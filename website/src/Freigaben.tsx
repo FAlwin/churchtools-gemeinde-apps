@@ -10,14 +10,16 @@ import { freigabeListe, type Eintrag, type EintragArt, type Ziel } from '@shared
 import type { Seite } from '@shared/website/modell';
 import { menueOhneSeite } from '@shared/website/seitenListe';
 import { ANMERKUNG_MAX } from '@shared/website/status';
-import type { WebsiteStand } from '@shared/website/speicher';
-import { darfFreigeben, type Zugang } from '@shared/website/zugang';
+import { darfFreigeben, leitetEtwas, type Zugang } from '@shared/website/zugang';
 import { FreigabeBand } from './FreigabeLeiste';
 import {
+  bereichsName,
+  bleibtHinweis,
   eintragEtikett,
   mailHinweis,
   misserfolg,
   werUndWann,
+  type BereichsNamen,
   type MailZweck,
 } from './freigabeAnzeige';
 import { mailFreigaben, mailZurueck, type MailErgebnis } from './mailVersand';
@@ -31,6 +33,7 @@ import {
   gebeFrei,
   setzeStatus,
   speichereMenue,
+  type FreigabeDaten,
   type FreigabeKategorien,
 } from './daten';
 import { Feld } from './Felder';
@@ -72,6 +75,11 @@ type Dialog =
  *
  * Die Daten (`daten`) gehören dem Rahmen (`App`): Er liest beide Kategorien auch für den Zähler am Reiter und liest nach jeder
  * Handlung neu (`onGeaendert`). Nichts gilt als erledigt, was nicht nachgelesen ist.
+ *
+ * **Bereiche (W3b-4b, E-W31):** Die Liste zeigt nur Seiten der eigenen Bereiche; die Knöpfe stehen nur an Einträgen, die die
+ * Person freigeben darf (`darfFreigeben` je Bereich) – die Leitung einer Untergruppe also nur an ihren Seiten, Menü und
+ * Einstellungen nur bei der Leitung der Website. „Alles freigeben“ nimmt nur, was man freigeben darf, jede Seite in die
+ * Kategorie ihres Bereichs. Steht eine verschobene Seite danach noch im alten Bereich, sagt es die Meldung.
  */
 export function Freigaben({
   kategorien,
@@ -80,19 +88,23 @@ export function Freigaben({
   ich,
   gemeinde,
   gruppe,
+  bereiche = { website: 'Website', untergruppen: [] },
   onGeaendert,
 }: {
   kategorien: FreigabeKategorien;
-  daten: { entwurf: WebsiteStand; online: WebsiteStand };
+  daten: FreigabeDaten;
   zugang: Zugang;
   ich: Schreiber;
   gemeinde: string | null;
-  /** Die Website-Gruppe – Mails gehen an die Einreichenden und lesen die Leitung dort (W3b-3). */
+  /** Die Website-Gruppe – Mails gehen an die Einreichenden und lesen die Leitung dort (W3b-3; Bereiche erst W3b-4c). */
   gruppe: number;
+  /** Die Namen der Bereiche – für Meldungen und die Zeile unter dem Titel (W3b-4b). */
+  bereiche?: BereichsNamen;
   /** Nach jeder gelungenen Handlung: Der Rahmen liest beide Kategorien neu. */
   onGeaendert: () => void;
 }) {
-  const leitung = darfFreigeben(zugang);
+  /** Gibt die Person irgendwo frei? Dann liest sich die Liste wie die der Leitung (Kopf, „Alles freigeben“). */
+  const leitung = leitetEtwas(zugang);
   const liste = useMemo(
     () => freigabeListe(daten.entwurf, daten.online, zugang, ich.person),
     [daten, zugang, ich.person],
@@ -145,11 +157,14 @@ export function Freigaben({
       const eingereicht =
         e.einheit === 'seite' && e.status?.zustand === 'eingereicht' ? e.status : null;
       const r = await gebeFrei(kategorien, ziel(e));
-      const text = r.statusEntfernt
+      const basis = r.statusEntfernt
         ? `„${e.titel}“ ist online.`
         : r.grund === 'geaendert'
           ? `„${e.titel}“ ist online. Danach wurde die Seite noch einmal geändert – die neue Fassung ist noch nicht freigegeben und bleibt eingereicht.`
           : `„${e.titel}“ ist online. Der Status ließ sich gerade nicht zurücksetzen – versuch es gleich noch einmal mit „Freigeben“.`;
+      // Verschoben, aber im alten Bereich nicht entfernt (W3b-4b): online ist sie – das ist kein Fehler, aber gesagt wird es.
+      const bleibt = bleibtHinweis(e.titel, r.bleibtIn, bereiche);
+      const text = bleibt ? `${basis} ${bleibt}` : basis;
       if (!eingereicht) return text;
       return mitHinweis(
         text,
@@ -194,13 +209,25 @@ export function Freigaben({
       const menue = menueOhneSeite(daten.entwurf.menue, e.id);
       if (menue && e.art !== 'nurOnline')
         await speichereMenue({ modul: kategorien.modul, kategorie: kategorien.entwuerfe }, menue);
-      await entferneSeiteUndOnline(kategorien, e.id);
-      return `„${e.titel}“ ist gelöscht und nicht mehr online.`;
+      const { bleibtIn } = await entferneSeiteUndOnline(kategorien, e.id, e.bereich);
+      if (bleibtIn.length === 0) return `„${e.titel}“ ist gelöscht und nicht mehr online.`;
+      // Im fremden Bereich fehlte das Recht (W3b-4b): dort steht sie noch – die Leitung der Website sieht sie als „nur noch online“.
+      return `„${e.titel}“ ist gelöscht. Sie steht aber noch online im Bereich ${bleibtIn
+        .map((b) => `„${bereichsName(bereiche, b)}“`)
+        .join(
+          ', ',
+        )} – dort kann sie nur die Leitung der Website offline nehmen; sie sieht sie unter „Freigaben“.`;
     }, `„${e.titel}“ wurde nicht gelöscht.`);
 
-  /** Was „Alles freigeben“ nimmt: eingereichte Seiten, das Menü und die Einstellungen (nie nicht eingereichte Entwürfe). */
+  /**
+   * Was „Alles freigeben“ nimmt: eingereichte Seiten, das Menü und die Einstellungen (nie nicht eingereichte Entwürfe) – und nur,
+   * was die Person freigeben darf (die Leitung einer Untergruppe: nur ihren Bereich; eigene eingereichte Seiten der Website nicht).
+   */
   const fuerAlle = liste.filter(
-    (e) => e.lesbar && (e.art === 'eingereicht' || e.art === 'menue' || e.art === 'einstellungen'),
+    (e) =>
+      e.lesbar &&
+      darfFreigeben(zugang, e.bereich) &&
+      (e.art === 'eingereicht' || e.art === 'menue' || e.art === 'einstellungen'),
   );
   const alleFreigeben = () =>
     handle(async () => {
@@ -229,8 +256,19 @@ export function Freigaben({
           }): ${misserfolg(r.fehler.fehler, '').trim()}${mailHinweisText ? ` ${mailHinweisText}` : ''}`,
         );
       }
-      const text = `Alles ist online: ${r.geschafft.length} ${r.geschafft.length === 1 ? 'Eintrag' : 'Einträge'}.`;
-      return mailHinweisText ? `${text} ${mailHinweisText}` : text;
+      const bleibtTexte = (r.bleibt ?? []).flatMap((b) => {
+        const titel = fuerAlle.find(
+          (x) => x.schluessel === `${b.ziel.einheit}:${b.ziel.id}`,
+        )?.titel;
+        const h = bleibtHinweis(titel ?? b.ziel.id, b.bleibtIn, bereiche);
+        return h ? [h] : [];
+      });
+      const text = [
+        `Alles ist online: ${r.geschafft.length} ${r.geschafft.length === 1 ? 'Eintrag' : 'Einträge'}.`,
+        ...bleibtTexte,
+        ...(mailHinweisText ? [mailHinweisText] : []),
+      ].join(' ');
+      return text;
     }, 'Nicht alles ist freigegeben.');
 
   return (
@@ -310,7 +348,11 @@ export function Freigaben({
                 <div className={styles.werkzeug}>
                   <div className={styles.name}>
                     <strong>{aktuell.titel}</strong>
-                    <span>{unterzeile(aktuell)}</span>
+                    <span>
+                      {unterzeile(aktuell)}
+                      {aktuell.bereich !== null &&
+                        ` · Bereich „${bereichsName(bereiche, aktuell.bereich)}“`}
+                    </span>
                   </div>
                   <Segment
                     value={ansicht}
@@ -324,13 +366,16 @@ export function Freigaben({
                   />
                 </div>
 
-                <FreigabeBand status={aktuell.status} darfFreigeben={leitung} />
+                <FreigabeBand
+                  status={aktuell.status}
+                  darfFreigeben={darfFreigeben(zugang, aktuell.bereich)}
+                />
                 {aktuell.warnung && (
                   <div className={baender.band} role="status">
                     <p>{aktuell.warnung}</p>
                   </div>
                 )}
-                {leitung && (
+                {darfFreigeben(zugang, aktuell.bereich) && (
                   <div className={styles.aktionen}>
                     <Aktionen
                       e={aktuell}
@@ -418,6 +463,7 @@ function unterzeile(e: Eintrag): string {
   if (e.einheit !== 'seite')
     return e.lage === 'nie' ? 'Noch nicht online' : 'Online steht noch die frühere Fassung';
   if (e.art === 'nurOnline') return 'Steht noch online, der Entwurf ist gelöscht';
+  if (e.verschieben) return 'Steht online noch in einem anderen Bereich – Freigeben verschiebt sie';
   return e.lage === 'nie' ? 'Noch nicht online' : 'Online steht noch die frühere Fassung';
 }
 
@@ -486,12 +532,12 @@ function Ansichtsfeld({
   ansicht,
 }: {
   e: Eintrag;
-  daten: { entwurf: WebsiteStand; online: WebsiteStand };
+  daten: FreigabeDaten;
   gemeinde: string | null;
   ansicht: Ansicht;
 }) {
   // Nur noch online: die Seite, wie sie online steht. Sonst der Entwurf; Menü und Einstellungen zeigen die Startseite damit.
-  const quelle = e.art === 'nurOnline' ? daten.online : daten.entwurf;
+  const quelle = e.art === 'nurOnline' ? daten.online.stand : daten.entwurf;
   const seite: Seite | null =
     e.einheit === 'seite'
       ? (quelle.seiten.find((s) => s.id === e.id) ?? null)

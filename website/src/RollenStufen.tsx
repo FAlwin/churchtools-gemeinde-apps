@@ -14,12 +14,18 @@ import styles from './Rechte.module.scss';
  * Stufe verspricht („weicht ab“) – gewählt ist dann der Vorschlag, bis „Rechte setzen“ gedrückt wird.
  */
 export function RollenStufen({
+  gruppenName,
   rollen,
   wahl,
   ist,
   disabled,
   onWahl,
 }: {
+  /**
+   * Die Gruppe – steht im Namen des Auswahlfelds, wo mehrere Gruppen untereinander stehen („Wer darf was“: Website und
+   * Untergruppen haben oft gleich benannte Rollen). Fehlt (Einrichten, nur eine Gruppe): „Stufe von Leiter“.
+   */
+  gruppenName?: string;
   rollen: readonly GruppenRolle[];
   wahl: readonly RollenStufe[];
   ist?: readonly RolleIst[];
@@ -37,7 +43,7 @@ export function RollenStufen({
             <span className={styles.name}>{r.name}</span>
             <select
               className={styles.auswahl}
-              aria-label={`Stufe von ${r.name}`}
+              aria-label={`Stufe von ${r.name}${gruppenName ? ` in „${gruppenName}“` : ''}`}
               value={stufe}
               disabled={disabled}
               onChange={(e) => onWahl(r.id, e.target.value as Stufe)}

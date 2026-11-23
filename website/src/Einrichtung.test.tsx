@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { WEBSITE_LEITUNG } from '@shared/website/zugang';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import { Einrichtung } from './Einrichtung';
@@ -21,7 +22,7 @@ const START: Start = {
   einrichtung: null,
   stand: 'einrichten',
   admin: true,
-  zugang: 'admin',
+  zugang: WEBSITE_LEITUNG,
   darfRechteSetzen: false,
   leitungOhneRechte: false,
 };

@@ -28,7 +28,7 @@ import { AbschnittEinfuegen } from './AbschnittEinfuegen';
 import { AbschnittGestalten } from './AbschnittGestalten';
 import { BausteinBearbeiten } from './BausteinBearbeiten';
 import { BausteinHinzufuegen } from './BausteinHinzufuegen';
-import { SeiteEinstellen } from './SeiteEinstellen';
+import { SeiteEinstellen, type BereichsWahl } from './SeiteEinstellen';
 import { Vorschau, type Ansicht } from './Vorschau';
 import {
   beendeBearbeiten,
@@ -101,6 +101,7 @@ export function Seitenarbeit({
   ansicht,
   onAnsicht,
   rechte,
+  bereichWahl,
   onGespeichert,
   onOffen,
   onLoeschen,
@@ -117,6 +118,8 @@ export function Seitenarbeit({
   ansicht: Ansicht;
   onAnsicht: (a: Ansicht) => void;
   rechte: Rechte;
+  /** „Bereich“ in „Seite einstellen“ (W3b-4b) – nur für die Leitung der Website; fehlt: kein Feld. */
+  bereichWahl?: readonly BereichsWahl[];
   /** Nach jedem gelungenen Speichern: Die Seitenliste übernimmt den Stand (ohne neu zu lesen). */
   onGespeichert: (seite: Seite, menue: Menue | null) => void;
   /** Ist etwas noch nicht gespeichert? (Dann bleibt man auf dieser Seite.) */
@@ -544,6 +547,7 @@ export function Seitenarbeit({
             andereSeiten={andereSeiten}
             meldungen={meldungen}
             menueAendern={rechte.menue}
+            bereichWahl={bereichWahl}
             onClose={schliessen}
             onFertig={(neu, menue) => {
               const p = uebernehmen(neu, menue);

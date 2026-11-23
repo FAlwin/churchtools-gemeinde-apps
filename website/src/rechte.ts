@@ -119,8 +119,11 @@ function mitUntergruppen(kat: Kategorien, untergruppen: readonly Untergruppe[]):
   };
 }
 
-/** Der Name einer Gruppe für die Anzeige (`/groups/{id}`); ohne lesbaren Namen „Gruppe 347“. */
-async function gruppenName(gruppe: number): Promise<string> {
+/**
+ * Der Name einer Gruppe für die Anzeige (`/groups/{id}`); ohne lesbaren Namen „Gruppe 347“. Auch für die Bereiche in „Seite
+ * einstellen“ (W3b-4b) – dieselben Namen wie hier.
+ */
+export async function gruppenName(gruppe: number): Promise<string> {
   const roh = await ctDaten<{ id?: unknown; name?: unknown } | null>(`/groups/${gruppe}`);
   return gruppenAus(roh ? [roh] : [])[0]?.name ?? `Gruppe ${gruppe}`;
 }

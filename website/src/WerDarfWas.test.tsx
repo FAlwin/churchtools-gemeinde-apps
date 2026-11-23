@@ -19,7 +19,9 @@ const ROLLEN = [
   { id: 2, name: 'Mitarbeiter', leitung: false },
   { id: 3, name: 'Coach', leitung: false },
 ];
-const stufe = (name: string) => screen.getByLabelText<HTMLSelectElement>(`Stufe von ${name}`).value;
+/** Das Auswahlfeld einer Rolle – seit W3b-4b mit dem Gruppennamen im Namen („Stufe von Leiter in „Website““). */
+const feld = (name: string) => new RegExp(`^Stufe von ${name} in „`);
+const stufe = (name: string) => screen.getByLabelText<HTMLSelectElement>(feld(name)).value;
 
 beforeEach(() => {
   r.ladeWerDarfWas.mockResolvedValue({
@@ -37,7 +39,7 @@ beforeEach(() => {
 describe('Wer darf was', () => {
   it('zeigt je Rolle die Stufe, die aus den Rechten in ChurchTools abgeleitet ist', async () => {
     render(<WerDarfWas gruppe={344} kategorien={KAT} />);
-    await screen.findByLabelText('Stufe von Leiter');
+    await screen.findByLabelText(feld('Leiter'));
     expect(stufe('Leiter')).toBe('leitung');
     expect(stufe('Mitarbeiter')).toBe('redakteur');
     expect(stufe('Coach')).toBe('keine');
@@ -55,15 +57,15 @@ describe('Wer darf was', () => {
       untergruppen: [],
     });
     render(<WerDarfWas gruppe={344} kategorien={KAT} />);
-    await screen.findByLabelText('Stufe von Mitarbeiter');
+    await screen.findByLabelText(feld('Mitarbeiter'));
     expect(screen.getByText(/Weicht ab/)).toBeTruthy();
     expect(stufe('Mitarbeiter')).toBe('redakteur');
   });
 
   it('„Rechte setzen“ übergibt die gewählten Stufen, liest danach neu und meldet „nachgelesen“', async () => {
     render(<WerDarfWas gruppe={344} kategorien={KAT} />);
-    await screen.findByLabelText('Stufe von Coach');
-    fireEvent.change(screen.getByLabelText('Stufe von Coach'), { target: { value: 'leitung' } });
+    await screen.findByLabelText(feld('Coach'));
+    fireEvent.change(screen.getByLabelText(feld('Coach')), { target: { value: 'leitung' } });
     fireEvent.click(screen.getByRole('button', { name: 'Rechte setzen' }));
     await screen.findByText(/Die Rechte sind gesetzt und nachgelesen/);
     expect(r.rechteSetzen).toHaveBeenCalledWith(344, KAT, [
@@ -77,8 +79,8 @@ describe('Wer darf was', () => {
   it('Fehler beim Setzen: Meldung mit Grund, die Wahl bleibt stehen, nichts gilt als gesetzt', async () => {
     r.rechteSetzen.mockRejectedValueOnce(new ApiError(503, 'kurz weg'));
     render(<WerDarfWas gruppe={344} kategorien={KAT} />);
-    await screen.findByLabelText('Stufe von Coach');
-    fireEvent.change(screen.getByLabelText('Stufe von Coach'), { target: { value: 'redakteur' } });
+    await screen.findByLabelText(feld('Coach'));
+    fireEvent.change(screen.getByLabelText(feld('Coach')), { target: { value: 'redakteur' } });
     fireEvent.click(screen.getByRole('button', { name: 'Rechte setzen' }));
     expect(await screen.findByText(/Noch nicht gesetzt/)).toBeTruthy();
     expect(screen.queryByText(/nachgelesen/)).toBeNull();
@@ -92,7 +94,7 @@ describe('Wer darf was', () => {
   it('Rechte gesetzt, aber die Leitung ließ sich nicht festhalten (W3b-3): eigene Meldung OHNE „Noch nicht gesetzt“ – es IST gesetzt, die Stufen werden neu gelesen, ein zweiter Versuch geht', async () => {
     r.rechteSetzen.mockRejectedValueOnce(new LeitungNichtFestgehalten());
     render(<WerDarfWas gruppe={344} kategorien={KAT} />);
-    await screen.findByLabelText('Stufe von Coach');
+    await screen.findByLabelText(feld('Coach'));
     fireEvent.click(screen.getByRole('button', { name: 'Rechte setzen' }));
     const meldung = await screen.findByText(
       /Die Rechte sind gesetzt\. ChurchTools hat aber nicht festgehalten/,
@@ -110,7 +112,7 @@ describe('Wer darf was', () => {
     r.ladeWerDarfWas.mockRejectedValueOnce(new ApiError(504, 'x'));
     render(<WerDarfWas gruppe={344} kategorien={KAT} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Erneut versuchen' }));
-    await screen.findByLabelText('Stufe von Leiter');
+    await screen.findByLabelText(feld('Leiter'));
     expect(r.rechteSetzen).not.toHaveBeenCalled();
   });
 
@@ -118,7 +120,7 @@ describe('Wer darf was', () => {
     let fertig: () => void = () => {};
     r.rechteSetzen.mockReturnValueOnce(new Promise<void>((ok) => (fertig = ok)));
     render(<WerDarfWas gruppe={344} kategorien={KAT} />);
-    await screen.findByLabelText('Stufe von Coach');
+    await screen.findByLabelText(feld('Coach'));
     fireEvent.click(screen.getByRole('button', { name: 'Rechte setzen' }));
     expect(screen.getByRole('button', { name: /Rechte werden gesetzt/ })).toHaveProperty(
       'disabled',
@@ -173,7 +175,7 @@ describe('Wer darf was – Untergruppen (W3b-4a)', () => {
 
   it('je Untergruppe ein Abschnitt: eingerichtet mit den Stufen aus ChurchTools („Weicht ab“), nicht eingerichtet mit Hinweis und Vorbelegung', async () => {
     render(<WerDarfWas gruppe={344} kategorien={KAT} />);
-    await screen.findByLabelText('Stufe von Technik-Leiter');
+    await screen.findByLabelText(feld('Technik-Leiter'));
     // Eingerichtet: die heutige Stufe (nicht der Vorschlag) und „Weicht ab“ bei der abweichenden Rolle.
     expect(stufe('Jugend-Leiter')).toBe('redakteur');
     expect(bereich('Website – Jugend').textContent).toMatch(/Weicht ab/);
@@ -188,8 +190,8 @@ describe('Wer darf was – Untergruppen (W3b-4a)', () => {
 
   it('„Rechte setzen“ bei einer nicht eingerichteten Untergruppe richtet sie ein – mit ihrer Wahl, nicht über die Website', async () => {
     render(<WerDarfWas gruppe={344} kategorien={KAT} />);
-    await screen.findByLabelText('Stufe von Technik-Mitarbeiter');
-    fireEvent.change(screen.getByLabelText('Stufe von Technik-Mitarbeiter'), {
+    await screen.findByLabelText(feld('Technik-Mitarbeiter'));
+    fireEvent.change(screen.getByLabelText(feld('Technik-Mitarbeiter')), {
       target: { value: 'keine' },
     });
     const knopf = bereich('Website – Technik').querySelector('button')!;
@@ -213,7 +215,7 @@ describe('Wer darf was – Untergruppen (W3b-4a)', () => {
       new WebsiteNichtNachgezogen('Website – Technik'),
     );
     render(<WerDarfWas gruppe={344} kategorien={KAT} />);
-    await screen.findByLabelText('Stufe von Technik-Leiter');
+    await screen.findByLabelText(feld('Technik-Leiter'));
     fireEvent.click(bereich('Website – Technik').querySelector('button')!);
     const meldung = await screen.findByText(/„Website – Technik“ ist eingerichtet/);
     expect(meldung.textContent).not.toMatch(/Noch nicht gesetzt/);
@@ -224,11 +226,11 @@ describe('Wer darf was – Untergruppen (W3b-4a)', () => {
     let fertig: () => void = () => {};
     r.untergruppeRechteSetzen.mockReturnValueOnce(new Promise<void>((ok) => (fertig = ok)));
     render(<WerDarfWas gruppe={344} kategorien={KAT} />);
-    await screen.findByLabelText('Stufe von Technik-Leiter');
+    await screen.findByLabelText(feld('Technik-Leiter'));
     fireEvent.click(bereich('Website – Technik').querySelector('button')!);
     for (const k of screen.getAllByRole('button', { name: 'Rechte setzen' }))
       expect(k).toHaveProperty('disabled', true);
-    expect(screen.getByLabelText<HTMLSelectElement>('Stufe von Leiter').disabled).toBe(true);
+    expect(screen.getByLabelText<HTMLSelectElement>(feld('Leiter')).disabled).toBe(true);
     fertig();
     await waitFor(() =>
       expect(screen.getAllByRole('button', { name: 'Rechte setzen' })[0]).toHaveProperty(
@@ -236,5 +238,44 @@ describe('Wer darf was – Untergruppen (W3b-4a)', () => {
         false,
       ),
     );
+  });
+});
+
+describe('Wer darf was – Abnahme W3b-4a (W3b-4b)', () => {
+  it('die Auswahlfelder tragen den Gruppennamen – gleich benannte Rollen in Website und Untergruppe sind unterscheidbar', async () => {
+    r.ladeWerDarfWas.mockResolvedValue({
+      rollen: ROLLEN,
+      ist: [],
+      untergruppen: [
+        {
+          gruppe: 347,
+          name: 'Website – Jugend',
+          kategorie: 117,
+          rollen: [{ id: 3323, name: 'Leiter', leitung: true }],
+          ist: [{ rolle: 3323, stufe: 'leitung' }],
+        },
+      ],
+    });
+    render(<WerDarfWas gruppe={344} kategorien={KAT} name="Website" />);
+    expect(await screen.findByLabelText('Stufe von Leiter in „Website“')).toBeTruthy();
+    expect(screen.getByLabelText('Stufe von Leiter in „Website – Jugend“')).toBeTruthy();
+  });
+
+  it('`springen`: rollt den Abschnitt ins Bild, sobald die Rollen gelesen sind – einmal; ohne `springen` nie', async () => {
+    const rollen = vi.fn();
+    const alt = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = rollen;
+    try {
+      const { unmount } = render(<WerDarfWas gruppe={344} kategorien={KAT} />);
+      await screen.findByLabelText(feld('Leiter'));
+      expect(rollen).not.toHaveBeenCalled();
+      unmount();
+      render(<WerDarfWas gruppe={344} kategorien={KAT} springen />);
+      await screen.findByLabelText(feld('Leiter'));
+      await waitFor(() => expect(rollen).toHaveBeenCalledTimes(1));
+      expect(rollen).toHaveBeenCalledWith({ block: 'start' });
+    } finally {
+      Element.prototype.scrollIntoView = alt;
+    }
   });
 });

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { WEBSITE_LEITUNG, WEBSITE_REDAKTEUR, sichtbareSeiten } from '@shared/website/zugang';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
 import { _vergissModul } from '@ui/ct/modulPort';
 import { neueLeereSeite } from '@shared/website/seitenListe';
@@ -7,6 +8,7 @@ import { freigabeListe, freigabeZaehler } from '@shared/website/freigabe';
 import {
   beginneBearbeiten,
   beginneEinstellungen,
+  gebeFrei,
   ladeFreigaben,
   ladeWebsite,
   speichereEinstellungen,
@@ -58,7 +60,7 @@ describe('Demo ohne echte Anfragen', () => {
   it('Start, Lesen, Speichern, Sperre nehmen, Kalender: keine einzige Anfrage geht an das echte `fetch`, keine ist unbekannt', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const { start, ort: o } = await ort('seiten');
-    expect(start.zugang).toBe('admin');
+    expect(start.zugang).toEqual(WEBSITE_LEITUNG);
     const stand = await ladeWebsite(o);
     expect(stand.seiten.map((s) => s.titel).sort()).toEqual([
       'Impressum',
@@ -168,13 +170,16 @@ describe('Demo: Aussehen', () => {
 
 describe('Demo: Rollen und „Wer darf was“ (W3b-1)', () => {
   it('Admin, Leitung, Redakteur: der Zugang kommt aus den Rechten der Demo-Person', async () => {
-    expect((await ort('seiten')).start).toMatchObject({ zugang: 'admin', darfRechteSetzen: true });
+    expect((await ort('seiten')).start).toMatchObject({
+      zugang: WEBSITE_LEITUNG,
+      darfRechteSetzen: true,
+    });
     expect((await ort('leitung')).start).toMatchObject({
-      zugang: 'leitung',
+      zugang: WEBSITE_LEITUNG,
       darfRechteSetzen: false,
     });
     expect((await ort('redakteur')).start).toMatchObject({
-      zugang: 'redakteur',
+      zugang: WEBSITE_REDAKTEUR,
       darfRechteSetzen: false,
     });
   });
@@ -234,7 +239,7 @@ describe('Demo: Rollen und „Wer darf was“ (W3b-1)', () => {
     });
     await rechteSetzen(g, kat, [{ rolle: 3, stufe: 'redakteur' }]);
     expect(await pruefeRechte(g, kat)).toEqual({ art: 'untergruppen', ...technik });
-    expect(ab.start.zugang).toBe('admin');
+    expect(ab.start.zugang).toEqual(WEBSITE_LEITUNG);
   });
 
   it('W3b-4a: „Website – Technik“ einrichten → Kategorie, Rechte, Website-Rollen nachgezogen, kein Hinweis mehr; nichts geht ins Netz', async () => {
@@ -283,14 +288,14 @@ describe('Demo: Freigabe (W3b-2)', () => {
       veroeffentlicht: start.einrichtung!.veroeffentlicht!,
     };
     const { entwurf, online } = await ladeFreigaben(kat);
-    const liste = freigabeListe(entwurf, online, 'leitung', start.ichId);
+    const liste = freigabeListe(entwurf, online, start.zugang!, start.ichId);
     expect(liste.map((e) => `${e.art}:${e.titel}`)).toEqual([
       'eingereicht:Jugend',
       'eingereicht:Impressum',
       'loeschenAngefragt:Alte Seite',
       'geaendert:Unsere Gruppen',
     ]);
-    expect(freigabeZaehler(liste, 'leitung')).toBe(3);
+    expect(freigabeZaehler(liste, start.zugang!)).toBe(3);
   });
 
   it('`redakteur`: eine zurückgegebene Seite mit Anmerkung, Zähler 1; kein Menü, keine Einstellungen', async () => {
@@ -301,9 +306,62 @@ describe('Demo: Freigabe (W3b-2)', () => {
       veroeffentlicht: start.einrichtung!.veroeffentlicht!,
     };
     const { entwurf, online } = await ladeFreigaben(kat);
-    const liste = freigabeListe(entwurf, online, 'redakteur', start.ichId);
+    const liste = freigabeListe(entwurf, online, start.zugang!, start.ichId);
     expect(liste.map((e) => `${e.art}:${e.titel}`)).toEqual(['zurueck:Impressum']);
     expect(liste[0].status?.anmerkung).toMatch(/Hausnummer/);
-    expect(freigabeZaehler(liste, 'redakteur')).toBe(1);
+    expect(freigabeZaehler(liste, start.zugang!)).toBe(1);
+  });
+});
+
+describe('Demo: Bereiche (W3b-4b)', () => {
+  const kategorienAus = (start: Awaited<ReturnType<typeof ladeStart>>, entwuerfe: number) => ({
+    modul: start.modul,
+    entwuerfe,
+    veroeffentlicht: start.einrichtung!.veroeffentlicht!,
+    untergruppen: (start.untergruppen ?? []).map((u) => ({
+      gruppe: u.gruppe,
+      kategorie: u.kategorie,
+    })),
+  });
+
+  it('`jugend-redakteur`: Redakteur nur der Untergruppe – sieht die drei Jugend-Seiten, „Freizeit 2027“ muss verschoben werden', async () => {
+    const { start, ort: o } = await ort('jugend-redakteur');
+    expect(start.zugang).toEqual({ sieht: [21], leitet: [] });
+    expect(start.untergruppen).toEqual([{ gruppe: 21, kategorie: 203, name: 'Website – Jugend' }]);
+    const { entwurf, online } = await ladeFreigaben(kategorienAus(start, o.kategorie));
+    expect(
+      sichtbareSeiten(entwurf.seiten, start.zugang)
+        .map((s) => s.titel)
+        .sort(),
+    ).toEqual(['Freizeit 2027', 'Jugend-Team', 'Jugendabend']);
+    expect([...online.falsch]).toEqual(['demo-freizeit']);
+  });
+
+  it('`jugend-leitung`: gibt ihre Seiten frei; „Freizeit 2027“ geht nach Jugend, aus der Website-Kategorie darf sie sie nicht nehmen', async () => {
+    const { start, ort: o } = await ort('jugend-leitung');
+    expect(start.zugang).toEqual({ sieht: [21], leitet: [21] });
+    const kat = kategorienAus(start, o.kategorie);
+    const vorher = await ladeFreigaben(kat);
+    const liste = freigabeListe(vorher.entwurf, vorher.online, start.zugang!, start.ichId);
+    expect(liste.map((e) => `${e.art}:${e.titel}`)).toEqual([
+      'eingereicht:Jugendabend',
+      'geaendert:Freizeit 2027',
+    ]);
+    expect(freigabeZaehler(liste, start.zugang!)).toBe(1);
+    const r = await gebeFrei(kat, { einheit: 'seite', id: 'demo-freizeit' });
+    expect(r.bleibtIn).toEqual([null]);
+    const nachher = await ladeFreigaben(kat);
+    expect(nachher.online.liegtIn.get('demo-freizeit')).toEqual([null, 21]);
+  });
+
+  it('`bereiche`: Leitung der Website – Verschieben gelingt ganz', async () => {
+    const { start, ort: o } = await ort('bereiche');
+    expect(start.zugang).toEqual(WEBSITE_LEITUNG);
+    const kat = kategorienAus(start, o.kategorie);
+    const r = await gebeFrei(kat, { einheit: 'seite', id: 'demo-freizeit' });
+    expect(r.bleibtIn).toBeUndefined();
+    const nachher = await ladeFreigaben(kat);
+    expect(nachher.online.liegtIn.get('demo-freizeit')).toEqual([21]);
+    expect(nachher.online.falsch.size).toBe(0);
   });
 });

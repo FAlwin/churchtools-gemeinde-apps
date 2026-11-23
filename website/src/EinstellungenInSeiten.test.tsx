@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { WEBSITE_LEITUNG } from '@shared/website/zugang';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
 import { einrichtungAus, kategorienFuer } from '@shared/website/einrichten';
@@ -123,7 +124,7 @@ beforeEach(() => {
     einrichtung,
     stand: 'fertig',
     admin: false,
-    zugang: 'leitung',
+    zugang: WEBSITE_LEITUNG,
     darfRechteSetzen: false,
     leitungOhneRechte: false,
   } satisfies Start);

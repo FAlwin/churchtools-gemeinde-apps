@@ -10,14 +10,15 @@ import {
   menueSpeichern,
   seiteSpeichern,
   websiteAusWerten,
-  type WebsiteStand,
 } from '@shared/website/speicher';
 import { statusSetzen } from '@shared/website/status';
-import type { Zugang } from '@shared/website/zugang';
+import { WEBSITE_LEITUNG, WEBSITE_REDAKTEUR, type Zugang } from '@shared/website/zugang';
+import { nurWebsite } from '@shared/website/freigabe';
 import { ENTWUERFE, ONLINE, fakeFreigabeSpeicher } from '@shared/website/freigabe.testutil';
 import { baustein, einstellungen, menue, seiteMit } from '@shared/website/website.testdaten';
 import * as D from './daten';
 import * as M from './mailVersand';
+import type { FreigabeDaten } from './daten';
 import { Freigaben } from './Freigaben';
 
 vi.mock('./daten', () => ({
@@ -52,7 +53,7 @@ const sei = (id: string, titel: string, text = id) =>
  * Rita (später), online in älterer Fassung · C zurückgegeben an Rita · D Löschen angefragt von Rita (online) · E nur ein
  * unfertiger Entwurf ohne Einreichen · X nur noch online · Menü und Einstellungen geändert.
  */
-async function szenario(): Promise<{ entwurf: WebsiteStand; online: WebsiteStand }> {
+async function szenario(): Promise<FreigabeDaten> {
   const s = fakeFreigabeSpeicher();
   const start = { ...sei('s', 'Willkommen'), startseite: true };
   for (const x of [
@@ -87,13 +88,11 @@ async function szenario(): Promise<{ entwurf: WebsiteStand; online: WebsiteStand
     SPAET,
   );
   await statusSetzen(s.entwurfsOrt, 'd', { zustand: 'loeschenAngefragt' }, RITA, SPAET);
-  return {
-    entwurf: websiteAusWerten(s.werte[ENTWUERFE]),
-    online: websiteAusWerten(s.werte[ONLINE]),
-  };
+  const entwurf = websiteAusWerten(s.werte[ENTWUERFE]);
+  return { entwurf, online: nurWebsite(entwurf, websiteAusWerten(s.werte[ONLINE])) };
 }
 
-async function zeigen(zugang: Zugang, ichId = zugang === 'redakteur' ? 5 : 1) {
+async function zeigen(zugang: Zugang, ichId = zugang === WEBSITE_REDAKTEUR ? 5 : 1) {
   const daten = await szenario();
   render(
     <Freigaben
@@ -117,7 +116,7 @@ beforeEach(() => {
   d.gebeFrei.mockResolvedValue({ stand: 'x', statusEntfernt: true });
   d.setzeStatus.mockResolvedValue({ zustand: 'zurueck', von: 1, name: 'Helene', zeit: 'x' });
   d.entferneStatus.mockResolvedValue(undefined);
-  d.entferneSeiteUndOnline.mockResolvedValue(undefined);
+  d.entferneSeiteUndOnline.mockResolvedValue({ bleibtIn: [] });
   d.speichereMenue.mockResolvedValue(undefined);
   d.gebeAllesFrei.mockResolvedValue({ geschafft: [], fehler: null, offen: 0 });
   m.mailZurueck.mockResolvedValue({ art: 'aus' });
@@ -126,7 +125,7 @@ beforeEach(() => {
 
 describe('Liste der Leitung', () => {
   it('Gruppen und Reihenfolge: Eingereicht (die älteste Bitte oben), Löschen angefragt, Zurückgegeben, Änderungen, Menü und Aussehen, nur noch online', async () => {
-    await zeigen('leitung');
+    await zeigen(WEBSITE_LEITUNG);
     const gruppen = within(liste())
       .getAllByRole('heading')
       .map((h) => h.textContent);
@@ -156,7 +155,7 @@ describe('Liste der Leitung', () => {
   });
 
   it('die Vorschau zeigt den Entwurf der gewählten Seite mit dem echten Renderer', async () => {
-    await zeigen('leitung');
+    await zeigen(WEBSITE_LEITUNG);
     waehle('A');
     expect(screen.getByTitle('Vorschau: A')).toBeTruthy();
     expect(screen.getByText(/Eingereicht von Rita Redakteurin am/)).toBeTruthy();
@@ -166,8 +165,11 @@ describe('Liste der Leitung', () => {
     render(
       <Freigaben
         kategorien={KAT}
-        daten={{ entwurf: websiteAusWerten([]), online: websiteAusWerten([]) }}
-        zugang="leitung"
+        daten={{
+          entwurf: websiteAusWerten([]),
+          online: nurWebsite(websiteAusWerten([]), websiteAusWerten([])),
+        }}
+        zugang={WEBSITE_LEITUNG}
         ich={HELENE}
         gemeinde="ECG"
         gruppe={GRUPPE}
@@ -181,7 +183,7 @@ describe('Liste der Leitung', () => {
 
 describe('Freigeben und Zurückgeben', () => {
   it('eingereicht: „Freigeben“ gibt GENAU diese Einheit frei, meldet es und lässt neu lesen', async () => {
-    await zeigen('leitung');
+    await zeigen(WEBSITE_LEITUNG);
     waehle('A');
     fireEvent.click(knopf('Freigeben'));
     await waitFor(() =>
@@ -193,7 +195,7 @@ describe('Freigeben und Zurückgeben', () => {
 
   it('scheitert es (503): die Meldung sagt, was NICHT geschah; nichts wird als online gemeldet; kein Neulesen nötig; ein neuer Versuch geht', async () => {
     d.gebeFrei.mockRejectedValueOnce(new ApiError(503, 'weg'));
-    await zeigen('leitung');
+    await zeigen(WEBSITE_LEITUNG);
     waehle('A');
     fireEvent.click(knopf('Freigeben'));
     expect(
@@ -211,7 +213,7 @@ describe('Freigeben und Zurückgeben', () => {
     d.gebeFrei.mockRejectedValueOnce(
       new ApiError(403, 'Dafür fehlt dir das Recht: nur die Leitung.'),
     );
-    await zeigen('leitung');
+    await zeigen(WEBSITE_LEITUNG);
     waehle('A');
     fireEvent.click(knopf('Freigeben'));
     expect(await screen.findByText(/Dafür fehlt dir das Recht/)).toBeTruthy();
@@ -219,14 +221,14 @@ describe('Freigeben und Zurückgeben', () => {
 
   it('ist der Entwurf nach dem Lesen weitergeändert worden, sagt die Meldung, dass er eingereicht bleibt', async () => {
     d.gebeFrei.mockResolvedValue({ stand: 'x', statusEntfernt: false, grund: 'geaendert' });
-    await zeigen('leitung');
+    await zeigen(WEBSITE_LEITUNG);
     waehle('A');
     fireEvent.click(knopf('Freigeben'));
     expect(await screen.findByText(/noch einmal geändert .* bleibt eingereicht/)).toBeTruthy();
   });
 
   it('eine nicht eingereichte Seite heißt „Veröffentlichen“ und hat kein „Mit Anmerkung zurück“', async () => {
-    await zeigen('leitung');
+    await zeigen(WEBSITE_LEITUNG);
     waehle('E');
     expect(knopf('Veröffentlichen')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Mit Anmerkung zurück' })).toBeNull();
@@ -234,7 +236,7 @@ describe('Freigeben und Zurückgeben', () => {
   });
 
   it('Menü und Einstellungen sind eigene Einträge: „Veröffentlichen“ gibt die feste Einheit frei – das Menü warnt vor Seiten, die noch nicht online sind', async () => {
-    await zeigen('leitung');
+    await zeigen(WEBSITE_LEITUNG);
     waehle('Menü');
     fireEvent.click(knopf('Veröffentlichen'));
     await waitFor(() =>
@@ -251,7 +253,7 @@ describe('Freigeben und Zurückgeben', () => {
   });
 
   it('„Mit Anmerkung zurück“ verlangt eine Anmerkung und schreibt sie samt Einreichender', async () => {
-    await zeigen('leitung');
+    await zeigen(WEBSITE_LEITUNG);
     waehle('A');
     fireEvent.click(knopf('Mit Anmerkung zurück'));
     const fenster = await screen.findByRole('dialog');
@@ -278,7 +280,7 @@ describe('Freigeben und Zurückgeben', () => {
 
   it('scheitert das Zurückgeben, bleibt das Fenster offen und nennt den Grund', async () => {
     d.setzeStatus.mockRejectedValue(new ApiError(503, 'weg'));
-    await zeigen('leitung');
+    await zeigen(WEBSITE_LEITUNG);
     waehle('A');
     fireEvent.click(knopf('Mit Anmerkung zurück'));
     const fenster = await screen.findByRole('dialog');
@@ -293,8 +295,11 @@ describe('Löschen angefragt und „online, aber Entwurf gelöscht“', () => {
   it('„Löschen und offline nehmen“: erst nach der Rückfrage – zuerst das Menü ohne die Seite, dann online + Entwurf', async () => {
     const reihenfolge: string[] = [];
     d.speichereMenue.mockImplementation(async () => void reihenfolge.push('menue'));
-    d.entferneSeiteUndOnline.mockImplementation(async () => void reihenfolge.push('seite'));
-    await zeigen('leitung');
+    d.entferneSeiteUndOnline.mockImplementation(async () => {
+      reihenfolge.push('seite');
+      return { bleibtIn: [] };
+    });
+    await zeigen(WEBSITE_LEITUNG);
     waehle('D');
     fireEvent.click(knopf('Löschen und offline nehmen'));
     expect(d.entferneSeiteUndOnline).not.toHaveBeenCalled();
@@ -305,13 +310,13 @@ describe('Löschen angefragt und „online, aber Entwurf gelöscht“', () => {
     );
     await waitFor(() => expect(reihenfolge).toEqual(['menue', 'seite']));
     expect(d.speichereMenue.mock.calls[0][1]).toEqual({ eintraege: [] });
-    expect(d.entferneSeiteUndOnline).toHaveBeenCalledWith(KAT, 'd');
+    expect(d.entferneSeiteUndOnline).toHaveBeenCalledWith(KAT, 'd', null);
     expect(onGeaendert).toHaveBeenCalled();
   });
 
   it('scheitert das Menü, wird nichts gelöscht – das Fenster bleibt mit der Meldung', async () => {
     d.speichereMenue.mockRejectedValue(new ApiError(503, 'weg'));
-    await zeigen('leitung');
+    await zeigen(WEBSITE_LEITUNG);
     waehle('D');
     fireEvent.click(knopf('Löschen und offline nehmen'));
     const dialog = await screen.findByRole('alertdialog');
@@ -321,7 +326,7 @@ describe('Löschen angefragt und „online, aber Entwurf gelöscht“', () => {
   });
 
   it('„Ablehnen“ nimmt nur den Status weg – die Seite bleibt', async () => {
-    await zeigen('leitung');
+    await zeigen(WEBSITE_LEITUNG);
     waehle('D');
     fireEvent.click(knopf('Ablehnen'));
     await waitFor(() => expect(d.entferneStatus).toHaveBeenCalledWith(KAT, 'd'));
@@ -330,7 +335,7 @@ describe('Löschen angefragt und „online, aber Entwurf gelöscht“', () => {
   });
 
   it('online, aber Entwurf gelöscht: „Offline nehmen“ nach Rückfrage – ohne das Menü anzufassen', async () => {
-    await zeigen('leitung');
+    await zeigen(WEBSITE_LEITUNG);
     waehle('X');
     fireEvent.click(knopf('Offline nehmen'));
     fireEvent.click(
@@ -338,14 +343,14 @@ describe('Löschen angefragt und „online, aber Entwurf gelöscht“', () => {
         name: 'Offline nehmen',
       }),
     );
-    await waitFor(() => expect(d.entferneSeiteUndOnline).toHaveBeenCalledWith(KAT, 'x'));
+    await waitFor(() => expect(d.entferneSeiteUndOnline).toHaveBeenCalledWith(KAT, 'x', null));
     expect(d.speichereMenue).not.toHaveBeenCalled();
   });
 });
 
 describe('Alles freigeben', () => {
   it('nimmt NUR eingereichte Seiten, Menü und Einstellungen – nie den nicht eingereichten Entwurf, nie Löschen angefragt', async () => {
-    await zeigen('leitung');
+    await zeigen(WEBSITE_LEITUNG);
     fireEvent.click(knopf('Alles freigeben'));
     const dialog = await screen.findByRole('alertdialog');
     expect(within(dialog).getByText(/„A“.*„B“|„B“.*„A“/)).toBeTruthy();
@@ -364,7 +369,7 @@ describe('Alles freigeben', () => {
       fehler: { ziel: { einheit: 'seite', id: 'b' }, fehler: new ApiError(503, 'weg') },
       offen: 2,
     });
-    await zeigen('leitung');
+    await zeigen(WEBSITE_LEITUNG);
     fireEvent.click(knopf('Alles freigeben'));
     const dialog = await screen.findByRole('alertdialog');
     fireEvent.click(within(dialog).getByRole('button', { name: 'Alles freigeben' }));
@@ -379,7 +384,7 @@ describe('Alles freigeben', () => {
 
 describe('Redakteur: nur lesen', () => {
   it('sieht nur seine eigenen Seiten – eingereicht, zurückgegeben, Löschen angefragt –, kein Menü, kein Aussehen, nichts Fremdes', async () => {
-    await zeigen('redakteur');
+    await zeigen(WEBSITE_REDAKTEUR);
     const titel = within(liste())
       .getAllByRole('button')
       .map((b) => b.textContent ?? '');
@@ -392,7 +397,7 @@ describe('Redakteur: nur lesen', () => {
   });
 
   it('hat keinen einzigen Knopf zum Freigeben, Veröffentlichen, Zurückgeben, Löschen, Ablehnen oder „Alles freigeben“', async () => {
-    await zeigen('redakteur');
+    await zeigen(WEBSITE_REDAKTEUR);
     for (const t of ['A', 'B', 'C', 'D']) {
       waehle(t);
       for (const name of [
@@ -409,13 +414,13 @@ describe('Redakteur: nur lesen', () => {
   });
 
   it('eine zurückgegebene Seite zeigt die Anmerkung der Leitung', async () => {
-    await zeigen('redakteur');
+    await zeigen(WEBSITE_REDAKTEUR);
     waehle('C');
     expect(screen.getByText(/Bitte das Foto tauschen\./)).toBeTruthy();
   });
 
   it('eine andere Redakteurin sieht davon nichts (nur den ruhigen Hinweis)', async () => {
-    await zeigen('redakteur', 77);
+    await zeigen(WEBSITE_REDAKTEUR, 77);
     expect(screen.queryByRole('complementary', { name: 'Freigaben' })).toBeNull();
     expect(screen.getByText(/Du hast gerade nichts eingereicht/)).toBeTruthy();
   });
@@ -425,7 +430,7 @@ describe('Mails im Freigabe-Weg (W3b-3): Zurückgeben und Freigeben', () => {
   const ORT_MAIL = { modul: 7, entwuerfe: ENTWUERFE, gruppe: GRUPPE };
 
   async function zurueckgeben(anmerkung = 'Bitte die Uhrzeit prüfen.') {
-    await zeigen('leitung');
+    await zeigen(WEBSITE_LEITUNG);
     waehle('A');
     fireEvent.click(knopf('Mit Anmerkung zurück'));
     const fenster = await screen.findByRole('dialog');
@@ -483,7 +488,7 @@ describe('Mails im Freigabe-Weg (W3b-3): Zurückgeben und Freigeben', () => {
 
   it('Freigeben einer eingereichten Seite: Mail an den Einreichenden – nach dem Freigeben', async () => {
     m.mailFreigaben.mockResolvedValue({ art: 'gesendet' });
-    await zeigen('leitung');
+    await zeigen(WEBSITE_LEITUNG);
     waehle('A');
     fireEvent.click(knopf('Freigeben'));
     expect(
@@ -499,7 +504,7 @@ describe('Mails im Freigabe-Weg (W3b-3): Zurückgeben und Freigeben', () => {
 
   it('scheitert das Freigeben, geht keine Mail', async () => {
     d.gebeFrei.mockRejectedValueOnce(new ApiError(503, 'weg'));
-    await zeigen('leitung');
+    await zeigen(WEBSITE_LEITUNG);
     waehle('A');
     fireEvent.click(knopf('Freigeben'));
     await screen.findByText(/wurde nicht veröffentlicht/);
@@ -507,7 +512,7 @@ describe('Mails im Freigabe-Weg (W3b-3): Zurückgeben und Freigeben', () => {
   });
 
   it('„Veröffentlichen“ einer nicht eingereichten Seite (Änderung) und das Menü: keine Mail', async () => {
-    await zeigen('leitung');
+    await zeigen(WEBSITE_LEITUNG);
     waehle('E');
     fireEvent.click(knopf('Veröffentlichen'));
     await waitFor(() => expect(d.gebeFrei).toHaveBeenCalledTimes(1));
@@ -515,7 +520,7 @@ describe('Mails im Freigabe-Weg (W3b-3): Zurückgeben und Freigeben', () => {
   });
 
   async function alleFreigeben() {
-    await zeigen('leitung');
+    await zeigen(WEBSITE_LEITUNG);
     fireEvent.click(knopf('Alles freigeben'));
     const dialog = await screen.findByRole('alertdialog');
     fireEvent.click(within(dialog).getByRole('button', { name: 'Alles freigeben' }));

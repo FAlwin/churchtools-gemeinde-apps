@@ -8,10 +8,18 @@ import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Icon } from '@ui/icons/icons';
 import type { Schreiber } from '@shared/ct/sperre';
-import { seitenLage } from '@shared/website/freigabe';
+import { onlineSicht, seitenLage } from '@shared/website/freigabe';
+import type { UntergruppenKategorie } from '@shared/website/einrichten';
 import type { Menue, Seite } from '@shared/website/modell';
 import type { SeitenStatus } from '@shared/website/status';
-import { darfFreigeben, type Zugang } from '@shared/website/zugang';
+import {
+  bereicheFuerNeueSeite,
+  bereichVon,
+  darfAussehenUndMenue,
+  darfFreigeben,
+  sichtbareSeiten,
+  type Zugang,
+} from '@shared/website/zugang';
 import {
   hatStartseite,
   menueOhneSeite,
@@ -19,7 +27,15 @@ import {
   seitenFuerListe,
 } from '@shared/website/seitenListe';
 import { FreigabeBand, FreigabeLeiste } from './FreigabeLeiste';
-import { mailHinweis, misserfolg, seitenEtikett, type MailZweck } from './freigabeAnzeige';
+import {
+  bereichsName,
+  bleibtHinweis,
+  mailHinweis,
+  misserfolg,
+  seitenEtikett,
+  type BereichsNamen,
+  type MailZweck,
+} from './freigabeAnzeige';
 import { mailAnLeitung, mailFreigaben, type MailErgebnis } from './mailVersand';
 import { Hinweis, Leise } from './Hinweis';
 import { ListenZeile } from './ListenZeile';
@@ -56,7 +72,12 @@ import styles from './Seiten.module.scss';
  * veröffentlichen – sonst ginge etwas anderes online als das, was man sieht.
  *
  * Eine Website ohne Startseite zeigt einen Hinweis mit dem Knopf „Startseite anlegen“ (Vorlage `start-schriftzug`) –
- * angelegt wird nie von selbst.
+ * angelegt wird nie von selbst. Den Knopf hat nur die Leitung der Website (E-W22, W3b-4b); Redakteure lesen, wer es tut.
+ *
+ * **Bereiche (W3b-4b, E-W31):** Die Liste („Im Menü“, „Weitere Seiten“) zeigt nur die Seiten, die die Person sieht
+ * (`sichtbareSeiten`); die Vorschau, die Prüfung der Adressen und „Neue Seite“ arbeiten weiter mit **allen** Seiten – die Seite
+ * sieht aus wie online, und eine Adresse ist über alle Bereiche eindeutig (E-W30). Ob die Person eine Seite freigeben oder
+ * löschen darf, entscheidet ihr Bereich (`darfFreigeben`).
  */
 export function Seiten({
   ort,
@@ -80,11 +101,20 @@ export function Seiten({
   /** Ohne: kein Freigabe-Weg (alte Aufrufer, Tests). */
   freigabe?: {
     zugang: Zugang;
-    /** Die Kategorie „Veröffentlicht“. */
+    /** Die Kategorie „Veröffentlicht“ der Website. */
     veroeffentlicht: number;
+    /** Die Veröffentlicht-Kategorien der eingerichteten Untergruppen (W3b-4b) – fehlt: keine. */
+    untergruppen?: readonly UntergruppenKategorie[];
+    /** Die Namen der Bereiche – für „Bereich“ in „Seite einstellen“, „Neue Seite“ und Meldungen (W3b-4b). */
+    bereiche?: BereichsNamen;
     /** Nach jedem Statuswechsel und jedem Veröffentlichen: Der Zähler am Reiter „Freigaben“ liest neu. */
     onGeaendert: () => void;
-    /** Die Website-Gruppe – an ihre Leitung gehen die Mails beim Einreichen und Löschen anfragen (W3b-3). */
+    /**
+     * Die Website-Gruppe – an ihre Leitung gehen die Mails beim Einreichen und Löschen anfragen (W3b-3). **Bis W3b-4c** auch für
+     * Seiten einer Untergruppe: Ein Untergruppen-Redakteur sieht die Mitglieder der Website-Gruppe nicht (Messung W3b-4-0),
+     * findet also keine Leitung – „niemand“, es geht keine Mail und es erscheint kein Hinweis. Die Leitung sieht die Seite
+     * trotzdem unter „Freigaben“ (Zähler am Reiter).
+     */
     gruppe: number;
   };
 }) {
@@ -128,37 +158,68 @@ export function Seiten({
   const einstellungenAlt = nachgelesen.stand.art === 'fehler';
 
   // Der Online-Stand (W3b-2): nur gelesen, nie geschrieben; scheitert das Lesen, bleibt „unbekannt“ (nichts Falsches anzeigen).
+  // Seit W3b-4b alle Bereiche: jede Seite wird mit der Kategorie IHRES Bereichs verglichen (`onlineSicht`).
   const veroeffentlicht = freigabe?.veroeffentlicht;
-  const kategorien =
-    veroeffentlicht !== undefined ? { modul, entwuerfe: kategorie, veroeffentlicht } : null;
-  const online = useLaden(
+  const untergruppen = freigabe?.untergruppen;
+  const kategorien = useMemo(
     () =>
       veroeffentlicht !== undefined
-        ? ladeOnline({ modul, entwuerfe: kategorie, veroeffentlicht })
+        ? { modul, entwuerfe: kategorie, veroeffentlicht, untergruppen: untergruppen ?? [] }
         : null,
-    [modul, kategorie, veroeffentlicht],
-    { behalten: true },
+    [modul, kategorie, veroeffentlicht, untergruppen],
   );
-  const onlineStaende = online.stand.art === 'fertig' ? online.stand.daten.staende : null;
+  const online = useLaden(() => (kategorien ? ladeOnline(kategorien) : null), [kategorien], {
+    behalten: true,
+  });
 
   const stand = geladen.stand.art === 'fertig' ? geladen.stand.daten : null;
+  const onlineKats = online.stand.art === 'fertig' ? online.stand.daten : null;
+  const sicht = useMemo(
+    () => (stand && onlineKats ? onlineSicht(stand, onlineKats) : null),
+    [stand, onlineKats],
+  );
+  const onlineStaende = sicht?.stand.staende ?? null;
+  const zugang = freigabe?.zugang ?? null;
+  // Was in der Liste steht (E-W31). Ohne Freigabe-Weg (alte Aufrufer, Tests) gibt es keine Bereiche: alle Seiten.
+  const sichtbar = useMemo(
+    () => (stand ? (freigabe ? sichtbareSeiten(stand.seiten, zugang) : stand.seiten) : null),
+    [stand, freigabe, zugang],
+  );
   const listen = useMemo(
-    () => (stand ? seitenFuerListe(stand.seiten, stand.menue) : null),
-    [stand],
+    () => (stand && sichtbar ? seitenFuerListe(sichtbar, stand.menue) : null),
+    [stand, sichtbar],
   );
   const aktuell: Seite | null =
-    stand && listen
-      ? (stand.seiten.find((s) => s.id === gewaehlt) ??
-        stand.seiten.find((s) => s.startseite) ??
+    sichtbar && listen
+      ? (sichtbar.find((s) => s.id === gewaehlt) ??
+        sichtbar.find((s) => s.startseite) ??
         listen.imMenue[0] ??
         listen.weitere[0] ??
         null)
       : null;
 
-  const darfFrei = darfFreigeben(freigabe?.zugang ?? null);
+  /** Darf die Person die gezeigte Seite freigeben und löschen? Je nach ihrem Bereich (W3b-4b). */
+  const darfFrei = aktuell !== null && darfFreigeben(zugang, bereichVon(aktuell));
+  /** Die Leitung der Website: Startseite, Menü, Bereich einer Seite (E-W22). Ohne Freigabe-Weg: wie bisher die Rechte. */
+  const websiteLeitung = freigabe ? darfAussehenUndMenue(zugang) : rechte.menue;
+  const namen = freigabe?.bereiche;
+  /** „Bereich“ in „Seite einstellen“: nur die Leitung der Website, und nur, wenn es eingerichtete Untergruppen gibt. */
+  const bereichWahl =
+    websiteLeitung && namen && namen.untergruppen.length > 0
+      ? [
+          { wert: null, name: namen.website },
+          ...namen.untergruppen.map((u) => ({ wert: u.gruppe, name: u.name })),
+        ]
+      : undefined;
+  /** Wohin eine neue Seite gehört (erbt den Bereich ihres Anlegers) – mit Namen für die Auswahl bei mehreren. */
+  const neueBereiche = bereicheFuerNeueSeite(zugang).map((b) => ({
+    wert: b,
+    name: namen ? bereichsName(namen, b) : 'Website',
+  }));
   const aktuellStatus: SeitenStatus | null =
     aktuell && stand ? (stand.status[aktuell.id] ?? null) : null;
-  const aktuellLage = aktuell && freigabe ? seitenLage(aktuell, onlineStaende) : null;
+  const aktuellLage =
+    aktuell && freigabe ? seitenLage(aktuell, onlineStaende, sicht?.falsch) : null;
 
   /** Den Status einer Seite im gelesenen Stand ersetzen (`null`: entfernt) – ohne neu zu lesen (er wurde nachgelesen). */
   const statusUebernehmen = (id: string, neu: SeitenStatus | null) =>
@@ -240,6 +301,9 @@ export function Seiten({
             ? 'Die Seite ist online. Danach wurde sie noch einmal geändert – diese Änderung ist noch nicht freigegeben, die Seite bleibt unter „Freigaben“.'
             : 'Die Seite ist online. Ihr Status ließ sich aber gerade nicht zurücksetzen – unter „Freigaben“ kannst du das noch einmal versuchen.',
         );
+      // Verschoben, aber im alten Bereich nicht entfernt (W3b-4b): nicht verschweigen.
+      const bleibt = namen ? bleibtHinweis(s.titel, r.bleibtIn, namen) : null;
+      if (bleibt) setMeldung((alt) => (alt ? `${alt} ${bleibt}` : bleibt));
       online.neu();
       freigabe.onGeaendert();
       if (eingereicht)
@@ -328,20 +392,25 @@ export function Seiten({
               </ul>
             </Hinweis>
           )}
-          {!hatStartseite(stand.seiten) && (
+          {/* Geprüft über ALLE Seiten (nicht nur die sichtbaren); wer nur Untergruppen sieht, bekommt den Hinweis nicht. */}
+          {!hatStartseite(stand.seiten) && (!freigabe || zugang?.sieht === 'alle') && (
             <Hinweis titel="Diese Website hat noch keine Startseite">
               <p>
                 {stand.seiten.length === 0
                   ? 'Es gibt noch keine Seite.'
                   : 'Keine der Seiten ist als Startseite festgelegt.'}{' '}
-                Du kannst eine Startseite aus einer Vorlage anlegen und danach nach Belieben ändern.
+                {websiteLeitung
+                  ? 'Du kannst eine Startseite aus einer Vorlage anlegen und danach nach Belieben ändern.'
+                  : 'Die Startseite legt die Leitung der Website an.'}
               </p>
-              <div className={styles.aktionen}>
-                <FensterKnopf disabled={laeuft} onClick={() => void startseiteAnlegen()}>
-                  <Icon name="home" size={16} />
-                  Startseite anlegen
-                </FensterKnopf>
-              </div>
+              {websiteLeitung && (
+                <div className={styles.aktionen}>
+                  <FensterKnopf disabled={laeuft} onClick={() => void startseiteAnlegen()}>
+                    <Icon name="home" size={16} />
+                    Startseite anlegen
+                  </FensterKnopf>
+                </div>
+              )}
             </Hinweis>
           )}
 
@@ -381,6 +450,7 @@ export function Seiten({
                 ansicht={ansicht}
                 onAnsicht={setAnsicht}
                 rechte={rechte}
+                bereichWahl={bereichWahl}
                 onGespeichert={(neueSeite, neuesMenue) => uebernehmen(neueSeite, neuesMenue)}
                 onOffen={setUngespeichert}
                 onLoeschen={() =>
@@ -423,6 +493,7 @@ export function Seiten({
       {neu && stand && (
         <NeueSeite
           seiten={stand.seiten}
+          bereiche={freigabe ? neueBereiche : undefined}
           speichern={(s) => speichereSeite(ort, s)}
           onAngelegt={(s) => {
             setNeu(false);
@@ -448,7 +519,9 @@ export function Seiten({
           seite={loeschen}
           online={
             freigabe !== undefined &&
-            ['gleich', 'geaendert'].includes(seitenLage(loeschen, onlineStaende) ?? '')
+            ['gleich', 'geaendert'].includes(
+              seitenLage(loeschen, onlineStaende, sicht?.falsch) ?? '',
+            )
           }
           imMenue={menueOhneSeite(stand.menue, loeschen.id) !== null}
           onLoeschen={async () => {

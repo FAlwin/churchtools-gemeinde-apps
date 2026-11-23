@@ -6,7 +6,8 @@
  * **Ablauf beim Setzen:** Rechte-Nummern aus den Definitionen → Rollen der Gruppe frisch lesen (nur deren Rollen werden
  * angefasst, auch wenn die Wahl etwas anderes enthielte) → ausrichten und nachlesen. Ein Fehler wird **geworfen**, nichts
  * wird zurückgenommen (vorübergehend ist nicht ungültig); ein zweiter Versuch ergänzt den Rest. Hat ChurchTools nach dem
- * Setzen etwas anderes, als verlangt war, wirft es `NichtUebernommen` – ein `204` ist kein Beleg.
+ * Setzen etwas anderes, als verlangt war, wirft es `NichtUebernommen` – ein `204` ist kein Beleg. **Danach** (W3b-3) wird
+ * festgehalten, welche Rollen die Leitung sind (`leitungFesthalten`) – für die Mails im Freigabe-Weg.
  */
 import {
   datenRechteNummernAus,
@@ -27,8 +28,10 @@ import {
   type RolleIst,
   type RollenStufe,
 } from '@shared/website/rechte';
+import { leitungSetzen } from '@shared/website/mailWerte';
+import { LeitungNichtFestgehalten } from './leitungFehler';
 import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
-import { modulPort } from '@ui/ct/modulPort';
+import { modulId, modulPort } from '@ui/ct/modulPort';
 import { ctDaten } from '@ui/ct/verbindung';
 
 const NUR_ADMIN =
@@ -101,6 +104,26 @@ export async function rechteSetzen(
   });
   if (a.fehlt.length > 0 || a.nochDa.length > 0)
     throw new NichtUebernommen('die Rechte der Rollen');
+  await leitungFesthalten(
+    kat.entwuerfe,
+    rollen.filter((r) => r.stufe === 'leitung').map((r) => r.rolle),
+  );
+}
+
+/**
+ * **Wer die Leitung ist, festhalten** – der EINE Schreiber des Werts `website-leitung` (`mailWerte.ts`): nur hier, wo der Admin
+ * die Stufen festlegt, und erst **nach** dem Setzen der Rechte. Ein Redakteur, der einreicht, kann die Stufen nicht lesen (nur
+ * der Admin kann es) und liest stattdessen diesen Wert, um die Leitung zu benachrichtigen. Abgemeldet (401) kommt unverändert an;
+ * jeder andere Fehler wird zu `LeitungNichtFestgehalten`.
+ */
+async function leitungFesthalten(entwuerfe: number, rollen: number[]): Promise<void> {
+  try {
+    const modul = await modulId('Die Erweiterung „Website“');
+    await leitungSetzen({ p: modulPort, modul, kategorie: entwuerfe }, rollen);
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 401) throw e;
+    throw new LeitungNichtFestgehalten();
+  }
 }
 
 /**

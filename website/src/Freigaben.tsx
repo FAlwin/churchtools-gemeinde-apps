@@ -13,7 +13,14 @@ import { ANMERKUNG_MAX } from '@shared/website/status';
 import type { WebsiteStand } from '@shared/website/speicher';
 import { darfFreigeben, type Zugang } from '@shared/website/zugang';
 import { FreigabeBand } from './FreigabeLeiste';
-import { eintragEtikett, misserfolg, werUndWann } from './freigabeAnzeige';
+import {
+  eintragEtikett,
+  mailHinweis,
+  misserfolg,
+  werUndWann,
+  type MailZweck,
+} from './freigabeAnzeige';
+import { mailFreigaben, mailZurueck, type MailErgebnis } from './mailVersand';
 import { Hinweis, Leise } from './Hinweis';
 import { ListenZeile } from './ListenZeile';
 import { Vorschau, type Ansicht } from './Vorschau';
@@ -72,6 +79,7 @@ export function Freigaben({
   zugang,
   ich,
   gemeinde,
+  gruppe,
   onGeaendert,
 }: {
   kategorien: FreigabeKategorien;
@@ -79,6 +87,8 @@ export function Freigaben({
   zugang: Zugang;
   ich: Schreiber;
   gemeinde: string | null;
+  /** Die Website-Gruppe – Mails gehen an die Einreichenden und lesen die Leitung dort (W3b-3). */
+  gruppe: number;
   /** Nach jeder gelungenen Handlung: Der Rahmen liest beide Kategorien neu. */
   onGeaendert: () => void;
 }) {
@@ -121,13 +131,31 @@ export function Freigaben({
 
   const ziel = (e: Eintrag): Ziel => ({ einheit: e.einheit, id: e.id });
 
+  /** Wohin die Mails gehören (W3b-3). */
+  const mailOrt = { modul: kategorien.modul, entwuerfe: kategorien.entwuerfe, gruppe };
+  /** Den Hinweis zur Mail an eine Meldung hängen – ohne Hinweis bleibt die Meldung, wie sie ist. */
+  const mitHinweis = (text: string, ergebnis: MailErgebnis, zweck: MailZweck): string => {
+    const h = mailHinweis(ergebnis, zweck);
+    return h ? `${text} ${h}` : text;
+  };
+
   const freigeben = (e: Eintrag) =>
     handle(async () => {
+      // Wer hatte eingereicht? Nur eine eingereichte Seite löst die Mail „ist freigegeben“ aus.
+      const eingereicht =
+        e.einheit === 'seite' && e.status?.zustand === 'eingereicht' ? e.status : null;
       const r = await gebeFrei(kategorien, ziel(e));
-      if (r.statusEntfernt) return `„${e.titel}“ ist online.`;
-      return r.grund === 'geaendert'
-        ? `„${e.titel}“ ist online. Danach wurde die Seite noch einmal geändert – die neue Fassung ist noch nicht freigegeben und bleibt eingereicht.`
-        : `„${e.titel}“ ist online. Der Status ließ sich gerade nicht zurücksetzen – versuch es gleich noch einmal mit „Freigeben“.`;
+      const text = r.statusEntfernt
+        ? `„${e.titel}“ ist online.`
+        : r.grund === 'geaendert'
+          ? `„${e.titel}“ ist online. Danach wurde die Seite noch einmal geändert – die neue Fassung ist noch nicht freigegeben und bleibt eingereicht.`
+          : `„${e.titel}“ ist online. Der Status ließ sich gerade nicht zurücksetzen – versuch es gleich noch einmal mit „Freigeben“.`;
+      if (!eingereicht) return text;
+      return mitHinweis(
+        text,
+        await mailFreigaben(mailOrt, [{ titel: e.titel, einreicher: eingereicht.von }], ich),
+        'freigeben',
+      );
     }, `„${e.titel}“ wurde nicht veröffentlicht – online steht weiter die bisherige Fassung.`);
 
   const zurueckgeben = (e: Eintrag, anmerkung: string) =>
@@ -142,7 +170,16 @@ export function Freigaben({
         },
         ich,
       );
-      return `„${e.titel}“ ist mit deiner Anmerkung zurückgegeben.`;
+      // Erst jetzt, nachdem der Status geschrieben und nachgelesen ist.
+      return mitHinweis(
+        `„${e.titel}“ ist mit deiner Anmerkung zurückgegeben.`,
+        await mailZurueck(
+          mailOrt,
+          { seite: e.titel, anmerkung: anmerkung.trim(), einreicher: e.status?.von ?? null },
+          ich,
+        ),
+        'zurueck',
+      );
     }, `„${e.titel}“ wurde nicht zurückgegeben.`);
 
   const ablehnen = (e: Eintrag) =>
@@ -168,6 +205,18 @@ export function Freigaben({
   const alleFreigeben = () =>
     handle(async () => {
       const r = await gebeAllesFrei(kategorien, fuerAlle.map(ziel));
+      // Eine Mail je Person mit allen ihren Seiten – für die eingereichten Seiten, die jetzt online sind (auch wenn es danach
+      // abbricht: Was geschafft ist, ist geschafft).
+      const freigegeben = r.geschafft.flatMap((z) => {
+        const e = fuerAlle.find((x) => x.schluessel === `${z.einheit}:${z.id}`);
+        return e?.einheit === 'seite' && e.status?.zustand === 'eingereicht'
+          ? [{ titel: e.titel, einreicher: e.status.von }]
+          : [];
+      });
+      const mailHinweisText =
+        freigegeben.length > 0
+          ? mailHinweis(await mailFreigaben(mailOrt, freigegeben, ich), 'freigeben')
+          : null;
       if (r.fehler) {
         const titel = fuerAlle.find(
           (e) => e.schluessel === `${r.fehler!.ziel.einheit}:${r.fehler!.ziel.id}`,
@@ -177,10 +226,11 @@ export function Freigaben({
         throw new Gemeldet(
           `${r.geschafft.length} von ${fuerAlle.length} sind online. Bei „${titel ?? r.fehler.ziel.id}“ ist es abgebrochen (${
             r.offen > 0 ? `${r.offen} weitere nicht mehr versucht` : 'keine weitere offen'
-          }): ${misserfolg(r.fehler.fehler, '').trim()}`,
+          }): ${misserfolg(r.fehler.fehler, '').trim()}${mailHinweisText ? ` ${mailHinweisText}` : ''}`,
         );
       }
-      return `Alles ist online: ${r.geschafft.length} ${r.geschafft.length === 1 ? 'Eintrag' : 'Einträge'}.`;
+      const text = `Alles ist online: ${r.geschafft.length} ${r.geschafft.length === 1 ? 'Eintrag' : 'Einträge'}.`;
+      return mailHinweisText ? `${text} ${mailHinweisText}` : text;
     }, 'Nicht alles ist freigegeben.');
 
   return (

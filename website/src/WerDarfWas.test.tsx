@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ApiError } from '@ui/ct/fehler';
+import { LeitungNichtFestgehalten } from './leitungFehler';
 import { WerDarfWas } from './WerDarfWas';
 import * as R from './rechte';
 
@@ -80,6 +81,23 @@ describe('Wer darf was', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Rechte setzen' }));
     await screen.findByText(/Die Rechte sind gesetzt und nachgelesen/);
     expect(screen.queryByText(/Noch nicht gesetzt/)).toBeNull();
+  });
+
+  it('Rechte gesetzt, aber die Leitung ließ sich nicht festhalten (W3b-3): eigene Meldung OHNE „Noch nicht gesetzt“ – es IST gesetzt, die Stufen werden neu gelesen, ein zweiter Versuch geht', async () => {
+    r.rechteSetzen.mockRejectedValueOnce(new LeitungNichtFestgehalten());
+    render(<WerDarfWas gruppe={344} kategorien={KAT} />);
+    await screen.findByLabelText('Stufe von Coach');
+    fireEvent.click(screen.getByRole('button', { name: 'Rechte setzen' }));
+    const meldung = await screen.findByText(
+      /Die Rechte sind gesetzt\. ChurchTools hat aber nicht festgehalten/,
+    );
+    expect(meldung.textContent).not.toMatch(/Noch nicht gesetzt/);
+    expect(screen.queryByText(/nachgelesen/)).toBeNull();
+    // Gelesen wird neu: die Stufen zeigen, was jetzt gilt.
+    expect(r.ladeWerDarfWas).toHaveBeenCalledTimes(2);
+    fireEvent.click(screen.getByRole('button', { name: 'Rechte setzen' }));
+    await screen.findByText(/Die Rechte sind gesetzt und nachgelesen/);
+    expect(screen.queryByText(/nicht festgehalten/)).toBeNull();
   });
 
   it('Lesefehler: Meldung mit „Erneut versuchen“ statt einer leeren Liste', async () => {

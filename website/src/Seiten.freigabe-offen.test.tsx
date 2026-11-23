@@ -19,6 +19,11 @@ vi.mock('./Seitenarbeit', () => ({
     </div>
   ),
 }));
+vi.mock('./mailVersand', () => ({
+  mailAnLeitung: vi.fn(),
+  mailZurueck: vi.fn(),
+  mailFreigaben: vi.fn(),
+}));
 vi.mock('./daten', () => ({
   ladeWebsite: vi.fn(),
   ladeOnline: vi.fn(),
@@ -54,7 +59,7 @@ describe('Ungespeichertes blockiert Einreichen und Veröffentlichen', () => {
         gemeinde="ECG"
         ich={ICH}
         rechte={{ html: false, menue: false }}
-        freigabe={{ zugang: 'redakteur', veroeffentlicht: 21, onGeaendert: vi.fn() }}
+        freigabe={{ zugang: 'redakteur', veroeffentlicht: 21, gruppe: 344, onGeaendert: vi.fn() }}
       />,
     );
     const knopf = await screen.findByRole('button', {
@@ -75,7 +80,7 @@ describe('Ungespeichertes blockiert Einreichen und Veröffentlichen', () => {
         gemeinde="ECG"
         ich={ICH}
         rechte={{ html: true, menue: true }}
-        freigabe={{ zugang: 'leitung', veroeffentlicht: 21, onGeaendert: vi.fn() }}
+        freigabe={{ zugang: 'leitung', veroeffentlicht: 21, gruppe: 344, onGeaendert: vi.fn() }}
       />,
     );
     await screen.findByRole('button', { name: 'Mehr' });

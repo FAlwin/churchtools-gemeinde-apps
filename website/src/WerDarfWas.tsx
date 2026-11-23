@@ -4,6 +4,7 @@ import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { useLaden } from '@ui/ct/useLaden';
 import { wahlAus, type Kategorien, type RollenStufe, type Stufe } from '@shared/website/rechte';
 import { RollenStufen } from './RollenStufen';
+import { LeitungNichtFestgehalten } from './leitungFehler';
 import { ladeWerDarfWas, rechteSetzen } from './rechte';
 import fenster from './Fenster.module.scss';
 import styles from './Rechte.module.scss';
@@ -28,6 +29,8 @@ export function WerDarfWas({ gruppe, kategorien }: { gruppe: number; kategorien:
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<Fehlermeldung | null>(null);
   const [gesetzt, setGesetzt] = useState(false);
+  /** Die Rechte sind gesetzt, nur das Festhalten der Leitung (für die Mails) ist gescheitert – das ist nicht „noch nicht gesetzt“. */
+  const [leitungOffen, setLeitungOffen] = useState(false);
 
   const stand = geladen.stand;
   const wahl =
@@ -44,6 +47,7 @@ export function WerDarfWas({ gruppe, kategorien }: { gruppe: number; kategorien:
     setLaeuft(true);
     setFehler(null);
     setGesetzt(false);
+    setLeitungOffen(false);
     rechteSetzen(gruppe, kategorien, wahl).then(
       () => {
         setLaeuft(false);
@@ -54,6 +58,12 @@ export function WerDarfWas({ gruppe, kategorien }: { gruppe: number; kategorien:
       (e: unknown) => {
         setLaeuft(false);
         setFehler(fehlerMeldung(e));
+        // Die Rechte stehen – neu lesen, damit die Stufen zeigen, was jetzt gilt.
+        if (e instanceof LeitungNichtFestgehalten) {
+          setLeitungOffen(true);
+          setEigene(null);
+          geladen.neu();
+        }
       },
     );
   };
@@ -102,7 +112,7 @@ export function WerDarfWas({ gruppe, kategorien }: { gruppe: number; kategorien:
         {gesetzt && <p className={styles.meldung}>Die Rechte sind gesetzt und nachgelesen.</p>}
         {fehler && (
           <p className={`${styles.meldung} ${styles.fehler}`} role="alert">
-            Noch nicht gesetzt – {fehler.text}
+            {leitungOffen ? fehler.text : <>Noch nicht gesetzt – {fehler.text}</>}
           </p>
         )}
       </div>

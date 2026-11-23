@@ -551,3 +551,47 @@ steht nach dem Loslassen in der Vorschau, oben „Gespeichert“, und lässt sic
 - **Historie:** neu mit W3c-3 (21.11.2026)
 
 </details>
+
+### TF-WEBSITE-17 · Mails im Freigabe-Weg: Einreichen, Löschen anfragen, Zurückgeben, Freigeben – und der Schalter
+
+**Das brauchst du:** Die Test-Instanz (**sie verschickt echte Mails** – nur an Testadressen), die Website eingerichtet, die Gruppe „Website“ mit
+zwei Konten, die du erreichst: eine **Leitung** (Leiter, Mail-Adresse zum Mitlesen) und ein **Redakteur** (Mitarbeiter, ebenfalls mit Adresse),
+dazu ein Admin-Konto. Zwei Browser. Mindestens zwei Seiten.
+
+**Das muss passieren:** Beim Einreichen und beim Löschen anfragen bekommt die **Leitung** eine kurze Mail, beim Zurückgeben und Freigeben
+bekommt sie die Person, die **eingereicht** hatte. **Nie an sich selbst.** Im Fenster „Einstellungen“ gibt es den Haken **Mails im
+Freigabe-Weg**; ist er aus, geht keine Mail und es erscheint kein Hinweis. Eine fehlgeschlagene Mail ändert nie, was die Handlung getan hat.
+
+1. **Leitung festhalten:** Als Admin unter Einstellungen → „Wer darf was“ die Stufen prüfen (Leiter = Leitung, Mitarbeiter = Redakteur) und
+   **Rechte setzen** → „Die Rechte sind gesetzt und nachgelesen.“ In ChurchTools (Administration → Erweiterung „Website“ → Daten, Kategorie
+   „Entwürfe“) steht ein Wert `website-leitung` mit der Rolle des Leiters. Ein zweites „Rechte setzen“ ändert daran nichts.
+2. **Einreichen:** Als Redakteur eine Seite ändern, **Zur Prüfung einreichen**: Unter der Werkzeugleiste steht „Die Leitung ist per Mail
+   benachrichtigt.“ Beim Leiter kommt eine Mail an: Betreff **Website: „…“ wartet auf Freigabe**, im Text der Name des Redakteurs, die Seite
+   und ein Link „Website in ChurchTools öffnen“ (führt auf die Erweiterung; der Reiter „Freigaben“ steht im Text). Der Redakteur bekommt **keine** Mail.
+3. **Löschen anfragen:** Als Redakteur bei einer anderen Seite **Löschen anfragen** → Mail an den Leiter mit **„– Löschen angefragt“** im Betreff.
+4. **Zurückgeben:** Als Leiter bei der eingereichten Seite **Mit Anmerkung zurück** („Bitte Überschrift ändern“): Hinweis „Wer eingereicht hatte,
+   ist per Mail benachrichtigt.“ Der **Redakteur** bekommt eine Mail **„… zurückgegeben“** mit der Anmerkung; der Leiter keine.
+5. **Freigeben:** Redakteur reicht erneut ein, Leiter **Freigeben** → Mail an den Redakteur **„… ist freigegeben“**. Eine Änderung, die nie
+   eingereicht war, über „⋯“ → **Veröffentlichen**: **keine** Mail.
+6. **Alles freigeben:** Der Redakteur reicht **zwei** Seiten ein, der Leiter **Alles freigeben**: Der Redakteur bekommt **genau eine** Mail
+   („2 Seiten sind freigegeben“, beide Seiten aufgelistet), nicht zwei.
+7. **Nie an sich selbst:** Als Leiter selbst eine Seite einreichen lassen geht nicht (Leitung veröffentlicht direkt); stattdessen mit dem Admin-Konto,
+   das zugleich die einzige Leitung ist: Es bekommt keine Mail für das, was es selbst tut – und es erscheint **kein Fehler und kein Hinweis**.
+8. **Schalter aus:** Als Leiter im Fenster **Einstellungen** den Haken **Mails im Freigabe-Weg** ausschalten (wirkt **sofort**, ohne „Speichern“; das
+   Fenster bleibt offen). Als Redakteur einreichen: **keine Mail, kein Hinweis**. Wieder einschalten: die nächste Mail kommt. Seite neu laden:
+   der Haken steht, wie er war. „Speichern“ im Fenster ändert den Haken nicht, und eine Meldung beim Haken meldet nie die Einstellungen als
+   gescheitert.
+9. **Eigener Wert:** Der Haken liegt als Wert `website-mail` in „Entwürfe“ – **nicht** in der Einheit „Einstellungen“ (die Leitung muss nichts
+   „Freigeben“, damit er wirkt).
+10. **Mail scheitert:** Dem Redakteur-Konto in ChurchTools das Recht, Mails zu senden, nehmen (oder die Mail-Adresse der Leitung entfernen) und
+    einreichen: Der Hinweis sagt „Die Mail an die Leitung ging nicht raus: …“ und dass die Seite **trotzdem eingereicht** ist – das Etikett
+    steht auf **Eingereicht**, die Seite erscheint beim Leiter unter „Freigaben“. Es wird **nichts automatisch wiederholt**.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `ui/ct/mailSenden.ts`, `shared/website/mail.ts`, `shared/website/mailWerte.ts`, `shared/website/speicher.ts`, `website/src/mailVersand.ts`, `website/src/MailSchalter.tsx`, `website/src/EinstellungenFenster.tsx`, `website/src/Seiten.tsx`, `website/src/Freigaben.tsx`, `website/src/rechte.ts`, `website/src/WerDarfWas.tsx`, `website/src/freigabeAnzeige.ts`, `anmeldungen/src/rundmail.ts`
+- **Automatisiert:** teilweise – `shared/website/mail.test.ts` (Empfänger je Anlass, Vorbelegung statt Wert, nie an sich selbst, Bündeln, Texte, HTML-Schutz, Link), `shared/website/mailWerte.test.ts` (beide Werte lesen/schreiben/nachlesen, beschädigt = fehlend, beim Lesen der Website übersprungen), `ui/ct/mailSenden.test.ts` (Zweige des Versands; die früheren Tests des Anmelde-Tools), `website/src/mailVersand.test.ts` (Schalter, Leitung, Mitglieder, die fünf Ausgänge), `website/src/Seiten.freigabe.test.tsx` und `website/src/Freigaben.test.tsx` (richtige Empfänger, erst nach dem Nachlesen, keine Mail bei gescheiterter Handlung, drei Hinweise), `website/src/EinstellungenFenster.mail.test.tsx` (Haken wirkt sofort, getrennte Fehler), `website/src/rechte.test.ts` (Admin setzt Stufen → Wert geschrieben); dass die Mail wirklich ankommt, der Link stimmt und wie sie in einem Mailprogramm aussieht, nur von Hand in der Test-Instanz
+- **Historie:** neu mit W3b-3 (23.11.2026)
+
+</details>

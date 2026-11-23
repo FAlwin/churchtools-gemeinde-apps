@@ -22,7 +22,9 @@ import { Feld } from './Felder';
 import { useEinstellungen, type EinstellungenBereit } from './einstellungenKontext';
 import { zielAusWert, zielWert } from './regeln';
 import { AUSSEHEN_TEXTE, einstellungenFremdText } from './sperrTexte';
+import { MailSchalter } from './MailSchalter';
 import { WerDarfWas } from './WerDarfWas';
+import type { EntwurfsOrt } from './daten';
 import styles from './Fenster.module.scss';
 
 const KEIN_LINK = '';
@@ -42,8 +44,11 @@ const KEIN_LINK = '';
 export function EinstellungenFenster({
   onSchliessen,
   werDarfWas,
+  mail,
 }: {
   onSchliessen: () => void;
+  /** Wo der Schalter „Mails im Freigabe-Weg“ liegt (W3b-3) – ohne: kein Schalter. Er wirkt sofort, unabhängig vom „Speichern“. */
+  mail?: EntwurfsOrt;
   /**
    * „Wer darf was“ (W3b-1): nur setzen, wenn die Person in ChurchTools Rechte setzen darf (`darfVerwalten`) – sonst fehlt der
    * Bereich ganz. Die Rechte gehören nicht zu den Einstellungen im Speicher und haben darum ihren eigenen Knopf.
@@ -73,17 +78,19 @@ export function EinstellungenFenster({
         )}
       </Sheet>
     );
-  return <Bereit q={q} onSchliessen={onSchliessen} werDarfWas={werDarfWas} />;
+  return <Bereit q={q} onSchliessen={onSchliessen} werDarfWas={werDarfWas} mail={mail} />;
 }
 
 function Bereit({
   q,
   onSchliessen,
   werDarfWas,
+  mail,
 }: {
   q: EinstellungenBereit;
   onSchliessen: () => void;
   werDarfWas?: { gruppe: number; kategorien: Kategorien };
+  mail?: EntwurfsOrt;
 }) {
   const { arbeit, stand, sperre, ich } = q;
   const [form, setForm] = useState<EinstellungenFormular>(() => formularAus(arbeit));
@@ -300,6 +307,8 @@ function Bereit({
           </>
         )}
       </div>
+
+      {mail && <MailSchalter ort={mail} />}
 
       {werDarfWas && <WerDarfWas gruppe={werDarfWas.gruppe} kategorien={werDarfWas.kategorien} />}
     </Sheet>

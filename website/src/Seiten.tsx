@@ -19,7 +19,8 @@ import {
   seitenFuerListe,
 } from '@shared/website/seitenListe';
 import { FreigabeBand, FreigabeLeiste } from './FreigabeLeiste';
-import { seitenEtikett, misserfolg } from './freigabeAnzeige';
+import { mailHinweis, misserfolg, seitenEtikett, type MailZweck } from './freigabeAnzeige';
+import { mailAnLeitung, mailFreigaben, type MailErgebnis } from './mailVersand';
 import { Hinweis, Leise } from './Hinweis';
 import { ListenZeile } from './ListenZeile';
 import { NeueSeite } from './NeueSeite';
@@ -83,6 +84,8 @@ export function Seiten({
     veroeffentlicht: number;
     /** Nach jedem Statuswechsel und jedem Veröffentlichen: Der Zähler am Reiter „Freigaben“ liest neu. */
     onGeaendert: () => void;
+    /** Die Website-Gruppe – an ihre Leitung gehen die Mails beim Einreichen und Löschen anfragen (W3b-3). */
+    gruppe: number;
   };
 }) {
   const { modul, kategorie } = ort;
@@ -181,12 +184,25 @@ export function Seiten({
     }
   };
 
+  /** Wohin die Mails gehören (W3b-3). */
+  const mailOrt = (gruppe: number) => ({ modul, entwuerfe: kategorie, gruppe });
+  /** Der kurze Hinweis zur Mail – hängt an einen schon gesetzten Hinweis an, ersetzt ihn nicht. */
+  const hinweisen = (ergebnis: MailErgebnis, zweck: MailZweck) => {
+    const h = mailHinweis(ergebnis, zweck);
+    if (h) setMeldung((alt) => (alt ? `${alt} ${h}` : h));
+  };
+
   const einreichen = (s: Seite) =>
     kategorien &&
     freigabe &&
     handle(async () => {
       statusUebernehmen(s.id, await setzeStatus(kategorien, s.id, { zustand: 'eingereicht' }, ich));
       freigabe.onGeaendert();
+      // Erst jetzt, nachdem der Status geschrieben und nachgelesen ist – und die Mail ändert nichts an dem, was gilt.
+      hinweisen(
+        await mailAnLeitung(mailOrt(freigabe.gruppe), { art: 'eingereicht', seite: s.titel }, ich),
+        'einreichen',
+      );
     }, 'Die Seite wurde nicht eingereicht.');
 
   const loeschenAnfragen = (s: Seite) =>
@@ -199,12 +215,23 @@ export function Seiten({
       );
       setAnfragen(null);
       freigabe.onGeaendert();
+      hinweisen(
+        await mailAnLeitung(
+          mailOrt(freigabe.gruppe),
+          { art: 'loeschenAngefragt', seite: s.titel },
+          ich,
+        ),
+        'loeschen',
+      );
     }, 'Das Löschen wurde nicht angefragt.');
 
   const veroeffentlichen = (s: Seite) =>
     kategorien &&
     freigabe &&
     handle(async () => {
+      // Wer hatte eingereicht? Nur dann geht eine Mail („ist freigegeben“) – gelesen VOR dem Freigeben, danach ist der Status weg.
+      const eingereicht =
+        stand?.status[s.id]?.zustand === 'eingereicht' ? stand.status[s.id] : null;
       const r = await gebeFrei(kategorien, { einheit: 'seite', id: s.id });
       if (r.statusEntfernt) statusUebernehmen(s.id, null);
       else
@@ -215,6 +242,15 @@ export function Seiten({
         );
       online.neu();
       freigabe.onGeaendert();
+      if (eingereicht)
+        hinweisen(
+          await mailFreigaben(
+            mailOrt(freigabe.gruppe),
+            [{ titel: s.titel, einreicher: eingereicht.von }],
+            ich,
+          ),
+          'freigeben',
+        );
     }, 'Die Seite wurde nicht veröffentlicht – online steht weiter die bisherige Fassung.');
 
   /** Eine gespeicherte Seite (und ggf. das Menü) in den gelesenen Stand übernehmen – ohne neu zu lesen. */

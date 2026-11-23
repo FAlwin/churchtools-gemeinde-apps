@@ -455,6 +455,37 @@ export function demoStarten(fall: string): void {
     if (pfad === '/permissions/global') return antwort(rechte());
     if (pfad === '/permissions/definitions') return antwort(definitionen);
     if (/^\/groups\/\d+\/roles$/.test(pfad)) return antwort(ROLLEN);
+    // Mails im Freigabe-Weg (W3b-3): Mitglieder der Gruppe (Helene = Leiter), das alte Mail-Senden und das Protokoll – gesendet
+    // wird nichts, es wird nur „angenommen“.
+    if (/^\/groups\/\d+\/members$/.test(pfad))
+      return antwort([
+        {
+          personId: 1,
+          person: { title: 'Helene Wiebe' },
+          groupTypeRoleId: 2,
+          groupMemberStatus: 'active',
+        },
+        {
+          personId: 7,
+          person: { title: 'Jonas Peters' },
+          groupTypeRoleId: 3,
+          groupMemberStatus: 'active',
+        },
+        {
+          personId: 8,
+          person: { title: 'Lena Kraft' },
+          groupTypeRoleId: 3,
+          groupMemberStatus: 'active',
+        },
+      ]);
+    if (url.pathname.endsWith('/index.php') && url.searchParams.get('q') === 'churchhome/ajax')
+      return Promise.resolve(
+        new Response(JSON.stringify({ status: 'success', data: {} }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    if (pfad === '/logs') return antwort([]);
     const rollenRechtePfad = /^\/permissions\/group_role\/(\d+)$/.exec(pfad);
     if (rollenRechtePfad) {
       const rolle = Number(rollenRechtePfad[1]);

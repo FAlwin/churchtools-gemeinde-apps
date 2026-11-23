@@ -17,6 +17,7 @@ import type { Zugang } from '@shared/website/zugang';
 import { ENTWUERFE, ONLINE, fakeFreigabeSpeicher } from '@shared/website/freigabe.testutil';
 import { baustein, einstellungen, menue, seiteMit } from '@shared/website/website.testdaten';
 import * as D from './daten';
+import * as M from './mailVersand';
 import { Freigaben } from './Freigaben';
 
 vi.mock('./daten', () => ({
@@ -27,9 +28,16 @@ vi.mock('./daten', () => ({
   entferneSeiteUndOnline: vi.fn(),
   speichereMenue: vi.fn(),
 }));
+vi.mock('./mailVersand', () => ({
+  mailAnLeitung: vi.fn(),
+  mailZurueck: vi.fn(),
+  mailFreigaben: vi.fn(),
+}));
 const d = vi.mocked(D);
+const m = vi.mocked(M);
 
 const KAT = { modul: 7, entwuerfe: ENTWUERFE, veroeffentlicht: ONLINE };
+const GRUPPE = 344;
 const HELENE = { person: 1, name: 'Helene Wiebe', fenster: 'f1' };
 const RITA = { person: 5, name: 'Rita Redakteurin', fenster: 'f2' };
 const FRUEH = new Date('2026-11-20T08:00:00Z');
@@ -94,6 +102,7 @@ async function zeigen(zugang: Zugang, ichId = zugang === 'redakteur' ? 5 : 1) {
       zugang={zugang}
       ich={{ ...HELENE, person: ichId }}
       gemeinde="ECG"
+      gruppe={GRUPPE}
       onGeaendert={onGeaendert}
     />,
   );
@@ -111,6 +120,8 @@ beforeEach(() => {
   d.entferneSeiteUndOnline.mockResolvedValue(undefined);
   d.speichereMenue.mockResolvedValue(undefined);
   d.gebeAllesFrei.mockResolvedValue({ geschafft: [], fehler: null, offen: 0 });
+  m.mailZurueck.mockResolvedValue({ art: 'aus' });
+  m.mailFreigaben.mockResolvedValue({ art: 'aus' });
 });
 
 describe('Liste der Leitung', () => {
@@ -159,6 +170,7 @@ describe('Liste der Leitung', () => {
         zugang="leitung"
         ich={HELENE}
         gemeinde="ECG"
+        gruppe={GRUPPE}
         onGeaendert={onGeaendert}
       />,
     );
@@ -406,5 +418,158 @@ describe('Redakteur: nur lesen', () => {
     await zeigen('redakteur', 77);
     expect(screen.queryByRole('complementary', { name: 'Freigaben' })).toBeNull();
     expect(screen.getByText(/Du hast gerade nichts eingereicht/)).toBeTruthy();
+  });
+});
+
+describe('Mails im Freigabe-Weg (W3b-3): Zurückgeben und Freigeben', () => {
+  const ORT_MAIL = { modul: 7, entwuerfe: ENTWUERFE, gruppe: GRUPPE };
+
+  async function zurueckgeben(anmerkung = 'Bitte die Uhrzeit prüfen.') {
+    await zeigen('leitung');
+    waehle('A');
+    fireEvent.click(knopf('Mit Anmerkung zurück'));
+    const fenster = await screen.findByRole('dialog');
+    fireEvent.change(within(fenster).getByRole('textbox'), { target: { value: anmerkung } });
+    fireEvent.click(within(fenster).getByRole('button', { name: 'Zurückgeben' }));
+  }
+
+  it('Zurückgeben: Mail an den EINREICHENDEN (Rita) mit der Anmerkung – erst nachdem der Status gesetzt ist', async () => {
+    m.mailZurueck.mockResolvedValue({ art: 'gesendet' });
+    await zurueckgeben();
+    expect(
+      await screen.findByText(/Wer eingereicht hatte, ist per Mail benachrichtigt\./),
+    ).toBeTruthy();
+    expect(m.mailZurueck).toHaveBeenCalledWith(
+      ORT_MAIL,
+      { seite: 'A', anmerkung: 'Bitte die Uhrzeit prüfen.', einreicher: 5 },
+      HELENE,
+    );
+    expect(d.setzeStatus.mock.invocationCallOrder[0]).toBeLessThan(
+      m.mailZurueck.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('scheitert das Zurückgeben, geht keine Mail', async () => {
+    d.setzeStatus.mockRejectedValue(new ApiError(503, 'weg'));
+    await zurueckgeben('x');
+    await waitFor(() => expect(d.setzeStatus).toHaveBeenCalled());
+    await screen.findAllByRole('alert');
+    expect(m.mailZurueck).not.toHaveBeenCalled();
+  });
+
+  it('Mail beim Zurückgeben nicht verschickt: Hinweis mit Grund, das Zurückgeben gilt (Fenster zu, neu gelesen)', async () => {
+    m.mailZurueck.mockResolvedValue({ art: 'nichtVerschickt', grund: 'kein Recht.' });
+    await zurueckgeben();
+    const hinweis = await screen.findByText(/Die Mail an den Einreichenden ging nicht raus/);
+    expect(hinweis.textContent).toContain('kein Recht.');
+    expect(hinweis.textContent).toContain('„A“ ist mit deiner Anmerkung zurückgegeben.');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(onGeaendert).toHaveBeenCalled();
+  });
+
+  it('Mail beim Zurückgeben unklar: der Hinweis rät ab, noch einmal zurückzugeben', async () => {
+    m.mailZurueck.mockResolvedValue({ art: 'unklar' });
+    await zurueckgeben();
+    expect((await screen.findByText(/Ob die Mail rausging, ist unklar/)).textContent).toContain(
+      'Bitte nicht noch einmal zurückgeben',
+    );
+  });
+
+  it('Schalter aus („aus“): kein Hinweis', async () => {
+    await zurueckgeben();
+    await screen.findByText('„A“ ist mit deiner Anmerkung zurückgegeben.');
+    expect(screen.queryByText(/Mail/)).toBeNull();
+  });
+
+  it('Freigeben einer eingereichten Seite: Mail an den Einreichenden – nach dem Freigeben', async () => {
+    m.mailFreigaben.mockResolvedValue({ art: 'gesendet' });
+    await zeigen('leitung');
+    waehle('A');
+    fireEvent.click(knopf('Freigeben'));
+    expect(
+      await screen.findByText(
+        /„A“ ist online\. Wer eingereicht hatte, ist per Mail benachrichtigt\./,
+      ),
+    ).toBeTruthy();
+    expect(m.mailFreigaben).toHaveBeenCalledWith(ORT_MAIL, [{ titel: 'A', einreicher: 5 }], HELENE);
+    expect(d.gebeFrei.mock.invocationCallOrder[0]).toBeLessThan(
+      m.mailFreigaben.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('scheitert das Freigeben, geht keine Mail', async () => {
+    d.gebeFrei.mockRejectedValueOnce(new ApiError(503, 'weg'));
+    await zeigen('leitung');
+    waehle('A');
+    fireEvent.click(knopf('Freigeben'));
+    await screen.findByText(/wurde nicht veröffentlicht/);
+    expect(m.mailFreigaben).not.toHaveBeenCalled();
+  });
+
+  it('„Veröffentlichen“ einer nicht eingereichten Seite (Änderung) und das Menü: keine Mail', async () => {
+    await zeigen('leitung');
+    waehle('E');
+    fireEvent.click(knopf('Veröffentlichen'));
+    await waitFor(() => expect(d.gebeFrei).toHaveBeenCalledTimes(1));
+    expect(m.mailFreigaben).not.toHaveBeenCalled();
+  });
+
+  async function alleFreigeben() {
+    await zeigen('leitung');
+    fireEvent.click(knopf('Alles freigeben'));
+    const dialog = await screen.findByRole('alertdialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Alles freigeben' }));
+    return dialog;
+  }
+
+  it('Alles freigeben: EIN Aufruf für alle eingereichten Seiten, die jetzt online sind (der Baustein bündelt je Person) – Menü und Einstellungen zählen nicht', async () => {
+    d.gebeAllesFrei.mockResolvedValue({
+      geschafft: [
+        { einheit: 'seite', id: 'a' },
+        { einheit: 'seite', id: 'b' },
+        { einheit: 'menue', id: MENUE_ID },
+        { einheit: 'einstellungen', id: EINSTELLUNGEN_ID },
+      ],
+      fehler: null,
+      offen: 0,
+    });
+    m.mailFreigaben.mockResolvedValue({ art: 'gesendet' });
+    await alleFreigeben();
+    expect(
+      await screen.findByText(/Wer eingereicht hatte, ist per Mail benachrichtigt\./),
+    ).toBeTruthy();
+    expect(m.mailFreigaben).toHaveBeenCalledTimes(1);
+    expect(m.mailFreigaben).toHaveBeenCalledWith(
+      ORT_MAIL,
+      [
+        { titel: 'A', einreicher: 5 },
+        { titel: 'B', einreicher: 5 },
+      ],
+      HELENE,
+    );
+  });
+
+  it('bricht „Alles freigeben“ ab, gehen Mails nur für das, was geschafft ist – der Hinweis steht bei der Abbruch-Meldung', async () => {
+    d.gebeAllesFrei.mockResolvedValue({
+      geschafft: [{ einheit: 'seite', id: 'a' }],
+      fehler: { ziel: { einheit: 'seite', id: 'b' }, fehler: new ApiError(503, 'weg') },
+      offen: 2,
+    });
+    m.mailFreigaben.mockResolvedValue({ art: 'gesendet' });
+    const dialog = await alleFreigeben();
+    expect(await within(dialog).findByText(/Bei „B“ ist es abgebrochen/)).toBeTruthy();
+    expect(m.mailFreigaben).toHaveBeenCalledWith(ORT_MAIL, [{ titel: 'A', einreicher: 5 }], HELENE);
+    expect(within(dialog).getByText(/per Mail benachrichtigt/)).toBeTruthy();
+  });
+
+  it('wurde nichts geschafft: keine Mail', async () => {
+    d.gebeAllesFrei.mockResolvedValue({
+      geschafft: [],
+      fehler: { ziel: { einheit: 'seite', id: 'a' }, fehler: new ApiError(503, 'weg') },
+      offen: 3,
+    });
+    await alleFreigeben();
+    await screen.findAllByText(/0 von 4 sind online/);
+    expect(m.mailFreigaben).not.toHaveBeenCalled();
   });
 });

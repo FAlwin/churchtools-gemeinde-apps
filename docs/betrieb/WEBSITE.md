@@ -1,7 +1,8 @@
 # Website – ChurchTools-Erweiterung
 
-> **Stand: W3c-3 (21.11.2026) – noch kein Release.** Gebaut: Grundgerüst (Einrichten, Seitenliste, Vorschau, Seiten anlegen und
-> löschen – W3a), **Aussehen** und **Einstellungen** (W3a-3), **Wer darf was** und **Freigabe** für Redakteure und Leitung (W3b-1/-2) und
+> **Stand: W3b-3 (23.11.2026) – noch kein Release.** Gebaut: Grundgerüst (Einrichten, Seitenliste, Vorschau, Seiten anlegen und
+> löschen – W3a), **Aussehen** und **Einstellungen** (W3a-3), **Wer darf was** und **Freigabe** für Redakteure und Leitung (W3b-1/-2),
+> **Mails im Freigabe-Weg** (W3b-3: Einreichen, Löschen anfragen, Zurückgeben, Freigeben) und
 > der neue **Designer in der Vorschau** (W3c): Text direkt tippen, Bausteine und Abschnitte ziehen, Spaltenbreite und Abstand ziehen,
 > Rückgängig/Wiederholen für die Seite – Abschnitte „Wer darf was“, „Freigabe“ und „Bearbeiten in der Vorschau“ unten. Noch **nicht**
 > da: siehe „Was noch fehlt“. Das Bild der ganzen Website: Bauplan „Neue Website“
@@ -111,7 +112,7 @@ den beiden Kategorien, die zu keiner Stufe gehören, zeigt „Weicht ab“ das; 
 **Der Weg einer Seite:** Ein Redakteur ändert sie in „Entwürfe“ und **reicht sie zur Prüfung ein**; die Leitung sieht sie im Reiter
 **Freigaben**, schaut sich die Vorschau an und **gibt frei** – oder **gibt sie mit einer Anmerkung zurück**. Freigeben heißt: der Entwurf
 wird **unverändert** nach „Veröffentlicht“ geschrieben. Die Leitung kann auch **direkt veröffentlichen** (Reiter „Seiten“, Menü „⋯“ →
-„Veröffentlichen“). Die Mail beim Einreichen und Zurückgeben folgt mit W3b-3, die Untergruppen mit W3b-4.
+„Veröffentlichen“). Die **Mails** in diesem Weg stehen im Abschnitt „Mails im Freigabe-Weg – Stand W3b-3“, die Untergruppen folgen mit W3b-4.
 
 **Der Status** (`shared/website/status.ts`): je Seite ein **eigener Wert** `website-status` in „Entwürfe“ – wie die Sperre, damit das
 Speichern der Seite und der Status nicht um denselben Wert streiten (der Kopf der Seite wird bei jedem Speichern neu geschrieben).
@@ -177,9 +178,63 @@ des Speichers); der nächste Versuch nutzt oder räumt die liegengebliebenen Tei
 **Der Rahmen** (`website/src/App.tsx`) liest „Entwürfe“ und „Veröffentlicht“ zusammen für Liste und Zähler (`ladeFreigaben`) – beim
 Öffnen, beim Wechsel des Reiters und nach jeder Handlung; die bisherigen Daten bleiben stehen, bis neue da sind.
 
-**Offen / bewusst noch nicht:** Mail beim Einreichen und Zurückgeben (W3b-3); Untergruppen und „Seite einem Bereich zuordnen“ (W3b-4: die Regel
+**Offen / bewusst noch nicht:** Untergruppen und „Seite einem Bereich zuordnen“ (W3b-4: die Regel
 `freigabeListe` und `darfFreigeben` sind die Stellen, an denen der Bereich ergänzt wird). Nimmt die Leitung eine Seite offline, bleibt der
 **veröffentlichte Menüpunkt** bestehen, bis das Menü unter „Freigaben“ veröffentlicht wird (der Entwurf des Menüs ist schon ohne die Seite).
+
+## Mails im Freigabe-Weg – Stand W3b-3
+
+**Wer bekommt wann eine Mail?** (Bauplan E-W20, Alwins Entscheidung 23.11.2026)
+
+| Was geschieht                                 | Mail an                                                                                |
+| --------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Redakteur **reicht eine Seite ein**           | die **Leitung** der Website-Gruppe                                                     |
+| Redakteur **fragt das Löschen an**            | die **Leitung**                                                                        |
+| Leitung **gibt mit Anmerkung zurück**         | die Person, die **eingereicht** hatte (steht im Status) – die Mail nennt die Anmerkung |
+| Leitung **gibt eine eingereichte Seite frei** | die Person, die **eingereicht** hatte („ist jetzt freigegeben“)                        |
+
+- **Bei „Alles freigeben“ eine Mail je Person**, die alle ihre jetzt freigegebenen Seiten nennt – nicht eine je Seite.
+- **Nie an sich selbst:** Wer handelt, wird aus den Empfängern genommen (die Leitung, die selbst eingereicht hat und selbst freigibt,
+  bekommt nichts). Bleibt niemand übrig, gibt es **keine Mail und keinen Fehler**. Freigeben ohne Einreichenden (eine Änderung, die nie
+  eingereicht war) und „Veröffentlichen“ von Menü und Einstellungen schicken nichts.
+- **Der Text ist kurz mit Link:** Betreff z. B. `Website: „Jugendabend“ wartet auf Freigabe` / `… zurückgegeben` / `… ist freigegeben` /
+  `… – Löschen angefragt`; im Text wer, welche Seite, beim Zurückgeben die Anmerkung, dazu ein Link auf die Erweiterung
+  (`erweiterungsLink`, `ui/erweiterung/kuerzel.ts`). **Der Reiter „Freigaben“ hat keine eigene Adresse** (Reiter sind ein Zustand der
+  Seite, nicht der Adresse) – der Link führt auf die Startseite der Erweiterung, der Text sagt, wo man den Reiter findet. Seitentitel,
+  Namen und Anmerkung gehen durch `htmlText` (`shared/website/html.ts`); der Betreff ist reiner, einzeiliger Text.
+- **Die Regeln stehen rein in `shared/website/mail.ts`** (Empfänger, Bündeln, Texte – getestet in `mail.test.ts`), das **Senden** in
+  `website/src/mailVersand.ts`, der **Versand selbst** im gemeinsamen Baustein `ui/ct/mailSenden.ts` (derselbe wie im Anmelde-Tool:
+  `sendEMailToPersonIds`, danach im ChurchTools-Protokoll nachgelesen).
+
+**Wer ist „Leitung“?** Die Stufe je Rolle steht nur in den ChurchTools-Rechten, die nur ein Admin lesen kann – ein Redakteur, der
+einreicht, könnte also nicht wissen, wen er benachrichtigt. Darum gibt es den **eigenen Wert `website-leitung`** in „Entwürfe“
+(`shared/website/mailWerte.ts`): die Rollen-IDs mit Stufe Leitung. **Einziger Schreiber ist der Admin, wo er die Stufen festlegt**
+(Einrichten und „Wer darf was“ – beide über `rechteSetzen` in `website/src/rechte.ts`), **nach** dem erfolgreichen Setzen und Nachlesen
+der Rechte. Fehlt der Wert (bestehende Installationen), gilt dieselbe **Vorbelegung** wie in „Wer darf was“ (`vorschlag` in
+`shared/website/rechte.ts`: Rollen mit Leiter-Kennzeichen). Ein leerer Wert ist eine echte Aussage („niemand“) und wird nicht durch die
+Vorbelegung ersetzt. Empfänger sind die aktiven Mitglieder der Website-Gruppe mit einer dieser Rollen (Mitglieder samt Rollen der
+eigenen Gruppe sind auch für Redakteure lesbar – gemessen W3b-0). Gelingt das Setzen der Rechte, aber nicht das Festhalten, sagt die
+Meldung das („Die Rechte sind gesetzt. …“); ein zweites „Rechte setzen“ holt es nach. **W3b-4 (Untergruppen):** Dann kommt die Leitung des
+Bereichs der Seite dazu – an der Stelle `leitungEmpfaenger`.
+
+**Der Schalter** „Mails im Freigabe-Weg“ steht im Fenster **Einstellungen** (nur Leitung und Admin, E-W22), als Haken, und **wirkt
+sofort**: eigener Wert `website-mail` in „Entwürfe“, **nicht** in der Einheit „Einstellungen“ (die geht erst über „Freigeben“ online).
+**Kein Wert = an.** Er hat einen eigenen Speicher-Weg und eine eigene Meldung: Ein Fehler beim Schalter meldet die Einstellungen nie als
+gescheitert und umgekehrt. Ist er aus, gibt es gar keinen Mail-Aufruf und keinen Hinweis.
+
+**Ablauf und Hinweis:** Die Mail geht **erst, nachdem der Status geschrieben bzw. die Seite freigegeben und nachgelesen ist**. Scheitert
+die Handlung, geht keine Mail. **Scheitert die Mail, gilt die Handlung trotzdem** – ein kurzer Hinweis unter der Werkzeugleiste bzw. in
+der Meldung des Reiters „Freigaben“ nennt drei Ausgänge:
+
+- **gesendet** – „Die Leitung ist per Mail benachrichtigt.“ (bzw. „Wer eingereicht hatte, …“);
+- **nicht verschickt** (abgelehnt, kein Recht, gebremst, oder schon das Vorbereiten ist gescheitert) – mit Grund, und dass die Handlung
+  trotzdem gilt;
+- **unklar** (ChurchTools antwortet nicht, im Protokoll steht nichts) – „Ob die Mail … rausging, ist unklar. Bitte nicht noch einmal
+  einreichen – die Leitung sieht die Seite auch im Reiter „Freigaben“.“ **Nichts wird automatisch wiederholt** (doppelte Mails).
+
+Weiß die Erweiterung die Adresse der Empfänger nicht (Redakteure sehen die der Leitung evtl. nicht), kann das Protokoll nicht nach der
+Adresse durchsucht werden; dann bleibt „gesendet“ ohne Beleg (und bei fehlender Antwort „unklar“). **Das Mitlesen im Protokoll braucht
+ein Recht, das nicht jeder hat** – ohne es gilt ebenfalls „gesendet, nicht belegt“.
 
 ## Wie die Daten im Speicher liegen
 
@@ -230,6 +285,11 @@ dieselbe Seite gleichzeitig, gewinnt die spätere. Deshalb gilt je Seite: **eine
 - Nicht gesperrt ist das **Menü**: Die Reihenfolge ändert man in „Seite einstellen“, gespeichert wird es zusammen mit der Seite;
   zwei Personen, die zugleich das Menü ändern (an verschiedenen Seiten), könnten sich überschreiben – die Menü-Sperre kommt,
   wenn das in der Praxis vorkommt.
+
+**Zwei weitere eigene Werte (W3b-3):** `website-leitung` (welche Rollen die Leitung sind) und `website-mail` (der Schalter für die Mails) –
+je ein Wert in „Entwürfe“, je ein Schreiber, vorher frisch lesen, nachher nachlesen (`shared/website/mailWerte.ts`). Beschädigt gilt
+wie fehlend und wird – wie ein beschädigter Status – gemeldet, nie gelöscht. Das Lesen der Website überspringt beide (wie Status und
+Sperre); siehe „Mails im Freigabe-Weg“.
 
 **Der eine Anschluss:** Alles, was die Erweiterung vom Speicher von ChurchTools braucht, steht in
 `shared/website/speicher.ts` (und dort über `shared/ct/modulDaten.ts`). Ändert ChurchTools die Ablage (Dev-Plattform, Bauplan
@@ -502,6 +562,8 @@ Regel wie die Gesamtprüfung `pruefeWebsite`). Kontaktformular-Adresse und `noin
   Reiterwechsel versucht es wieder. Test: `website/src/EinstellungenInSeiten.test.tsx`. Weitere Kopien der Einstellungen gibt es
   nicht (`Seitenarbeit`, `Vorschau`, `AbschnittGestalten` bekommen sie als Eigenschaft von `Seiten`).
 - **Fremd gesperrt:** Das Fenster ist nur zum Lesen (Felder und „Speichern“ aus, Hinweis mit Namen).
+- **„Mails im Freigabe-Weg“ (W3b-3)** ist ein Haken unter den Einstellungen und **wirkt sofort** – unabhängig von „Speichern“ und von der
+  Sperre der Einstellungen (eigener Wert `website-mail`, siehe „Mails im Freigabe-Weg“).
 - **„Wer darf was“ (W3b-1)** steht unter den Einstellungen im selben Fenster, nur für Admins mit „Personen administrieren“; es hat
   einen eigenen Knopf („Rechte setzen“, wirkt sofort) und ist von der Sperre der Einstellungen unabhängig (siehe „Wer darf was – Stand
   W3b-1“). Leitung sieht das Fenster ohne diesen Bereich; Redakteure sehen es gar nicht.
@@ -519,7 +581,7 @@ mit Begründung bewusst keine).
 
 ## Was noch fehlt
 
-W3b-3 Mail · W3b-4 Untergruppen · W4 Bilder · W5 Bau-Dienst und Veröffentlichen · Release
+W3b-4 Untergruppen · W4 Bilder · W5 Bau-Dienst und Veröffentlichen · Release
 (`website-v…`; Tag erst nach grünem Merge, siehe `.github/workflows/website-release.yml`).
 
 ## Release

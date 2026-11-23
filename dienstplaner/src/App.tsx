@@ -48,6 +48,7 @@ import type { TerminZeile } from '@shared/dienstplan/termine';
 import { leseAuswahl, merkeAuswahl } from './auswahl';
 import { gemeindeZeitzone, heuteImKalender } from '@shared/ct/zeit';
 import { entwurfAnschluss } from './ladeEntwuerfe';
+import { EinstellungenFenster } from './EinstellungenFenster';
 
 /** Solange keine Termine da sind – ein fester Wert, damit `useVertretung` nicht bei jedem Zeichnen neu rechnet. */
 const KEINE_ZEILEN: TerminZeile[] = [];
@@ -60,6 +61,8 @@ const KEINE_ZEILEN: TerminZeile[] = [];
 export function App() {
   const [zustand, setZustand] = useState<SeitenZustand>({ art: 'laedt' });
   const [start, setStart] = useState<Start | null>(null);
+  // „Einstellungen“ (L4-2, R13): der letzte Reiter öffnet ein Fenster.
+  const [einstellungenOffen, setEinstellungenOffen] = useState(false);
   // Der Platz der Lupe im Seitenkopf (R7) – Planen hängt „Person hervorheben“ dort ein.
   const [lupeOrt, setLupeOrt] = useState<HTMLElement | null>(null);
   const [hash, setHash] = useState(() => window.location.hash);
@@ -235,6 +238,12 @@ export function App() {
           zustand={zustand}
           bereiche={bereiche}
           handy={handy}
+          // „Einstellungen“ ist der letzte Reiter (R13) – alle sehen ihn, ändern dürfen Planer (das Fenster prüft es).
+          einstellungen={
+            start
+              ? { onOeffnen: () => setEinstellungenOffen(true), offen: einstellungenOffen }
+              : undefined
+          }
           // Die Lupe „Person hervorheben“ (R7/E5) sitzt rechts neben den Reitern – nur in Planen. Planen hängt sie in diesen
           // Platz (`createPortal`); `display: contents`, damit der Platz selbst keine Fläche einnimmt.
           lupe={
@@ -358,6 +367,13 @@ export function App() {
               heute={heuteImKalender()}
               dienstgruppen={eigeneGruppen}
               eigeneDienste={meineDienste}
+            />
+          )}
+          {start && einstellungenOffen && (
+            <EinstellungenFenster
+              darfAendern={darfPlanen}
+              ich={{ personId: start.ichId, name: start.vorname }}
+              onSchliessen={() => setEinstellungenOffen(false)}
             />
           )}
         </ErweiterungsSeite>

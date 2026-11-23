@@ -1,11 +1,33 @@
 // @vitest-environment jsdom
+import type { ComponentProps } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { ablaufZeileAus } from '@shared/ct/ablaufZeile';
-import { liveStandAus, type LiveGrund, type LiveStand } from '@shared/ct/liveAgenda';
+import {
+  liveStandAus,
+  type Betriebsart,
+  type LiveGrund,
+  type LiveStand,
+} from '@shared/ct/liveAgenda';
 import type { CtAgendaItem } from '@shared/ct/typen';
-import { LiveAnsicht } from './LiveAnsicht';
+import type { EinstellungenStand } from '@shared/dienstplan/liveEinstellungen';
+import { LiveAnsicht as LiveAnsichtEcht } from './LiveAnsicht';
 import { TAKT_MS } from './useLive';
+import { BETRIEBSART_NOCHMAL_MS, BETRIEBSART_TAKT_MS } from './useBetriebsart';
+
+/** Die Betriebsart, wie `ladeEinstellungen` sie liefert – ohne ChurchTools. `fehler`: das Lesen ist gescheitert. */
+const betriebsartMit =
+  (betriebsart: Betriebsart, fehler: EinstellungenStand['fehler'] = null) =>
+  (): Promise<EinstellungenStand> =>
+    Promise.resolve({ betriebsart, gespeichert: null, unlesbar: false, fehler });
+
+/**
+ * Die Ansicht mit der Betriebsart „immer nach der Uhr“ als Vorgabe – so verhielt sie sich vor L4-2, und die alten Tests
+ * unten prüfen genau das. Die neuen Betriebsarten haben einen eigenen Block (`betriebsartLesen` überschreibt die Vorgabe).
+ */
+function LiveAnsicht(p: ComponentProps<typeof LiveAnsichtEcht>) {
+  return <LiveAnsichtEcht betriebsartLesen={betriebsartMit('immer-uhr')} {...p} />;
+}
 
 /**
  * **„Live“ zum Folgen** (E6b-2 L2, Entwurf `e6b-2-live.html` Variante A). Der Stand kommt aus `liveStandAus` (Antworten
@@ -156,7 +178,10 @@ describe('LiveAnsicht', () => {
     expect(within(jetzt).getByText('mit Lied – Wie groß')).toBeTruthy();
     expect(within(screen.getByRole('region', { name: 'Dann' })).getByText('Ansagen')).toBeTruthy();
     expect(restzeit()).toBe('29:00noch, von 30 Min');
-    expect(screen.getByText('2 Min. später')).toBeTruthy();
+    // Zeitkonto statt „Gesamt“: Predigt Plan 10:05, begonnen 10:07 → 2 Min. Rückstand (A5: Minus rot).
+    expect(screen.getByLabelText('Zeitkonto').textContent).toBe('Zeitkonto−2:00Rückstand');
+    expect(screen.getByLabelText('Zeitkonto').className).toMatch(/minus/);
+    expect(screen.queryByText(/Gesamt|später|früher/)).toBeNull();
     const liste = screen.getByRole('list', { name: 'Ablauf' });
     const punkte = within(liste).getAllByRole('listitem');
     expect(punkte.map((p) => p.textContent)).toEqual([
@@ -175,7 +200,7 @@ describe('LiveAnsicht', () => {
     expect(screen.getByText('Live').getAttribute('data-laeuft')).toBe('true');
   });
 
-  it('nicht gestartet: „Jetzt“ nach der Uhr, mit Hinweis – kein Punkt „läuft“, keine Abweichung', async () => {
+  it('nicht gestartet: „Jetzt“ nach der Uhr, mit Hinweis – kein Punkt „läuft“, kein Zeitkonto', async () => {
     vi.setSystemTime(ms('2027-03-07T09:10:00Z'));
     zeige([{ stelle: null, seit: null }]);
     await fertig();
@@ -183,6 +208,7 @@ describe('LiveAnsicht', () => {
     expect(within(jetztBereich()).getByRole('heading').textContent).toBe('Predigt');
     expect(screen.getByText('Noch nicht gestartet – „Jetzt“ folgt der Uhr.')).toBeTruthy();
     expect(restzeit()).toBe('25:00noch, von 30 Min');
+    expect(screen.queryByLabelText('Zeitkonto')).toBeNull();
     expect(screen.queryByText(/Gesamt/)).toBeNull();
     expect(screen.getByText('Live').getAttribute('data-laeuft')).toBe('false');
   });
@@ -209,14 +235,14 @@ describe('LiveAnsicht', () => {
     expect(screen.getByLabelText('Restzeit').querySelectorAll('circle')).toHaveLength(1);
   });
 
-  it('Ende: „Ablauf vorbei“, fertig um, Abweichung; alles erledigt', async () => {
+  it('Ende: „Ablauf vorbei“, fertig um, Endstand des Zeitkontos; alles erledigt', async () => {
     vi.setSystemTime(ms('2027-03-07T09:50:00Z'));
     zeige([{ stelle: ENDE, seit: '2027-03-07T09:49:00Z' }]);
     await fertig();
     expect(within(jetztBereich()).getByRole('heading').textContent).toBe('Ablauf vorbei');
-    expect(within(jetztBereich()).getByText(/Fertig um/).textContent).toBe(
-      'Fertig um 10:49 · 4 Min. später',
-    );
+    expect(within(jetztBereich()).getByText(/Fertig um/).textContent).toBe('Fertig um 10:49');
+    // Plan-Ende 09:45 (UTC), letzter Klick 09:49 → 4 Min. Rückstand als Endstand.
+    expect(screen.getByLabelText('Zeitkonto').textContent).toBe('Zeitkonto−4:00Rückstand');
     expect(screen.queryByRole('region', { name: 'Dann' })).toBeNull();
     const punkte = within(screen.getByRole('list', { name: 'Ablauf' })).getAllByRole('listitem');
     expect(punkte.filter((p) => /erledigt/.test(p.className))).toHaveLength(5);
@@ -736,7 +762,7 @@ describe('LiveAnsicht – Anzeige (L4-1)', () => {
     expect(weiter.textContent).toBe('WEITERLied');
     expect(weiter.className).toMatch(/haupt/);
     expect(zurueck.className).not.toMatch(/haupt/);
-    // Nicht mehr in der rechten Spalte (dort bleiben Kreis und „Gesamt“).
+    // Nicht mehr in der rechten Spalte (dort bleiben Kreis und Zeitkonto).
     expect(screen.getByLabelText('Restzeit').parentElement?.contains(leiste)).toBe(false);
     // Die Leiste steht hinter dem Rumpf, ganz unten.
     expect(leiste.previousElementSibling?.contains(liste())).toBe(true);
@@ -809,3 +835,287 @@ describe('LiveAnsicht – Anzeige (L4-1)', () => {
 function knopfText(name: string) {
   return screen.getByRole('button', { name }).textContent;
 }
+
+/**
+ * **Betriebsart und Zeitkonto** (L4-2, Alwin 23.11.2026): Ein Ablauf mit Vorlauf – Soundcheck, Countdown, **Beginn 10:00** –,
+ * dann Begrüßung und Predigt. Die Zeiten stehen in UTC (09:00 UTC = 10:00 Uhr in Berlin). Gerechnet wird in `liveLage`
+ * (`shared/ct/liveAgenda.test.ts`); hier geht es darum, was die Ansicht daraus zeigt und welche Knöpfe sie anbietet.
+ */
+describe('LiveAnsicht – Betriebsart und Zeitkonto (L4-2)', () => {
+  const VOR: CtAgendaItem[] = [
+    {
+      id: 1,
+      title: 'Soundcheck',
+      type: 'text',
+      duration: 1500,
+      isBeforeEvent: true,
+      startTimes: { '216': '2027-03-07T08:30:00Z' },
+    },
+    {
+      id: 2,
+      title: 'Countdown',
+      type: 'text',
+      duration: 300,
+      isBeforeEvent: true,
+      startTimes: { '216': '2027-03-07T08:55:00Z' },
+    },
+    {
+      id: 3,
+      title: 'Begrüßung',
+      type: 'text',
+      duration: 300,
+      isBeforeEvent: false,
+      startTimes: { '216': '2027-03-07T09:00:00Z' },
+    },
+    {
+      id: 4,
+      title: 'Predigt',
+      type: 'text',
+      duration: 1800,
+      isBeforeEvent: false,
+      startTimes: { '216': '2027-03-07T09:05:00Z' },
+    },
+  ];
+  const zeigeVor = (
+    start: { stelle: number | null; seit: string | null; zusatz?: number },
+    art: Betriebsart | (() => Promise<EinstellungenStand>),
+    steuern = true,
+  ) =>
+    zeigeSteuern(start, {
+      items: VOR,
+      steuern,
+      betriebsartLesen: typeof art === 'string' ? betriebsartMit(art) : art,
+    });
+  const knopf = (name: string) => screen.getByRole('button', { name });
+  const jetztUm = (iso: string) => vi.setSystemTime(ms(iso));
+  const konto = () => screen.getByLabelText('Zeitkonto');
+
+  /** Wie `zeigeSteuern` weiter oben – hier nur die Hilfe, die der Block braucht. */
+  function zeigeSteuern(
+    start: { stelle: number | null; seit: string | null; zusatz?: number },
+    o: {
+      steuern?: boolean;
+      items: CtAgendaItem[];
+      betriebsartLesen: () => Promise<EinstellungenStand>;
+    },
+  ) {
+    let aktuell = { ...start };
+    const lesen = vi.fn(() =>
+      Promise.resolve({ ok: true, stand: stand(aktuell.stelle, aktuell.seit, aktuell) } as const),
+    );
+    const schreiben = vi.fn(
+      (_t: number, _a: number, ziel: { stelle: number; zusatzSek: number }) => {
+        const seit =
+          ziel.stelle === aktuell.stelle ? aktuell.seit : new Date(Date.now()).toISOString();
+        aktuell = { stelle: ziel.stelle, seit, zusatz: ziel.zusatzSek };
+        return Promise.resolve({
+          ok: true,
+          stand: stand(aktuell.stelle, aktuell.seit, aktuell),
+        } as const);
+      },
+    );
+    render(
+      <LiveAnsicht
+        titel="Gottesdienst"
+        tag="2027-03-07"
+        beginn="10:00"
+        terminId={T}
+        agendaId={126}
+        items={o.items}
+        zeilen={o.items.map((i) => ablaufZeileAus(i, T, 'Europe/Berlin'))}
+        infoGruppen={[]}
+        zeitzone="Europe/Berlin"
+        onSchliessen={() => {}}
+        steuern={o.steuern}
+        lesen={lesen}
+        schreiben={schreiben}
+        ablaufLesen={() => Promise.resolve({ id: 126, items: o.items })}
+        betriebsartLesen={o.betriebsartLesen}
+      />,
+    );
+    return { lesen, schreiben };
+  }
+
+  describe('bis Beginn nach der Uhr, ab Beginn klicken (Standard)', () => {
+    it('vor Beginn: läuft nach der Uhr, Konto „±0:00 im Plan“, ‹ Zurück / Weiter › vom gezeigten Punkt', async () => {
+      jetztUm('2027-03-07T08:57:00Z');
+      zeigeVor({ stelle: null, seit: null }, 'bis-beginn');
+      await fertig();
+      expect(within(jetztBereich()).getByText('Jetzt · nach Plan')).toBeTruthy();
+      expect(within(jetztBereich()).getByRole('heading').textContent).toBe('Countdown');
+      expect(
+        screen.getByText(
+          'Bis Beginn folgt „Jetzt“ der Uhr. Ab 10:00 geht es weiter, wenn jemand „Weiter“ drückt.',
+        ),
+      ).toBeTruthy();
+      expect(restzeit()).toBe('3:00noch, von 5 Min');
+      expect(konto().textContent).toBe('Zeitkonto±0:00im Plan');
+      // Die Leiste: Zurück zum Soundcheck, Weiter zur Begrüßung – kein „Starten“, keine ±1 Min (läuft noch nichts).
+      expect(
+        within(screen.getByRole('group', { name: 'Live-Agenda steuern' }))
+          .getAllByRole('button')
+          .map((b) => b.getAttribute('aria-label')),
+      ).toEqual(['Zum vorigen Punkt', 'Zum nächsten Punkt']);
+      expect(knopf('Zum nächsten Punkt').textContent).toContain('Begrüßung');
+      expect(knopf('Zum vorigen Punkt').textContent).toContain('Soundcheck');
+    });
+
+    it('ab Beginn ohne Klick: bleibt am Countdown stehen, „Wartet auf „Weiter““, rot ins Minus, Konto läuft mit', async () => {
+      jetztUm('2027-03-07T09:02:14Z');
+      zeigeVor({ stelle: null, seit: null }, 'bis-beginn');
+      await fertig();
+      expect(within(jetztBereich()).getByText('Wartet auf „Weiter“')).toBeTruthy();
+      expect(within(jetztBereich()).getByRole('heading').textContent).toBe('Countdown');
+      expect(
+        screen.getByText('Beginn war um 10:00. Drück „Weiter“, wenn es losgeht.'),
+      ).toBeTruthy();
+      expect(restzeit()).toBe('−2:14über der Zeit');
+      expect(screen.getByLabelText('Restzeit').className).toMatch(/ueber/);
+      expect(konto().textContent).toBe('Zeitkonto−2:14Rückstand');
+      expect(konto().className).toMatch(/minus/);
+      // Es läuft sekündlich weiter ins Minus.
+      await spulen(1000);
+      expect(restzeit()).toBe('−2:15über der Zeit');
+      expect(konto().textContent).toBe('Zeitkonto−2:15Rückstand');
+    });
+
+    it('„Weiter“ startet den Punkt NACH dem gezeigten (die Begrüßung), nicht den ersten', async () => {
+      jetztUm('2027-03-07T09:02:14Z');
+      const { schreiben } = zeigeVor({ stelle: null, seit: null }, 'bis-beginn');
+      await fertig();
+      expect(knopf('Zum nächsten Punkt').textContent).toContain('Begrüßung');
+      fireEvent.click(knopf('Zum nächsten Punkt'));
+      await fertig();
+      expect(schreiben).toHaveBeenCalledWith(T, 126, { stelle: 3, zusatzSek: 0 });
+      // Danach läuft die Live-Agenda: die Begrüßung ist dran, volle Dauer ab dem Klick, Konto: 2:14 Rückstand.
+      expect(within(jetztBereich()).getByRole('heading').textContent).toBe('Begrüßung');
+      expect(restzeit()).toBe('5:00noch, von 5 Min');
+      expect(konto().textContent).toBe('Zeitkonto−2:14Rückstand');
+    });
+
+    it('ohne Steuer-Recht: derselbe Wartezustand, aber ohne Leiste und mit anderem Satz', async () => {
+      jetztUm('2027-03-07T09:02:14Z');
+      zeigeVor({ stelle: null, seit: null }, 'bis-beginn', false);
+      await fertig();
+      expect(screen.queryByRole('group', { name: 'Live-Agenda steuern' })).toBeNull();
+      expect(
+        screen.getByText('Beginn war um 10:00. Es geht weiter, sobald jemand „Weiter“ drückt.'),
+      ).toBeTruthy();
+      expect(restzeit()).toBe('−2:14über der Zeit');
+    });
+  });
+
+  describe('immer nach der Uhr', () => {
+    it('läuft nach Beginn weiter durch den Ablauf, „Starten“ allein, kein Zeitkonto', async () => {
+      jetztUm('2027-03-07T09:02:14Z');
+      zeigeVor({ stelle: null, seit: null }, 'immer-uhr');
+      await fertig();
+      expect(within(jetztBereich()).getByText('Jetzt · nach Plan')).toBeTruthy();
+      expect(within(jetztBereich()).getByRole('heading').textContent).toBe('Begrüßung');
+      expect(screen.queryByLabelText('Zeitkonto')).toBeNull();
+      expect(
+        within(screen.getByRole('group', { name: 'Live-Agenda steuern' }))
+          .getAllByRole('button')
+          .map((b) => b.getAttribute('aria-label')),
+      ).toEqual(['Live-Agenda starten']);
+    });
+  });
+
+  describe('von Anfang an klicken', () => {
+    it('nie automatisch: „Wartet auf „Starten““, nichts läuft, „Starten“ beginnt vorn', async () => {
+      jetztUm('2027-03-07T09:02:14Z');
+      const { schreiben } = zeigeVor({ stelle: null, seit: null }, 'klicken');
+      await fertig();
+      expect(within(jetztBereich()).getByText('Wartet auf „Starten“')).toBeTruthy();
+      expect(within(jetztBereich()).getByRole('heading').textContent).toBe('Noch nicht begonnen');
+      expect(
+        screen.getByText('Nichts läuft von selbst – drück „Starten“, wenn es losgeht.'),
+      ).toBeTruthy();
+      expect(screen.queryByLabelText('Restzeit')).toBeNull();
+      expect(screen.queryByLabelText('Zeitkonto')).toBeNull();
+      fireEvent.click(knopf('Live-Agenda starten'));
+      await fertig();
+      expect(schreiben).toHaveBeenCalledWith(T, 126, { stelle: 1, zusatzSek: 0 });
+    });
+  });
+
+  describe('läuft ChurchTools schon: Betriebsart ohne Wirkung, Zeitkonto laufend', () => {
+    it('ein überzogener Punkt verbraucht das Konto sofort – jede Sekunde ein Stück', async () => {
+      // Begrüßung (Plan 10:00–10:05) pünktlich begonnen; Ende der Zeit um 09:05:00 UTC.
+      jetztUm('2027-03-07T09:04:59Z');
+      zeigeVor({ stelle: 3, seit: '2027-03-07T09:00:00Z' }, 'klicken');
+      await fertig();
+      expect(konto().textContent).toBe('Zeitkonto±0:00im Plan');
+      await spulen(1000);
+      expect(konto().textContent).toBe('Zeitkonto±0:00im Plan');
+      await spulen(1000);
+      expect(konto().textContent).toBe('Zeitkonto−0:01Rückstand');
+      await spulen(9000);
+      expect(konto().textContent).toBe('Zeitkonto−0:10Rückstand');
+    });
+
+    it('zu früh weitergeklickt: „+0:20“ grün = gespart', async () => {
+      jetztUm('2027-03-07T09:00:30Z');
+      zeigeVor({ stelle: 3, seit: '2027-03-07T08:59:40Z' }, 'bis-beginn');
+      await fertig();
+      expect(konto().textContent).toBe('Zeitkonto+0:20gespart');
+      expect(konto().className).toMatch(/plus/);
+    });
+
+    it('„−1 / +1 Min“ ändert den Kreis, nicht das Zeitkonto (A13)', async () => {
+      jetztUm('2027-03-07T09:06:10Z');
+      zeigeVor({ stelle: 3, seit: '2027-03-07T09:00:00Z', zusatz: 60 }, 'bis-beginn');
+      await fertig();
+      // Begrüßung 5 Min + 1 Min Zusatz: Kreis „noch −0:10“ wäre bei 6:10 vergangen → −0:10; Konto gegen den Plan: −1:10.
+      expect(restzeit()).toBe('−0:10über der Zeit');
+      expect(konto().textContent).toBe('Zeitkonto−1:10Rückstand');
+    });
+  });
+
+  describe('Betriebsart lesen', () => {
+    it('Lesefehler beim Öffnen: Standard (bis Beginn) – und beim nächsten Versuch die gespeicherte Art', async () => {
+      jetztUm('2027-03-07T09:02:14Z');
+      const lesen = vi
+        .fn<() => Promise<EinstellungenStand>>()
+        .mockImplementationOnce(betriebsartMit('immer-uhr', 'voruebergehend'))
+        .mockImplementation(betriebsartMit('immer-uhr'));
+      zeigeVor({ stelle: null, seit: null }, lesen);
+      await fertig();
+      // Standard gilt: wartet am Countdown.
+      expect(within(jetztBereich()).getByText('Wartet auf „Weiter“')).toBeTruthy();
+      await spulen(BETRIEBSART_NOCHMAL_MS);
+      expect(lesen).toHaveBeenCalledTimes(2);
+      expect(within(jetztBereich()).getByText('Jetzt · nach Plan')).toBeTruthy();
+      expect(within(jetztBereich()).getByRole('heading').textContent).toBe('Begrüßung');
+    });
+
+    it('ein späterer Lesefehler ändert die gelesene Betriebsart NICHT (vorübergehend ist nicht ungültig)', async () => {
+      jetztUm('2027-03-07T09:02:14Z');
+      const lesen = vi
+        .fn<() => Promise<EinstellungenStand>>()
+        .mockImplementationOnce(betriebsartMit('immer-uhr'))
+        .mockImplementation(betriebsartMit('bis-beginn', 'voruebergehend'));
+      zeigeVor({ stelle: null, seit: null }, lesen);
+      await fertig();
+      expect(within(jetztBereich()).getByRole('heading').textContent).toBe('Begrüßung');
+      await spulen(BETRIEBSART_TAKT_MS);
+      expect(lesen).toHaveBeenCalledTimes(2);
+      // Der Fehlerstand trägt nur den Standard – er darf die gelesene Art nicht überschreiben.
+      expect(within(jetztBereich()).getByRole('heading').textContent).toBe('Begrüßung');
+      expect(within(jetztBereich()).getByText('Jetzt · nach Plan')).toBeTruthy();
+    });
+
+    it('ändert ein Planer die Betriebsart, folgt die offene Ansicht beim nächsten Lesen', async () => {
+      jetztUm('2027-03-07T09:02:14Z');
+      const lesen = vi
+        .fn<() => Promise<EinstellungenStand>>()
+        .mockImplementationOnce(betriebsartMit('immer-uhr'))
+        .mockImplementation(betriebsartMit('klicken'));
+      zeigeVor({ stelle: null, seit: null }, lesen);
+      await fertig();
+      expect(within(jetztBereich()).getByText('Jetzt · nach Plan')).toBeTruthy();
+      await spulen(BETRIEBSART_TAKT_MS);
+      expect(within(jetztBereich()).getByText('Wartet auf „Starten“')).toBeTruthy();
+    });
+  });
+});

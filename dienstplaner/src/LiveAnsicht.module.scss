@@ -188,14 +188,6 @@
   }
 }
 
-.spaeter {
-  color: var(--red);
-}
-
-.frueher {
-  color: var(--blue-ink, var(--blue));
-}
-
 .liste {
   flex: 1;
   min-height: 0;
@@ -370,7 +362,7 @@
   }
 }
 
-.gesamt {
+.konto {
   width: 220px;
   padding: 8px;
   border: 1px solid var(--border);
@@ -382,16 +374,26 @@
 
   b {
     display: block;
-    color: var(--text);
-    font-size: 17px;
+    color: var(--text2);
+    font-size: 26px;
+    line-height: 1.2;
   }
 
-  .spaeter {
+  span {
+    font-size: 13px;
+  }
+}
+
+// Zeitkonto im Plus (gespart): grün – im Minus (Rückstand): rot, wie die Restzeit über der Zeit.
+.plus {
+  b {
+    color: var(--green);
+  }
+}
+
+.minus {
+  b {
     color: var(--red);
-  }
-
-  .frueher {
-    color: var(--blue-ink, var(--blue));
   }
 }
 
@@ -437,7 +439,7 @@
     display: none;
   }
 
-  .gesamt {
+  .konto {
     width: auto;
   }
 

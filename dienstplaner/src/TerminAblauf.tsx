@@ -23,7 +23,7 @@ import type { AblaufTermin } from '@shared/ct/ablaufRecht';
 import { ablaufAnlegen } from '@shared/ct/ablaufAnlegen';
 import { ablaufBestandLesen, ablaufNeuAufsetzen, type AblaufStand } from '@shared/ct/ablaufNeu';
 import { vorlagenFuer } from '@shared/ct/ablaufVorschlaege';
-import { liveInfoGruppen, liveListe } from '@shared/ct/liveAgenda';
+import { liveInfoGruppen } from '@shared/ct/liveAgenda';
 import { ortszeitAus } from '@shared/ct/zeit';
 import type { CtAgenda, CtSong } from '@shared/ct/typen';
 import type { AblaufQuelle, AblaufVorlage, InfoGruppe } from '@shared/types/index';
@@ -34,8 +34,9 @@ import { ablaufBearbeitbar, vorlageBearbeitbar, type Start } from './start';
 import { LiedAnsicht } from './LiedAnsicht';
 import { AblaufAnzeige } from './AblaufAnzeige';
 import { LiveAnsicht } from './LiveAnsicht';
-import { ladeLive } from './ladeLive';
+import { ladeLiveLaeuft } from './ladeLive';
 import { LiedWahl } from './LiedWahl';
+import { LivePunkt } from './LivePunkt';
 import styles from './TerminAblauf.module.scss';
 
 const NEU_LADEN_FEHLT =
@@ -126,6 +127,7 @@ export function TerminAblauf({
   mitNeuAufsetzen = true,
   schnittText,
   onLiveGeschlossen,
+  liveStart = false,
   children,
 }: {
   start: Start;
@@ -151,6 +153,8 @@ export function TerminAblauf({
   schnittText?: (zeile: AblaufZeile) => string | null;
   /** „Live“ wurde geschlossen (L4-4): Der Verlauf hat sich vermutlich geändert, der Rückblick liest neu. */
   onLiveGeschlossen?: () => void;
+  /** „Live“ gleich offen (Adresse `#/termin/ID/live`, Knopf „Live“ auf der Startseite). Gilt nur beim ersten Zeigen. */
+  liveStart?: boolean;
   children: (teile: AblaufTeile) => ReactNode;
 }) {
   const terminId = termin.id;
@@ -161,7 +165,7 @@ export function TerminAblauf({
   // „Ablauf zeigen“ (E6b-1): die Anzeige im Vollbild.
   const [zeigen, setZeigen] = useState(false);
   // „Live“ (E6b-2 L2): offen? Und läuft der Termin heute gerade in ChurchTools (roter Punkt am Knopf)?
-  const [live, setLive] = useState(false);
+  const [live, setLive] = useState(liveStart);
   const agendaId = ablauf?.id;
   const items = ablauf?.items;
   // „Ablauf anlegen“ (E6-5a) und „Neu aufsetzen“ (E6-5b, `neu`): Fenster und was es braucht – erst beim Öffnen geladen.
@@ -513,11 +517,7 @@ export function TerminAblauf({
   const liveStand = useLaden(() => {
     if (schmal || live || agendaId === undefined || !items) return null;
     if (termin.tag !== ortszeitAus(new Date().toISOString(), zeitzone).slice(0, 10)) return null;
-    const punkte = liveListe(items, terminId).length;
-    return ladeLive(terminId, agendaId).then((r) => {
-      const s = r.ok ? r.stand.stelle : null;
-      return s !== null && s > 0 && s <= punkte;
-    });
+    return ladeLiveLaeuft(terminId, agendaId, items);
   }, [schmal, live, agendaId, items, terminId, termin.tag, zeitzone]).stand;
   const liveLaeuft = liveStand.art === 'fertig' && liveStand.daten;
 
@@ -564,13 +564,7 @@ export function TerminAblauf({
           title={
             liveLaeuft ? 'Live – läuft gerade in ChurchTools' : 'Live-Agenda von ChurchTools folgen'
           }
-          symbol={
-            liveLaeuft ? (
-              <span className={styles.livePunkt} data-testid="live-punkt" />
-            ) : (
-              <Icon name="clock" size={16} stroke={2.2} />
-            )
-          }
+          symbol={liveLaeuft ? <LivePunkt /> : <Icon name="clock" size={16} stroke={2.2} />}
         />
       ) : null,
   });

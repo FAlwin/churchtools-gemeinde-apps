@@ -169,8 +169,35 @@ Die Zeile bleibt stehen („nicht im Schnitt“), zählt aber nicht für Ø und 
 alte kennt. Geschrieben wird mit demselben Recht wie der Verlauf („ändern“ an der Ablage); fehlt es, steht ein Hinweis da und es ändert sich
 nichts. Zwei Planer, die im selben Augenblick schreiben, können sich theoretisch eine Markierung wegschreiben (ChurchTools prüft keine Version);
 das ist bewusst hingenommen – es sind seltene, von Hand gesetzte Markierungen, und das nächste Setzen/Lesen holt sie nach.
-Ob jemand Rückblick, „Ø beim Planen“ und die Spalten „Ø bisher“/„±“ sehen will, stellt jede Person später unter „Meine Anzeige“ ein
-(L4-5; bis dahin immer an).
+
+**Meine Anzeige** (Live-Ansicht 2, L4-5, Alwin 23.11.2026): Unter „Einstellungen“ stellt **jede Person für sich** ein, was sie sehen will –
+sechs Haken, **Standard alles an**: „−1 / +1 Min“ in der Live-Ansicht (nur die Knöpfe; die Rechnung bleibt), Durchschnitt beim Ablauf
+bearbeiten, Rückblick im Termin (darunter eingerückt die Spalten „Ø bisher“ und „±“, nur wählbar, solange der Rückblick an ist) und die Infos
+der eigenen Dienstgruppen in der Live-Ansicht (A16: nur die Dienstgruppen, in denen man an diesem Termin eingeteilt ist – sonst die Wahl unter
+„Spalten“). **Jeder** darf „Meine Anzeige“ ändern, auch wer nicht planen darf; die Betriebsart oben bleibt Planern vorbehalten. Der Reiter
+„Einstellungen“ ist deshalb für alle da.
+
+_Wo es gespeichert ist:_ in der **Personen-Datei** `dienstplaner_anzeige.json` am eigenen ChurchTools-Konto (Dateien der Person, wie bei der
+Musik-App und den Protokollen; Baustein `shared/ct/personenAblage.ts`) – es braucht **kein Recht an einer Ablage**, jede Person darf die Datei an
+sich selbst hängen, fremde ändern verweigert ChurchTools. Sie gilt auf allen Geräten dieser Person. **Format:** `{ "v": 1, "felder": { "<Name>": { "w": true|false, "t": <Zeitpunkt ms> } } }`;
+Namen: `minutenKnoepfe`, `schnittBeimPlanen`, `rueckblick`, `spalteSchnitt`, `spalteAbweichung`, `infosMeinerGruppen`. Die Datei enthält **nur, was die Person
+selbst gewählt hat**; der Standard „an“ steht nie darin – ein fehlendes oder unbekanntes Feld (spätere Schalter) und jeder Wert, der kein
+Ja/Nein ist, gilt als „an“. Zusätzlich merkt sich jedes Gerät die Wahl **je Person** (`dienstplaner.anzeige.<Personen-ID>` im Browser), damit die Seite sofort
+richtig startet.
+
+_Sicher gegen Verlust:_ Abgeglichen wird beim Öffnen, kurz (1,5 s) nach jeder Änderung, beim Weglegen der Seite und wenn das Netz zurückkommt –
+**Feld für Feld, die jüngere Änderung gewinnt**; ersetzt wird als Doppelschritt (neue Fassung hochladen, nachlesen, erst dann die alte löschen).
+Scheitert etwas **vorübergehend** (Netz, 5xx, Zeitgrenze), bleibt alles im Gerät und wird beim nächsten Anlass nachgeholt; im Fenster steht leise
+„Noch nicht in ChurchTools gespeichert …“, die Auswahl bleibt sichtbar. Die Datei wird **nie mit Standardwerten überschrieben**: Ein
+misslungenes Lesen lädt nichts hoch (die Ablage wirft), und hochgeladen wird nur, was die Person gewählt hat. Den Abgleich teilen sich Dienstplaner und
+Protokolle (`ui/ct/useAblageSpiegel.ts`). Die Demo (`?demo`) hält die Personen-Datei im Speicher (`demo.ts`), zusätzlich merkt sich das Gerät die Wahl.
+
+**Live-Ansicht von der Startseite** (L4-5, Alwin 23.11.2026): In „Als Nächstes“ steht neben „Musik-App“ und „Ablauf & Dienste“ der Knopf
+**„Live“** – **am Tag des Termins ab 0 Uhr (Ortszeit der Gemeinde, `liveFenster.ts`) bis zum Ende des Termins** (`endDate`; ohne eigenes Ende
+bis 24 Uhr) und nur, wenn der Termin einen Ablauf hat. Ein Klick geht auf `#/termin/<id>/live`: dieselbe Termin-Ansicht, die Live-Ansicht gleich
+offen (kein zweiter Weg); „Schließen“ führt zum Termin. Läuft die Live-Agenda gerade, trägt der Knopf den roten Punkt wie „Live“ im Termin
+(`ladeLiveLaeuft`, einmal beim Öffnen der Seite, kein Takt; scheitert es, fehlt nur der Punkt). Am Handy steht das Wort „Live“ neben „Ablauf & Dienste“ (derselbe stille Knopf). Jeder, der die
+Karte sieht, bekommt den Knopf; steuern darf in der Live-Ansicht weiterhin nur, wer am Dienst „Live-Agenda steuern“ hat.
 
 **Mails** („Erinnern“, „Vertretung suchen“) brauchen kein eigenes Recht: ChurchTools lässt jeden Personen zu einem
 Termin anschreiben, die er dort sehen darf; Absender ist die Person selbst.
@@ -687,8 +714,9 @@ aufrufen). Testnutzer Spike (19) hat nur „Dienstplaner sehen“.
   (`verlaufAlleLesen`) und das Schreiben der Markierungen in `shared/dienstplan/liveVerlaufSpeicher.ts`. Im Browser hält
   `dienstplaner/src/ladeVerlauf.ts` das Ergebnis **einmal je Seitenaufruf** (`ladeAlleVerlaeufe`, Fehler werden nicht gehalten; `verlaufCacheLeeren`
   nach „Live“), `useVerlaufDaten.ts` rechnet den Schnitt, `Rueckblick.tsx` zeigt die Karte, `TerminAnsicht.tsx` verdrahtet sie und reicht das
-  „Ø“ an `useAblaufBearbeiten` (`schnittText`, gemeinsamer Baustein in `ui/ablauf/`). `meineAnzeige.ts` hält die Schalter (Standard alles an) –
-  L4-5 füttert nur `useMeineAnzeige`. Das Lied-Merkmal (`LivePunkt.lied`, `Wechsel.lied`, Ablage `l`) kommt von `liveListe`; ältere Verläufe
+  „Ø“ an `useAblaufBearbeiten` (`schnittText`, gemeinsamer Baustein in `ui/ablauf/`). `meineAnzeige.ts` hält die Schalter (Standard alles an,
+  `anzeigeAus` liest sie aus der Personen-Datei) und den Kontext; **L4-5** füttert ihn über `MeineAnzeigeAnschluss.tsx` (um die ganze Seite in `App.tsx`; Personen-Datei und Schlüssel in `anzeigeAblage.ts`;
+  Abgleich `ui/ct/useAblageSpiegel.ts`, derselbe Baustein wie die To-Do-Einstellungen der Protokolle); das Fenster ist `EinstellungenFenster.tsx`. Das Lied-Merkmal (`LivePunkt.lied`, `Wechsel.lied`, Ablage `l`) kommt von `liveListe`; ältere Verläufe
   ohne Merkmal zählen für den Schnitt nach Titel.
   Die Demo hat drei vergangene Gottesdienste mit Verlauf (108 mit Rückblick und einer Zeile „nicht im Schnitt“, 109/110 für Ø).
 - Release: Tag `dienstplan-vX.Y.Z` → `dienstplaner-release.yml` → gemeinsame Vorlage

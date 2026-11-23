@@ -16,11 +16,22 @@
  * Übernimmt **einmal**, was S7-1 im Gerät gemerkt hat (Einteilung, Filter), und räumt es danach weg – sonst erbte die
  * nächste Person an diesem Gerät es auch.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback } from 'react';
 import { leseImGeraet, merkeImGeraet } from '@ui/bedienung/geraet';
 import { ablagePort } from '@ui/ct/ablagePort';
-import { erstellePersonenAblage, mische, type DatenDatei } from '@shared/ct/personenAblage';
+import {
+  ABGLEICH_NACH_MS,
+  spiegelImGeraet,
+  useAblageSpiegel,
+  type Abgleich,
+} from '@ui/ct/useAblageSpiegel';
+import { erstellePersonenAblage, type DatenDatei } from '@shared/ct/personenAblage';
 import { pruefen, VORGABE, type ToDoEinstellungen } from './todoEinstellungen';
+
+// Wie der Spiegel mit ChurchTools abgeglichen wird (Pause, Wiederholen, nie überschreiben), steht in `useAblageSpiegel` –
+// seit L4-5 (Dienstplaner „Meine Anzeige“) für beide Apps derselbe Baustein.
+export { ABGLEICH_NACH_MS };
+export type { Abgleich };
 
 /** Der Spiegel im Gerät – je Person. */
 export const merkSchluessel = (person: number) => `protokolle.todos.einstellungen.${person}`;
@@ -36,16 +47,12 @@ function wegraeumen(schluessel: string): void {
     // Kein Speicher (privater Modus) – dann gibt es auch nichts wegzuräumen.
   }
 }
-/** Wie lange nach der letzten Änderung gewartet wird, bevor sie nach ChurchTools geht (Ziehen erzeugt viele). */
-export const ABGLEICH_NACH_MS = 1500;
 
 const ablage = erstellePersonenAblage({
   praefix: 'protokolle_',
   datenName: 'protokolle_einstellungen.json',
 });
 
-/** Der Weg nach ChurchTools – austauschbar für Tests. */
-export type Abgleich = (lokal: DatenDatei) => Promise<DatenDatei>;
 const inChurchTools: Abgleich = (lokal) => ablage.mischeEin(ablagePort, lokal);
 
 const FELDER = Object.keys(VORGABE) as (keyof ToDoEinstellungen)[];
@@ -61,10 +68,7 @@ export function werteAus(s: DatenDatei): ToDoEinstellungen {
 }
 
 function spiegelLesen(person: number): DatenDatei {
-  const s = leseImGeraet<DatenDatei | null>(merkSchluessel(person), null, (x) => {
-    const o = x as Partial<DatenDatei> | null;
-    return o?.v === 1 && o.felder && typeof o.felder === 'object' ? (o as DatenDatei) : null;
-  });
+  const s = spiegelImGeraet(merkSchluessel(person));
   if (s) return s;
   // Einmal übernehmen, was S7-1 gemerkt hat – mit Zeitpunkt 0: Alles, was je anderswo gespeichert wurde, ist jünger.
   const felder: DatenDatei['felder'] = {};
@@ -78,84 +82,21 @@ function spiegelLesen(person: number): DatenDatei {
   return neu;
 }
 
-const gleich = (a: DatenDatei, b: DatenDatei) => JSON.stringify(a) === JSON.stringify(b);
-
 export function useToDoEinstellungen(
   person: number,
   q: { jetzt?: () => number; abgleich?: Abgleich } = {},
 ) {
-  const jetzt = q.jetzt ?? Date.now;
-  const abgleich = q.abgleich ?? inChurchTools;
-  const [spiegel, setSpiegel] = useState<DatenDatei>(() => spiegelLesen(person));
-  const aktuell = useRef(spiegel);
-  const laeuft = useRef(false);
-  const nochmal = useRef(false);
-  const uhr = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const uebernehmen = useCallback(
-    (neu: DatenDatei) => {
-      aktuell.current = neu;
-      merkeImGeraet(merkSchluessel(person), neu);
-      setSpiegel(neu);
-    },
-    [person],
-  );
-
-  /** Einen Abgleich anstoßen – läuft schon einer, danach noch einmal (was inzwischen geändert wurde, fehlt ihm). */
-  const abgleichen = useCallback(() => {
-    if (uhr.current) clearTimeout(uhr.current);
-    uhr.current = null;
-    if (laeuft.current) {
-      nochmal.current = true;
-      return;
-    }
-    laeuft.current = true;
-    const gesendet = aktuell.current;
-    abgleich(gesendet)
-      .then(
-        (dort) => {
-          // Was während des Abgleichs im Gerät geändert wurde, ist jünger – es bleibt und geht beim nächsten Mal mit.
-          const neu = mische(dort, aktuell.current);
-          if (!gleich(aktuell.current, gesendet)) nochmal.current = true;
-          if (!gleich(neu, aktuell.current)) uebernehmen(neu);
-        },
-        (e: unknown) => console.warn('Protokolle: Einstellungen bleiben vorerst im Gerät', e),
-      )
-      .finally(() => {
-        laeuft.current = false;
-        if (nochmal.current) {
-          nochmal.current = false;
-          abgleichen();
-        }
-      });
-  }, [abgleich, uebernehmen]);
-
-  // Beim Öffnen holen; beim Weglegen der Seite und wenn das Netz zurückkommt, sofort abgleichen.
-  useEffect(() => {
-    abgleichen();
-    const weg = () => {
-      if (document.visibilityState === 'hidden' && uhr.current) abgleichen();
-    };
-    document.addEventListener('visibilitychange', weg);
-    window.addEventListener('online', abgleichen);
-    return () => {
-      document.removeEventListener('visibilitychange', weg);
-      window.removeEventListener('online', abgleichen);
-      if (uhr.current) clearTimeout(uhr.current);
-    };
-  }, [abgleichen]);
-
+  const { spiegel, setzen: setzeFelder } = useAblageSpiegel({
+    person,
+    merkSchluessel,
+    anfang: spiegelLesen,
+    abgleich: q.abgleich ?? inChurchTools,
+    jetzt: q.jetzt,
+    warnung: 'Protokolle: Einstellungen bleiben vorerst im Gerät',
+  });
   const setzen = useCallback(
-    (teil: Partial<ToDoEinstellungen>) => {
-      const t = jetzt();
-      const felder = { ...aktuell.current.felder };
-      for (const [k, w] of Object.entries(teil)) felder[k] = { w, t };
-      uebernehmen({ v: 1, felder });
-      if (uhr.current) clearTimeout(uhr.current);
-      uhr.current = setTimeout(abgleichen, ABGLEICH_NACH_MS);
-    },
-    [jetzt, uebernehmen, abgleichen],
+    (teil: Partial<ToDoEinstellungen>) => setzeFelder(teil as Record<string, unknown>),
+    [setzeFelder],
   );
-
   return [werteAus(spiegel), setzen] as const;
 }

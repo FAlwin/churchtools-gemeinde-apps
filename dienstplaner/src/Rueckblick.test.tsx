@@ -170,6 +170,8 @@ describe('Rückblick – was die Karte zeigt (A6, A18)', () => {
     expect(screen.queryByRole('columnheader', { name: 'Ø bisher' })).toBeNull();
     expect(zeileVon('Predigt').textContent).not.toContain(`${MINUS}6:40`);
     expect(screen.getByRole('columnheader', { name: 'Plan' })).toBeTruthy();
+    // Ohne die Spalte „Ø bisher“ braucht es auch ihre Erklärung nicht.
+    expect(screen.queryByText(/„Ø bisher“ zählt gleichnamige Punkte/)).toBeNull();
   });
 
   it('Handy: Plan, Gelaufen, ± und Ø stehen alle da – mit Beschriftung, nichts abgeschnitten', () => {

@@ -72,6 +72,12 @@ type KopfKnopfProps = Stufe & {
    * zu sehen (dort steht nur das Symbol, der Pfeil sagt, dass noch etwas aufgeht).
    */
   pfeil?: boolean;
+  /**
+   * Das Wort bleibt auch am Handy stehen (der Knopf wird so breit wie nötig, Höhe und Rahmen wie sonst). **Ausnahme** für kurze
+   * Karten-Aktionen, bei denen ein Symbol allein nicht reicht – „Ablauf & Dienste“ und „Live“ in „Als Nächstes“ auf der Startseite.
+   * Sonst gilt R12: am Handy nur das Symbol. Ohne das Merkmal ändert sich nichts.
+   */
+  wortAmHandy?: boolean;
 };
 
 /**
@@ -100,6 +106,7 @@ export function KopfKnopf({
   symbolHinten,
   zahl,
   pfeil,
+  wortAmHandy,
 }: KopfKnopfProps) {
   return (
     <button
@@ -116,7 +123,7 @@ export function KopfKnopf({
                 : offen
                   ? ' ' + styles.offen
                   : ''
-      }${still && !haupt && !neu && !gefahr ? ' ' + styles.still : ''}${nurSymbol ? ' ' + styles.nurSymbol : ''}${klein ? ' ' + styles.klein : ''}${raster ? ' ' + styles.raster : ''}${
+      }${still && !haupt && !neu && !gefahr ? ' ' + styles.still : ''}${nurSymbol ? ' ' + styles.nurSymbol : ''}${klein ? ' ' + styles.klein : ''}${raster ? ' ' + styles.raster : ''}${wortAmHandy ? ' ' + styles.wortAmHandy : ''}${
         zahl !== undefined ? ' ' + styles.mitZahl : ''
       }`}
       onClick={onClick}

@@ -8,6 +8,7 @@ import type { VerlaufTermin } from '@shared/ct/liveRueckblick';
 import type { CtAgendaItem } from '@shared/ct/typen';
 import { startFuer } from './start.testutil';
 import { TerminAnsicht } from './TerminAnsicht';
+import { AnzeigeKontext, STANDARD_ANZEIGE, type MeineAnzeige } from './meineAnzeige';
 
 /**
  * **Rückblick und Ø in der Termin-Ansicht (L4-4)** – mit dem echten Laden des Termins (ChurchTools ist ersetzt) und dem
@@ -109,20 +110,28 @@ const NUR_ANSEHEN = startFuer({
   rechte: { ...startFuer().rechte, planbareDienstgruppen: [], ablaufKalender: [] },
 });
 
-function zeige(start = START, terminId = 7) {
+function zeige(start = START, terminId = 7, anzeige: Partial<MeineAnzeige> = {}) {
   const ansicht = (id: number) => (
-    <TerminAnsicht
-      start={start}
-      terminId={id}
-      zeitzone="Europe/Berlin"
-      vorher={null}
-      nachher={null}
-      zurueck="Termine"
-      onTermin={vi.fn()}
-      onZurueck={vi.fn()}
-      heute="2026-10-30"
-      handy={false}
-    />
+    <AnzeigeKontext.Provider
+      value={{
+        anzeige: { ...STANDARD_ANZEIGE, ...anzeige },
+        setzen: () => {},
+        abgleichFehler: false,
+      }}
+    >
+      <TerminAnsicht
+        start={start}
+        terminId={id}
+        zeitzone="Europe/Berlin"
+        vorher={null}
+        nachher={null}
+        zurueck="Termine"
+        onTermin={vi.fn()}
+        onZurueck={vi.fn()}
+        heute="2026-10-30"
+        handy={false}
+      />
+    </AnzeigeKontext.Provider>
   );
   const r = render(ansicht(terminId));
   return { ...r, wechsel: (id: number) => r.rerender(ansicht(id)) };
@@ -322,5 +331,57 @@ describe('Ø beim Ablauf bearbeiten (L4-4, A8)', () => {
     const ablauf = await bearbeiten();
     expect(within(ablauf).getByText('Ø 7:00')).toBeTruthy();
     expect(within(ablauf).getByText('Ø 25:00')).toBeTruthy();
+  });
+});
+
+describe('Meine Anzeige: Rückblick und Ø ausschalten (L4-5, A15)', () => {
+  const VORHER = verlaufVon(
+    [
+      [1, 0],
+      [2, 420],
+      [3, 720],
+      [ENDE, 720 + 1500],
+    ],
+    T0 - 7 * 86_400_000,
+  );
+  const beide = () =>
+    ablage.alle.mockResolvedValue(
+      alsAntwort({ 7: { wechsel: BEENDET, ausnahmen: [] }, 6: { wechsel: VORHER, ausnahmen: [] } }),
+    );
+
+  it('„Rückblick im Termin zeigen“ aus: keine Karte – das Ø beim Bearbeiten bleibt (eigener Schalter)', async () => {
+    ct();
+    beide();
+    zeige(START, 7, { rueckblick: false });
+    await screen.findByRole('region', { name: 'Ablauf' });
+    await waitFor(() => expect(ablage.alle).toHaveBeenCalled());
+    expect(rueckblick()).toBeNull();
+    fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
+    const ablauf = await screen.findByRole('region', { name: 'Ablauf' });
+    expect(await within(ablauf).findByText('Ø 7:30')).toBeTruthy();
+  });
+
+  it('„Durchschnitt beim Ablauf bearbeiten“ aus: kein Ø – der Rückblick bleibt (eigener Schalter)', async () => {
+    ct();
+    beide();
+    zeige(START, 7, { schnittBeimPlanen: false });
+    await screen.findByRole('region', { name: 'Rückblick' });
+    fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
+    const ablauf = screen.getByRole('region', { name: 'Ablauf' });
+    expect(within(ablauf).queryByText(/^Ø /)).toBeNull();
+  });
+
+  it('Spalten: „Ø bisher“ und „±“ lassen sich einzeln ausblenden', async () => {
+    ct();
+    beide();
+    zeige(START, 7, { spalteSchnitt: false });
+    const karte = await screen.findByRole('region', { name: 'Rückblick' });
+    expect(within(karte).queryByRole('columnheader', { name: 'Ø bisher' })).toBeNull();
+    expect(within(karte).getByRole('columnheader', { name: '±' })).toBeTruthy();
+    cleanup();
+    zeige(START, 7, { spalteAbweichung: false });
+    const karte2 = await screen.findByRole('region', { name: 'Rückblick' });
+    expect(within(karte2).getByRole('columnheader', { name: 'Ø bisher' })).toBeTruthy();
+    expect(within(karte2).queryByRole('columnheader', { name: '±' })).toBeNull();
   });
 });

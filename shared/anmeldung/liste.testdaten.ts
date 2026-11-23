@@ -11,6 +11,7 @@ import {
   type VerlaufRoh,
 } from './liste';
 import { anmeldungAufbauen, type FormWert } from './senden';
+import type { Antworten } from './formular';
 import { CT, antworten, einstellungen } from './senden.testdaten';
 
 export const NR = 669;
@@ -60,12 +61,19 @@ export function mitglieder(
   nr: string | undefined,
   mitPlatz: boolean[],
   ersteId: number,
-  extra: { bezahlt?: boolean } = {},
+  extra: { bezahlt?: boolean; antworten?: Antworten } = {},
 ): MitgliedRoh[] {
-  const a = anmeldungAufbauen(e(), antworten(), { option: 0, extras: [] }, HEUTE, CT_MIT_NR, {
-    nr,
-    mitPlatz,
-  });
+  const a = anmeldungAufbauen(
+    e(),
+    extra.antworten ?? antworten(),
+    { option: 0, extras: [] },
+    HEUTE,
+    CT_MIT_NR,
+    {
+      nr,
+      mitPlatz,
+    },
+  );
   return a.forms.map((f, i) => ({
     personId: ersteId + i,
     person: {

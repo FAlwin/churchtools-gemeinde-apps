@@ -8,7 +8,13 @@
  */
 import { tagPunkt } from '../ct/datum';
 import { ctAblage, nurText, type Feld, type OeffentlicheEinstellungen } from './formular';
-import { antwortText, listenZahlen, type ListenAnmeldung, type ListenPerson } from './liste';
+import {
+  antwortRoh,
+  antwortText,
+  listenZahlen,
+  type ListenAnmeldung,
+  type ListenPerson,
+} from './liste';
 import { adresseText } from './adresse';
 import { euroText, kannEtwasKosten } from './preis';
 import { zahlungTitel } from './zahlung';
@@ -124,11 +130,35 @@ export function frageAntwort(
   x: ListenAnmeldung,
   p: ListenPerson | null,
 ): string | null {
+  return frageLesen(e, f, x, p, antwortText);
+}
+
+/**
+ * **Die Antwort, wie sie in ChurchTools steht** (`antwortRoh`: die freie Antwort als ihre Beschriftung) – für die Filter
+ * der Tabelle (R2): Gefiltert wird nach den Antworten des Formulars, nicht nach dem frei eingetippten Text. Dieselbe
+ * Regel „wessen Werte“ wie `frageAntwort`.
+ */
+export function frageAntwortRoh(
+  e: OeffentlicheEinstellungen,
+  f: Feld,
+  x: ListenAnmeldung,
+  p: ListenPerson | null,
+): string | null {
+  return frageLesen(e, f, x, p, antwortRoh);
+}
+
+function frageLesen(
+  e: OeffentlicheEinstellungen,
+  f: Feld,
+  x: ListenAnmeldung,
+  p: ListenPerson | null,
+  lesen: typeof antwortText,
+): string | null {
   const jePerson = e.formular.person.includes(f);
   if (jePerson && !p) return null;
   // F4b: Die Adresse steht an der Person – mit Person ihre, je Anmeldung die der ersten (alle bekamen dieselbe).
   if (f.typ === 'adresse') return adresseText((p ?? x.personen[0])?.adresse ?? undefined) || null;
-  return antwortText(f, jePerson && p ? p.werte : x.einmal, e.ctFelder);
+  return lesen(f, jePerson && p ? p.werte : x.einmal, e.ctFelder);
 }
 
 const deutsch = new Intl.Collator('de', { sensitivity: 'base' });

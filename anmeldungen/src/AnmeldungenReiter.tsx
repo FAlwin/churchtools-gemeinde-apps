@@ -6,7 +6,11 @@ import { useNeuAnlegen } from '@ui/bedienung/NeuAnlegen';
 import { MehrMenue } from '@ui/bedienung/MehrMenue';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { Icon } from '@ui/icons/icons';
-import type { OeffentlicheEinstellungen, TabellenWahl } from '@shared/anmeldung/formular';
+import type {
+  OeffentlicheEinstellungen,
+  SpaltenFilter,
+  TabellenWahl,
+} from '@shared/anmeldung/formular';
 import { euroText } from '@shared/anmeldung/preis';
 import { wartenTrotzPlatz } from '@shared/anmeldung/nachpruefung';
 import {
@@ -32,7 +36,18 @@ import {
   type TabellenModus,
   type TabellenSpalte,
 } from '@shared/anmeldung/tabelle';
+import {
+  filterArt,
+  filterName,
+  filterSetzen,
+  filterText,
+  gefilterteListe,
+  passtAnmeldung,
+} from '@shared/anmeldung/tabellenFilter';
+import { FilterChips } from '@ui/bedienung/SpaltenFilter';
+import { TextKnopf } from '@ui/bedienung/TextKnopf';
 import { AnmeldungenTabelle } from './AnmeldungenTabelle';
+import { SpaltenFilterFenster } from './SpaltenFilterFenster';
 import { SpaltenFenster } from './SpaltenFenster';
 import { leseZeilenOben, zeileUmschalten } from './zeilenOben';
 import { aendereEinstellungen } from './einrichten';
@@ -134,6 +149,13 @@ export function AnmeldungenReiter({
   const [filter, setFilter] = useState<ListenFilter>(startFilter);
   const [suche, setSuche] = useState('');
   const [sortierung, setSortierung] = useState<Sortierung>(null);
+  // Filter der Spalten (R2): gelten nur für jetzt, im gewählten Reiter – mehrere zusammen („und“).
+  const [spaltenFilter, setSpaltenFilter] = useState<SpaltenFilter[]>([]);
+  // Das offene Filterfenster: welche Spalte, woran es hängt (Trichter oder Chip).
+  const [filterOffen, setFilterOffen] = useState<{ spalte: string; anker: HTMLElement } | null>(
+    null,
+  );
+  const karte = useRef<HTMLElement>(null);
   // Eine Zeile je Anmeldung oder je Person (U2-2) – gilt in allen Reitern außer „Abgesagt“ (Absagen sind je Person).
   const [jePerson, setJePerson] = useState(false);
   // Die Spaltenwahl (U2-3) kommt aus den Einstellungen; hier steht nur, was man eben übernommen hat – damit die Tabelle
@@ -222,12 +244,33 @@ export function AnmeldungenReiter({
 
   const z = listenZahlen(e, liste);
   const plaetze = { belegt: z.belegt, wartend: z.wartend, max: maxPlaetze };
-  const { wartende, absagen, zeilen, personenGezeigt, absageZeilen, zahlen } = listenAnsicht(
-    e,
-    liste,
-    stand!.absagen,
-    { filter, suche, sortierung, jePerson, oben },
-  );
+  const filterAktiv = filter !== 'abgesagt' ? spaltenFilter : [];
+  const {
+    wartende,
+    absagen,
+    zeilen,
+    personenGezeigt,
+    absageZeilen,
+    zahlen,
+    imReiterGesamt,
+    imReiter,
+  } = listenAnsicht(e, liste, stand!.absagen, {
+    filter,
+    spaltenFilter: filterAktiv,
+    suche,
+    sortierung,
+    jePerson,
+    oben,
+  });
+  // Rundmail und Druckliste nehmen immer das Gefilterte (Klick-Runde 23.11.2026) – dieselbe Regel wie die Tabelle.
+  const gefiltert = filterAktiv.length > 0;
+  const filterBeschreibung = gefiltert
+    ? filterAktiv.map((f) => `${filterName(e, f.spalte)}: ${filterText(f)}`).join(' · ')
+    : null;
+  const fuerRundmail = gefiltert
+    ? imReiter.filter((x) => passtAnmeldung(e, filterAktiv, x))
+    : liste;
+  const fuerDruck = gefiltert ? gefilterteListe(e, imReiter, filterAktiv) : liste;
   const frei = maxPlaetze === null ? null : maxPlaetze - z.belegt;
   // Das „⋯“-Menü der Liste (R6, B7): was vorher drei Knöpfe nebeneinander waren.
   const mehr: Option[] = [
@@ -243,7 +286,7 @@ export function AnmeldungenReiter({
     ...(liste.length > 0
       ? [
           {
-            label: 'Druckliste',
+            label: gefiltert ? `Druckliste (nur diese ${fuerDruck.length})` : 'Druckliste',
             symbol: <Icon name="drucker" size={16} />,
             onClick: () => setDruck(true),
           },
@@ -252,7 +295,7 @@ export function AnmeldungenReiter({
     ...(darf && liste.length > 0
       ? [
           {
-            label: 'Rundmail',
+            label: gefiltert ? `Rundmail an diese ${fuerRundmail.length}` : 'Rundmail',
             symbol: <Icon name="brief" size={16} />,
             onClick: () => setRundmail(true),
           },
@@ -301,7 +344,26 @@ export function AnmeldungenReiter({
   const wechseln = (f: ListenFilter) => {
     setFilter(f);
     setSortierung(null);
+    // Ein Filter gilt nur in seinem Reiter (Entwurf: „für jetzt“).
+    setSpaltenFilter([]);
+    setFilterOffen(null);
   };
+  /** Filterfenster am Trichter öffnen – ein zweiter Tipp auf denselben Trichter schließt es. */
+  const filterOeffnen = (spalte: string, anker: HTMLElement) =>
+    setFilterOffen((o) => (o?.spalte === spalte ? null : { spalte, anker }));
+  /** Vom Chip aus: am Trichter, wenn die Spalte zu sehen ist, sonst am Chip. */
+  const filterVomChip = (spalte: string, chip: HTMLElement) =>
+    filterOeffnen(
+      spalte,
+      karte.current?.querySelector<HTMLElement>(`thead [data-trichter="${spalte}"]`) ?? chip,
+    );
+  const tabellenFilter = {
+    kann: (k: string) => filterArt(e, k) !== null,
+    an: (k: string) => filterAktiv.some((f) => f.spalte === k),
+    offen: filterOffen?.spalte ?? null,
+    oeffnen: filterOeffnen,
+  };
+  const gezeigt = jePerson ? personenGezeigt.length : zeilen.length;
   const reiter: Reiter<ListenFilter>[] = [
     { id: 'alle', label: 'Alle', icon: 'people', zahl: zahlen.alle },
     ...(z.kostet
@@ -411,14 +473,23 @@ export function AnmeldungenReiter({
     }
   };
 
-  const leer = (text: string) => (
-    <p className={a.leerZeile}>{suche.trim() ? `Niemand mit „${suche.trim()}“ gefunden.` : text}</p>
-  );
+  const leer = (text: string) =>
+    gefiltert ? (
+      <p className={a.leerZeile}>
+        {jePerson ? 'Keine Person passt' : 'Keine Anmeldung passt'} zu den Filtern
+        {suche.trim() ? ` und „${suche.trim()}“` : ''}.{' '}
+        <TextKnopf onClick={() => setSpaltenFilter([])}>Alle Filter entfernen</TextKnopf>
+      </p>
+    ) : (
+      <p className={a.leerZeile}>
+        {suche.trim() ? `Niemand mit „${suche.trim()}“ gefunden.` : text}
+      </p>
+    );
 
   return (
     <div className={a.reiter}>
       {/* Plätze, Warteliste und Zahlung offen stehen seit U1 oben auf der Seite (Kennzahlen, `Einstieg.tsx`). */}
-      <section className={s.karte} aria-label="Anmeldungen">
+      <section className={s.karte} aria-label="Anmeldungen" ref={karte}>
         <ReiterLeiste oben name="Ansichten" reiter={reiter} aktiv={filter} onWechsel={wechseln} />
 
         {/* „Platz frei – jemand wartet“ steht seit U2-1 nur noch hier und in der Kachel (Alwin, 29.10.2026). */}
@@ -483,6 +554,33 @@ export function AnmeldungenReiter({
           </span>
         </div>
 
+        {gefiltert && (
+          <div className={a.filterKopf}>
+            <FilterChips
+              chips={filterAktiv.map((f) => ({
+                spalte: f.spalte,
+                name: filterName(e, f.spalte),
+                text: filterText(f),
+              }))}
+              onAendern={filterVomChip}
+              onWeg={(k) => setSpaltenFilter((alt) => filterSetzen(alt, k, null))}
+              onAlleWeg={() => setSpaltenFilter([])}
+            />
+            <p className={a.filterStand} aria-live="polite">
+              <b>
+                {gezeigt} von {imReiterGesamt}
+              </b>{' '}
+              {jePerson
+                ? imReiterGesamt === 1
+                  ? 'Person'
+                  : 'Personen'
+                : imReiterGesamt === 1
+                  ? 'Anmeldung'
+                  : 'Anmeldungen'}
+            </p>
+          </div>
+        )}
+
         {spaltenFehler && (
           <p className={a.hinweisRot} role="alert">
             {spaltenFehler}
@@ -506,7 +604,7 @@ export function AnmeldungenReiter({
               onZeile={darf ? (b) => setZurueck({ b, von: null }) : undefined}
             />
           )
-        ) : (jePerson ? personenGezeigt.length : zeilen.length) === 0 ? (
+        ) : gezeigt === 0 ? (
           leer(
             filter === 'offen'
               ? 'Alle haben bezahlt.'
@@ -525,6 +623,7 @@ export function AnmeldungenReiter({
             sortierung={sortierung}
             onSortieren={setSortierung}
             onZeile={(y) => oeffnen(y.x.schluessel)}
+            filter={tabellenFilter}
             anheften={{
               an: (y) => oben.has(personSchluessel(y)),
               umschalten: (y) => anheftenUm(personSchluessel(y)),
@@ -541,6 +640,7 @@ export function AnmeldungenReiter({
             sortierung={sortierung}
             onSortieren={setSortierung}
             onZeile={(x) => oeffnen(x.schluessel)}
+            filter={tabellenFilter}
             anheften={{
               an: (x) => oben.has(x.schluessel),
               umschalten: (x) => anheftenUm(x.schluessel),
@@ -550,8 +650,8 @@ export function AnmeldungenReiter({
 
         <p className={v.pruefFuss}>
           {jePerson
-            ? 'Eine Zeile je Person, ohne Wahl nach Anmeldetag – ein Tipp auf die Überschrift einer Spalte sortiert. Die Summen zählen Personen mit Platz; Betrag und Bezahlt gehören der Anmeldung und zählen sie einmal.'
-            : 'Eine Zeile je Anmeldung, ohne Wahl nach Anmeldetag – ein Tipp auf die Überschrift einer Spalte sortiert. Die Summen zählen Anmeldungen mit Platz. Ältere Anmeldungen ohne Nr. stehen je Person einzeln.'}{' '}
+            ? 'Eine Zeile je Person, ohne Wahl nach Anmeldetag – ein Tipp auf die Überschrift einer Spalte sortiert, der Trichter daneben filtert. Die Summen zählen Personen mit Platz (gefiltert nur die gezeigten); Betrag und Bezahlt gehören der Anmeldung und zählen sie einmal.'
+            : 'Eine Zeile je Anmeldung, ohne Wahl nach Anmeldetag – ein Tipp auf die Überschrift einer Spalte sortiert, der Trichter daneben filtert. Die Summen zählen Anmeldungen mit Platz (gefiltert nur die gezeigten). Ältere Anmeldungen ohne Nr. stehen je Person einzeln.'}{' '}
           Die Nadel am Zeilenanfang heftet eine Zeile oben an – nur auf diesem Gerät. Die Leitung
           steht nicht in der Liste.
           {stand!.verlaufGekuerzt &&
@@ -598,10 +698,40 @@ export function AnmeldungenReiter({
           id={id}
           e={e}
           veranstaltung={veranstaltung}
-          liste={liste}
+          liste={fuerRundmail}
+          gefiltert={filterBeschreibung}
           // Wie der Filter der Liste – „Zahlung offen“ beginnt mit der Zahlungserinnerung.
           startFilter={filter === 'offen' ? 'offen' : filter === 'warte' ? 'warte' : 'alle'}
           onClose={() => setRundmail(false)}
+        />
+      )}
+
+      {filterOffen && filter !== 'abgesagt' && (
+        <SpaltenFilterFenster
+          key={filterOffen.spalte}
+          e={e}
+          spalte={filterOffen.spalte}
+          filter={filterAktiv.find((f) => f.spalte === filterOffen.spalte) ?? null}
+          wer={jePerson ? 'Personen' : 'Anmeldungen'}
+          anzahl={(f) => {
+            // Wie viele mit den übrigen Filtern UND dieser Antwort übrig blieben – dieselbe Rechnung wie die Tabelle.
+            const r = listenAnsicht(e, liste, [], {
+              filter,
+              spaltenFilter: filterSetzen(filterAktiv, f.spalte, f),
+              suche: '',
+              sortierung: null,
+              jePerson,
+              oben: new Set(),
+            });
+            return jePerson ? r.personenGezeigt.length : r.zeilen.length;
+          }}
+          anker={filterOffen.anker}
+          handy={handy}
+          onAnwenden={(f) => {
+            setSpaltenFilter((alt) => filterSetzen(alt, filterOffen.spalte, f));
+            setFilterOffen(null);
+          }}
+          onClose={() => setFilterOffen(null)}
         />
       )}
 
@@ -622,7 +752,8 @@ export function AnmeldungenReiter({
           e={e}
           veranstaltung={veranstaltung}
           gemeinde={gemeinde}
-          liste={liste}
+          liste={fuerDruck}
+          gefiltert={filterBeschreibung}
           darf={darf}
           onGemerkt={onGespeichert}
           onClose={() => setDruck(false)}

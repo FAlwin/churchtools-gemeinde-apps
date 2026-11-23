@@ -619,6 +619,16 @@ export interface TabellenWahl {
   fest: string[];
 }
 
+/**
+ * **Ein Filter auf eine Spalte der Tabelle** (R2, Entwurf `r2-u3-filter-ansichten-v1`, abgenommen 23.11.2026) – je nach
+ * Art der Spalte (`filterArt` in `tabellenFilter.ts`): gewählte Antworten („eine davon“), eine Zahl ab/bis oder ein Text
+ * ausgefüllt/leer/enthält. `spalte` ist der Spaltenschlüssel der Tabelle (`frage:<id>`, `betrag` …) – keine Personendaten.
+ */
+export type SpaltenFilter =
+  | { spalte: string; werte: string[] }
+  | { spalte: string; ab: number | null; bis: number | null }
+  | { spalte: string; text: 'ausgefuellt' | 'leer' | 'enthaelt'; suche?: string };
+
 /** Name von Schritt 1, solange keiner eingetragen ist (Klick-Runde 8). */
 export const ERSTER_SCHRITT = 'Deine Angaben';
 

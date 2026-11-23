@@ -40,6 +40,7 @@ export function DrucklisteFenster({
   gemeinde,
   liste,
   darf,
+  gefiltert = null,
   onGemerkt,
   onClose,
 }: {
@@ -49,6 +50,11 @@ export function DrucklisteFenster({
   gemeinde: string | null;
   liste: ListenAnmeldung[];
   darf: boolean;
+  /**
+   * Die Filter der Tabelle als Text (R2, „Druckliste nimmt immer das Gefilterte“) – `liste` ist dann schon gefiltert
+   * (`gefilterteListe`); das Fenster sagt es nur dazu. `null`: ungefiltert.
+   */
+  gefiltert?: string | null;
   /** Die Wahl wurde gespeichert – die Seite liest die Einstellungen neu. */
   onGemerkt: () => void;
   onClose: () => void;
@@ -152,6 +158,12 @@ export function DrucklisteFenster({
       }
     >
       <p className={a.unterTitel}>{veranstaltung} · aus ChurchTools, Stand jetzt</p>
+      {gefiltert && (
+        <p className={a.hinweisBlau}>
+          Nur, wer zu den Filtern der Tabelle passt: {gefiltert}. Für alle vorher die Filter
+          entfernen.
+        </p>
+      )}
       <section className={a.teil}>
         <h3>Liste</h3>
         <div className={d.chips}>

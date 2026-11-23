@@ -135,7 +135,18 @@ ausgeblendet, ebenso das Geburtsdatum); ihre Summe zählt jede Anmeldung einmal.
 wie die Wahl der Druckliste in den Einstellungen der Veranstaltung – gespeichert wird nur, was von der Vorgabe abweicht,
 und nur von dem, der die Veranstaltung bearbeiten darf (alle anderen können umstellen, bis die Seite neu lädt).
 Gelöschte Fragen fallen aus der Wahl, neue stehen hinten; „Wie zu Beginn“ holt die Vorgabe zurück. Eine Kopie der
-Veranstaltung übernimmt die Wahl. **Zeilen anheften** (U2-4): Die Nadel am Zeilenanfang heftet eine Anmeldung oder
+Veranstaltung übernimmt die Wahl. **Filter** (R2, 23.11.2026): Neben jeder Spaltenüberschrift (außer Name, Nr., Vor-
+und Nachname, Geburtsdatum, Angemeldet am) steht ein Trichter; er öffnet das Filterfenster direkt dort (am Handy als
+Fenster). Auswahl, Ja/Nein, Ankreuzen, Bezahlt und Status bieten ihre Antworten mit Anzahl an (mehrere angehakt = eine
+davon reicht; die freie Antwort unter ihrer Beschriftung, nicht der getippte Text), Zahlen „ab / bis“ (Betrag in Euro,
+„Personen“ = alle Personen der Anmeldung), Text „ist ausgefüllt / ist leer / enthält …“. Gesetzte Filter stehen als
+Chips über der Tabelle (antippen = ändern, × = entfernen, „Alle Filter entfernen“), darunter „n von m Anmeldungen“;
+mehrere Filter gelten zusammen, die Summen zählen nur das Gefilterte, die Zahlen an den festen Reitern nicht. Je Person
+filtern Fragen je Person (und Status, Alter) die einzelne Person; je Anmeldung zählt eine Anmeldung, wenn **eine** Person
+alle diese Filter erfüllt. Ein Filter gilt nur für jetzt und nur im gewählten Reiter. **Rundmail und Druckliste nehmen
+immer das Gefilterte** („Rundmail an diese 4“, „Druckliste (nur diese 4)“, im Fenster steht, welche Filter gelten); die
+Druckliste zeigt bei Filtern je Person nur die passenden Personen. Die eine Regel steht in
+`shared/anmeldung/tabellenFilter.ts`. **Zeilen anheften** (U2-4): Die Nadel am Zeilenanfang heftet eine Anmeldung oder
 Person oben an – sie bleibt beim Sortieren oben und steht nur in den Reitern, in die sie ohnehin gehört. Das merkt sich
 nur dieses Gerät (je Veranstaltung, im Speicher des Browsers); im privaten Fenster gilt es bis zum Neuladen. Mit Maus
 erscheint die Nadel beim Darüberfahren, am Handy steht sie immer da und bleibt mit der ersten Spalte links stehen. Ein

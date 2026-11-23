@@ -20,6 +20,7 @@
  *   Schnappschuss, ohne Fehlermeldung (`zumLesen`, die EINE Stelle für Ansicht und PDF).
  */
 import type { Anfrage } from './sitzungen';
+import type { Block } from './dokument';
 
 export type AnwesenheitsStatus = 'offen' | 'da' | 'weg';
 
@@ -220,4 +221,29 @@ export function zumLesen(
 ): TreffenStand | null | 'unbekannt' {
   if (live !== 'unbekannt') return live;
   return schnappschussAus(schnappschuss) ?? 'unbekannt';
+}
+
+const ohneSchnappschuss = (b: Block): unknown => {
+  const { schnappschuss: _weg, ...props } = b.props ?? {};
+  return {
+    ...b,
+    ...(b.props ? { props } : {}),
+    ...(b.children ? { children: b.children.map(ohneSchnappschuss) } : {}),
+  };
+};
+
+/**
+ * **Hat sich nur ein Schnappschuss geändert?** (W16) – dann ist es keine Eingabe: Der Editor speichert deswegen nicht und
+ * nimmt keine Sperre (ein bloßes Öffnen soll niemandem die Sperre wegnehmen, und ein zusätzliches Speichern stieß sich
+ * beim Durchklicken mit dem Einfügen übernommener Vorschläge). Der Schnappschuss fährt mit dem nächsten Speichern mit; nach
+ * einem eigenen Tipp stößt die Anwesenheit das Speichern selbst an.
+ */
+export function nurSchnappschussAnders(
+  vorher: readonly Block[],
+  nachher: readonly Block[],
+): boolean {
+  if (JSON.stringify(vorher) === JSON.stringify(nachher)) return false;
+  return (
+    JSON.stringify(vorher.map(ohneSchnappschuss)) === JSON.stringify(nachher.map(ohneSchnappschuss))
+  );
 }

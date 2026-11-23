@@ -7,6 +7,7 @@ import {
   nachTipp,
   ohneAus,
   ohneAusgeblendete,
+  nurSchnappschussAnders,
   ohneWert,
   personenAus,
   schnappschussAus,
@@ -267,5 +268,27 @@ describe('Schnappschuss im Protokoll (W16)', () => {
     expect(zumLesen('unbekannt', wert)).toEqual(schnappschussAus(wert));
     expect(zumLesen('unbekannt', '')).toBe('unbekannt');
     expect(zumLesen(null, wert)).toBeNull();
+  });
+});
+
+describe('nurSchnappschussAnders (W16)', () => {
+  const anw = (schnappschuss?: string) => ({
+    id: 'v',
+    type: 'verweis',
+    props: { art: 'anwesenheit', ...(schnappschuss === undefined ? {} : { schnappschuss }) },
+  });
+  const text = (t: string) => ({ id: 'p', type: 'paragraph', content: t });
+
+  it('nur der Schnappschuss neu oder anders: ja – auch tief in Unterpunkten', () => {
+    expect(nurSchnappschussAnders([text('a'), anw('')], [text('a'), anw('{"x":1}')])).toBe(true);
+    expect(nurSchnappschussAnders([anw()], [anw('{"x":1}')])).toBe(true);
+    const tief = (s: string) => [{ ...text('a'), children: [anw(s)] }];
+    expect(nurSchnappschussAnders(tief('1'), tief('2'))).toBe(true);
+  });
+
+  it('gar nichts anders oder auch etwas anderes: nein', () => {
+    expect(nurSchnappschussAnders([anw('1')], [anw('1')])).toBe(false);
+    expect(nurSchnappschussAnders([text('a'), anw('1')], [text('b'), anw('2')])).toBe(false);
+    expect(nurSchnappschussAnders([anw('1')], [anw('1'), text('neu')])).toBe(false);
   });
 });

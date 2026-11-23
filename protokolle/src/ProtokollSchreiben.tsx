@@ -85,7 +85,7 @@ import { ctBasis } from '@ui/ct/verbindung';
 import { modulPort } from '@ui/ct/modulPort';
 import { beitragMoeglich, beitragSchritt } from './beitragSchreiben';
 import { sitzungsLink } from './reiter';
-import type { TreffenStand } from '@shared/protokolle/anwesenheit';
+import { nurSchnappschussAnders, type TreffenStand } from '@shared/protokolle/anwesenheit';
 import { SchreibSteuerung, type SteuerZustand } from './schreibSteuerung';
 import { MITLESEN_MS, useMitlesen } from './useMitlesen';
 import ansicht from './SitzungAnsicht.module.scss';
@@ -370,6 +370,8 @@ export function ProtokollSchreiben({
       ),
     [todoAendern, schreiber.person],
   );
+  // Nach einem eigenen Tipp in der Anwesenheit (W16) – der Schnappschuss allein ist keine Eingabe.
+  const speichernAnstossen = useCallback(() => steuerung.current?.geaendert(), []);
   // „Schreibt mit“ (W16): in „Offene To-Dos“ nur abhaken, was auch ein Mitarbeiter darf (W9) – die Leitungsrechte bleiben.
   const darfHakenMitarbeit = useCallback(
     (a: Aufgabe) => toDoRechte(a, { ich: schreiber.person, leitung: false }).haken,
@@ -714,6 +716,7 @@ export function ProtokollSchreiben({
       ich={schreiber.person}
       onTreffenAnlegen={neuesTreffen}
       schreibt={z?.lage === 'schreibe'}
+      onSpeichern={speichernAnstossen}
       onZuSitzung={
         onZuSitzung
           ? (s) => {
@@ -1063,7 +1066,11 @@ export function ProtokollSchreiben({
                 griff={editor}
                 fremdeAufgabe={fremdeAufgabe}
                 onAenderung={(d) => {
+                  // Nur ein Schnappschuss der Anwesenheit (W16): keine Eingabe – kein Speichern, keine Sperre. Er fährt mit
+                  // dem nächsten Speichern mit.
+                  const nurSchnappschuss = nurSchnappschussAnders(dok, d);
                   setDok(d);
+                  if (nurSchnappschuss) return;
                   setHinweis(null);
                   steuerung.current?.geaendert();
                 }}

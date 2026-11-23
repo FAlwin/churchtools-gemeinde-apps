@@ -33,6 +33,7 @@ export function FestePunkteRahmen({
   ich,
   imFenster = false,
   schreibt = false,
+  onSpeichern,
   onZuSitzung,
   onTreffenAnlegen,
   children,
@@ -52,6 +53,8 @@ export function FestePunkteRahmen({
   imFenster?: boolean;
   /** Dieses Fenster schreibt gerade (W16, `FestePunkteWert.schreibt`). */
   schreibt?: boolean;
+  /** Speichern anstoßen (W16, `FestePunkteWert.speichern`) – nur beim Schreiben. */
+  onSpeichern?: () => void;
   /** „Öffnen“ im Fenster: zu dieser Sitzung springen (K3b-2) – fehlt, bleibt das Fenster ohne Knopf. */
   onZuSitzung?: (s: Sitzung) => void;
   /** „Gruppentreffen anlegen“ (S5-3, nur beim Schreiben): legt an, verknüpft und gibt die ID zurück. */
@@ -91,6 +94,7 @@ export function FestePunkteRahmen({
           ? undefined
           : async () => setNeuesTreffen(await onTreffenAnlegen()),
       schreibt: !imFenster && schreibt,
+      speichern: imFenster ? undefined : onSpeichern,
     }),
     [
       sitzung,
@@ -106,6 +110,7 @@ export function FestePunkteRahmen({
       treffen,
       onTreffenAnlegen,
       schreibt,
+      onSpeichern,
     ],
   );
   const dokument = offen ? dokumentDerSitzung(offen.kopf, teile) : null;

@@ -197,8 +197,14 @@ export function Anwesenheit({
         setze(neu);
         // Ein eigener Tipp ist Schreiben – das Protokoll merkt sich den neuen Stand gleich (W16).
         const wert = schnappschussWert(neu);
-        if (wert !== (typeof schnappschuss === 'string' ? schnappschuss : ''))
-          schnappschussSetzen?.(wert);
+        if (
+          schnappschussSetzen &&
+          wert !== (typeof schnappschuss === 'string' ? schnappschuss : '')
+        ) {
+          schnappschussSetzen(wert);
+          // Der Schnappschuss allein ist keine Eingabe (`nurSchnappschussAnders`) – hier wurde aber geschrieben: speichern.
+          w.speichern?.();
+        }
       },
       (e: unknown) => {
         setLaeuft(null);

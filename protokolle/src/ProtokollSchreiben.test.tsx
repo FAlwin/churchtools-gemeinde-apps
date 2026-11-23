@@ -39,6 +39,8 @@ const E = vi.hoisted(() => ({
   ersetzt: [] as unknown[],
   // Der Kontext der festen Punkte, wie die Blöcke ihn sehen (W16: `darfHaken`).
   feste: null as FestePunkteWert | null,
+  // Was der Knopf „melden“ als Änderung meldet (W16: nur ein Schnappschuss).
+  meldung: [] as unknown[],
 }));
 // Vorschläge in „Mitarbeit“: die Regel wird auf den gespeicherten Stand angewendet, wie bei ChurchTools.
 const VS = vi.hoisted(() => ({ stand: new Map<string, unknown>() }));
@@ -158,6 +160,9 @@ vi.mock('./DokumentEditor', async () => {
           <span data-testid="editor">{bearbeitbar ? 'bearbeitbar' : 'nur lesen'}</span>
           <button type="button" onClick={() => onAenderung(MIT_AUFGABE)}>
             tippen
+          </button>
+          <button type="button" onClick={() => onAenderung(E.meldung)}>
+            melden
           </button>
           <button
             type="button"
@@ -1417,5 +1422,29 @@ describe('Schreibt mit (W16)', () => {
     zeigeAls(true);
     await screen.findByTestId('editor');
     expect(darf()).toBeUndefined(); // Leitung: alle
+  });
+});
+
+describe('Schnappschuss der Anwesenheit im Editor (W16)', () => {
+  const MIT_ANW = [
+    ...DOK,
+    { id: 'anw', type: 'verweis', props: { art: 'anwesenheit' }, children: [] },
+  ] as typeof DOK;
+  const schnapp = (wert: string) =>
+    MIT_ANW.map((b) => (b.id === 'anw' ? { ...b, props: { ...b.props, schnappschuss: wert } } : b));
+
+  it('nur ein neuer Schnappschuss ist keine Eingabe: kein Speichern, keine Sperre – eine echte Eingabe schon', async () => {
+    vi.mocked(S.sperreNehmen).mockResolvedValue({ art: 'ok', kopf: KOPF });
+    vi.mocked(S.speichern).mockResolvedValue({ art: 'ok', kopf: { ...KOPF, stand: 'b' } });
+    lesen.mockResolvedValue({ kopf: KOPF, dokument: MIT_ANW });
+    zeige();
+    await screen.findByText('bearbeitbar');
+    E.meldung = schnapp('{"personen":[]}');
+    fireEvent.click(screen.getByText('melden'));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(S.sperreNehmen).not.toHaveBeenCalled();
+    expect(S.speichern).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('tippen'));
+    await waitFor(() => expect(S.sperreNehmen).toHaveBeenCalled());
   });
 });

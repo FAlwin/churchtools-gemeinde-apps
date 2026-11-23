@@ -58,7 +58,12 @@ const SITZUNG: Sitzung = {
 
 function zeige(
   punkt: React.ReactNode,
-  q: { sitzung?: Sitzung; onTreffenAnlegen?: () => Promise<number>; schreibt?: boolean } = {},
+  q: {
+    sitzung?: Sitzung;
+    onTreffenAnlegen?: () => Promise<number>;
+    schreibt?: boolean;
+    onSpeichern?: () => void;
+  } = {},
 ) {
   return render(
     <FestePunkteRahmen
@@ -70,6 +75,7 @@ function zeige(
       zeitzone="Europe/Berlin"
       onTreffenAnlegen={q.onTreffenAnlegen}
       schreibt={q.schreibt}
+      onSpeichern={q.onSpeichern}
     >
       {punkt}
     </FestePunkteRahmen>,
@@ -468,9 +474,10 @@ describe('Schnappschuss der Anwesenheit (W16)', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  it('beim Schreiben: ein eigener Tipp schreibt den Schnappschuss gleich mit', async () => {
+  it('beim Schreiben: ein eigener Tipp schreibt den Schnappschuss gleich mit – und stößt das Speichern an', async () => {
     ct.treffen.get(G)![0].hasEditingStarted = true;
     const merken = vi.fn();
+    const speichern = vi.fn();
     zeige(
       <FesterPunkt
         art="anwesenheit"
@@ -480,11 +487,13 @@ describe('Schnappschuss der Anwesenheit (W16)', () => {
         fest=""
         schnappschussSetzen={merken}
       />,
+      { onSpeichern: speichern },
     );
     const spike = await screen.findByRole('group', { name: 'Spike Musiker' });
     expect(merken).not.toHaveBeenCalled(); // bloßes Öffnen schreibt nichts (sonst nähme es die Sperre)
     fireEvent.click(within(spike).getByRole('button', { name: 'Anwesend' }));
     await waitFor(() => expect(merken).toHaveBeenCalledTimes(1));
+    expect(speichern).toHaveBeenCalledTimes(1);
     expect(schnappschussAus(merken.mock.calls[0][0])?.personen).toEqual([
       { person: 1, name: 'Alwin Friesen', status: 'offen' },
       { person: 19, name: 'Spike Musiker', status: 'da' },
@@ -504,8 +513,11 @@ describe('Schnappschuss der Anwesenheit (W16)', () => {
         schnappschussSetzen={merken}
       />
     );
-    const { rerender } = zeige(punkt(''), { schreibt: true });
+    const speichern = vi.fn();
+    const { rerender } = zeige(punkt(''), { schreibt: true, onSpeichern: speichern });
     await waitFor(() => expect(merken).toHaveBeenCalledTimes(1));
+    // Von selbst nachgezogen ist keine Eingabe: kein eigenes Speichern – er fährt mit dem nächsten mit.
+    expect(speichern).not.toHaveBeenCalled();
     const wert = merken.mock.calls[0][0] as string;
     // Nach der Vorbelegung: Alwin hat zugesagt, Spike abgesagt.
     expect(wert).toBe(GEMERKT);

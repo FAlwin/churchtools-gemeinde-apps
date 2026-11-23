@@ -54,6 +54,8 @@ export interface FestePunkteWert {
    * selbst im Block – ein bloßes Öffnen soll niemandem die Sperre wegnehmen. Nach einem eigenen Tipp schreibt sie ihn immer.
    */
   schreibt?: boolean;
+  /** Speichern anstoßen (W16): nach einem eigenen Tipp in der Anwesenheit – der Schnappschuss allein ist keine Eingabe. */
+  speichern?: () => void;
 }
 
 export const FestePunkteKontext = createContext<FestePunkteWert | null>(null);

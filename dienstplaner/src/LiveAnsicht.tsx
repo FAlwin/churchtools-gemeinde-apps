@@ -378,7 +378,7 @@ export function LiveAnsicht({
   const anteil = rest && rest.dauer > 0 ? Math.min(1, Math.max(0, rest.sek / rest.dauer)) : 0;
   const konto = lage.konto;
   // ± je Punkt, „Warum“ und „Ende voraussichtlich“ – gerechnet in `shared/ct/liveVerlauf.ts` (T8), hier nur gezeigt.
-  const abw = abweichungen(liste, laeufe, jetzt);
+  const abw = abweichungen(liste, laeufe, jetzt, wirksam?.stelle ?? null);
   const warum = warumPunkte(liste, abw);
   const prog = lage.art === 'ende' ? null : prognose(liste, konto);
 

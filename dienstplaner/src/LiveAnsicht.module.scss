@@ -542,6 +542,7 @@
 // Steuerleiste unten (A11) wie „Davor / Danach“ der Punkt-Ansicht (`PunktAnsicht.module.scss`): links „Zurück“ mit dem Titel
 // des vorigen Punkts, in der Mitte −1/+1 Min, rechts „Weiter“ – der eine gefüllte Knopf (R1). Über dem Home-Strich.
 .fuss {
+  position: relative;
   display: grid;
   flex: none;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -564,13 +565,20 @@
 }
 
 // Hinweis nach einem Fehlklick (A19): kurz, leise, mit „Neu starten“ als blauem Wort.
+// Liegt als Überlagerung direkt über der Knopfzeile (nicht im Fluss): Zurück/Weiter springen nicht, wenn er erscheint oder geht.
 .fehlklick {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
   display: flex;
-  grid-column: 1 / -1;
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
   margin: 0;
+  padding: 8px 20px;
+  border-top: 1px solid var(--hair);
+  background: var(--surface2);
   color: var(--text2);
   font-size: 13px;
 }
@@ -586,5 +594,9 @@
   .fuss {
     gap: 6px;
     padding: 8px 10px max(8px, var(--unten-strich));
+  }
+
+  .fehlklick {
+    padding: 8px 10px;
   }
 }

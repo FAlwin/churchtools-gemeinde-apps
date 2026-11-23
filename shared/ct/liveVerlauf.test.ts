@@ -311,9 +311,10 @@ describe('laeufeAus – Fehlklick (A19)', () => {
     ]);
   });
 
-  it('„Neu starten“: derselbe Wechsel zählt als normaler', () => {
+  it('„Neu starten“: der Punkt beginnt einen neuen Lauf, die kurzen Stopps dazwischen bleiben übersprungen', () => {
     const s = sitzung();
     s.klick(2, 0);
+    const beginnB = s.zeit;
     s.klick(3, 100);
     s.klick(2, 10);
     expect(laeufeAus(s.verlauf).laeufe).toHaveLength(1);
@@ -321,11 +322,31 @@ describe('laeufeAus – Fehlklick (A19)', () => {
     const { laeufe, uebersprungen } = laeufeAus(s.verlauf);
     expect(laeufe.map((l) => [l.stelle, l.fortgesetzt])).toEqual([
       [2, false],
-      [3, false],
       [2, false],
     ]);
-    expect(uebersprungen).toEqual([]);
-    expect(laeufe[2].seit).toBe(s.zeit);
+    // Der frühere Lauf endet mit dem ersten kurzen Stopp, der neue beginnt mit dem Rückkehr-Wechsel.
+    expect(laeufe[0]).toMatchObject({ seit: beginnB, bis: beginnB + 100_000 });
+    expect(laeufe[1]).toMatchObject({ seit: s.zeit, bis: null });
+    expect(stellen(uebersprungen)).toEqual([3]);
+  });
+
+  it('„Neu starten“: der übersprungene Punkt hat danach weder ± noch „Warum“, der Zielpunkt zählt beide Läufe', () => {
+    const s = sitzung();
+    s.klick(1, 0);
+    s.klick(2, 200); // A: 200 s, B beginnt
+    s.klick(3, 2); // Fehlklick auf C (2 s)
+    s.klick(2, 2);
+    s.neuStarten();
+    s.klick(4, 120); // B: 2 + 2 + 120 s? nein – zwei Läufe: 2 s und 120 s
+    const a = abweichungen(
+      liste,
+      laeufeAus(s.verlauf).laeufe,
+      s.zeit + 1000,
+      s.stand?.stelle ?? null,
+    );
+    expect(a.get(liste[2].id)).toBeUndefined();
+    expect(warumPunkte(liste, a).map((x) => x.punkt.title)).not.toContain('C');
+    expect(a.get(liste[1].id)?.sek).toBe(300 - 2 - 120);
   });
 
   it('nach einem Fehlklick zählt der nächste Wechsel wieder normal', () => {
@@ -503,7 +524,12 @@ describe('abweichungen – ± je Punkt (A14)', () => {
     s.klick(2, 260); // A: 40 s gespart
     s.klick(3, 340); // B: 40 s überzogen
     s.klick(4, 300); // C: genau im Plan
-    const a = abweichungen(liste, laeufeAus(s.verlauf).laeufe, s.zeit + 10_000);
+    const a = abweichungen(
+      liste,
+      laeufeAus(s.verlauf).laeufe,
+      s.zeit + 10_000,
+      s.stand?.stelle ?? null,
+    );
     expect(a.get(liste[0].id)).toEqual({ sek: 40, laeuft: false });
     expect(a.get(liste[1].id)).toEqual({ sek: -40, laeuft: false });
     expect(a.get(liste[2].id)).toEqual({ sek: 0, laeuft: false });
@@ -513,14 +539,20 @@ describe('abweichungen – ± je Punkt (A14)', () => {
   it('der laufende Punkt fehlt, solange er in der Zeit ist, und kommt mit seinem Minus, sobald er überzieht', () => {
     const s = sitzung();
     s.klick(1, 0);
-    expect(abweichungen(liste, laeufeAus(s.verlauf).laeufe, T0 + 100_000).size).toBe(0);
-    expect(abweichungen(liste, laeufeAus(s.verlauf).laeufe, T0 + 300_000).size).toBe(0);
-    expect(abweichungen(liste, laeufeAus(s.verlauf).laeufe, T0 + 345_000).get(liste[0].id)).toEqual(
-      {
-        sek: -45,
-        laeuft: true,
-      },
-    );
+    expect(
+      abweichungen(liste, laeufeAus(s.verlauf).laeufe, T0 + 100_000, s.stand?.stelle ?? null).size,
+    ).toBe(0);
+    expect(
+      abweichungen(liste, laeufeAus(s.verlauf).laeufe, T0 + 300_000, s.stand?.stelle ?? null).size,
+    ).toBe(0);
+    expect(
+      abweichungen(liste, laeufeAus(s.verlauf).laeufe, T0 + 345_000, s.stand?.stelle ?? null).get(
+        liste[0].id,
+      ),
+    ).toEqual({
+      sek: -45,
+      laeuft: true,
+    });
   });
 
   it('„−1 / +1 Min“ ändert das ± nicht (gerechnet gegen den ursprünglichen Plan)', () => {
@@ -531,6 +563,7 @@ describe('abweichungen – ± je Punkt (A14)', () => {
       liste,
       laeufeAus(zusammenfuehren(s.verlauf, k.neue)).laeufe,
       T0 + 290_000,
+      2,
     );
     expect(a.get(liste[0].id)?.sek).toBe(20);
   });
@@ -542,7 +575,12 @@ describe('abweichungen – ± je Punkt (A14)', () => {
     s.klick(3, 200); // B: 200 s
     s.klick(2, 8); // Fehlklick auf C, zurück auf B
     s.klick(3, 90); // B insgesamt 200 + 8 + 90 = 298 s, dann C regulär
-    const a = abweichungen(liste, laeufeAus(s.verlauf).laeufe, s.zeit + 5_000);
+    const a = abweichungen(
+      liste,
+      laeufeAus(s.verlauf).laeufe,
+      s.zeit + 5_000,
+      s.stand?.stelle ?? null,
+    );
     expect(a.get(liste[1].id)?.sek).toBe(2);
     // C lief nur die 8 s des Fehlklicks – und zählt dafür nicht: sein Lauf beginnt erst mit dem regulären Wechsel.
     expect(a.get(liste[2].id)).toBeUndefined();
@@ -554,7 +592,12 @@ describe('abweichungen – ± je Punkt (A14)', () => {
     s.klick(2, 100);
     s.klick(1, 60); // B 60 s, zurück auf A (60 s ≥ 30 → normaler Wechsel)
     s.klick(2, 100); // A noch einmal 100 s
-    const a = abweichungen(liste, laeufeAus(s.verlauf).laeufe, s.zeit + 5_000);
+    const a = abweichungen(
+      liste,
+      laeufeAus(s.verlauf).laeufe,
+      s.zeit + 5_000,
+      s.stand?.stelle ?? null,
+    );
     expect(a.get(liste[0].id)?.sek).toBe(300 - 200);
   });
 
@@ -577,8 +620,33 @@ describe('abweichungen – ± je Punkt (A14)', () => {
       wechselAus(mit, 3, T0 + 200_000),
       wechselAus(mit, 4, T0 + 300_000),
     ]).laeufe;
-    const a = abweichungen(mit, laeufe, T0 + 400_000);
+    const a = abweichungen(mit, laeufe, T0 + 400_000, 4);
     expect([...a.keys()]).toEqual([mit[0].id]);
+  });
+
+  it('nur Punkte vor der aktuellen Stelle: ein Punkt, der noch kommt, hat kein ±, auch wenn er schon einmal kurz lief', () => {
+    const s = sitzung();
+    s.klick(1, 0);
+    s.klick(2, 100);
+    s.klick(3, 40); // C läuft 40 s (kein Fehlklick) …
+    s.klick(2, 100); // … dann ein echtes Zurück auf B (normaler Wechsel, B nicht fortgesetzt)
+    const a = abweichungen(
+      liste,
+      laeufeAus(s.verlauf).laeufe,
+      s.zeit + 1000,
+      s.stand?.stelle ?? null,
+    );
+    expect(a.get(liste[2].id)).toBeUndefined();
+    expect(warumPunkte(liste, a).map((x) => x.punkt.title)).toEqual(['A']);
+  });
+
+  it('ohne Stelle („nicht gestartet“) gibt es kein ±; bei „Ende“ haben alle erledigten eins', () => {
+    const s = sitzung();
+    s.klick(1, 0);
+    s.klick(ENDE, 100);
+    const l = laeufeAus(s.verlauf).laeufe;
+    expect(abweichungen(liste, l, s.zeit + 1000, null).size).toBe(0);
+    expect(abweichungen(liste, l, s.zeit + 1000, ENDE).get(liste[0].id)?.sek).toBe(200);
   });
 
   it('Läufe ohne Punkt („nicht gestartet“, „Ende“) werden nicht gezählt', () => {
@@ -586,7 +654,12 @@ describe('abweichungen – ± je Punkt (A14)', () => {
     s.klick(0, 0);
     s.klick(1, 10);
     s.klick(ENDE, 500);
-    const a = abweichungen(liste, laeufeAus(s.verlauf).laeufe, s.zeit + 1000);
+    const a = abweichungen(
+      liste,
+      laeufeAus(s.verlauf).laeufe,
+      s.zeit + 1000,
+      s.stand?.stelle ?? null,
+    );
     expect([...a.keys()]).toEqual([liste[0].id]);
   });
 });
@@ -600,7 +673,7 @@ describe('warumPunkte – die drei größten Abweichungen', () => {
       t = dauerPlan;
     });
     s.klick(sekunden.length + 1, t);
-    return abweichungen(liste, laeufeAus(s.verlauf).laeufe, s.zeit + 1000);
+    return abweichungen(liste, laeufeAus(s.verlauf).laeufe, s.zeit + 1000, s.stand?.stelle ?? null);
   }
 
   it('nach Betrag, egal ob Plus oder Minus; höchstens drei', () => {
@@ -624,7 +697,12 @@ describe('warumPunkte – die drei größten Abweichungen', () => {
     const s = sitzung();
     s.klick(1, 0);
     s.klick(2, 290);
-    const a = abweichungen(liste, laeufeAus(s.verlauf).laeufe, s.zeit + 400_000);
+    const a = abweichungen(
+      liste,
+      laeufeAus(s.verlauf).laeufe,
+      s.zeit + 400_000,
+      s.stand?.stelle ?? null,
+    );
     expect(warumPunkte(liste, a).map((x) => [x.punkt.title, x.sek])).toEqual([
       ['B', -100],
       ['A', 10],

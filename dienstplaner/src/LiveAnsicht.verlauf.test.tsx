@@ -437,6 +437,15 @@ describe('Fehlklick zählt nicht (A19, T9)', () => {
     expect(restzeit()).toMatch(/^4:4\d/);
   });
 
+  it('nach „Neu starten“ steht der Fehlklick-Punkt nicht im „Warum“ (er hat gar nicht stattgefunden)', async () => {
+    await fehlklick();
+    await klick('Neu starten');
+    await spulen(VERLAUF_TAKT_MS);
+    expect(screen.queryByLabelText(/Plus\/Minus/)).toBeNull();
+    const warum = screen.queryByRole('list', { name: 'Warum' });
+    expect(warum?.textContent ?? '').not.toContain('Predigt');
+  });
+
   it('war der Punkt dazwischen 30 Sekunden dran, ist es ein normaler Wechsel – kein Hinweis, kein Ausgleich', async () => {
     vi.setSystemTime(T0 + 300_000);
     const { schreiben } = zeige({ stelle: 2, seit: ISO(T0 + 300_000) });

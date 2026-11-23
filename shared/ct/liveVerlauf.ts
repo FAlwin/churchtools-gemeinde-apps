@@ -109,13 +109,27 @@ export interface Laeufe {
   uebersprungen: Wechsel[];
 }
 
+const neuerLauf = (w: Wechsel): Lauf => ({
+  stelle: w.stelle,
+  punktId: w.punktId,
+  titel: w.titel,
+  seit: w.zeit,
+  bis: null,
+  oeffnung: w.zeit,
+  fortgesetzt: false,
+  zusatzSek: 0,
+  ausgleich: 0,
+  wechsel: [w],
+});
+
 const dauerMs = (l: Lauf) => (l.bis ?? l.seit) - l.seit;
 
 /**
  * **Die wirksamen Läufe** – aus den Wechseln, nach Zeit sortiert. Ein Wechsel auf Stelle `t` ist eine **Fortsetzung**
  * (Fehlklick, A19), wenn davor schon ein Lauf auf `t` war und **jeder Lauf dazwischen** (auch der gerade verlassene) kürzer
- * als `FEHLKLICK_MS` dran war – es sei denn, der Wechsel trägt `neu` („Neu starten“). Dann läuft der alte Lauf weiter (sein
- * Beginn bleibt, die Zeit dazwischen gehört ihm), die Läufe dazwischen entfallen. Gilt für Weiter→Zurück, Zurück→Weiter und
+ * als `FEHLKLICK_MS` dran war. Dann läuft der alte Lauf weiter (sein Beginn bleibt, die Zeit dazwischen gehört ihm), die
+ * Läufe dazwischen entfallen. Trägt der Wechsel `neu` („Neu starten“), beginnt der Punkt stattdessen einen neuen Lauf ab dem
+ * Wechsel: Die kurzen Stopps dazwischen bleiben Fehlklicks (nicht gelaufen), der frühere Lauf zählt weiter. Gilt für Weiter→Zurück, Zurück→Weiter und
  * mehrere Schritte; ab 30 Sekunden ist es ein normaler Wechsel. Nur Stellen ab 1 (Punkte und „Ende“) können fortgesetzt
  * werden, nicht „nicht gestartet“.
  */
@@ -130,7 +144,7 @@ export function laeufeAus(verlauf: readonly Wechsel[]): Laeufe {
       if (w.zusatzDavor !== undefined) letzter.zusatzSek = w.zusatzDavor;
     }
     let k = -1;
-    if (w.neu !== true && w.stelle >= 1) {
+    if (w.stelle >= 1) {
       for (let j = laeufe.length - 1; j >= 0; j--) {
         const l = laeufe[j];
         if (j < laeufe.length - 1 && l.stelle === w.stelle) {
@@ -141,26 +155,22 @@ export function laeufeAus(verlauf: readonly Wechsel[]): Laeufe {
       }
     }
     if (k >= 0) {
+      // Die kurzen Stopps dazwischen sind Fehlklicks – sie zählen auch bei „Neu starten“ nicht.
       for (const weg of laeufe.splice(k + 1)) uebersprungen.push(...weg.wechsel);
       const l = laeufe[k];
-      l.bis = null;
-      l.oeffnung = w.zeit;
-      l.fortgesetzt = true;
-      l.ausgleich = w.ausgleich ?? 0;
-      l.wechsel.push(w);
+      if (w.neu !== true) {
+        l.bis = null;
+        l.oeffnung = w.zeit;
+        l.fortgesetzt = true;
+        l.ausgleich = w.ausgleich ?? 0;
+        l.wechsel.push(w);
+      } else {
+        // „Neu starten“: Der frühere Lauf bleibt, wie er war (er endete mit dem ersten kurzen Stopp); der Punkt bekommt
+        // einen neuen Lauf ab dem Rückkehr-Wechsel.
+        laeufe.push(neuerLauf(w));
+      }
     } else {
-      laeufe.push({
-        stelle: w.stelle,
-        punktId: w.punktId,
-        titel: w.titel,
-        seit: w.zeit,
-        bis: null,
-        oeffnung: w.zeit,
-        fortgesetzt: false,
-        zusatzSek: 0,
-        ausgleich: 0,
-        wechsel: [w],
-      });
+      laeufe.push(neuerLauf(w));
     }
   }
   return { laeufe, uebersprungen };
@@ -193,12 +203,15 @@ export interface Abweichung {
  * **± je Punkt** (A14): geplante Dauer (ursprünglicher Plan, `addseconds` zählt nie mit – A13) minus gelaufene Dauer, über
  * alle wirksamen Läufe dieses Punkts. Ein Fehlklick-Lauf zählt vom ersten Beginn an, die kurzen Stopps dazwischen gar nicht.
  * Schlüssel ist die Punkt-ID. Weggelassene Punkte und Lieder ohne Dauer haben keine Plan-Zeit und kein ±. `jetzt` = Uhr
- * von ChurchTools; der laufende Punkt kommt nur vor, wenn er überzieht (dann mit `laeuft`).
+ * von ChurchTools; der laufende Punkt kommt nur vor, wenn er überzieht (dann mit `laeuft`). **Nur Punkte vor der aktuellen
+ * `stelle`** (alle bei „Ende“): Ein Punkt, der in der Liste noch kommt, hat noch kein ± – auch wenn er schon einmal kurz lief;
+ * ohne Stelle („nicht gestartet“) gibt es keins.
  */
 export function abweichungen(
   liste: readonly LivePunkt[],
   laeufe: readonly Lauf[],
   jetzt: number,
+  stelle: number | null,
 ): Map<number, Abweichung> {
   const gelaufen = new Map<number, { ms: number; laeuft: boolean }>();
   for (const l of laeufe) {
@@ -211,7 +224,8 @@ export function abweichungen(
     });
   }
   const aus = new Map<number, Abweichung>();
-  for (const p of liste) {
+  for (const [i, p] of liste.entries()) {
+    if (stelle === null || i + 1 > stelle) continue;
     const g = gelaufen.get(p.id);
     if (!g || p.weggelassen || p.liedOhneDauer) continue;
     const sek = Math.round(p.dauerSek - g.ms / 1000) + 0; // `+ 0`: kein „−0“

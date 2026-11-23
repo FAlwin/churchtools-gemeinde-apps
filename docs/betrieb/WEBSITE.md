@@ -1,8 +1,9 @@
 # Website – ChurchTools-Erweiterung
 
-> **Stand: W3b-3 (23.11.2026) – noch kein Release.** Gebaut: Grundgerüst (Einrichten, Seitenliste, Vorschau, Seiten anlegen und
+> **Stand: W3b-4a (23.11.2026) – noch kein Release.** Gebaut: Grundgerüst (Einrichten, Seitenliste, Vorschau, Seiten anlegen und
 > löschen – W3a), **Aussehen** und **Einstellungen** (W3a-3), **Wer darf was** und **Freigabe** für Redakteure und Leitung (W3b-1/-2),
-> **Mails im Freigabe-Weg** (W3b-3: Einreichen, Löschen anfragen, Zurückgeben, Freigeben) und
+> **Mails im Freigabe-Weg** (W3b-3: Einreichen, Löschen anfragen, Zurückgeben, Freigeben), **Untergruppen einrichten** (W3b-4a: Kategorie
+> und Rechte je Untergruppe, „Wer darf was“, Hinweis beim Start – Abschnitt „Untergruppen – Stand W3b-4a“) und
 > der neue **Designer in der Vorschau** (W3c): Text direkt tippen, Bausteine und Abschnitte ziehen, Spaltenbreite und Abstand ziehen,
 > Rückgängig/Wiederholen für die Seite – Abschnitte „Wer darf was“, „Freigabe“ und „Bearbeiten in der Vorschau“ unten. Noch **nicht**
 > da: siehe „Was noch fehlt“. Das Bild der ganzen Website: Bauplan „Neue Website“
@@ -86,7 +87,8 @@ aber keine Rechte hat. Auch das ist die Regel der Oberfläche; **den Schutz der 
 wird nirgends zusätzlich gespeichert. Entspricht eine Rolle keiner Stufe genau (von Hand verändert, ein früherer Versuch ist
 abgebrochen), steht dort „Weicht ab“; gewählt ist dann der Vorschlag der Rolle. **Rechte setzen** wirkt sofort (unabhängig vom
 „Speichern“ der Einstellungen), richtet Soll gegen Ist aus (setzen, entziehen, ein Recht nachschieben, nachlesen) und meldet erst
-nach dem Nachlesen „gesetzt“. **Entzogen wird nur, was auf die beiden Kategorien der Website zeigt**; Rechte an anderen Kategorien
+nach dem Nachlesen „gesetzt“. **Entzogen wird nur, was auf die Kategorien der Website zeigt** (Entwürfe, Veröffentlicht und seit W3b-4a die Kategorien der
+Untergruppen); Rechte an anderen Kategorien
 oder Zusatzrechte bleiben. Berührt werden nur Rollen, die die Wahl nennt und die zur Gruppe gehören.
 
 **Prüfung beim Start** (nur für diese Admins, `website/src/RechteHinweis.tsx`): Haben die Rollen keine Rechte an der Website oder
@@ -106,6 +108,63 @@ Regel der Oberfläche, nicht der Schutz der Daten.
 **Von Hand gesetzte Rechte (frühere Einrichtungen, z. B. die Test-Instanz):** Sie genügen weiter. Wer sie auf die neue Einrichtung
 überführen will, öffnet „Wer darf was“, prüft die Stufen und drückt **Rechte setzen**. Stehen bei einer Rolle zusätzlich Rechte an
 den beiden Kategorien, die zu keiner Stufe gehören, zeigt „Weicht ab“ das; „Rechte setzen“ entzieht sie.
+
+## Untergruppen – Stand W3b-4a
+
+**Was eine Untergruppe ist** (E-W28): jede **direkte** Untergruppe der Gruppe „Website“ in `GET /groups/hierarchies` – Kinder über `parents`
+**und** `children` (die Auswertung des Organigramms: `elternAus`/`kinderVon` in `shared/organigramm/gruppen.ts`, für die Website
+`untergruppenAus` in `shared/website/einrichten.ts`). **Enkel zählen nicht.** Eine neue Untergruppe erscheint unter „Wer darf was“ als
+„noch nicht eingerichtet“; erst wenn der Admin dort ihre Stufen setzt, bekommt sie Kategorie und Rechte.
+
+**Je Untergruppe eine Kategorie** `veroeffentlicht-g<Untergruppe>` („Website: Veröffentlicht · <Name der Untergruppe>“,
+`untergruppenKategorie`) – **keine** eigene Entwürfe-Kategorie (E-W19: alle teilen sich „Entwürfe“). Eingerichtet heißt: diese Kategorie gibt
+es (`untergruppenKategorienAus`). Eine schon angelegte (Test-Instanz: 117 aus der Messung W3b-4-0) wird wiederverwendet
+(`kategorieSicherstellen`).
+
+**Welche Website man sieht, bestimmt nur `entwuerfe-g<ID>`** (`einrichtungAus`): Neben `veroeffentlicht-g344` steht jetzt
+`veroeffentlicht-g347`; eine Veröffentlicht-Kategorie wird deshalb **nie** als Website gewählt – auch nicht, wenn ihre ID kleiner ist. Wer nur
+eine Veröffentlicht-Kategorie sieht, sieht keine Website (ein Admin richtet dann ein; vorhandene Kategorien werden wiederverwendet).
+
+**Die Rechte** (`shared/website/rechte.ts`, eine Funktion `sollRechte` für alle – mit `unter` für die Rollen einer Untergruppe):
+
+| Rollen der …      | Stufe     | Entwürfe  | Veröffentlicht der Website   | Veröffentlicht einer Untergruppe |
+| ----------------- | --------- | --------- | ---------------------------- | -------------------------------- |
+| Gruppe „Website“  | Redakteur | schreiben | lesen                        | **alle** lesen                   |
+| Gruppe „Website“  | Leitung   | schreiben | schreiben                    | **alle** schreiben               |
+| einer Untergruppe | Redakteur | schreiben | lesen (neu, Messung W3b-4-0) | nur die **eigene** lesen         |
+| einer Untergruppe | Leitung   | schreiben | lesen                        | nur die **eigene** schreiben     |
+
+Dazu jeweils „Modul sehen“. Eine Rolle einer Untergruppe schreibt **nie** in „Veröffentlicht“ der Website oder einer anderen Untergruppe.
+**Uns gehören** (`verwaltetVon`, nur deren Daten-Rechte werden entzogen): Entwürfe, Veröffentlicht der Website und die Kategorien **aller**
+eingerichteten Untergruppen. Die Untergruppen samt Kategorien werden bei jedem Lesen und Setzen **frisch** gelesen (`untergruppenLesen` in
+`website/src/rechte.ts`) – darum gehören die Rechte der Website-Rollen an den Untergruppen immer zum Soll, und „Rechte setzen“ bei der Website
+entzieht sie nicht. Eine Kategorie einer früheren Untergruppe (aus der Hierarchie gelöst) gehört nicht mehr dazu; ihre Rechte bleiben stehen.
+
+**Einrichten einer Untergruppe** (`untergruppeRechteSetzen`, „Rechte setzen“ in ihrem Abschnitt – auch später zum Ändern der Stufen):
+
+1. Ist sie noch direkte Untergruppe? (sonst `409`, nichts geschieht)
+2. Kategorie sicherstellen (nachgelesen).
+3. Rechte ihrer Rollen ausrichten (nachgelesen).
+4. **Danach die Rollen der Website nachziehen** – mit ihren **heutigen** Stufen (`stufenZumNachziehen`: abgeleitet nur aus Entwürfe und
+   Veröffentlicht der Website, nicht neu vorbelegt). Eine Rolle, die dort schon abweicht, bleibt unberührt (Hinweis „weicht ab“ bleibt).
+5. Ihre Leitung festhalten (`website-leitung` mit `gruppe`).
+
+Scheitert 3, ist die Untergruppe nicht eingerichtet („Noch nicht gesetzt – …“). Scheitert 4, sagt `WebsiteNichtNachgezogen`: „Die Untergruppe
+„…“ ist eingerichtet. Die Rollen der Website haben ihre Rechte daran aber noch nicht bekommen …“; ein zweites „Rechte setzen“ holt es nach
+(Soll gegen Ist ändert nur, was fehlt). Während ein Abschnitt setzt, warten die anderen.
+
+**„Wer darf was“** (`website/src/WerDarfWas.tsx`): unter der Liste der Website je Untergruppe ein Abschnitt mit ihrem Namen (aus
+`/groups/{id}`), dieselben Bausteine (`StufenBereich`, `RollenStufen`). **Hinweis beim Start** (`RechteHinweis.tsx`, `pruefeRechte`): auch für
+jede nicht eingerichtete Untergruppe und jede, deren Rechte abweichen; eine eingerichtete Untergruppe, deren Rollen alle „Kein Zugriff“ haben,
+ist eine Entscheidung und kein Hinweis. Lesefehler → kein Hinweis.
+
+**`website-leitung` je Gruppe:** Der Wert der Website trägt **kein** `gruppe` (wie seit W3b-3 – abwärtskompatibel, die Mails der Website lesen
+ihn unverändert); der Wert einer Untergruppe trägt `"gruppe": <ID>`. Die Rollen sind `group_role`-IDs der jeweiligen Gruppe. Gelesen wird
+erst in W3b-4c (Mails je Bereich).
+
+**Zwischenstand bis W3b-4b:** Mitglieder einer Untergruppe schreiben in „Entwürfe“, nicht in „Veröffentlicht“ der Website – die Oberfläche
+(`zugangFuer`) macht sie darum zu **Redakteuren der ganzen Website**, auch die Leitung einer Untergruppe. Sie sehen alle Seiten, reichen ein,
+geben nicht frei. Bereich je Seite, gefilterte Listen und Freigeben je Bereich kommen mit W3b-4b.
 
 ## Freigabe – Stand W3b-2
 
@@ -214,8 +273,9 @@ der Rechte. Fehlt der Wert (bestehende Installationen), gilt dieselbe **Vorbeleg
 `shared/website/rechte.ts`: Rollen mit Leiter-Kennzeichen). Ein leerer Wert ist eine echte Aussage („niemand“) und wird nicht durch die
 Vorbelegung ersetzt. Empfänger sind die aktiven Mitglieder der Website-Gruppe mit einer dieser Rollen (Mitglieder samt Rollen der
 eigenen Gruppe sind auch für Redakteure lesbar – gemessen W3b-0). Gelingt das Setzen der Rechte, aber nicht das Festhalten, sagt die
-Meldung das („Die Rechte sind gesetzt. …“); ein zweites „Rechte setzen“ holt es nach. **W3b-4 (Untergruppen):** Dann kommt die Leitung des
-Bereichs der Seite dazu – an der Stelle `leitungEmpfaenger`.
+Meldung das („Die Rechte sind gesetzt. …“); ein zweites „Rechte setzen“ holt es nach. **W3b-4 (Untergruppen):** Seit W3b-4a gibt es den Wert
+je Gruppe (der Wert der Website bleibt ohne `gruppe`); mit W3b-4c kommt die Leitung des Bereichs der Seite dazu – an der Stelle
+`leitungEmpfaenger`.
 
 **Der Schalter** „Mails im Freigabe-Weg“ steht im Fenster **Einstellungen** (nur Leitung und Admin, E-W22), als Haken, und **wirkt
 sofort**: eigener Wert `website-mail` in „Entwürfe“, **nicht** in der Einheit „Einstellungen“ (die geht erst über „Freigeben“ online).
@@ -584,7 +644,8 @@ mit Begründung bewusst keine).
 
 ## Was noch fehlt
 
-W3b-4 Untergruppen · W4 Bilder · W5 Bau-Dienst und Veröffentlichen · Release
+W3b-4b Bereich je Seite und Oberfläche (bis dahin sind Mitglieder einer Untergruppe Redakteure der ganzen Website, siehe „Untergruppen – Stand
+W3b-4a“) · W3b-4c Mails je Bereich · W4 Bilder · W5 Bau-Dienst und Veröffentlichen · Release
 (`website-v…`; Tag erst nach grünem Merge, siehe `.github/workflows/website-release.yml`).
 
 ## Release

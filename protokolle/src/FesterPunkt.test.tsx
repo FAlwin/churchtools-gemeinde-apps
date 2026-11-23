@@ -196,7 +196,7 @@ describe('Fester Punkt im Editor', () => {
       >
         <VerweisBlock
           block={{ id: 'v', props: { art: 'letztes-protokoll', fest: '' } }}
-          editor={{ isEditable: false, updateBlock: () => undefined }}
+          editor={{ isEditable: false, updateBlock: () => undefined, transact: () => undefined }}
         />
       </FestePunkteRahmen>,
       { container: editor },

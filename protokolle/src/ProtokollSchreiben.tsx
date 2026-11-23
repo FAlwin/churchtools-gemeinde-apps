@@ -595,6 +595,8 @@ export function ProtokollSchreiben({
     zusammenfassung: string;
     treffen: number | null;
     beitrag: Beitrag | null;
+    /** Die frisch gelesene Anwesenheit – kommt beim Freigeben als Schnappschuss ins Protokoll (W16). */
+    anwesenheit: TreffenStand | null;
   } | null>(null);
   const freigabeOeffnen = () => {
     const d = editor.current?.dokument() ?? dok;
@@ -614,11 +616,13 @@ export function ProtokollSchreiben({
       laedtBeitrag: true,
       treffen,
       beitrag: null,
+      anwesenheit: null,
       ...mit(null),
     });
     if (treffen !== null)
       anwesenheitLesen(gruppeId, treffen).then(
-        (a) => setFreigabe((f) => f && { ...f, laedtAnwesenheit: false, ...mit(a) }),
+        (a) =>
+          setFreigabe((f) => f && { ...f, laedtAnwesenheit: false, anwesenheit: a, ...mit(a) }),
         // Lesen gescheitert: ohne Anwesenheits-Hinweis weiter – Freigeben bleibt möglich.
         () => setFreigabe((f) => f && { ...f, laedtAnwesenheit: false }),
       );
@@ -647,6 +651,7 @@ export function ProtokollSchreiben({
       sitzung: { beginn: sitzung.beginn, kopf: { sitzung: ort.sitzung, status: 'entwurf' } },
       protokolle,
       heute: heuteImKalender(new Date(), zone),
+      anwesenheit: freigabe?.anwesenheit,
     });
     const r = await freigeben(ort, schreiber, st.basisStand, d, ichV, new Date(), abgleich(d));
     if (r.art !== 'ok')
@@ -694,6 +699,7 @@ export function ProtokollSchreiben({
       status={mOrt ? statusFest : undefined}
       ich={schreiber.person}
       onTreffenAnlegen={neuesTreffen}
+      schreibt={z?.lage === 'schreibe'}
       onZuSitzung={
         onZuSitzung
           ? (s) => {

@@ -44,6 +44,11 @@ export interface FestePunkteWert {
   anfragen: readonly Anfrage[];
   /** „Gruppentreffen anlegen“ (S5-3) – nur beim Schreiben; legt an und verknüpft es mit dem Protokoll. */
   treffenAnlegen?: () => Promise<void>;
+  /**
+   * Dieses Fenster schreibt gerade (hält die Sperre, W16). Nur dann merkt sich die Anwesenheit ihren gelesenen Stand von
+   * selbst im Block – ein bloßes Öffnen soll niemandem die Sperre wegnehmen. Nach einem eigenen Tipp schreibt sie ihn immer.
+   */
+  schreibt?: boolean;
 }
 
 export const FestePunkteKontext = createContext<FestePunkteWert | null>(null);

@@ -14,6 +14,7 @@
  */
 import { BLOCK, type Block } from './dokument';
 import { erledigtAm, erledigtSeit, offene, type Aufgabe } from './aufgaben';
+import { schnappschussWert, type TreffenStand } from './anwesenheit';
 
 /** Was eine Sitzung für die festen Punkte mitbringt (Teil von `Sitzung`). */
 export interface SitzungsBezug {
@@ -221,8 +222,28 @@ export function festePunkteLoesen(dokument: readonly Block[]): Block[] {
 }
 
 /**
+ * **Die Anwesenheit ins Protokoll schreiben** (W16) – jeder Punkt „Anwesenheit“ bekommt den Stand als Schnappschuss
+ * (`props.schnappschuss`). Ohne Stand (kein Treffen oder nicht lesbar) bleibt der bisherige Schnappschuss, wie er ist.
+ */
+export function anwesenheitFesthalten(
+  dokument: readonly Block[],
+  stand: TreffenStand | null | undefined,
+): Block[] {
+  if (!stand) return [...dokument];
+  const schnappschuss = schnappschussWert(stand);
+  const halten = (b: Block): Block => {
+    const kinder = b.children?.length ? { children: b.children.map(halten) } : {};
+    if (b.type !== BLOCK.verweis || b.props?.art !== 'anwesenheit') return { ...b, ...kinder };
+    return { ...b, props: { ...b.props, schnappschuss }, ...kinder };
+  };
+  return dokument.map(halten);
+}
+
+/**
  * **Festhalten bei der Freigabe** mit denselben Eingaben, die der Punkt live zeigt (`FesterPunkt`): die offenen To-Dos
- * von früher und das letzte freigegebene Protokoll vor dieser Sitzung. Die eine Stelle dafür.
+ * von früher und das letzte freigegebene Protokoll vor dieser Sitzung. Die eine Stelle dafür. Seit W16 auch die
+ * Anwesenheit, wie die Freigabe sie frisch gelesen hat (`anwesenheit`) – damit jedes freigegebene Protokoll sie für alle
+ * lesbar trägt, auch wenn die Leitung vorher nichts getippt hat.
  */
 export function festhaltenFuerFreigabe<T extends SitzungsBezug>(
   dokument: readonly Block[],
@@ -232,10 +253,13 @@ export function festhaltenFuerFreigabe<T extends SitzungsBezug>(
     sitzung: SitzungsBezug & { kopf: { sitzung: string; status: string } };
     protokolle: readonly T[];
     heute: string;
+    /** Die Anwesenheit aus dem Gruppentreffen, wie die Freigabe sie gelesen hat – fehlt/`null`: nicht lesbar oder keins. */
+    anwesenheit?: TreffenStand | null;
   },
 ): Block[] {
   const letztes = letztesProtokoll(q.protokolle, q.sitzung);
-  return festePunkteFesthalten(dokument, {
+  const mitAnwesenheit = anwesenheitFesthalten(dokument, q.anwesenheit);
+  return festePunkteFesthalten(mitAnwesenheit, {
     offen: offeneVonFrueher({
       aufgaben: q.aufgaben,
       gruppe: q.gruppe,

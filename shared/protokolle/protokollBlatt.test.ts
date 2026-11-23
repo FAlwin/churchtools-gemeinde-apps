@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Absatz, Rgb } from '../ct/terminBlatt';
 import { neueAufgabe, statusSetzen, type Aufgabe } from './aufgaben';
-import { ohneWert } from './anwesenheit';
+import { ohneWert, schnappschussWert } from './anwesenheit';
 import type { Block } from './dokument';
 import {
   BAUSTEIN_BLAU,
@@ -518,6 +518,32 @@ describe('Feste Punkte', () => {
     expect(texte(teile(quelle([b])))).toEqual(['Zu dieser Sitzung gibt es kein Gruppentreffen.']);
     expect(texte(teile(quelle([b], { anwesenheit: 'unbekannt' })))).toEqual([
       'Die Anwesenheit ließ sich nicht laden.',
+    ]);
+  });
+
+  it('Anwesenheit nicht lesbar (403 oder vorübergehend): der Schnappschuss im Block (W16) – wie in der Ansicht', () => {
+    const live = {
+      abgeschlossen: false,
+      begonnen: true,
+      personen: [
+        { person: 1, name: 'Alwin Friesen', status: 'offen' as const },
+        { person: 2, name: 'Maria Dück', status: 'offen' as const },
+      ],
+    };
+    const b = verweis('anwesenheit', {
+      schnappschuss: schnappschussWert({
+        personen: [
+          { person: 1, name: 'Alwin Friesen', status: 'da' },
+          { person: 2, name: 'Maria Dück', status: 'weg' },
+        ],
+      }),
+    });
+    expect(texte(teile(quelle([b], { anwesenheit: 'unbekannt' })))).toEqual([
+      'Anwesend (1): Alwin Friesen · Abwesend: Maria Dück',
+    ]);
+    // Lesbar: live gilt.
+    expect(texte(teile(quelle([b], { anwesenheit: live })))).toEqual([
+      'Anwesend (0): – · Offen: Alwin Friesen, Maria Dück',
     ]);
   });
 

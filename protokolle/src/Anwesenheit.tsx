@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@ui/icons/icons';
 import { Segment } from '@ui/bedienung/Segment';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
@@ -9,6 +9,8 @@ import {
   nachTipp,
   ohneAus,
   ohneAusgeblendete,
+  schnappschussWert,
+  zumLesen,
   type AnwesenheitsStatus,
   type TreffenStand,
 } from '@shared/protokolle/anwesenheit';
@@ -32,6 +34,11 @@ import styles from './Anwesenheit.module.scss';
  * - **Einklappbar:** zugeklappt die Kurzform „Anwesend (n): … · Abwesend: … · Offen: … · Gäste: …“ – beim Lesen
  *   zugeklappt, beim Schreiben offen; aufgeklappt nur eine Zeile mit den Zahlen.
  * - Ohne Gruppentreffen: „Gruppentreffen anlegen“ (nur beim Schreiben).
+ * - **Das Protokoll merkt sich die Anwesenheit** (W16, Alwin 23.11.2026): Beim Schreiben steht der gelesene Stand als
+ *   Schnappschuss (Person, Name, Status) im Block (`props.schnappschuss`, `schnappschussSetzen`) – nach jedem eigenen Tipp
+ *   und, solange dieses Fenster schreibt (`w.schreibt`), auch nach dem Lesen. Das geht am Rückgängig-Verlauf vorbei (der
+ *   Aufrufer nimmt `ohneVerlauf`). Wer die Anwesenheit in ChurchTools nicht sehen darf (403) oder bei einem vorübergehenden
+ *   Fehler, liest den Schnappschuss – ohne Fehlermeldung (`zumLesen`, dieselbe Regel wie im PDF).
  */
 
 type Laden =
@@ -53,6 +60,8 @@ export function Anwesenheit({
   gaesteSetzen,
   ohne: ohneRoh,
   ohneSetzen,
+  schnappschuss,
+  schnappschussSetzen,
 }: {
   w: FestePunkteWert;
   /** `props.gaeste` des Blocks. */
@@ -64,6 +73,10 @@ export function Anwesenheit({
   ohne?: unknown;
   /** Beim Schreiben: Personen aus dem Protokoll nehmen/zurückholen (fehlt es, wird nur gelesen). */
   ohneSetzen?: (ohne: number[]) => void;
+  /** `props.schnappschuss` des Blocks (W16) – gilt, wenn ChurchTools die Anwesenheit nicht zeigt. */
+  schnappschuss?: unknown;
+  /** Beim Schreiben: den Schnappschuss in den Block schreiben (am Rückgängig-Verlauf vorbei). */
+  schnappschussSetzen?: (wert: string) => void;
 }) {
   const gaeste = gaesteAus(gaesteRoh);
   const ohne = ohneAus(ohneRoh);
@@ -100,6 +113,21 @@ export function Anwesenheit({
       : geladen.art === 'fehler'
         ? { art: 'fehler', text: geladen.fehler.text }
         : { art: 'laedt' };
+  // Nicht lesbar (kein Recht oder vorübergehend): der Schnappschuss aus dem Block, falls es einen gibt (W16).
+  const gemerkt = laden.art === 'fehler' ? zumLesen('unbekannt', schnappschuss) : null;
+  const ausDemProtokoll = gemerkt !== null && gemerkt !== 'unbekannt' ? gemerkt : null;
+
+  // Den Schnappschuss nachziehen – nur mit einem Live-Stand und nur, solange dieses Fenster schreibt (sonst nähme ein
+  // bloßes Öffnen die Sperre). Gleicher Stand: nichts schreiben (sonst liefe jedes Neuzeichnen in eine Änderung).
+  const schreibt = bearbeitbar && w.schreibt === true;
+  const merken = useRef(schnappschussSetzen);
+  merken.current = schnappschussSetzen;
+  const liveStand = laden.art === 'fertig' ? laden.stand : null;
+  useEffect(() => {
+    if (!schreibt || !liveStand) return;
+    const wert = schnappschussWert(liveStand);
+    if (wert !== (typeof schnappschuss === 'string' ? schnappschuss : '')) merken.current?.(wert);
+  }, [schreibt, liveStand, schnappschuss]);
 
   const antwortVon = new Map(anfragen.map((a) => [a.person, a.antwort]));
 
@@ -142,7 +170,7 @@ export function Anwesenheit({
         <p className={styles.leise}>Anwesenheit wird gelesen …</p>
       </div>
     );
-  if (laden.art === 'fehler')
+  if (laden.art === 'fehler' && !ausDemProtokoll)
     return (
       <div className={styles.kasten}>
         <p className={styles.fehler} role="alert">
@@ -152,11 +180,12 @@ export function Anwesenheit({
     );
 
   // Der Stand bleibt vollständig (wie ChurchTools ihn liefert); gezeigt, gezählt und gelesen wird ohne die Ausgeblendeten.
-  const { stand } = laden;
+  const stand = laden.art === 'fertig' ? laden.stand : ausDemProtokoll!;
   const sichtbar = ohneAusgeblendete(stand, ohne);
   const ausgeblendet = stand.personen.filter((p) => ohne.includes(p.person));
   const k = kurzform(sichtbar.personen, gaeste);
-  const tippbar = bearbeitbar && !stand.abgeschlossen;
+  // Der Schnappschuss ist kein Treffen – darin tippt niemand.
+  const tippbar = bearbeitbar && !stand.abgeschlossen && !ausDemProtokoll;
 
   const tippen = (person: number, jetzt: AnwesenheitsStatus, tipp: AnwesenheitsStatus) => {
     if (tipp === 'offen' || laeuft !== null) return;
@@ -166,6 +195,10 @@ export function Anwesenheit({
       (neu) => {
         setLaeuft(null);
         setze(neu);
+        // Ein eigener Tipp ist Schreiben – das Protokoll merkt sich den neuen Stand gleich (W16).
+        const wert = schnappschussWert(neu);
+        if (wert !== (typeof schnappschuss === 'string' ? schnappschuss : ''))
+          schnappschussSetzen?.(wert);
       },
       (e: unknown) => {
         setLaeuft(null);
@@ -351,6 +384,12 @@ export function Anwesenheit({
                 Hinzufügen
               </button>
             </form>
+          )}
+          {ausDemProtokoll && bearbeitbar && (
+            <p className={styles.leise}>
+              ChurchTools zeigt die Anwesenheit gerade nicht – zu sehen ist der Stand, den sich das
+              Protokoll gemerkt hat.
+            </p>
           )}
           {stand.abgeschlossen ? (
             <p className={styles.leise}>

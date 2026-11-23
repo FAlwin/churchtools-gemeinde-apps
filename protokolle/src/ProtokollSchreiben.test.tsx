@@ -780,6 +780,26 @@ describe('Freigeben (S6-1)', () => {
     expect(AW.treffenAbschliessen).toHaveBeenCalledWith(194, 15);
   });
 
+  it('Freigeben schreibt die frisch gelesene Anwesenheit als Schnappschuss ins Protokoll (W16)', async () => {
+    vi.mocked(S.freigeben).mockResolvedValue({
+      art: 'ok',
+      kopf: { ...MIT_TREFFEN, status: 'frei' },
+    });
+    E.zusatz.push({ id: 'anw', type: 'verweis', props: { art: 'anwesenheit' }, children: [] });
+    const fertig = zeigeFrei();
+    const d = await oeffnen();
+    await within(d).findByText('Anwesenheit: 1 noch offen – geprüft?');
+    await freigabeKlick();
+    await waitFor(() => expect(fertig).toHaveBeenCalled());
+    const anw = vi.mocked(S.freigeben).mock.calls[0][3].find((b) => b.id === 'anw');
+    expect(JSON.parse(String(anw?.props?.schnappschuss))).toEqual({
+      personen: [
+        { person: 1, name: 'Alwin Friesen', status: 'da' },
+        { person: 19, name: 'Spike Musiker', status: 'offen' },
+      ],
+    });
+  });
+
   it('Treffen lässt sich nicht abschließen: „freigegeben“ mit „Nochmal versuchen“ – klappt es dann, weiter', async () => {
     vi.mocked(S.freigeben).mockResolvedValue({
       art: 'ok',

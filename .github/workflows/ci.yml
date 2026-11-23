@@ -34,8 +34,12 @@ jobs:
       - name: Format
         run: npm run format:check
 
+      # Typbewusstes ESLint über das ganze Repo braucht mehr als Nodes Standard-Heap: seit 23.11.2026 (#1133)
+      # brach der Schritt mit „JavaScript heap out of memory“ (Exit 134) ab – bei jedem PR. Der Runner hat 16 GB.
       - name: Lint
         run: npm run lint
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
       - name: Verwaiste Doc-Kommentare
         run: npm run doc-check
 

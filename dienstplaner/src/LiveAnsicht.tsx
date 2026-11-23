@@ -8,14 +8,13 @@ import { useWakeLock } from '@ui/bedienung/useWakeLock';
 import { itemTitleParts, type AblaufZeile } from '@shared/ct/ablaufZeile';
 import { tagKurz } from '@shared/ct/datum';
 import {
-  abweichungText,
   endeStelle,
+  kontoText,
+  kontoWort,
   liveLage,
   liveListe,
-  naechsteStelle,
   restText,
   stelleNachziehen,
-  vorigeStelle,
   weiterZiel,
   zurueckZiel,
   zusatzZiel,
@@ -28,7 +27,9 @@ import { ortszeitAus } from '@shared/ct/zeit';
 import type { CtAgenda, CtAgendaItem } from '@shared/ct/typen';
 import type { InfoGruppe } from '@shared/types/index';
 import { ladeAblauf } from './ladeBeiwerk';
+import type { EinstellungenStand } from '@shared/dienstplan/liveEinstellungen';
 import { ladeLive, schreibeLive } from './ladeLive';
+import { useBetriebsart } from './useBetriebsart';
 import { useLive } from './useLive';
 import styles from './LiveAnsicht.module.scss';
 
@@ -84,6 +85,10 @@ type Schalten = 'weiter' | 'zurueck' | 'plus' | 'minus';
  * nur in der Anzeige, gezählt wird weiter exakt wie in ChurchTools (`liveListe`, T6); die Steuerknöpfe stehen als Leiste
  * unten wie „Davor / Danach“ der Punkt-Ansicht (A11); `infoGruppen` sind schon die richtigen (A16, `liveInfoGruppen`).
  *
+ * **Betriebsart + Zeitkonto** (L4-2, Alwin 23.11.2026): Wie lange „Jetzt“ ohne Klick der Uhr folgt, stellen die Planer unter
+ * „Einstellungen“ ein (`useBetriebsart`, Standard: bis Beginn nach der Uhr, ab Beginn klicken); das **Zeitkonto** (+ grün =
+ * gespart, − rot = Rückstand) ersetzt das alte „Gesamt“. Beides rechnet `liveLage` – diese Datei zeigt nur an.
+ *
  * **Steuern** (L3, Alwin 02.11.2026: „genau wie ChurchTools“): Wer an diesem Termin in einem Dienst mit „Live-Agenda
  * steuern“ eingeteilt ist (`steuern`), bekommt ‹ Zurück, Weiter ›, −1/+1 Min bzw. „Starten“ – ChurchTools selbst prüft
  * beim Speichern nichts. Vor jedem Schalten wird der Ablauf frisch gelesen: Hat er sich geändert, wird die Stelle
@@ -106,6 +111,7 @@ export function LiveAnsicht({
   lesen = ladeLive,
   schreiben = schreibeLive,
   ablaufLesen = ladeAblauf,
+  betriebsartLesen,
 }: {
   titel: string;
   /** Tag des Termins (`JJJJ-MM-TT`, Gemeinde-Zeit). */
@@ -130,6 +136,7 @@ export function LiveAnsicht({
   lesen?: typeof ladeLive;
   schreiben?: typeof schreibeLive;
   ablaufLesen?: (terminId: number) => Promise<CtAgenda | null>;
+  betriebsartLesen?: () => Promise<EinstellungenStand>;
 }) {
   const wurzel = useRef<HTMLDivElement>(null);
   const aktuell = useRef<HTMLLIElement>(null);
@@ -137,6 +144,7 @@ export function LiveAnsicht({
   const { umschalten: vollbildUmschalten } = vollbild;
   useWakeLock(true);
   const live = useLive(terminId, agendaId, lesen);
+  const betriebsart = useBetriebsart(betriebsartLesen);
 
   const liste = useMemo(() => liveListe(items, terminId), [items, terminId]);
   const [beschaeftigt, setBeschaeftigt] = useState(false);
@@ -145,7 +153,7 @@ export function LiveAnsicht({
   const indexVon = useMemo(() => new Map(liste.map((p, i) => [p.id, i])), [liste]);
   // Gerechnet wird in der Uhr von ChurchTools, damit Restzeit und Abweichung auf allen Geräten gleich sind.
   const jetzt = live.jetzt - live.versatz;
-  const lage = liveLage(liste, live.stand, jetzt);
+  const lage = liveLage(liste, live.stand, jetzt, betriebsart);
 
   /**
    * Schalten: Ablauf frisch lesen und die Stelle nachziehen, wenn er sich geändert hat; dann schreiben. Scheitert das
@@ -157,6 +165,7 @@ export function LiveAnsicht({
     setSteuerFehler(null);
     try {
       let punkte = liste;
+      let lageSchalten = lage;
       let stand: LiveStand | null = live.stand;
       const frisch = await ablaufLesen(terminId).catch(() => null);
       if (frisch) {
@@ -165,14 +174,16 @@ export function LiveAnsicht({
           if (stand?.stelle)
             stand = { ...stand, stelle: stelleNachziehen(liste, neu, stand.stelle) };
           punkte = neu;
+          // „Weiter“ nach der Uhr rechnet von der gezeigten Stelle aus – die gehört zur neuen Liste.
+          lageSchalten = liveLage(neu, stand, Date.now() - live.versatz, betriebsart);
           onAblauf?.(frisch);
         }
       }
       const ziel: LiveZiel =
         art === 'weiter'
-          ? weiterZiel(punkte, stand)
+          ? weiterZiel(punkte, stand, lageSchalten)
           : art === 'zurueck'
-            ? zurueckZiel(punkte, stand)
+            ? zurueckZiel(punkte, stand, lageSchalten)
             : stand
               ? zusatzZiel(stand, art === 'plus' ? 1 : -1)
               : { stelle: 0, zusatzSek: 0 };
@@ -244,20 +255,36 @@ export function LiveAnsicht({
         : null;
   const ueber = rest !== null && rest.sek < 0;
   const anteil = rest && rest.dauer > 0 ? Math.min(1, Math.max(0, rest.sek / rest.dauer)) : 0;
-  const verspaetung = lage.art === 'nach-plan' ? null : lage.verspaetungSek;
+  const konto = lage.konto;
 
   const label =
-    lage.art === 'ende' ? 'Ende' : lage.art === 'nach-plan' ? 'Jetzt · nach Plan' : 'Jetzt';
+    lage.art === 'ende'
+      ? 'Ende'
+      : lage.art === 'nach-plan'
+        ? lage.wartet
+          ? `Wartet auf „${lage.jetzt ? 'Weiter' : 'Starten'}“`
+          : 'Jetzt · nach Plan'
+        : 'Jetzt';
+  /** Der Satz unter „Jetzt“, solange niemand gestartet hat – je nach Betriebsart. */
+  const nachPlanHinweis = (l: Extract<typeof lage, { art: 'nach-plan' }>): string => {
+    const knopf = l.jetzt ? 'Weiter' : 'Starten';
+    if (l.betriebsart === 'klicken')
+      return `Nichts läuft von selbst – ${steuern ? `drück „${knopf}“` : `jemand drückt „${knopf}“`}, wenn es losgeht.`;
+    if (l.betriebsart === 'bis-beginn' && l.weiterAbJetzt)
+      return l.wartet
+        ? `Beginn war um ${beginn}. ${steuern ? `Drück „${knopf}“, wenn es losgeht.` : `Es geht weiter, sobald jemand „${knopf}“ drückt.`}`
+        : `Bis Beginn folgt „Jetzt“ der Uhr. Ab ${beginn} geht es weiter, wenn jemand „Weiter“ drückt.`;
+    return 'Noch nicht gestartet – „Jetzt“ folgt der Uhr.';
+  };
   const grossTitel =
     lage.art === 'ende'
       ? 'Ablauf vorbei'
       : (jetztTeile?.titel ??
         (lage.art === 'nach-plan' && lage.vorbei ? 'Laut Plan vorbei' : 'Noch nicht begonnen'));
 
-  // Die Leiste unten nennt den vorigen und den nächsten Punkt – dieselbe Reihenfolge wie `zurueckZiel`/`weiterZiel`.
-  const stelleJetzt = live.stand?.stelle ?? null;
-  const naechste = naechsteStelle(liste, stelleJetzt);
-  const vorige = vorigeStelle(liste, stelleJetzt);
+  // Die Leiste unten nennt den vorigen und den nächsten Punkt – genau die, zu denen `zurueckZiel`/`weiterZiel` führen.
+  const naechste = weiterZiel(liste, live.stand, lage).stelle;
+  const vorige = zurueckZiel(liste, live.stand, lage).stelle;
   const weiterTitel =
     lage.art === 'ende'
       ? ''
@@ -265,6 +292,8 @@ export function LiveAnsicht({
         ? 'Ende'
         : teile(liste[naechste - 1]).titel;
   const zurueckTitel = vorige <= 0 ? 'Noch nicht gestartet' : teile(liste[vorige - 1]).titel;
+  // Nach der Uhr gibt es nur „Starten“ – außer die Betriebsart „bis Beginn“ zeigt schon einen Punkt: dann ‹ Zurück / Weiter ›.
+  const nurStarten = lage.art === 'nach-plan' && !(lage.weiterAbJetzt && lage.jetzt !== null);
 
   const standVon =
     live.gelesenUm !== null ? uhrzeit(live.gelesenUm - live.versatz, zeitzone) : null;
@@ -326,17 +355,7 @@ export function LiveAnsicht({
                 <p className={styles.unter}>Beginn {beginn}</p>
               )}
               {lage.art === 'ende' && lage.seit !== null && (
-                <p className={styles.unter}>
-                  Fertig um {uhrzeit(lage.seit, zeitzone)}
-                  {lage.verspaetungSek !== null && (
-                    <>
-                      {' · '}
-                      <b className={lage.verspaetungSek > 0 ? styles.spaeter : styles.frueher}>
-                        {abweichungText(lage.verspaetungSek)}
-                      </b>
-                    </>
-                  )}
-                </p>
+                <p className={styles.unter}>Fertig um {uhrzeit(lage.seit, zeitzone)}</p>
               )}
               {/* Die Notiz wie in der Live-Agenda von ChurchTools („Thema folgt“, Test-Instanz 02.11.2026). */}
               {jetztTeile?.zeile?.note && <p className={styles.notiz}>{jetztTeile.zeile.note}</p>}
@@ -350,7 +369,7 @@ export function LiveAnsicht({
                 <p className={styles.unter}>mit {mit.map((p) => teile(p).titel).join(', ')}</p>
               )}
               {lage.art === 'nach-plan' && (
-                <p className={styles.hinweis}>Noch nicht gestartet – „Jetzt“ folgt der Uhr.</p>
+                <p className={styles.hinweis}>{nachPlanHinweis(lage)}</p>
               )}
             </section>
 
@@ -469,16 +488,14 @@ export function LiveAnsicht({
                 </div>
               </div>
             )}
-            {verspaetung !== null && (
-              <div className={styles.gesamt}>
-                Gesamt
-                <b
-                  className={
-                    verspaetung >= 60 ? styles.spaeter : verspaetung <= -60 ? styles.frueher : ''
-                  }
-                >
-                  {abweichungText(verspaetung)}
-                </b>
+            {konto !== null && (
+              <div
+                className={`${styles.konto}${konto > 0 ? ` ${styles.plus}` : konto < 0 ? ` ${styles.minus}` : ''}`}
+                aria-label="Zeitkonto"
+              >
+                Zeitkonto
+                <b>{kontoText(konto)}</b>
+                <span>{kontoWort(konto)}</span>
               </div>
             )}
           </div>
@@ -486,11 +503,11 @@ export function LiveAnsicht({
 
         {steuern && (
           <div
-            className={`${styles.fuss}${lage.art === 'nach-plan' ? ` ${styles.nurStarten}` : ''}`}
+            className={`${styles.fuss}${nurStarten ? ` ${styles.nurStarten}` : ''}`}
             role="group"
             aria-label="Live-Agenda steuern"
           >
-            {lage.art === 'nach-plan' ? (
+            {nurStarten ? (
               <KopfKnopf
                 onClick={() => void schalten('weiter')}
                 label="Starten"

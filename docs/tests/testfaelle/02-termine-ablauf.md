@@ -336,15 +336,16 @@ einer Person, die dort steuern darf.
 Dann, Restzeit, Abweichung – und folgt jedem Weiterschalten nach spätestens 2,5 Sekunden.
 
 1. Dienstplaner → Termin öffnen → oben **„Live“** (Uhr-Symbol). Noch nicht gestartet: „Jetzt · nach Plan“ zeigt den
-   Punkt, der laut Uhr dran ist, mit „Noch nicht gestartet – „Jetzt“ folgt der Uhr.“
+   Punkt, der laut Uhr dran ist (mit der Betriebsart „Immer nach der Uhr“ und dem Satz „Noch nicht gestartet – „Jetzt“ folgt der Uhr.“;
+   die Standard-Betriebsart „bis Beginn“ siehe TF-ABLAUF-45)
 2. In ChurchTools **›** → nach spätestens 2,5 s steht derselbe Punkt unter „Jetzt“, der Kreis zählt die Restzeit herunter,
    in der Liste ist er hervorgehoben, die Punkte davor haben einen Haken. Im Kopf leuchtet „Live“ rot.
 3. Die Notiz des Punkts steht unter „Jetzt“ wie in ChurchTools. Infos: siehe TF-ABLAUF-44 (nur die der eigenen Dienstgruppen).
    Am Handy steht „Musik-App“ im Kopf des Ablaufs nur als Symbol.
 4. In ChurchTools **+** → die Restzeit springt eine Minute höher; **−** eine niedriger.
 5. Zeit ablaufen lassen → der Kreis wird rot, „−0:…“ (Minus, wie beim Zeitkonto) und „über der Zeit“.
-6. „Gesamt“ zeigt die Abweichung wie ChurchTools, aber in Worten („2 Min. später“ statt „−2 Minuten“). Ausnahme: Steht
-   vor dem Punkt ein weggelassener, rechnet ChurchTools dessen Dauer mit – der Dienstplaner nimmt die Zeit aus dem Ablauf.
+6. Das **Zeitkonto** (rechts unter dem Kreis, ersetzt „Gesamt“) zeigt, wie viel Zeit gespart oder verloren ist – siehe TF-ABLAUF-46.
+   Steht vor dem Punkt ein weggelassener, rechnet ChurchTools dessen Dauer mit – der Dienstplaner nimmt die Zeit aus dem Ablauf.
 7. Der weggelassene Punkt steht durchgestrichen in der Liste.
 8. **Schließen** → zurück im Termin: der Knopf „Live“ hat jetzt einen roten Punkt. Ein anderer Tag: Knopf ohne Punkt.
 9. WLAN kurz aus → „Keine Verbindung – Stand von … Uhr. Wird wieder versucht.“, Jetzt bleibt stehen; WLAN an → weiter.
@@ -405,7 +406,7 @@ sehen; Weiter/Zurück stehen unten; du siehst nur die Infos deiner Dienstgruppe.
 3. Unten steht die Leiste: links **‹ ZURÜCK** mit dem Titel des vorigen Punkts, in der Mitte **− 1 Min / + 1 Min** (nur wenn
    Live läuft), rechts **WEITER ›** blau gefüllt mit dem Titel des nächsten Punkts (am letzten Punkt „Ende“). Vor dem Start nur
    **Starten**. Am Handy: dieselbe Leiste über dem Home-Strich, lange Titel enden mit „…“. Rechts neben der Liste bleiben nur
-   Kreis und „Gesamt“.
+   Kreis und Zeitkonto (TF-ABLAUF-46).
 4. **Infos:** Unter „Jetzt“ stehen nur die Infos der Dienstgruppe, in der du eingeteilt bist, und klein unter jedem Punkt mit
    Info – auch unter dem laufenden, nicht unter erledigten. Die Infos der anderen Gruppe stehen nirgends.
 5. Mit der zweiten Person (nirgends eingeteilt): es gilt wie bisher die Auswahl unter „Spalten“.
@@ -418,6 +419,71 @@ sehen; Weiter/Zurück stehen unten; du siehst nur die Infos deiner Dienstgruppe.
 - **Betrifft:** `dienstplaner/src/LiveAnsicht.tsx`, `dienstplaner/src/LiveAnsicht.module.scss`, `dienstplaner/src/TerminAblauf.tsx`, `shared/ct/liveAgenda.ts`, `shared/dienstplan/plan.ts`, `ui/ablauf/NachbarKnopf.tsx`
 - **Automatisiert:** ja – `dienstplaner/src/LiveAnsicht.test.tsx` (Bänder, Beginn-Linie, Zählung, Leiste, Infos), `dienstplaner/src/TerminAnsicht.test.tsx` (Infos der eigenen Dienstgruppe), `shared/ct/liveAgenda.test.ts` (`eigeneDienstgruppen`, `liveInfoGruppen`, `restText`), `shared/dienstplan/plan.test.ts`, `ui/design/liveListeUeberlauf.test.ts` (Raster/Umbruch/Leiste als Quelltext); von Hand bleiben das Aussehen bei 1280/900/Handy und der Vergleich mit der echten Live-Agenda
 - **Historie:** Live-Ansicht 2, L4-1 (23.11.2026, Entwurf `entwurf/live-2.html`, Bauplan Dienstplaner „Wunsch 22.11.2026“)
+
+</details>
+
+### TF-ABLAUF-45 · „Live“: Betriebsart in den Einstellungen
+
+**Das brauchst du:** Einen Test-Termin, der in 3–5 Minuten beginnt, mit **Vorlauf** (Soundcheck, Countdown vor Beginn) und danach
+mindestens zwei Punkten; du bist dort in einem Dienst mit „Live-Agenda steuern“ eingeteilt und **Planer**. Eine zweite Person
+**ohne** Planer-Recht. In ChurchTools hat die Ablage „Einstellungen“ des Dienstplaners für Planer „Daten anlegen, ändern“ und für
+alle „Daten sehen“ (`docs/betrieb/DIENSTPLANER.md`, „Einstellungen für alle“).
+
+**Das muss passieren:** Die Betriebsart bestimmt, wie lange „Live“ ohne Klick der Uhr folgt; Planer stellen sie für alle ein.
+
+1. Dienstplaner → ganz rechts der Reiter **„Einstellungen“** (am Handy unten rechts) → Fenster mit **„Live-Ansicht – für alle“** und drei
+   Möglichkeiten; vorgewählt (noch nie gespeichert) ist **„Bis Beginn nach der Uhr, ab Beginn klicken“**.
+2. **Standard, vor Beginn:** „Live“ öffnen → „Jetzt · nach Plan“ läuft durch Soundcheck und Countdown; unter „Jetzt“ steht „Bis Beginn folgt
+   „Jetzt“ der Uhr. Ab 10:00 geht es weiter, wenn jemand „Weiter“ drückt.“ Unten **‹ ZURÜCK / WEITER ›** (Titel von Vorgänger und Nachfolger).
+3. **Standard, ab Beginn ohne Klick:** Die Ansicht bleibt am letzten Punkt vor Beginn stehen, das Etikett heißt **„Wartet auf „Weiter““**, die
+   Restzeit läuft **rot ins Minus** („−0:45 über der Zeit“), das Zeitkonto ebenso. Auf einem zweiten Gerät steht dasselbe.
+4. **WEITER** drücken → der Punkt **nach** dem gezeigten läuft (die Begrüßung), nicht der erste; ChurchTools-Live-Agenda folgt.
+5. Einstellung auf **„Immer nach der Uhr“** → Speichern. Ein offenes „Live“ folgt nach höchstens 30 s: es läuft jetzt auch nach Beginn
+   weiter durch den Ablauf, vor dem Start nur **Starten**, kein Zeitkonto.
+6. **„Von Anfang an klicken“** → „Live“ zeigt „Wartet auf „Starten““ und „Noch nicht begonnen“, nichts läuft von selbst; **Starten** beginnt beim
+   ersten Punkt (auch vor Beginn).
+7. Mit der Person **ohne** Planer-Recht: Reiter „Einstellungen“ öffnet das Fenster, die Auswahl ist **gesperrt** („Ändern dürfen nur Planer“), kein
+   „Speichern“.
+8. Zwei Planer gleichzeitig: Der zweite beim Speichern bekommt „… hat das inzwischen geändert – nichts überschrieben“ und sieht den neuen Stand.
+9. Netz weg (WLAN aus) beim Öffnen der Einstellungen: Hinweis „… konnte nicht gelesen werden“, Auswahl gesperrt, **Nochmal versuchen**; ein
+   offenes „Live“ behält seine Betriebsart.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `dienstplaner/src/EinstellungenFenster.tsx`, `dienstplaner/src/useBetriebsart.ts`, `dienstplaner/src/ladeEinstellungen.ts`, `dienstplaner/src/LiveAnsicht.tsx`, `dienstplaner/src/App.tsx`, `shared/dienstplan/liveEinstellungen.ts`, `shared/ct/liveAgenda.ts`
+- **Automatisiert:** ja – `shared/ct/liveAgenda.test.ts` (alle drei Betriebsarten, Grenze, „wartet“, „Weiter“ vom gezeigten Punkt), `shared/dienstplan/liveEinstellungen.test.ts` (Validierung, Lesen/Speichern, Fehlerzweige vorübergehend/403/401, Konflikt, nicht angekommen), `dienstplaner/src/EinstellungenFenster.test.tsx`, `dienstplaner/src/LiveAnsicht.test.tsx` (Block „Betriebsart und Zeitkonto“, Lesefehler ändert nichts), `dienstplaner/src/App.test.tsx` (Reiter zuletzt, Planer/Nicht-Planer); von Hand bleiben Rechte an der Ablage in ChurchTools, zwei Geräte und das Aussehen
+- **Historie:** Live-Ansicht 2, L4-2 (23.11.2026, Entwurf `entwurf/live-2.html` Abschnitte 1–2 und 8, Entscheidungen A3/A4, T2)
+
+</details>
+
+### TF-ABLAUF-46 · „Live“: Zeitkonto
+
+**Das brauchst du:** Einen Test-Termin heute mit Ablauf (mehrere Punkte à 2–5 Minuten), du darfst steuern. In ChurchTools daneben die
+Live-Agenda desselben Termins.
+
+**Das muss passieren:** Rechts unter dem Kreis steht das **Zeitkonto**: sekundengenau und laufend – **„+0:20“ grün = gespart**,
+**„−2:10“ rot = Rückstand**. Es gilt gegen den **ursprünglichen** Plan; „− 1 / + 1 Min“ ändert nur den Kreis.
+
+1. Live starten (oder Betriebsart „bis Beginn“ und vor Beginn warten): Das Zeitkonto steht auf **±0:00 im Plan**.
+2. Einen Punkt früher weiterklicken, als er dauern sollte (z. B. 20 Sekunden früher) → nach dem Klick **+0:20 gespart** (grün). Es bleibt, solange
+   der neue Punkt in seiner Zeit läuft.
+3. Einen Punkt **überziehen** lassen → in dem Moment, in dem die Restzeit ins Minus läuft, sinkt das Zeitkonto **sofort mit** (jede Sekunde
+   ein Stück), nicht erst beim nächsten Klick; es wird rot („−0:12 Rückstand“).
+4. **+ 1 Min** drücken → die Restzeit im Kreis springt um eine Minute, das **Zeitkonto bleibt gleich**.
+5. Zu spät beginnen (erster Klick nach dem geplanten Beginn) → das Zeitkonto zeigt den Rückstand schon ab dem ersten Punkt.
+6. Nach dem letzten Punkt: „Ablauf vorbei“, das Zeitkonto zeigt den **Endstand** (Plan-Ende minus Zeit des letzten Klicks).
+7. Mit der Betriebsart „Immer nach der Uhr“ ist vor dem Start **kein** Zeitkonto zu sehen (nichts zu verbuchen).
+8. Auf zwei Geräten steht überall **dieselbe Zahl** (alle rechnen in der Uhr von ChurchTools).
+9. **Demo** (`npm run dev -w dienstplaner`, `…/?demo`): Termin „Gottesdienst (Live-Probe)“ → „Live“: Das Konto steht auf ±0:00 oder im
+   Minus – nie „+5689 Minuten“ wie beim alten „Gesamt … früher“ für einen Termin in der Zukunft.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/ct/liveAgenda.ts`, `dienstplaner/src/LiveAnsicht.tsx`, `dienstplaner/src/LiveAnsicht.module.scss`, `dienstplaner/src/demo.ts`
+- **Automatisiert:** ja – `shared/ct/liveAgenda.test.ts` (Block „Zeitkonto“: pünktlich, früh, spät, überzogen sekündlich, `addseconds` ohne Wirkung, Endstand, ohne Plan-Zeit, „kontoText“ mit Minus U+2212), `dienstplaner/src/LiveAnsicht.test.tsx` (Anzeige, laufend mit Fake-Timern, grün/rot, ±1 Min ändert nur den Kreis); von Hand bleiben der Vergleich auf zwei Geräten und das Aussehen
+- **Historie:** Live-Ansicht 2, L4-2 (23.11.2026, Entscheidungen A5/A13, T3/T8)
 
 </details>
 

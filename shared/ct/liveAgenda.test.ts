@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import type { AltAnfragePort } from './altSchnittstelle';
 import { diensteAus } from './dienste';
 import {
-  abweichungText,
   darfLiveSteuern,
   eigeneDienstgruppen,
   endeStelle,
+  kontoSek,
+  kontoText,
+  kontoWort,
   liveInfoGruppen,
   liveLage,
   liveLesen,
@@ -14,18 +16,28 @@ import {
   liveStandAus,
   naechsteStelle,
   restText,
+  STANDARD_BETRIEBSART,
   stelleNachziehen,
   uhrVersatz,
   vorigeStelle,
   weiterZiel,
   zurueckZiel,
   zusatzZiel,
+  type Betriebsart,
+  type LiveLage,
   type LiveStand,
 } from './liveAgenda';
 import type { CtAgendaItem } from './typen';
 
 const EVENT = 216;
 const ms = (iso: string) => Date.parse(iso);
+/** `liveLage` mit „immer nach der Uhr“ als Vorgabe – so rechneten die Tests vor L4-2; die Betriebsarten prüft ein eigener Block. */
+const lage = (
+  liste: Parameters<typeof liveLage>[0],
+  stand: Parameters<typeof liveLage>[1],
+  jetzt: number,
+  art: Betriebsart = 'immer-uhr',
+): LiveLage => liveLage(liste, stand, jetzt, art);
 
 /**
  * Der Ablauf des Probe-Termins 216 aus der Messung L0 (02.11.2026), so wie `GET /events/216/agenda` ihn lieferte –
@@ -262,7 +274,7 @@ describe('liveLage', () => {
   });
 
   it('läuft: Predigt 2 Min. später begonnen, 1 Min. vergangen', () => {
-    const l = liveLage(liste, stand(3, '2027-03-07T09:07:00Z'), ms('2027-03-07T09:08:00Z'));
+    const l = lage(liste, stand(3, '2027-03-07T09:07:00Z'), ms('2027-03-07T09:08:00Z'));
     expect(l).toMatchObject({
       art: 'laeuft',
       stelle: 3,
@@ -271,13 +283,13 @@ describe('liveLage', () => {
       mit: [],
       dauerSek: 1800,
       restSek: 1740,
-      verspaetungSek: 120,
+      // Predigt: Plan 09:05–09:35, begonnen 09:07 → endet voraussichtlich 09:37 → 2 Min. Rückstand.
+      konto: -120,
     });
-    expect(abweichungText(120)).toBe('2 Min. später');
   });
 
   it('Zusatzzeit verlängert, überzogen wird negativ', () => {
-    const plus = liveLage(liste, stand(1, '2027-03-07T09:00:00Z', 60), ms('2027-03-07T09:06:45Z'));
+    const plus = lage(liste, stand(1, '2027-03-07T09:00:00Z', 60), ms('2027-03-07T09:06:45Z'));
     expect(plus).toMatchObject({ art: 'laeuft', dauerSek: 360, restSek: -45 });
     // A5: „−0:45“ (echtes Minus), nicht „+0:45“ – dasselbe Vorzeichen wie beim Zeitkonto: Minus = Rückstand.
     expect(restText(-45)).toBe('−0:45');
@@ -285,7 +297,7 @@ describe('liveLage', () => {
   });
 
   it('Lieder ohne Dauer laufen mit „Jetzt“ mit, „Dann“ ist der nächste eigene Punkt', () => {
-    const l = liveLage(
+    const l = lage(
       liveListe(MIT_LIED, EVENT),
       stand(1, '2027-03-07T09:00:00Z'),
       ms('2027-03-07T09:01:00Z'),
@@ -298,26 +310,26 @@ describe('liveLage', () => {
   });
 
   it('steht ChurchTools auf einem weggelassenen Punkt, wird er gezeigt – ohne Abweichung', () => {
-    const l = liveLage(liste, stand(2, '2027-03-07T09:05:00Z'), ms('2027-03-07T09:05:30Z'));
-    expect(l).toMatchObject({ art: 'laeuft', jetzt: { title: 'Lied' }, verspaetungSek: null });
+    const l = lage(liste, stand(2, '2027-03-07T09:05:00Z'), ms('2027-03-07T09:05:30Z'));
+    expect(l).toMatchObject({ art: 'laeuft', jetzt: { title: 'Lied' }, konto: null });
   });
 
   it('letzter Punkt: „Dann“ ist das Ende', () => {
-    expect(
-      liveLage(liste, stand(5, '2027-03-07T09:40:00Z'), ms('2027-03-07T09:41:00Z')),
-    ).toMatchObject({
-      dann: 'ende',
-    });
+    expect(lage(liste, stand(5, '2027-03-07T09:40:00Z'), ms('2027-03-07T09:41:00Z'))).toMatchObject(
+      {
+        dann: 'ende',
+      },
+    );
   });
 
   it('Ende: 4 Min. später fertig als geplant (Plan-Ende 09:45)', () => {
-    const l = liveLage(liste, stand(6, '2027-03-07T09:49:00Z'), ms('2027-03-07T09:50:00Z'));
-    expect(l).toEqual({ art: 'ende', seit: ms('2027-03-07T09:49:00Z'), verspaetungSek: 240 });
+    const l = lage(liste, stand(6, '2027-03-07T09:49:00Z'), ms('2027-03-07T09:50:00Z'));
+    expect(l).toEqual({ art: 'ende', seit: ms('2027-03-07T09:49:00Z'), konto: -240 });
   });
 
   describe('nicht gestartet → nach der Uhr', () => {
     it('vor dem ersten Punkt: kein „Jetzt“, „Dann“ der erste', () => {
-      const l = liveLage(liste, null, ms('2027-03-07T08:55:00Z'));
+      const l = lage(liste, null, ms('2027-03-07T08:55:00Z'));
       expect(l).toMatchObject({
         art: 'nach-plan',
         jetzt: null,
@@ -327,12 +339,12 @@ describe('liveLage', () => {
     });
 
     it('Stelle 0 (nach „Zurück“) wie nie gestartet', () => {
-      const l = liveLage(liste, stand(0, '2027-03-07T08:00:00Z'), ms('2027-03-07T09:10:00Z'));
+      const l = lage(liste, stand(0, '2027-03-07T08:00:00Z'), ms('2027-03-07T09:10:00Z'));
       expect(l).toMatchObject({ art: 'nach-plan', jetzt: { title: 'Predigt' }, restSek: 1500 });
     });
 
     it('der weggelassene Punkt kommt nach der Uhr nie dran', () => {
-      const l = liveLage(liste, null, ms('2027-03-07T09:04:00Z'));
+      const l = lage(liste, null, ms('2027-03-07T09:04:00Z'));
       expect(l).toMatchObject({
         jetzt: { title: 'Begrüßung' },
         dann: { title: 'Predigt' },
@@ -341,7 +353,7 @@ describe('liveLage', () => {
     });
 
     it('nach dem Plan-Ende: vorbei', () => {
-      expect(liveLage(liste, null, ms('2027-03-07T10:00:00Z'))).toMatchObject({
+      expect(lage(liste, null, ms('2027-03-07T10:00:00Z'))).toMatchObject({
         jetzt: null,
         vorbei: true,
       });
@@ -349,15 +361,295 @@ describe('liveLage', () => {
   });
 });
 
-describe('abweichungText – abgeschnitten wie ChurchTools', () => {
+/**
+ * Ein Ablauf mit Vorlauf (`isBeforeEvent`) – Soundcheck 09:00, Countdown 09:30, **Beginn 09:35**, Begrüßung, Predigt, Segen
+ * (Ende 10:15). Die Zeiten kommen aus `startTimes` wie bei ChurchTools; alles Weitere rechnen die Erzeuger (`liveListe`).
+ */
+const ABLAUF_VOR: CtAgendaItem[] = [
+  {
+    id: 1,
+    title: 'Soundcheck',
+    type: 'text',
+    duration: 1800,
+    isBeforeEvent: true,
+    startTimes: { '216': '2027-03-07T09:00:00Z' },
+  },
+  {
+    id: 2,
+    title: 'Countdown',
+    type: 'text',
+    duration: 300,
+    isBeforeEvent: true,
+    startTimes: { '216': '2027-03-07T09:30:00Z' },
+  },
+  {
+    id: 3,
+    title: 'Begrüßung',
+    type: 'text',
+    duration: 300,
+    isBeforeEvent: false,
+    startTimes: { '216': '2027-03-07T09:35:00Z' },
+  },
+  {
+    id: 4,
+    title: 'Predigt',
+    type: 'text',
+    duration: 1800,
+    isBeforeEvent: false,
+    startTimes: { '216': '2027-03-07T09:40:00Z' },
+  },
+  {
+    id: 5,
+    title: 'Segen',
+    type: 'text',
+    duration: 300,
+    isBeforeEvent: false,
+    startTimes: { '216': '2027-03-07T10:10:00Z' },
+  },
+];
+
+describe('Betriebsart (L4-2, T2) – ohne Schreiben, alle Geräte rechnen gleich', () => {
+  const liste = liveListe(ABLAUF_VOR, EVENT);
+  const [soundcheck, countdown, begruessung] = liste;
+  const beginn = begruessung.planBeginn!;
+  const nachPlan = (art: Betriebsart, jetzt: number) => {
+    const l = liveLage(liste, null, jetzt, art);
+    if (l.art !== 'nach-plan') throw new Error('kein nach-plan');
+    return l;
+  };
+
+  it('die Vorlauf-Punkte kommen aus `isBeforeEvent`', () => {
+    expect(liste.map((p) => p.vorBeginn)).toEqual([true, true, false, false, false]);
+  });
+
+  it('der Standard ist „bis Beginn“', () => {
+    expect(STANDARD_BETRIEBSART).toBe('bis-beginn');
+  });
+
+  describe('bis Beginn nach der Uhr, ab Beginn klicken (Standard)', () => {
+    it('vor Beginn läuft „Jetzt“ nach der Uhr durch den Vorlauf', () => {
+      const l1 = nachPlan('bis-beginn', soundcheck.planBeginn! + 10 * 60_000);
+      expect(l1).toMatchObject({ jetzt: soundcheck, dann: countdown, wartet: false });
+      expect(l1.restSek).toBe(20 * 60);
+      const l2 = nachPlan('bis-beginn', countdown.planBeginn! + 60_000);
+      expect(l2).toMatchObject({ jetzt: countdown, dann: { title: 'Begrüßung' }, wartet: false });
+      expect(l2.konto).toBe(0);
+    });
+
+    it('ab Beginn bleibt die Ansicht am letzten Punkt vor Beginn stehen, die Restzeit läuft ins Minus', () => {
+      const l = nachPlan('bis-beginn', beginn + 134_000);
+      expect(l).toMatchObject({
+        jetzt: countdown,
+        dann: { title: 'Begrüßung' },
+        wartet: true,
+        vorbei: false,
+      });
+      expect(l.restSek).toBe(-134);
+      // Das Zeitkonto läuft mit: Der Countdown hätte um `beginn` enden sollen.
+      expect(l.konto).toBe(-134);
+      // Auch viel später (Plan-Ende längst vorbei) bleibt es stehen – nie „vorbei“.
+      expect(nachPlan('bis-beginn', ms('2027-03-07T12:00:00Z'))).toMatchObject({
+        jetzt: countdown,
+        vorbei: false,
+        wartet: true,
+      });
+    });
+
+    it('genau zum Beginn wartet die Ansicht schon (Grenze zählt dazu)', () => {
+      expect(nachPlan('bis-beginn', beginn)).toMatchObject({ jetzt: countdown, wartet: true });
+      expect(nachPlan('bis-beginn', beginn - 1000)).toMatchObject({ wartet: false });
+    });
+
+    it('„Weiter“ und „Zurück“ gehen vom gezeigten Punkt aus – nicht ganz vorn', () => {
+      const l = nachPlan('bis-beginn', beginn + 5000);
+      // Countdown steht an Stelle 2: weiter → Begrüßung (3), zurück → Soundcheck (1).
+      expect(weiterZiel(liste, null, l)).toEqual({ stelle: 3, zusatzSek: 0 });
+      expect(zurueckZiel(liste, null, l)).toEqual({ stelle: 1, zusatzSek: 0 });
+      // Ohne die Lage (altes Verhalten) startet „Weiter“ vorn.
+      expect(weiterZiel(liste, null)).toEqual({ stelle: 1, zusatzSek: 0 });
+    });
+
+    it('ohne Punkte vor Beginn: kein „Jetzt“ vor dem Beginn, danach „wartet“; „Weiter“ startet den ersten', () => {
+      const ohneVorlauf = liveListe(
+        ABLAUF_VOR.slice(2).map((i) => ({ ...i, isBeforeEvent: false })),
+        EVENT,
+      );
+      const vorher = liveLage(ohneVorlauf, null, beginn - 60_000, 'bis-beginn');
+      expect(vorher).toMatchObject({ jetzt: null, wartet: false, dann: { title: 'Begrüßung' } });
+      const nachher = liveLage(ohneVorlauf, null, beginn + 60_000, 'bis-beginn');
+      expect(nachher).toMatchObject({ jetzt: null, wartet: true, konto: null, vorbei: false });
+      expect(weiterZiel(ohneVorlauf, null, nachher)).toEqual({ stelle: 1, zusatzSek: 0 });
+    });
+
+    it('ohne erkennbaren Beginn (alles Vorlauf) wie „immer nach der Uhr“ – sonst bliebe es am Ende hängen', () => {
+      const allesVor = liveListe(
+        ABLAUF_VOR.map((i) => ({ ...i, isBeforeEvent: true })),
+        EVENT,
+      );
+      const ende = liveLage(allesVor, null, ms('2027-03-07T11:00:00Z'), 'bis-beginn');
+      expect(ende).toMatchObject({
+        jetzt: null,
+        vorbei: true,
+        wartet: false,
+        weiterAbJetzt: false,
+      });
+      expect(liveLage(allesVor, null, ms('2027-03-07T09:41:00Z'), 'bis-beginn')).toMatchObject({
+        jetzt: { title: 'Predigt' },
+      });
+    });
+  });
+
+  describe('immer nach der Uhr (wie bisher)', () => {
+    it('folgt der Uhr durch den ganzen Ablauf und wird „vorbei“', () => {
+      expect(nachPlan('immer-uhr', beginn + 134_000)).toMatchObject({
+        jetzt: { title: 'Begrüßung' },
+        wartet: false,
+        weiterAbJetzt: false,
+        // Es läuft alles nur nach der Uhr – nichts zu verbuchen.
+        konto: null,
+      });
+      expect(nachPlan('immer-uhr', ms('2027-03-07T10:30:00Z'))).toMatchObject({
+        jetzt: null,
+        vorbei: true,
+      });
+    });
+
+    it('„Starten“ beginnt vorn (nicht beim gezeigten Punkt)', () => {
+      const l = nachPlan('immer-uhr', beginn + 134_000);
+      expect(weiterZiel(liste, null, l)).toEqual({ stelle: 1, zusatzSek: 0 });
+    });
+  });
+
+  describe('von Anfang an klicken', () => {
+    it('nie automatisch: kein „Jetzt“, „Dann“ ist der erste Punkt, die Ansicht wartet – zu jeder Zeit', () => {
+      for (const t of [
+        soundcheck.planBeginn! + 60_000,
+        beginn + 60_000,
+        ms('2027-03-07T12:00:00Z'),
+      ]) {
+        expect(nachPlan('klicken', t)).toMatchObject({
+          jetzt: null,
+          dann: { title: 'Soundcheck' },
+          wartet: true,
+          vorbei: false,
+          restSek: null,
+          konto: null,
+        });
+      }
+    });
+  });
+
+  it('läuft ChurchTools schon (Stelle ≥ 1), ist die Betriebsart ohne Wirkung', () => {
+    const stand: LiveStand = { stelle: 3, seit: beginn + 5000, zusatzSek: 0, serverZeit: 0 };
+    const jetzt = beginn + 65_000;
+    const [a, b, c] = (['bis-beginn', 'immer-uhr', 'klicken'] as const).map((art) =>
+      liveLage(liste, stand, jetzt, art),
+    );
+    expect(a).toEqual(b);
+    expect(b).toEqual(c);
+    expect(a).toMatchObject({ art: 'laeuft', jetzt: { title: 'Begrüßung' } });
+  });
+});
+
+describe('Zeitkonto (L4-2, T3/A5) – eine Rechnung, sekundengenau und laufend', () => {
+  const liste = liveListe(ABLAUF_VOR, EVENT);
+  const begruessung = liste[2];
+  const stelle = 3;
+  const laeuft = (seit: number, jetzt: number, zusatzSek = 0) => {
+    const l = liveLage(liste, { stelle, seit, zusatzSek, serverZeit: 0 }, jetzt, 'bis-beginn');
+    if (l.art !== 'laeuft') throw new Error('läuft nicht');
+    return l;
+  };
+  const plan = begruessung.planBeginn!;
+  const dauer = begruessung.dauerSek * 1000;
+
+  it('pünktlich begonnen, in der Zeit: 0', () => {
+    expect(laeuft(plan, plan + 60_000).konto).toBe(0);
+  });
+
+  it('20 s zu früh begonnen: +20 gespart – und es bleibt, solange der Punkt in der Zeit läuft', () => {
+    expect(laeuft(plan - 20_000, plan + 5_000).konto).toBe(20);
+    expect(laeuft(plan - 20_000, plan - 20_000 + dauer - 1000).konto).toBe(20);
+  });
+
+  it('zu spät begonnen: Rückstand von Anfang an', () => {
+    expect(laeuft(plan + 130_000, plan + 131_000).konto).toBe(-130);
+  });
+
+  it('ein überzogener Punkt verbraucht das Konto sofort und läuft sekündlich weiter', () => {
+    const seit = plan;
+    const ende = seit + dauer;
+    expect(laeuft(seit, ende).konto).toBe(0);
+    expect(laeuft(seit, ende + 1000).konto).toBe(-1);
+    expect(laeuft(seit, ende + 130_000).konto).toBe(-130);
+    expect(laeuft(seit, ende + 131_000).konto).toBe(-131);
+    // Ein Rückstand schon vor dem Überziehen wächst mit.
+    expect(laeuft(seit + 20_000, ende + 20_000 + 10_000).konto).toBe(-30);
+  });
+
+  it('„−1 / +1 Min“ (`addseconds`) ändert nur den Kreis, nie das Konto (A13)', () => {
+    const seit = plan;
+    const jetzt = seit + dauer + 130_000;
+    const ohne = laeuft(seit, jetzt, 0);
+    const plus = laeuft(seit, jetzt, 60);
+    const minus = laeuft(seit, jetzt, -60);
+    expect(plus.konto).toBe(ohne.konto);
+    expect(minus.konto).toBe(ohne.konto);
+    expect(ohne.restSek).toBe(-130);
+    expect(plus.restSek).toBe(-70);
+    expect(minus.restSek).toBe(-190);
+  });
+
+  it('der Endstand: Plan-Ende minus der letzte Klick (gespart +, später −)', () => {
+    const planEnde = liste[4].planBeginn! + liste[4].dauerSek * 1000;
+    const frueh = liveLage(
+      liste,
+      { stelle: 6, seit: planEnde - 90_000, zusatzSek: 0, serverZeit: 0 },
+      planEnde,
+      'bis-beginn',
+    );
+    expect(frueh).toMatchObject({ art: 'ende', konto: 90 });
+    const spaet = liveLage(
+      liste,
+      { stelle: 6, seit: planEnde + 45_000, zusatzSek: 0, serverZeit: 0 },
+      planEnde + 99_000,
+      'bis-beginn',
+    );
+    expect(spaet).toMatchObject({ art: 'ende', konto: -45 });
+  });
+
+  it('ohne Plan-Zeit oder ohne Wechselzeit kein Konto', () => {
+    expect(kontoSek({ ...begruessung, planBeginn: null }, plan, plan)).toBeNull();
+    const ohneSeit = liveLage(
+      liste,
+      { stelle, seit: null, zusatzSek: 0, serverZeit: 0 },
+      plan,
+      'bis-beginn',
+    );
+    expect(ohneSeit).toMatchObject({ art: 'laeuft', konto: null });
+  });
+
+  it('nie „−0“', () => {
+    expect(Object.is(kontoSek(begruessung, plan + 400, plan + 400)!, 0)).toBe(true);
+  });
+});
+
+describe('kontoText – „+0:20“ gespart, „−2:10“ Rückstand (U+2212 wie restText)', () => {
   it.each([
-    [0, 'im Plan'],
-    [59, 'im Plan'],
-    [-59, 'im Plan'],
-    [119, '1 Min. später'],
-    [-61, '1 Min. früher'],
-    [-696360, '11606 Min. früher'],
-  ])('%i s → %s', (sek, text) => expect(abweichungText(sek)).toBe(text));
+    [20, '+0:20', 'gespart'],
+    [-130, '−2:10', 'Rückstand'],
+    [0, '±0:00', 'im Plan'],
+    [3600 + 61, '+61:01', 'gespart'],
+    [-1, '−0:01', 'Rückstand'],
+  ])('%i s → %s (%s)', (sek, text, wort) => {
+    expect(kontoText(sek)).toBe(text);
+    expect(kontoWort(sek)).toBe(wort);
+  });
+
+  it('dasselbe Minuszeichen wie restText', () => {
+    expect(kontoText(-45)[0]).toBe(restText(-45)[0]);
+    expect(kontoText(-45).charCodeAt(0)).toBe(0x2212);
+  });
 });
 
 describe('darfLiveSteuern – genau wie ChurchTools', () => {
@@ -458,7 +750,7 @@ describe('liveLesen / liveSchreiben', () => {
     const r = await liveSchreiben(ct, EVENT, 126, zusatzZiel(vorher.stand, 1));
     if (!r.ok) throw new Error('schreiben');
     expect(r.stand.seit).toBe(beginn);
-    expect(liveLage(liste, r.stand, ct.jetzt)).toMatchObject({ restSek: 1800 + 60 - 90 });
+    expect(lage(liste, r.stand, ct.jetzt)).toMatchObject({ restSek: 1800 + 60 - 90 });
   });
 
   it('stumm nicht übernommen → „nicht angekommen“', async () => {

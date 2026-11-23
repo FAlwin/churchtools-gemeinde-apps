@@ -13,6 +13,11 @@
  *  - ChurchTools prüft beim Speichern **nichts** (auch nicht bei Personen ohne Admin, Dienst oder Recht). Wer steuern
  *    darf, entscheidet allein die Oberfläche – bei ChurchTools wie hier (`darfLiveSteuern`).
  *
+ * **Live-Ansicht 2, L4-2** (Alwin, 23.11.2026): Die **Betriebsart** (`Betriebsart`, einstellbar für alle) bestimmt, wie lange
+ * „Jetzt“ ohne Klick nach der Uhr läuft (T2, ohne Schreiben); das **Zeitkonto** (`konto`, T3/A5) ersetzt die alte Gesamt-
+ * Abweichung: sekundengenau, laufend, gerechnet gegen den **ursprünglichen** Plan – `addseconds` ändert nur den Kreis, nie
+ * das Konto (A13). Beides rechnet **nur diese Datei** (T8); die Anzeige rechnet nichts nach.
+ *
  * Unsere Regeln darüber hinaus (Alwin, 02.11.2026): „Weiter“ überspringt weggelassene Punkte (ChurchTools nur Lieder
  * ohne Dauer), gezählt werden sie trotzdem; solange niemand gestartet hat, läuft „Jetzt“ nach der Uhr; ändert sich
  * der Ablauf während Live, zieht das steuernde Gerät die Stelle nach (`stelleNachziehen`).
@@ -36,6 +41,17 @@ export interface LiveStand {
   serverZeit: number;
 }
 
+/**
+ * **Wie die Live-Ansicht ohne Klick läuft** (Alwin, 23.11.2026, A3/A4 – eine Einstellung für alle, Standard `bis-beginn`):
+ *  - `bis-beginn`: Bis zum Beginn des Termins folgt „Jetzt“ der Uhr (nur die Punkte vor Beginn); ab Beginn bleibt die Ansicht
+ *    am letzten Punkt stehen, bis jemand „Weiter“ drückt – die Restzeit läuft rot ins Minus.
+ *  - `immer-uhr`: wie bisher – „Jetzt“ folgt der Uhr durch den ganzen Ablauf, bis jemand „Starten“ drückt.
+ *  - `klicken`: nie automatisch – schon der erste Punkt vor Beginn muss gestartet werden.
+ */
+export const BETRIEBSARTEN = ['bis-beginn', 'immer-uhr', 'klicken'] as const;
+export type Betriebsart = (typeof BETRIEBSARTEN)[number];
+export const STANDARD_BETRIEBSART: Betriebsart = 'bis-beginn';
+
 /** Ein Punkt der Live-Liste – Überschriften gehören nicht dazu. */
 export interface LivePunkt {
   id: number;
@@ -48,6 +64,8 @@ export interface LivePunkt {
   weggelassen: boolean;
   /** Geplanter Beginn an diesem Termin (ms); `null` ohne Zeit oder wenn weggelassen. */
   planBeginn: number | null;
+  /** Vor dem Beginn des Termins (`isBeforeEvent`: Soundcheck, Vorbereitung, Countdown). */
+  vorBeginn: boolean;
 }
 
 /** Was „Live“ gerade zeigt. `dann: 'ende'` heißt: danach ist der Ablauf vorbei. */
@@ -63,6 +81,17 @@ export type LiveLage =
       restSek: number | null;
       /** Laut Plan ist alles vorbei. */
       vorbei: boolean;
+      /** Die Betriebsart, nach der gerechnet wurde (für die Texte der Anzeige). */
+      betriebsart: Betriebsart;
+      /**
+       * Die Ansicht bewegt sich nicht mehr von selbst und wartet auf einen Klick: bei `klicken` immer, bei `bis-beginn` ab
+       * der Beginn-Grenze (dann bleibt „Jetzt“ stehen und die Restzeit läuft ins Minus).
+       */
+      wartet: boolean;
+      /** „Weiter“/„Zurück“ gehen vom gezeigten „Jetzt“ aus (nur `bis-beginn` mit Beginn-Grenze) – sonst startet „Starten“ vorn. */
+      weiterAbJetzt: boolean;
+      /** Zeitkonto in Sekunden (+ gespart, − Rückstand); `null` ohne „Jetzt“ und wenn alles nur nach der Uhr läuft. */
+      konto: number | null;
     }
   | {
       art: 'laeuft';
@@ -75,15 +104,15 @@ export type LiveLage =
       dauerSek: number;
       /** Was übrig ist – negativ, wenn die Zeit um ist (läuft weiter, bis jemand „Weiter“ drückt). */
       restSek: number;
-      /** Wie viel später als geplant der Punkt begann (negativ = früher); `null` ohne Plan-Zeit. */
-      verspaetungSek: number | null;
+      /** Zeitkonto in Sekunden (+ gespart, − Rückstand), laufend; `null` ohne Plan-Zeit. Siehe `kontoSek`. */
+      konto: number | null;
     }
   | {
       art: 'ende';
       /** Wann der Ablauf vorbei war (ms, Uhr von ChurchTools). */
       seit: number | null;
-      /** Wie viel später als geplant er endete (negativ = früher); `null` ohne Plan-Zeit. */
-      verspaetungSek: number | null;
+      /** Endstand des Zeitkontos (+ gespart, − Rückstand); `null` ohne Plan-Zeit. */
+      konto: number | null;
     };
 
 /** Wohin geschrieben wird: Stelle und Zusatzzeit (Gesamtwert). */
@@ -158,6 +187,7 @@ export function liveListe(items: readonly CtAgendaItem[], eventId: number): Live
         liedOhneDauer: dauerSek === 0 && !!i.song,
         weggelassen,
         planBeginn: beginn === null ? null : Date.parse(beginn),
+        vorBeginn: i.isBeforeEvent === true,
       };
     });
 }
@@ -210,32 +240,85 @@ function planEnde(liste: readonly LivePunkt[]): number | null {
   return null;
 }
 
-/** „Jetzt“ nach der Uhr – solange niemand gestartet hat (Alwin, 02.11.2026). */
-function nachPlan(liste: readonly LivePunkt[], jetzt: number): LiveLage {
+/**
+ * **Das Zeitkonto in Sekunden** (T3/A5): geplantes Ende des Punkts minus voraussichtliches Ende – positiv = gespart,
+ * negativ = Rückstand. Voraussichtlich endet der Punkt `seit` + geplante Dauer; ist die Zeit um, endet er „jetzt“ (ein
+ * überzogener Punkt verbraucht das Konto sofort, nicht erst beim Klick). Gerechnet gegen den **ursprünglichen** Plan:
+ * `addseconds` (−1/+1 Min) fehlt hier mit Absicht – es ändert nur den Kreis (A13). `null` ohne Plan-Zeit.
+ */
+export function kontoSek(p: LivePunkt, seit: number, jetzt: number): number | null {
+  if (p.planBeginn === null) return null;
+  const planEnde = p.planBeginn + p.dauerSek * 1000;
+  const voraussichtlich = Math.max(seit + p.dauerSek * 1000, jetzt);
+  return Math.round((planEnde - voraussichtlich) / 1000) + 0; // `+ 0`: kein „−0“
+}
+
+/** Der Beginn des Termins (ms): der erste Punkt nach dem Vorlauf, der eine Plan-Zeit hat. `null`, wenn es keinen gibt. */
+function beginnGrenze(liste: readonly LivePunkt[]): number | null {
+  return liste.find((p) => !p.vorBeginn && p.planBeginn !== null)?.planBeginn ?? null;
+}
+
+/**
+ * „Jetzt“ nach der Uhr – solange niemand gestartet hat (Alwin, 02.11.2026), je nach Betriebsart (L4-2, T2):
+ * `immer-uhr` durch den ganzen Ablauf, `bis-beginn` nur durch die Punkte vor Beginn (danach bleibt es stehen), `klicken` nie.
+ * Ohne erkennbaren Beginn (kein Punkt danach mit Zeit) verhält sich `bis-beginn` wie `immer-uhr` – sonst bliebe „Jetzt“ für
+ * immer am letzten Punkt hängen.
+ */
+function nachPlan(liste: readonly LivePunkt[], jetzt: number, art: Betriebsart): LiveLage {
+  const grenze = beginnGrenze(liste);
+  const bisBeginn = art === 'bis-beginn' && grenze !== null;
+  const nurUhr = art === 'immer-uhr' || (art === 'bis-beginn' && grenze === null);
+  const wartet = art === 'klicken' || (bisBeginn && grenze !== null && jetzt >= grenze);
   let index = -1;
-  for (let i = 0; i < liste.length; i++) {
-    const p = liste[i];
-    // Weggelassene haben keine Plan-Zeit; ein Lied ohne Dauer beginnt mit dem nächsten Punkt und wird von ihm abgelöst.
-    if (p.planBeginn === null) continue;
-    if (p.planBeginn <= jetzt) index = i;
-    else break;
+  if (art !== 'klicken') {
+    for (let i = 0; i < liste.length; i++) {
+      const p = liste[i];
+      // Weggelassene haben keine Plan-Zeit; ein Lied ohne Dauer beginnt mit dem nächsten Punkt und wird von ihm abgelöst.
+      if (p.planBeginn === null) continue;
+      // Nach dem Vorlauf läuft bei `bis-beginn` nichts mehr von selbst.
+      if (bisBeginn && !p.vorBeginn) break;
+      if (p.planBeginn <= jetzt) index = i;
+      else break;
+    }
   }
-  if (index < 0) {
-    const erster = liste.find((p) => !uebersprungen(p)) ?? null;
-    return { art: 'nach-plan', jetzt: null, mit: [], dann: erster, restSek: null, vorbei: false };
-  }
+  const ohne = (dann: LivePunkt | 'ende' | null, vorbei = false): LiveLage => ({
+    art: 'nach-plan',
+    jetzt: null,
+    mit: [],
+    dann,
+    restSek: null,
+    vorbei,
+    betriebsart: art,
+    wartet,
+    weiterAbJetzt: bisBeginn,
+    konto: null,
+  });
+  if (index < 0) return ohne(liste.find((p) => !uebersprungen(p)) ?? null);
   const p = liste[index];
-  const rest = Math.round(((p.planBeginn ?? jetzt) + p.dauerSek * 1000 - jetzt) / 1000);
+  const beginn = p.planBeginn ?? jetzt;
+  const rest = Math.round((beginn + p.dauerSek * 1000 - jetzt) / 1000);
   const { mit, dann } = folge(liste, index);
-  if (rest <= 0 && dann === 'ende') {
-    return { art: 'nach-plan', jetzt: null, mit: [], dann: null, restSek: null, vorbei: true };
-  }
-  return { art: 'nach-plan', jetzt: p, mit, dann, restSek: rest, vorbei: false };
+  if (nurUhr && rest <= 0 && dann === 'ende') return ohne(null, true);
+  return {
+    art: 'nach-plan',
+    jetzt: p,
+    mit,
+    dann,
+    restSek: rest,
+    vorbei: false,
+    betriebsart: art,
+    wartet,
+    weiterAbJetzt: bisBeginn,
+    // Nach Plan gilt der Punkt als pünktlich begonnen: 0 – oder Rückstand, wenn er stehen bleibt und überzieht. Läuft alles
+    // nur nach der Uhr (`immer-uhr`), gibt es nichts zu verbuchen: kein Konto.
+    konto: nurUhr ? null : kontoSek(p, beginn, jetzt),
+  };
 }
 
 /**
  * **Was „Live“ zeigt** – aus der Liste, dem Stand und der Zeit `jetzt` **in der Uhr von ChurchTools** (Gerät minus
- * `uhrVersatz`). Ohne Stand (nie gelesen oder nie gestartet) und bei Stelle 0 läuft es nach der Uhr.
+ * `uhrVersatz`). Ohne Stand (nie gelesen oder nie gestartet) und bei Stelle 0 läuft es nach der Uhr – wie weit, sagt die
+ * `betriebsart` (L4-2).
  *
  * Abweichung: ChurchTools rechnet den Plan-Beginn selbst aus den Dauern davor – samt weggelassener Punkte. Wir nehmen
  * die Zeit, die ChurchTools für diesen Termin nennt (`startTimes`), also dieselbe wie im Ablauf; mit weggelassenen
@@ -245,16 +328,20 @@ export function liveLage(
   liste: readonly LivePunkt[],
   stand: LiveStand | null,
   jetzt: number,
+  betriebsart: Betriebsart,
 ): LiveLage {
   const stelle = stand?.stelle ?? null;
-  if (stand === null || stelle === null || stelle === 0) return nachPlan(liste, jetzt);
+  if (stand === null || stelle === null || stelle === 0) return nachPlan(liste, jetzt, betriebsart);
   if (stelle >= endeStelle(liste)) {
     const geplant = planEnde(liste);
     return {
       art: 'ende',
       seit: stand.seit,
-      verspaetungSek:
-        stand.seit !== null && geplant !== null ? Math.round((stand.seit - geplant) / 1000) : null,
+      // Endstand des Zeitkontos: Plan-Ende minus Zeitpunkt des letzten Klicks.
+      konto:
+        stand.seit !== null && geplant !== null
+          ? Math.round((geplant - stand.seit) / 1000) + 0
+          : null,
     };
   }
   const index = stelle - 1;
@@ -270,22 +357,24 @@ export function liveLage(
     dann,
     dauerSek,
     restSek: Math.round(dauerSek - vergangen),
-    verspaetungSek:
-      stand.seit !== null && p.planBeginn !== null
-        ? Math.round((stand.seit - p.planBeginn) / 1000)
-        : null,
+    konto: stand.seit === null ? null : kontoSek(p, stand.seit, jetzt),
   };
 }
 
 /**
- * Die Abweichung in Worten: „2 Min. später“, „1 Min. früher“, „im Plan“. Abgeschnitten wie in ChurchTools
- * (`truncate`), damit beide Ansichten dieselbe Zahl zeigen.
+ * **Das Zeitkonto als Text** (A5): „+0:20“ = gespart, „−2:10“ = Rückstand, „±0:00“ genau im Plan – auf die Sekunde, mit dem
+ * echten Minus (U+2212) wie `restText`. Die Farbe (grün/rot) wählt die Anzeige nach dem Vorzeichen von `konto`.
  */
-export function abweichungText(sek: number): string {
-  const min = Math.trunc(Math.abs(sek) / 60);
-  if (min === 0) return 'im Plan';
-  return `${min} Min. ${sek > 0 ? 'später' : 'früher'}`;
+export function kontoText(sek: number): string {
+  const s = Math.round(sek);
+  const a = Math.abs(s);
+  const zeit = `${Math.floor(a / 60)}:${String(a % 60).padStart(2, '0')}`;
+  return s > 0 ? `+${zeit}` : s < 0 ? `−${zeit}` : `±${zeit}`;
 }
+
+/** Das Wort unter dem Zeitkonto: „gespart“, „Rückstand“ oder „im Plan“. */
+export const kontoWort = (sek: number): string =>
+  Math.round(sek) > 0 ? 'gespart' : Math.round(sek) < 0 ? 'Rückstand' : 'im Plan';
 
 /**
  * Restzeit als „2:12“ – ist die Zeit um, mit Minus davor: „−0:45“ (läuft weiter, bis jemand weiterschaltet). Das Vorzeichen
@@ -358,15 +447,40 @@ export function liveInfoGruppen(
   return eigene.length > 0 ? sichtbar.filter((g) => eigene.includes(g.id)) : gewaehlt;
 }
 
-/** „Weiter“: nächster Punkt, Zusatzzeit zurück auf 0 (wie ChurchTools). */
-export const weiterZiel = (liste: readonly LivePunkt[], stand: LiveStand | null): LiveZiel => ({
-  stelle: naechsteStelle(liste, stand?.stelle ?? null),
+/**
+ * Von welcher Stelle aus „Weiter“/„Zurück“ rechnen: normalerweise die im Stand; zeigt „Jetzt“ nach der Uhr einen Punkt und
+ * gehen die Knöpfe von dort aus (`weiterAbJetzt`, Betriebsart „bis Beginn“), dessen Stelle – damit „Weiter“ den Punkt nach
+ * dem gezeigten startet und nicht ganz vorn anfängt.
+ */
+function ausgangsStelle(
+  liste: readonly LivePunkt[],
+  stand: LiveStand | null,
+  lage: LiveLage | null,
+): number | null {
+  if (lage?.art === 'nach-plan' && lage.weiterAbJetzt && lage.jetzt) {
+    const i = liste.indexOf(lage.jetzt);
+    if (i >= 0) return i + 1;
+  }
+  return stand?.stelle ?? null;
+}
+
+/** „Weiter“: nächster Punkt, Zusatzzeit zurück auf 0 (wie ChurchTools). `lage` = was gerade gezeigt wird. */
+export const weiterZiel = (
+  liste: readonly LivePunkt[],
+  stand: LiveStand | null,
+  lage: LiveLage | null = null,
+): LiveZiel => ({
+  stelle: naechsteStelle(liste, ausgangsStelle(liste, stand, lage)),
   zusatzSek: 0,
 });
 
 /** „Zurück“: voriger Punkt, Zusatzzeit zurück auf 0. */
-export const zurueckZiel = (liste: readonly LivePunkt[], stand: LiveStand | null): LiveZiel => ({
-  stelle: vorigeStelle(liste, stand?.stelle ?? null),
+export const zurueckZiel = (
+  liste: readonly LivePunkt[],
+  stand: LiveStand | null,
+  lage: LiveLage | null = null,
+): LiveZiel => ({
+  stelle: vorigeStelle(liste, ausgangsStelle(liste, stand, lage)),
   zusatzSek: 0,
 });
 

@@ -85,6 +85,12 @@
   > .eingabe:not(.klein):not(.zahl) {
     flex: 1 1 140px;
   }
+
+  // „Erster … Letzter <Wochentag> im Monat“ steht wie in ChurchTools in einer eigenen Zeile – daneben wären beide Auswahlen
+  // abgeschnitten (beim Durchklicken 23.11.2026).
+  > .eingabe.eigeneZeile:not(.klein):not(.zahl) {
+    flex: 1 1 100%;
+  }
 }
 
 .haken {

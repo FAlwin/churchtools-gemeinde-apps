@@ -225,7 +225,7 @@ export function TerminFormular(p: Props) {
         </select>
         {e.art === WIEDERHOLUNG.monatlichWochentag && (
           <select
-            className={styles.eingabe}
+            className={`${styles.eingabe} ${styles.eigeneZeile}`}
             aria-label="Welcher Wochentag im Monat"
             value={e.option}
             disabled={aus}

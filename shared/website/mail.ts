@@ -22,7 +22,8 @@
  * Mensch getippt hat (Seitentitel, Namen, Anmerkung), geht durch `htmlText` (`html.ts`) – ein Titel wie `<script>` bleibt Text.
  * Der Betreff ist reiner Text (kein HTML) und einzeilig.
  */
-import type { GruppenRolle } from '../ct/rollenRechte';
+import { ctId } from '../ct/ctId';
+import type { GruppenRolle, RolleRoh } from '../ct/rollenRechte';
 import { htmlAttr, htmlText } from './html';
 import { vorschlag } from './rechte';
 
@@ -34,7 +35,11 @@ export interface MailPerson {
 
 /** Ein aktives Mitglied der Website-Gruppe, wie es aus ChurchTools kommt. */
 export interface GruppenMitglied extends MailPerson {
-  /** Rolle in der Gruppe (`group_role`) – `null`, wenn nur über eine Untergruppe dabei. */
+  /**
+   * Rolle des Mitglieds als **Rolle der Gruppenart** (`groupTypeRoleId`, z. B. 16 = Leiter) – so liefert sie
+   * `GET /groups/{id}/members`. **Nicht** die `group_role`-ID (z. B. 3290), an der die Rechte hängen: Die übersetzt
+   * `leitungsTypen`. `null`, wenn unlesbar.
+   */
   rolleId: number | null;
 }
 
@@ -51,6 +56,23 @@ export function leitungsRollen(
   return vorschlag(rollen)
     .filter((r) => r.stufe === 'leitung')
     .map((r) => r.rolle);
+}
+
+/**
+ * **Von der Rechte-Rolle zur Mitglieder-Rolle:** Die Leitung steht als `group_role`-IDs fest (daran hängen die Rechte, z. B.
+ * 3290), die Mitglieder tragen aber die Rolle der Gruppenart (`groupTypeRoleId`, z. B. 16) – gemessen 23.11.2026 auf der
+ * Test-Instanz. `GET /groups/{id}/roles` liefert beides je Zeile; hier wird übersetzt. Zeilen ohne lesbare Nummern fallen weg.
+ */
+export function leitungsTypen(
+  rollenDerLeitung: readonly number[],
+  roh: readonly RolleRoh[] | null,
+): number[] {
+  const leitung = new Set(rollenDerLeitung);
+  return (roh ?? []).flatMap((r) => {
+    const id = ctId(r.id);
+    const typ = ctId(r.groupTypeRoleId);
+    return id !== null && typ !== null && leitung.has(id) ? [typ] : [];
+  });
 }
 
 /** Je Person einmal – die erste Fundstelle gilt (dort steht ggf. die Adresse). */

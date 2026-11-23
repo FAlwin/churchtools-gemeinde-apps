@@ -29,6 +29,7 @@ import {
   freigabeMails,
   leitungEmpfaenger,
   leitungsRollen,
+  leitungsTypen,
   mailText,
   zurueckEmpfaenger,
   type FreigegebeneSeite,
@@ -68,8 +69,10 @@ type MitgliedRoh = RohMitglied & { person?: { email?: unknown } | null };
 
 /**
  * **Die aktiven Mitglieder der Website-Gruppe mit ihrer Rolle** – gelesen mit der Liste aller Seiten, ausgewertet wie im
- * Organigramm (`mitgliederAus`: nur aktive, nicht beendete). Die Adresse (`person.email`) nur, wenn ChurchTools sie liefert;
- * ohne sie kann das Nachlesen im Protokoll nicht prüfen (`mailSenden` gibt dann `null`). Die Mitglieder samt Rollen der eigenen
+ * Organigramm (`mitgliederAus`: nur aktive, nicht beendete; Rolle = `groupTypeRoleId`). Die Adresse (`person.email`) nur, wenn
+ * ChurchTools sie liefert – **gemessen 23.11.2026: auch für den Admin nicht** (`person` ist nur das Kurzprofil); ohne sie kann
+ * das Nachlesen im Protokoll nicht prüfen (`mailSenden` gibt dann `null`, die Website meldet „gesendet“, sobald ChurchTools
+ * den Auftrag angenommen hat). Die Mitglieder samt Rollen der eigenen
  * Gruppe sind für Redakteure lesbar (gemessen W3b-0).
  */
 async function gruppenMitglieder(gruppe: number): Promise<GruppenMitglied[]> {
@@ -98,7 +101,7 @@ async function leitungLaden(
     gruppenMitglieder(o.gruppe),
   ]);
   const rollen = leitungsRollen(leitungAusWerten(werte), gruppenRollenAus(rollenRoh));
-  return leitungEmpfaenger(mitglieder, rollen, ichId);
+  return leitungEmpfaenger(mitglieder, leitungsTypen(rollen, rollenRoh), ichId);
 }
 
 interface GeplanteMail {

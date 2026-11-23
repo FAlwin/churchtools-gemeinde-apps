@@ -4,6 +4,7 @@ import {
   freigabeMails,
   leitungEmpfaenger,
   leitungsRollen,
+  leitungsTypen,
   mailText,
   zurueckEmpfaenger,
   type GruppenMitglied,
@@ -44,32 +45,55 @@ describe('Wer ist „Leitung“?', () => {
   });
 });
 
-describe('Empfänger: die Leitung (Einreichen, Löschen anfragen)', () => {
-  const mitglieder = [
-    m(1, 3290, 'helene@example.org'),
-    m(2, 3291),
-    m(3, 3287),
-    m(4, null),
-    m(5, 3287),
+describe('Von der Rechte-Rolle zur Mitglieder-Rolle (leitungsTypen)', () => {
+  /** Zeilen wie `GET /groups/344/roles` auf der Test-Instanz (gemessen 23.11.2026). */
+  const ROH = [
+    { id: 3290, groupTypeRoleId: 16, name: 'Leiter', isLeader: true },
+    { id: 3293, groupTypeRoleId: 17, name: 'Co-Leiter', isLeader: true },
+    { id: 3287, groupTypeRoleId: 15, name: 'Mitarbeiter', isLeader: false },
   ];
 
+  it('übersetzt die group_role-IDs der Leitung in die Rollen, die an den Mitgliedern stehen', () => {
+    expect(leitungsTypen([3290, 3293], ROH)).toEqual([16, 17]);
+  });
+
+  it('eine Mitglieder-Rolle mit derselben Zahl wie eine group_role wird nicht verwechselt', () => {
+    expect(leitungsTypen([16], ROH)).toEqual([]);
+  });
+
+  it('Zeilen ohne lesbare Nummern und unlesbare Rollen fallen weg', () => {
+    expect(leitungsTypen([3290], [{ id: 3290 }, { groupTypeRoleId: 16 }])).toEqual([]);
+    expect(leitungsTypen([3290], null)).toEqual([]);
+  });
+
+  it('zusammen mit leitungEmpfaenger: die Leitung aus dem Wert erreicht die Mitglieder mit groupTypeRoleId', () => {
+    const mitglieder = [m(1, 16), m(2, 15)];
+    expect(
+      leitungEmpfaenger(mitglieder, leitungsTypen([3290], ROH), 9).map((p) => p.personId),
+    ).toEqual([1]);
+  });
+});
+
+describe('Empfänger: die Leitung (Einreichen, Löschen anfragen)', () => {
+  const mitglieder = [m(1, 16, 'helene@example.org'), m(2, 17), m(3, 15), m(4, null), m(5, 15)];
+
   it('nur Mitglieder mit einer Leitungs-Rolle', () => {
-    expect(leitungEmpfaenger(mitglieder, [3290, 3291], 5).map((p) => p.personId)).toEqual([1, 2]);
+    expect(leitungEmpfaenger(mitglieder, [16, 17], 5).map((p) => p.personId)).toEqual([1, 2]);
   });
 
   it('die Adresse reist mit, wenn bekannt – sonst fehlt das Feld ganz (kein leerer Text)', () => {
-    const an = leitungEmpfaenger(mitglieder, [3290, 3291], 5);
+    const an = leitungEmpfaenger(mitglieder, [16, 17], 5);
     expect(an[0]).toEqual({ personId: 1, email: 'helene@example.org' });
     expect(an[1]).toEqual({ personId: 2 });
     expect('email' in an[1]).toBe(false);
   });
 
   it('nie an sich selbst: die handelnde Leitung wird herausgenommen', () => {
-    expect(leitungEmpfaenger(mitglieder, [3290, 3291], 1).map((p) => p.personId)).toEqual([2]);
+    expect(leitungEmpfaenger(mitglieder, [16, 17], 1).map((p) => p.personId)).toEqual([2]);
   });
 
   it('niemand übrig (die einzige Leitung reicht selbst ein): leere Liste – kein Fehler', () => {
-    expect(leitungEmpfaenger([m(1, 3290)], [3290], 1)).toEqual([]);
+    expect(leitungEmpfaenger([m(1, 16)], [16], 1)).toEqual([]);
   });
 
   it('niemand hat die Rolle: leere Liste', () => {
@@ -77,12 +101,12 @@ describe('Empfänger: die Leitung (Einreichen, Löschen anfragen)', () => {
   });
 
   it('eine Person mit zwei Mitgliedschaften (zwei Rollen) bekommt nur eine Mail', () => {
-    const doppelt = [m(1, 3290), m(1, 3291), m(2, 3290)];
-    expect(leitungEmpfaenger(doppelt, [3290, 3291], 9).map((p) => p.personId)).toEqual([1, 2]);
+    const doppelt = [m(1, 16), m(1, 17), m(2, 16)];
+    expect(leitungEmpfaenger(doppelt, [16, 17], 9).map((p) => p.personId)).toEqual([1, 2]);
   });
 
   it('nur über eine Untergruppe dabei (Rolle null) zählt nicht als Leitung', () => {
-    expect(leitungEmpfaenger([m(4, null)], [3290], 9)).toEqual([]);
+    expect(leitungEmpfaenger([m(4, null)], [16], 9)).toEqual([]);
   });
 });
 

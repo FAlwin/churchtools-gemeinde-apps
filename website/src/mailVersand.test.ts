@@ -33,11 +33,17 @@ const WERTE_PFAD = `/custommodules/${MODUL}/customdatacategories/${ENTWUERFE}/cu
 const HELENE = { person: 1, name: 'Helene Wiebe', fenster: 'f1' };
 const RITA = { person: 5, name: 'Rita Redakteurin', fenster: 'f2' };
 
+/**
+ * Wie auf der Test-Instanz gemessen (23.11.2026): `id` ist die `group_role` (daran hängen Rechte und der Wert
+ * `website-leitung`), die Mitglieder tragen die `groupTypeRoleId`. Absichtlich verschiedene Zahlen – mit gleichen fiele die
+ * Verwechslung nicht auf (so war es im ersten Bau).
+ */
 const ROLLEN_ROH = [
-  { id: 3290, name: 'Leiter', isLeader: true, isActive: true },
-  { id: 3291, name: 'Co-Leiter', isLeader: true, isActive: true },
-  { id: 3287, name: 'Mitarbeiter', isLeader: false, isActive: true },
+  { id: 3290, groupTypeRoleId: 16, name: 'Leiter', isLeader: true, isActive: true },
+  { id: 3291, groupTypeRoleId: 17, name: 'Co-Leiter', isLeader: true, isActive: true },
+  { id: 3287, groupTypeRoleId: 15, name: 'Mitarbeiter', isLeader: false, isActive: true },
 ];
+const TYP = { 3290: 16, 3291: 17, 3287: 15 } as const;
 const mitglied = (personId: number, rolle: number, email?: string, status = 'active') => ({
   personId,
   groupTypeRoleId: rolle,
@@ -53,10 +59,10 @@ beforeEach(() => {
   vi.stubEnv('BASE_URL', '/ccm/website/');
   werte = [];
   mitglieder = [
-    mitglied(1, 3290, 'helene@example.org'), // Leitung
-    mitglied(2, 3291), // Co-Leitung
-    mitglied(5, 3287), // Rita, Mitarbeiterin
-    mitglied(6, 3290, undefined, 'requested'), // nur angefragt – kein Mitglied
+    mitglied(1, TYP[3290], 'helene@example.org'), // Leitung
+    mitglied(2, TYP[3291]), // Co-Leitung
+    mitglied(5, TYP[3287]), // Rita, Mitarbeiterin
+    mitglied(6, TYP[3290], undefined, 'requested'), // nur angefragt – kein Mitglied
   ];
   ct.ctDaten.mockImplementation((pfad: string) => {
     if (pfad === WERTE_PFAD) return Promise.resolve(werte.map((w) => ({ ...w })) as never);
@@ -123,7 +129,7 @@ describe('Einreichen und Löschen anfragen: Mail an die Leitung', () => {
   });
 
   it('sich selbst nicht: reicht die einzige Leitung selbst ein, ist niemand übrig – kein Aufruf, kein Fehler', async () => {
-    mitglieder = [mitglied(1, 3290), mitglied(5, 3287)];
+    mitglieder = [mitglied(1, TYP[3290]), mitglied(5, TYP[3287])];
     const r = await mailAnLeitung(O, { art: 'eingereicht', seite: 'A' }, HELENE);
     expect(r).toEqual({ art: 'niemand' });
     expect(senden).not.toHaveBeenCalled();

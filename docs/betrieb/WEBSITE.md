@@ -232,7 +232,10 @@ der Meldung des Reiters „Freigaben“ nennt drei Ausgänge:
 - **unklar** (ChurchTools antwortet nicht, im Protokoll steht nichts) – „Ob die Mail … rausging, ist unklar. Bitte nicht noch einmal
   einreichen – die Leitung sieht die Seite auch im Reiter „Freigaben“.“ **Nichts wird automatisch wiederholt** (doppelte Mails).
 
-Weiß die Erweiterung die Adresse der Empfänger nicht (Redakteure sehen die der Leitung evtl. nicht), kann das Protokoll nicht nach der
+**Rollen-Nummern (gemessen 23.11.2026):** Der Wert hält die `group_role`-IDs (z. B. 3290, daran hängen die Rechte), die Mitglieder
+tragen die Rolle der Gruppenart (`groupTypeRoleId`, z. B. 16). `leitungsTypen` (`shared/website/mail.ts`) übersetzt über
+`GET /groups/{id}/roles`, das beides je Zeile liefert. Die Mitgliederliste liefert **keine** Mail-Adressen (auch nicht dem Admin).
+Weiß die Erweiterung die Adresse der Empfänger nicht (das ist der Normalfall), kann das Protokoll nicht nach der
 Adresse durchsucht werden; dann bleibt „gesendet“ ohne Beleg (und bei fehlender Antwort „unklar“). **Das Mitlesen im Protokoll braucht
 ein Recht, das nicht jeder hat** – ohne es gilt ebenfalls „gesendet, nicht belegt“.
 

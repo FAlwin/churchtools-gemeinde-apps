@@ -393,9 +393,10 @@ export function demoStarten(fall: string): void {
     ],
   };
   const ROLLEN = [
-    { id: 2, name: 'Leiter', isLeader: true, isActive: true },
-    { id: 3, name: 'Mitarbeiter', isLeader: false, isActive: true },
-    { id: 4, name: 'Coach', isLeader: false, isActive: true },
+    // `id` = group_role (Rechte), `groupTypeRoleId` = Rolle an den Mitgliedern – verschieden wie in ChurchTools.
+    { id: 2, groupTypeRoleId: 16, name: 'Leiter', isLeader: true, isActive: true },
+    { id: 3, groupTypeRoleId: 15, name: 'Mitarbeiter', isLeader: false, isActive: true },
+    { id: 4, groupTypeRoleId: 18, name: 'Coach', isLeader: false, isActive: true },
   ];
   const rollenRechte: Recht[] =
     fall === 'rechte-leer' || !eingerichtet
@@ -438,7 +439,7 @@ export function demoStarten(fall: string): void {
           ? [
               {
                 group: { domainIdentifier: String(GRUPPE), title: 'Website' },
-                groupTypeRoleId: fall === 'leitung' || fall === 'leitung-ohne-rechte' ? 2 : 3,
+                groupTypeRoleId: fall === 'leitung' || fall === 'leitung-ohne-rechte' ? 16 : 15,
                 groupMemberStatus: 'active',
                 memberEndDate: null,
               },
@@ -447,34 +448,35 @@ export function demoStarten(fall: string): void {
       );
     if (pfad === '/group/roles')
       return antwort([
-        { id: 2, isLeader: true },
-        { id: 3, isLeader: false },
+        { id: 16, isLeader: true },
+        { id: 15, isLeader: false },
       ]);
     if (pfad === '/info') return antwort({ shortName: 'Demo-Gemeinde' });
     if (pfad === '/config') return antwort({});
     if (pfad === '/permissions/global') return antwort(rechte());
     if (pfad === '/permissions/definitions') return antwort(definitionen);
     if (/^\/groups\/\d+\/roles$/.test(pfad)) return antwort(ROLLEN);
-    // Mails im Freigabe-Weg (W3b-3): Mitglieder der Gruppe (Helene = Leiter), das alte Mail-Senden und das Protokoll – gesendet
+    // Mails im Freigabe-Weg (W3b-3): Mitglieder der Gruppe (Jonas = Leiter, Helene je nach Fall), das alte Mail-Senden und das Protokoll – gesendet
     // wird nichts, es wird nur „angenommen“.
     if (/^\/groups\/\d+\/members$/.test(pfad))
       return antwort([
         {
           personId: 1,
           person: { title: 'Helene Wiebe' },
-          groupTypeRoleId: 2,
+          // Dieselbe Rolle wie in ihren Gruppen (`/persons/1/groups`): Leiterin nur im Fall „leitung“.
+          groupTypeRoleId: fall === 'leitung' || fall === 'leitung-ohne-rechte' ? 16 : 15,
           groupMemberStatus: 'active',
         },
         {
           personId: 7,
           person: { title: 'Jonas Peters' },
-          groupTypeRoleId: 3,
+          groupTypeRoleId: 16, // Leiter – er hat in der Demo das Impressum zurückgegeben
           groupMemberStatus: 'active',
         },
         {
           personId: 8,
           person: { title: 'Lena Kraft' },
-          groupTypeRoleId: 3,
+          groupTypeRoleId: 15,
           groupMemberStatus: 'active',
         },
       ]);

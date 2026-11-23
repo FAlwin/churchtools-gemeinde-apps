@@ -225,7 +225,8 @@ export function terminZeitText(beginn: string, zeitzone: string): string {
 }
 
 /**
- * **Der Link nach ChurchTools** – der Kalender der Instanz. Eine Adresse für genau diesen Termin ist nicht gemessen;
- * hier der eine Ort, falls sie bekannt wird.
+ * **Der Link nach ChurchTools** – der Kalender der Instanz (`/?q=churchcal`, so verlinkt ChurchTools selbst). Bis 1.5.1
+ * stand hier `/calendars` – das ist nur ein API-Pfad, im Browser kam eine 404-Seite (Handtest TF-PROT-31, 23.11.2026).
+ * Eine Adresse für genau diesen Termin ist nicht gemessen; hier der eine Ort, falls sie bekannt wird.
  */
-export const terminLink = (basis: string): string => `${basis.replace(/\/+$/, '')}/calendars`;
+export const terminLink = (basis: string): string => `${basis.replace(/\/+$/, '')}/?q=churchcal`;

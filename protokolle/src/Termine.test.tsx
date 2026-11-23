@@ -251,7 +251,9 @@ describe('Eintragen', () => {
     fireEvent.click(screen.getByRole('button', { name: /Im Kalender/ }));
     const z = await zeile('Heiligabend, 16 Uhr');
     expect(z.textContent).toContain('Gemeindeleitung · 16:00 Uhr');
-    expect(within(z).getByRole('link', { name: 'In ChurchTools öffnen' })).toBeTruthy();
+    expect(
+      within(z).getByRole('link', { name: 'In ChurchTools öffnen' }).getAttribute('href'),
+    ).toMatch(/\/\?q=churchcal$/);
   });
 
   it('ohne Uhrzeit: ganztägig – der Tag geht an ChurchTools, nicht eine Uhrzeit', async () => {

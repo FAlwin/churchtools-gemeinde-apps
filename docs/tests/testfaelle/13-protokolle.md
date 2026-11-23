@@ -1026,7 +1026,7 @@ Bausteine sehen im Editor, beim Lesen und im PDF gleich ruhig aus.
 3. Nimm bei einem Beschluss den **kleinen Haken „ersetzt“** weg: Es steht jetzt „ersetzt nicht, kommt darunter“. Wähle den Beschluss ab: Der kleine Haken ist gesperrt.
 4. **Ausgewählte übernehmen:** Der Baustein steht **an der Stelle deiner Zeile**, die Zeile ist weg; wo der Haken fehlte, stehen Zeile **und** Baustein darunter. Eine Zeile mit
    eingerückten Unterzeilen bleibt stehen (der Baustein kommt darunter). Es steht nichts mehr doppelt am Ende des Punkts.
-5. Drücke **einmal Strg+Z** (Mac: Cmd+Z), solange du noch nichts anderes getan hast: Die ganze Übernahme ist zurück, deine Zeilen stehen wieder da.
+5. Drücke **einmal Strg+Z** (Mac: Cmd+Z), solange du noch nichts anderes getan hast: Die ganze Übernahme ist zurück, deine Zeilen stehen wieder da. Nimm dafür eine Antwort **mit To-Do mit Wer und Bis** (genau da ging Rückgängig bis 1.5.1 gar nicht mehr). Noch einmal Strg+Z: Auch das, was du vorher getippt hattest, geht zurück.
 6. Schalte auf **Lesen**, hell und dunkel: **Beschluss** hat einen grünen Rand und das kleine grüne Etikett „BESCHLUSS“, **Termin** einen blauen Rand mit blauem, fettem Datum
    (Datum und Text in einer Zeile), **To-Do** einen grauen Rand mit Kreis und leiser Angabe „offen · bis …“ – keine getönten Kästen. Im Editor sieht es genauso aus; Wer und Bis
    stehen leise ohne Rahmen. Am Handy (375 px) läuft nichts über den Rand.
@@ -1037,7 +1037,7 @@ Bausteine sehen im Editor, beim Lesen und im PDF gleich ruhig aus.
 
 - **Priorität:** hoch
 - **Betrifft:** `shared/protokolle/ki.ts`, `shared/protokolle/doppelt.ts`, `protokolle/src/KiFuellenFenster.tsx`, `protokolle/src/KiFuellen.module.scss`, `protokolle/src/bloeckeEinfuegen.ts`, `protokolle/src/DokumentEditor.tsx`, `protokolle/src/EditorBloecke.module.scss`, `protokolle/src/ProtokollAnsicht.module.scss`, `protokolle/src/ProtokollAnsicht.tsx`, `shared/protokolle/protokollBlatt.ts`, `ui/teilen/protokollPdf.ts`
-- **Automatisiert:** größtenteils – `shared/protokolle/ki.vorhanden.test.ts` (ganzer Weg Auftrag → Antwort → Lesen → Übernehmen mit eingerückter Zeile, Zeile mit Kindern, unbekannter und fremder Kennung, doppelt ersetzter Kennung, abgewähltem Ersetzen, geänderter und gelöschter Zeile, Namensschutz), `shared/protokolle/doppelt.test.ts` (Schwelle), `shared/protokolle/ki.test.ts` (Auftrag ohne Text unverändert), `protokolle/src/KiFuellenFenster.test.tsx` (Vorschau, Haken, abgewählter Doppelter), `protokolle/src/bloeckeEinfuegen.test.ts` (echter Editor: Ersetzen, Unterzeilen, eine Transaktion, ein Rückgängig), `shared/protokolle/protokollBlatt.test.ts` und `ui/teilen/protokollPdf.test.ts` (Rand, Etikett, Kreis, keine Fläche); **nur von Hand:** Aussehen hell/dunkel und am Handy, die echte KI-Antwort, PDF-Seite ansehen
+- **Automatisiert:** größtenteils – `shared/protokolle/ki.vorhanden.test.ts` (ganzer Weg Auftrag → Antwort → Lesen → Übernehmen mit eingerückter Zeile, Zeile mit Kindern, unbekannter und fremder Kennung, doppelt ersetzter Kennung, abgewähltem Ersetzen, geänderter und gelöschter Zeile, Namensschutz), `shared/protokolle/doppelt.test.ts` (Schwelle), `shared/protokolle/ki.test.ts` (Auftrag ohne Text unverändert), `protokolle/src/KiFuellenFenster.test.tsx` (Vorschau, Haken, abgewählter Doppelter), `protokolle/src/bloeckeEinfuegen.test.ts` (echter Editor: Ersetzen, Unterzeilen, eine Transaktion, ein Rückgängig), `protokolle/src/ohneVerlauf.test.ts` (echter Editor: To-Do mit Vorab-Wahl übernommen, Wahl herausgenommen, Rückgängig nimmt erst die Übernahme, dann das Getippte), `protokolle/src/EditorBloecke.test.tsx` (der Block nimmt die Wahl am Verlauf vorbei heraus), `shared/protokolle/protokollBlatt.test.ts` und `ui/teilen/protokollPdf.test.ts` (Rand, Etikett, Kreis, keine Fläche); **nur von Hand:** Aussehen hell/dunkel und am Handy, die echte KI-Antwort, PDF-Seite ansehen
 - **Historie:** 21.11.2026 (W12, nach dem Festplanung-Protokoll)
 
 </details>
@@ -1100,7 +1100,7 @@ und merkt sich das. Wer nicht in den Kalender darf, sieht nur die Liste.
 7. **Aussetzer** (nur wenn gerade möglich, z. B. Flugmodus nach dem Antippen): Kommt keine Antwort, steht im Fenster „ChurchTools hat nicht geantwortet – ob der Termin angelegt wurde, ist
    unklar. Bitte erst im Kalender nachsehen …“, **nichts** steht danach unter „Im Kalender“ oder „Nicht eintragen“. Ist der Termin doch da: erneut **Eintragen** → das Fenster bietet „Nur verknüpfen“ an.
 8. Hell und dunkel, PC und 375 px: nichts läuft über den Rand, am Handy stehen „Eintragen“ und ⋯ unter dem Text.
-9. **Link:** „In ChurchTools öffnen“ führt zum **Kalender** der Instanz (nicht zu genau diesem Termin – eine Adresse dafür ist nicht gemessen; wenn sie bekannt ist, steht sie in `terminLink`).
+9. **Link:** „In ChurchTools öffnen“ führt zur **Kalender-Seite** von ChurchTools (`/?q=churchcal`, keine 404-Seite – bis 1.5.1 führte er auf `/calendars`), nicht zu genau diesem Termin (eine Adresse dafür ist nicht gemessen; wenn sie bekannt ist, steht sie in `terminLink`).
 
 <details><summary>Technisches</summary>
 

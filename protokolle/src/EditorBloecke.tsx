@@ -3,6 +3,7 @@ import { Icon, type IconName } from '@ui/icons/icons';
 import { useEscape } from '@ui/bedienung/useEscape';
 import { tagPunkt } from '@shared/ct/datum';
 import { terminDatum, textAus } from '@shared/protokolle/dokument';
+import { ohneVerlauf, type VerlaufsfreierEditor } from './ohneVerlauf';
 import {
   istUeberfaellig,
   nameAusListe,
@@ -106,7 +107,7 @@ export function AufgabeBlock({
   contentRef,
 }: Inhalt & {
   block: { id: string; props: { aufgabe: string; vorab: string }; content: unknown };
-  editor: {
+  editor: VerlaufsfreierEditor & {
     isEditable: boolean;
     updateBlock: (b: string, u: { props: { vorab: string } }) => unknown;
   };
@@ -134,9 +135,11 @@ export function AufgabeBlock({
     });
   };
   // Gibt es das To-Do, ist die Wahl übernommen – aus dem Block nehmen, sonst übernähme eine Kopie sie noch einmal.
+  // Ohne Rückgängig-Verlauf: sonst holte „Rückgängig“ die Wahl zurück, dieser Effekt nähme sie gleich wieder heraus, und
+  // Rückgängig käme nie weiter (TF-PROT-29, 23.11.2026 – `ohneVerlauf`).
   useEffect(() => {
     if (a && block.props.vorab && editor.isEditable)
-      editor.updateBlock(block.id, { props: { vorab: '' } });
+      ohneVerlauf(editor, () => editor.updateBlock(block.id, { props: { vorab: '' } }));
   }, [a, block.props.vorab, block.id, editor]);
   const sicht = a ?? vorab;
 

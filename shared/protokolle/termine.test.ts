@@ -179,8 +179,8 @@ describe('Vorbelegung, Prüfung und Zeitraum des Fensters', () => {
   });
 
   it('terminLink: der Kalender der Instanz, ein Schrägstrich am Ende stört nicht', () => {
-    expect(terminLink('https://ct.test/')).toBe('https://ct.test/calendars');
-    expect(terminLink('https://ct.test')).toBe('https://ct.test/calendars');
+    expect(terminLink('https://ct.test/')).toBe('https://ct.test/?q=churchcal');
+    expect(terminLink('https://ct.test')).toBe('https://ct.test/?q=churchcal');
   });
 });
 

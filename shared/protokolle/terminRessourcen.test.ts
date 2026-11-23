@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { eintragVorbelegung } from './termine';
+import { eintragVorbelegung, ganztaegigWechseln } from './termine';
 import { eintragZusatz } from './terminFelder';
 import {
   begrenzeLauf,
@@ -35,6 +35,28 @@ const buchung = (extra: Partial<Buchung> = {}): Buchung => ({
 });
 
 describe('Vorgaben und Grenzen', () => {
+  it('ganztägig wie in ChurchTools: Vorgabe 0/0, beide Zeiten ab 00:00 des Tages (gemessen 23.11.2026)', () => {
+    const e = eintragVorbelegung({ text: 'Bibeltag', datum: '2026-11-26' }, 4);
+    expect([e.ganztaegig, e.vorlauf, e.nachlauf]).toEqual([true, 0, 0]);
+    expect(vorlaufZeit(e, 0)).toBe('26.11.2026 00:00');
+    expect(nachlaufZeit(e, 0)).toBe('26.11.2026 00:00');
+  });
+  it('„Ganztägig“ umschalten: Vorgabe wechselt mit, selbst Eingetipptes bleibt, Tabelle unberührt', () => {
+    const e = eintrag({ buchungen: [buchung({ vorlauf: 15 })] });
+    const an = ganztaegigWechseln(e, true);
+    expect([an.ganztaegig, an.vorlauf, an.nachlauf, an.buchungen[0].vorlauf]).toEqual([
+      true,
+      0,
+      0,
+      15,
+    ]);
+    expect([ganztaegigWechseln(an, false).vorlauf, ganztaegigWechseln(an, false).nachlauf]).toEqual(
+      [15, 15],
+    );
+    const eigen = ganztaegigWechseln({ ...e, vorlauf: 60 }, true);
+    expect([eigen.vorlauf, eigen.nachlauf]).toEqual([60, 0]);
+  });
+
   it('Vorgabe 15/15 wie in ChurchTools; die Vorschläge; Grenzen der Schnittstelle', () => {
     const e = eintrag();
     expect([e.vorlauf, e.nachlauf, e.buchungen]).toEqual([LAUF_VORGABE, LAUF_VORGABE, []]);

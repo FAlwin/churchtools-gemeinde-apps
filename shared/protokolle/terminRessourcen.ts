@@ -23,6 +23,11 @@ export const STATUS_AUSWAHL: readonly { id: BuchungsStatus; label: string }[] = 
 export const VORLAUF_MAX = 20_160;
 export const NACHLAUF_MAX = 1_440;
 export const LAUF_VORGABE = 15;
+/**
+ * **Die Vorgabe für Vorlauf/Nachlauf wie in ChurchTools** (gemessen 23.11.2026 im Dialog „Termin erstellen“): mit Uhrzeit
+ * 15/15 min, ganztägig 0/0.
+ */
+export const laufVorgabe = (ganztaegig: boolean): number => (ganztaegig ? 0 : LAUF_VORGABE);
 /** Die Vorschläge im Auswahlpfeil neben Vorlauf/Nachlauf. */
 export const LAUF_VORSCHLAEGE: readonly number[] = [0, 15, 30, 45, 60, 90, 120, 180, 240];
 

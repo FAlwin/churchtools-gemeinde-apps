@@ -2,7 +2,7 @@
 
 - **Ressourcen buchen beim Eintragen in den Kalender (W15-2).** Im Fenster „In Kalender eintragen“ gibt es jetzt – wie im ChurchTools-Dialog „Termin erstellen“ – den Reiter
   **„Ressourcen“** neben „Kalender“ (nur, wenn du in ChurchTools mindestens eine Ressource buchen darfst). Oben **Vorlauf** und **Nachlauf** (Minuten, frei tippbar oder aus den Vorschlägen
-  0 bis 240; Vorgabe 15/15) mit der errechneten Uhrzeit daneben („23.11.2026 13:45“). Darunter **Ressource** wählen („Saal · Raum“, nach Typ gruppiert, nur die, die du buchen darfst) – sie
+  0 bis 240; Vorgabe 15/15, bei ganztägigen Terminen 0/0 wie in ChurchTools) mit der errechneten Uhrzeit daneben („23.11.2026 13:45“). Darunter **Ressource** wählen („Saal · Raum“, nach Typ gruppiert, nur die, die du buchen darfst) – sie
   landet mit dem aktuellen Vorlauf/Nachlauf in der Tabelle **„Vorhandene Buchungen“**: je Zeile eigener Vorlauf und Nachlauf, **Status** („Wartet auf Bestätigung“, „Bestätigt“, „Abgelehnt“ –
   wählbar nur bei Ressourcen, die du in ChurchTools verwalten darfst, sonst steht fest „Wartet auf Bestätigung“), ✕ zum Entfernen und bei Ressourcen mit mehreren Stück (Stühle) die **Anzahl**.
   Am Handy wird jede Zeile zur Karte.

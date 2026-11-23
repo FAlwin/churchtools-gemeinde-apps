@@ -554,7 +554,7 @@ eine eigene Messung). Es gehen weiterhin keine Einladungen raus; „Ersteller in
 
 **Reiter „Ressourcen“ (W15-2, 23.11.2026):** Reiterleiste **Kalender · Ressourcen** (Reihenfolge wie in ChurchTools, kein Zähler); den Reiter gibt es nur, wenn `GET /permissions/global` →
 `churchresource` „create bookings“ mindestens eine Ressource nennt. Oben **Vorlauf**/**Nachlauf** (Minuten, 0–20160 bzw. 0–1440, Vorgabe 15/15, Vorschläge 0/15/30/45/60/90/120/180/240) mit der
-errechneten Uhrzeit (Beginn − Vorlauf, Ende + Nachlauf; ganztägig von 00:00 bis 23:59 – nicht in ChurchTools nachgemessen), dann **Ressource** (`GET /resources` + `GET /resourcetypes`, nur die
+errechneten Uhrzeit (Beginn − Vorlauf, Ende + Nachlauf; ganztägig wie ChurchTools: Vorgabe 0/0 und beide Zeiten ab 00:00 des Tages, gemessen 23.11.2026; „Ganztägig“ umschalten wechselt die Vorgabe mit, Eingetipptes bleibt), dann **Ressource** (`GET /resources` + `GET /resourcetypes`, nur die
 buchbaren, „Name · Typ“, nach Typ gruppiert) und die Tabelle **Vorhandene Buchungen**: je Zeile Vorlauf, Nachlauf, **Status** (1 Wartet / 2 Bestätigt / 3 Abgelehnt – wählbar nur bei Ressourcen in
 „administer bookings“, sonst fest 1) und bei `quantity > 1` die Anzahl. `terminRumpf` schreibt sie als `bookings` (`resourceId`, `leadTimeMinutes`, `afterwardMinutes`, `statusId`, `quantity` nur > 1).
 **Erfolg ist kein Beleg:** Die Antwort auf `POST …/appointments` enthält die Buchungen nicht (gemessen W15-0); `terminLegen` liest je Ressource `GET /bookings?resource_ids[]=…&from&to` (einen Tag

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import type { Eintrag } from '@shared/protokolle/termine';
+import { ganztaegigWechseln, type Eintrag } from '@shared/protokolle/termine';
 import { hatOrt } from '@shared/protokolle/terminFelder';
 import {
   artWechseln,
@@ -177,7 +177,7 @@ export function TerminFormular(p: Props) {
               type="checkbox"
               checked={e.ganztaegig}
               disabled={aus}
-              onChange={(ev) => set('ganztaegig', ev.target.checked)}
+              onChange={(ev) => p.onAendern(ganztaegigWechseln(e, ev.target.checked))}
             />
             <span>Ganztägig</span>
           </label>

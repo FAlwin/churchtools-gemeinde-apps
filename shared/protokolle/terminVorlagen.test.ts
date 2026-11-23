@@ -55,6 +55,7 @@ describe('vorlagenAus', () => {
       adresse: { name: 'Saal', street: 'Hauptstraße 1', zip: '53797', city: 'Lohmar' },
       tags: [3, 5],
       imAuftrag: 19,
+      buchungen: [],
     });
   });
 
@@ -106,6 +107,7 @@ describe('vorlageAnwenden', () => {
       ortZusatz: '',
       tags: [3, 5],
       imAuftrag: 19,
+      buchungen: [],
       weitere: [],
       ausnahmen: [],
     });
@@ -210,6 +212,7 @@ describe('vorlageRumpf („Als Vorlage speichern“)', () => {
       ortPlz: '53797',
       tags: [3, 'Neu'],
       imAuftrag: 19,
+      buchungen: [],
     });
     expect(r).toMatchObject({
       subtitle: 'Sonntag',
@@ -266,5 +269,87 @@ describe('Rechnen mit Tag und Uhrzeit', () => {
   it('plusSekunden und sekundenZwischen sind Gegenstücke', () => {
     expect(plusSekunden('2026-12-31', '23:30', 3600)).toEqual({ tag: '2027-01-01', zeit: '00:30' });
     expect(sekundenZwischen('2026-12-31', '23:30', '2027-01-01', '00:30')).toBe(3600);
+  });
+});
+
+/** Buchungen in Termin-Vorlagen (W15-2): Altformat `{resource_id, minpre, minpost, status_id}` mit Zahlen als Text. */
+describe('Vorlagen mit Buchungen', () => {
+  const alt = [
+    { resource_id: '3', minpre: '150', minpost: '60', status_id: 1 },
+    { resource_id: '5', minpre: '0', minpost: '15', status_id: 2 },
+  ];
+  const darf = { buchbar: new Set([3, 5]), verwaltbar: new Set([5]) };
+
+  it('liest das Altformat (Zahlen als Text) – und die neuen Namen der Schnittstelle', () => {
+    expect(eine({ bookings: alt }).buchungen).toEqual([
+      { ressource: 3, vorlauf: 150, nachlauf: 60, status: 1, menge: 1 },
+      { ressource: 5, vorlauf: 0, nachlauf: 15, status: 2, menge: 1 },
+    ]);
+    expect(
+      eine({
+        bookings: [{ resourceId: 7, leadTimeMinutes: 10, afterwardMinutes: 5, statusId: 3 }],
+      }).buchungen,
+    ).toEqual([{ ressource: 7, vorlauf: 10, nachlauf: 5, status: 3, menge: 1 }]);
+  });
+
+  it('ohne `bookings`, mit Unsinn oder ohne Ressource: keine Buchungen', () => {
+    expect(eine().buchungen).toEqual([]);
+    expect(eine({ bookings: 'x' }).buchungen).toEqual([]);
+    expect(eine({ bookings: [{ minpre: '5' }, null, { resource_id: '0' }] }).buchungen).toEqual([]);
+  });
+
+  it('anwenden: die Tabelle füllt sich – nur buchbare Ressourcen, Status ohne Verwalten-Recht = 1', () => {
+    const e = vorlageAnwenden(eintrag(), eine({ bookings: alt }), darf);
+    expect(e.buchungen).toEqual([
+      { ressource: 3, vorlauf: 150, nachlauf: 60, status: 1, menge: 1 },
+      { ressource: 5, vorlauf: 0, nachlauf: 15, status: 2, menge: 1 },
+    ]);
+    const ohneVerwalten = vorlageAnwenden(eintrag(), eine({ bookings: alt }), {
+      buchbar: new Set([3, 5]),
+      verwaltbar: new Set(),
+    });
+    expect(ohneVerwalten.buchungen.map((b) => b.status)).toEqual([1, 1]);
+    const nurEine = vorlageAnwenden(eintrag(), eine({ bookings: alt }), {
+      buchbar: new Set([3]),
+      verwaltbar: new Set(),
+    });
+    expect(nurEine.buchungen.map((b) => b.ressource)).toEqual([3]);
+  });
+
+  it('ohne Angabe der Rechte übernimmt die Vorlage keine Buchungen; die Vorgabe oben bleibt', () => {
+    const e = vorlageAnwenden({ ...eintrag(), vorlauf: 40, nachlauf: 50 }, eine({ bookings: alt }));
+    expect(e.buchungen).toEqual([]);
+    expect([e.vorlauf, e.nachlauf]).toEqual([40, 50]);
+  });
+
+  it('eine Vorlage ohne Buchungen leert die Tabelle', () => {
+    const vorher = {
+      ...eintrag(),
+      buchungen: [{ ressource: 3, vorlauf: 1, nachlauf: 1, status: 1 as const, menge: 1 }],
+    };
+    expect(vorlageAnwenden(vorher, eine(), darf).buchungen).toEqual([]);
+  });
+
+  it('speichern: im Altformat (Zahlen als Text), ohne Buchungen kein `bookings`', () => {
+    const e = {
+      ...eintrag(),
+      buchungen: [{ ressource: 3, vorlauf: 150, nachlauf: 60, status: 1 as const, menge: 1 }],
+    };
+    expect(vorlageRumpf(e).bookings).toEqual([
+      { resource_id: '3', minpre: '150', minpost: '60', status_id: 1 },
+    ]);
+    expect(vorlageRumpf(eintrag())).not.toHaveProperty('bookings');
+  });
+
+  it('Rundreise: was gespeichert wird, füllt beim Anwenden dieselbe Tabelle wieder ein (Menge ausgenommen)', () => {
+    const quelle = {
+      ...eintrag(),
+      buchungen: [
+        { ressource: 3, vorlauf: 150, nachlauf: 60, status: 1 as const, menge: 1 },
+        { ressource: 5, vorlauf: 0, nachlauf: 15, status: 2 as const, menge: 1 },
+      ],
+    };
+    const [v] = vorlagenAus([{ ...vorlageRumpf(quelle), id: 42 }]);
+    expect(vorlageAnwenden(eintrag(), v, darf).buchungen).toEqual(quelle.buchungen);
   });
 });

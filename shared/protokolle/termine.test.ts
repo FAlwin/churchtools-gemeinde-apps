@@ -143,6 +143,9 @@ describe('Vorbelegung, Prüfung und Zeitraum des Fensters', () => {
       ortZusatz: '',
       tags: [],
       informieren: true,
+      vorlauf: 15,
+      nachlauf: 15,
+      buchungen: [],
     });
   });
 

@@ -16,6 +16,7 @@
 import { tagAusIso } from '@shared/ct/zeit';
 import { terminPfad, type TerminRoh } from '@shared/ct/kalenderTermine';
 import { minute } from '@shared/protokolle/sitzungen';
+import { buchungRumpf } from '@shared/protokolle/terminRessourcen';
 import type { TerminZusatz } from '@shared/protokolle/terminFelder';
 import { ApiError, Unklar } from '@ui/ct/fehler';
 import { ctAnfrage, ctDaten, KeinSpeicherRecht } from '@ui/ct/verbindung';
@@ -110,6 +111,9 @@ export function terminRumpf(q: TerminAnlegenFrage): Record<string, unknown> {
     ...(q.ausnahmen?.length ? { exceptions: q.ausnahmen.map((date) => ({ date })) } : {}),
     ...(q.imAuftrag != null ? { onBehalfOfPid: q.imAuftrag } : {}),
     ...(q.tags?.length ? { tags: q.tags } : {}),
+    // Ressourcen (W15-2): ChurchTools legt die Buchungen mit dem Termin an – die Antwort zeigt sie NICHT; erst
+    // `buchungenLesen` belegt, dass sie da sind.
+    ...(q.buchungen?.length ? { bookings: q.buchungen.map(buchungRumpf) } : {}),
     ...(q.informieren !== undefined ? { informOwner: q.informieren } : {}),
     ...(q.eingeladen ? { meetingrequests: q.eingeladen.map((inviteeId) => ({ inviteeId })) } : {}),
   };

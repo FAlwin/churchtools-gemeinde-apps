@@ -698,7 +698,26 @@ interface Speicher {
   beitraege: { id: number; groupId: number; title: string; content: string }[];
   /** Termin-Vorlagen (W15-1, „Als Vorlage speichern“) – wie ChurchTools sie liefert. */
   vorlagen: Record<string, unknown>[];
+  /** Ressourcen-Buchungen (W15-2) – von `POST …/appointments` angelegt, von `GET /bookings` gelesen. */
+  buchungen: { resourceId: number; appointmentId: number }[];
 }
+
+/**
+ * Fünf Ressourcen für den Reiter „Ressourcen“ (W15-2) – Formen wie gemessen. Saal und Küche darf die Leitung auch
+ * verwalten (Status wählbar), Beamer, Stühle (80 Stück) und Bus nur buchen (Status fest „Wartet auf Bestätigung“).
+ */
+const DEMO_RESSOURCEN = [
+  { id: 1, name: 'Saal', resourceTypeId: 10, quantity: 1, isAutoAccept: false },
+  { id: 2, name: 'Küche', resourceTypeId: 10, quantity: 1, isAutoAccept: false },
+  { id: 3, name: 'Beamer', resourceTypeId: 11, quantity: 1, isAutoAccept: true },
+  { id: 4, name: 'Stühle', resourceTypeId: 11, quantity: 80, isAutoAccept: true },
+  { id: 5, name: 'Bus', resourceTypeId: 12, quantity: 1, isAutoAccept: false },
+];
+const DEMO_RESSOURCEN_TYPEN = [
+  { id: 10, name: 'Raum', nameTranslated: 'Raum' },
+  { id: 11, name: 'Gegenstand', nameTranslated: 'Gegenstand' },
+  { id: 12, name: 'Fahrzeug', nameTranslated: 'Fahrzeug' },
+];
 
 /** Zwei Termin-Vorlagen für den Kalender „Gemeindeleitung“ (W15-1) – Formen wie gemessen (`messung-w15-0`). */
 const DEMO_VORLAGEN: Record<string, unknown>[] = [
@@ -717,6 +736,11 @@ const DEMO_VORLAGEN: Record<string, unknown>[] = [
     repeatDuration: 86400 * 56,
     address: { name: 'Gemeindehaus', street: 'Hauptstraße 1', zip: '53797', city: 'Lohmar' },
     tags: [],
+    // Buchungen im Altformat von ChurchTools (W15-2): Zahlen als Text.
+    bookings: [
+      { resource_id: '1', minpre: '150', minpost: '60', status_id: 2 },
+      { resource_id: '3', minpre: '30', minpost: '15', status_id: 2 },
+    ],
   },
   {
     id: 902,
@@ -826,6 +850,7 @@ function speicherAnlegen(fall: string): Speicher {
     geloescht: new Set(),
     beitraege: [],
     vorlagen: [...DEMO_VORLAGEN],
+    buchungen: [],
   };
 }
 
@@ -891,6 +916,11 @@ function antwort(
             ? {}
             : { 'edit calendar entry template': [4, 2], 'admin appointment tags': true }),
         },
+        // W15-2: Ressourcen buchen (alle fünf) und davon Saal + Küche verwalten – ein Mitglied darf nichts.
+        churchresource:
+          fall === 'mitglied'
+            ? {}
+            : { 'create bookings': [1, 2, 3, 4, 5], 'administer bookings': [1, 2] },
         // Die Leitung schreibt Protokolle (S4-1); als Mitglied nur „Mitarbeit“.
         protokolle: {
           'view custom data': [60, 61, 70, 80, 81, 5],
@@ -958,6 +988,17 @@ function antwort(
     }
     return { status: 200, data: s.vorlagen };
   }
+  if (pfad === '/api/resources') return { status: 200, data: DEMO_RESSOURCEN };
+  if (pfad === '/api/resourcetypes') return { status: 200, data: DEMO_RESSOURCEN_TYPEN };
+  if (pfad === '/api/bookings') {
+    const ress = abfrage.getAll('resource_ids[]').map(Number);
+    return {
+      status: 200,
+      data: s.buchungen
+        .filter((b) => ress.includes(b.resourceId))
+        .map((b) => ({ base: { id: b.appointmentId * 10, appointment: { id: b.appointmentId } } })),
+    };
+  }
   if (pfad === '/api/tags/appointment')
     return {
       status: 200,
@@ -1019,6 +1060,9 @@ function antwort(
         state: a.inviteeId === 1 ? 'accepted' : 'pending',
       })),
     });
+    // Wie ChurchTools: Die Antwort enthält die Buchungen nicht – sie stehen erst in `GET /bookings`.
+    for (const b of (rumpf.bookings as { resourceId: number }[] | undefined) ?? [])
+      s.buchungen.push({ resourceId: Number(b.resourceId), appointmentId: id });
     return { status: 201, data: { id } };
   }
   const termin = /^\/api\/calendars\/\d+\/appointments\/(\d+)$/.exec(pfad);

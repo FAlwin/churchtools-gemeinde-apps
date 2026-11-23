@@ -8,12 +8,16 @@
  * Beginn bis zum Serienende. Wird sie gewählt, bleibt das **Datum** des Termins, alles andere kommt aus der Vorlage; „Ende“
  * = Beginn + Dauer, „Bis“ = Beginn + `repeatDuration`.
  *
- * Buchungen, Events und Anmeldung stehen auch in der Vorlage – sie werden erst in W15-2/3/5 ausgewertet und hier **nicht**
- * übernommen.
+ * **Buchungen** (W15-2) stehen im Altformat `bookings: [{resource_id: "3", minpre: "150", minpost: "60", status_id: 1}]`
+ * (Zahlen als Text, gemessen 23.11.2026): Beim Anwenden kommen sie in die Tabelle des Reiters „Ressourcen“ – nur Ressourcen,
+ * die die Person buchen darf, der Status ohne Verwalten-Recht als „Wartet auf Bestätigung“ –, beim Speichern gehen sie im
+ * selben Format wieder hinaus. Events und Anmeldung stehen auch in der Vorlage – sie werden erst in W15-3/5 ausgewertet
+ * und hier **nicht** übernommen.
  */
 import { plusTage } from '../ct/datum';
 import type { Eintrag } from './termine';
 import { eintragAdresse, type TerminAdresse } from './terminFelder';
+import { buchungenAufRechte, type Buchung } from './terminRessourcen';
 import { bisVorgabe, istAutomatisch, ordinalAusDatum, WIEDERHOLUNG } from './terminWiederholung';
 
 const TAGSEKUNDEN = 86_400;
@@ -42,6 +46,8 @@ export interface TerminVorlage {
   /** Nummern der Tags. */
   tags: number[];
   imAuftrag: number | null;
+  /** Gebuchte Ressourcen (aus dem Altformat `bookings`). */
+  buchungen: Buchung[];
 }
 
 const zahl = (x: unknown): number | null => {
@@ -64,6 +70,29 @@ function adresseAus(roh: unknown): TerminAdresse | null {
   if (text(o.city).trim()) a.city = text(o.city).trim();
   if (text(o.addition).trim()) a.addition = text(o.addition).trim();
   return Object.keys(a).length ? a : null;
+}
+
+/**
+ * Die Buchungen einer Vorlage aus dem Altformat `{resource_id, minpre, minpost, status_id}` (Zahlen als Text) – die neuen
+ * Namen der Schnittstelle (`resourceId`, `leadTimeMinutes`, `afterwardMinutes`, `statusId`) lesen wir ebenfalls. Ohne
+ * Ressource keine Buchung; fehlende Zeiten 0, ein unbekannter Status „Wartet“.
+ */
+function buchungenAus(roh: unknown): Buchung[] {
+  return (Array.isArray(roh) ? roh : []).flatMap((b): Buchung[] => {
+    const o = objekt(b);
+    const ressource = zahl(o?.resource_id ?? o?.resourceId);
+    if (!o || ressource === null || ressource <= 0) return [];
+    const status = zahl(o.status_id ?? o.statusId);
+    return [
+      {
+        ressource,
+        vorlauf: Math.max(0, zahl(o.minpre ?? o.leadTimeMinutes) ?? 0),
+        nachlauf: Math.max(0, zahl(o.minpost ?? o.afterwardMinutes) ?? 0),
+        status: status === 2 || status === 3 ? status : 1,
+        menge: 1,
+      },
+    ];
+  });
 }
 
 /** Eine Vorlage aus der Antwort von ChurchTools – `null`, wenn Nummer, Kalender oder Titel fehlen. */
@@ -98,6 +127,7 @@ function vorlageAus(roh: unknown): TerminVorlage | null {
     adresse: adresseAus(o.address),
     tags,
     imAuftrag: zahl(o.onBehalfOfPid),
+    buchungen: buchungenAus(o.bookings),
   };
 }
 
@@ -148,7 +178,15 @@ const tageZwischen = (t1: string, t2: string): number =>
  * Beginn + `repeatDuration`, Adresse, Tags und „Im Auftrag von“. Weitere Termine und Ausnahmen gibt es in Vorlagen nicht –
  * sie werden geleert. „Ersteller informieren“ ist keine Sache der Vorlage und bleibt.
  */
-export function vorlageAnwenden(e: Eintrag, v: TerminVorlage): Eintrag {
+export function vorlageAnwenden(
+  e: Eintrag,
+  v: TerminVorlage,
+  /** Was die Person buchen und verwalten darf – ohne Angabe übernimmt die Vorlage keine Buchungen. */
+  rechte: { buchbar: ReadonlySet<number>; verwaltbar: ReadonlySet<number> } = {
+    buchbar: new Set(),
+    verwaltbar: new Set(),
+  },
+): Eintrag {
   const von = v.ganztaegig ? e.von : v.startzeit || e.von;
   const ende = v.ganztaegig
     ? { tag: plusTage(e.tag, Math.floor(v.dauer / TAGSEKUNDEN)), zeit: e.bis }
@@ -186,6 +224,7 @@ export function vorlageAnwenden(e: Eintrag, v: TerminVorlage): Eintrag {
     ortZusatz: v.adresse?.addition ?? '',
     tags: v.tags,
     imAuftrag: v.imAuftrag,
+    buchungen: buchungenAufRechte(v.buchungen, rechte.buchbar, rechte.verwaltbar),
   };
 }
 
@@ -223,5 +262,16 @@ export function vorlageRumpf(e: Eintrag & { kalender: number }): Record<string, 
     ...(adresse ? { address: adresse } : {}),
     ...(nummern.length ? { tags: nummern } : {}),
     ...(e.imAuftrag !== null ? { onBehalfOfPid: e.imAuftrag } : {}),
+    // Buchungen im Altformat von ChurchTools (Zahlen als Text) – so liest `buchungenAus` sie wieder.
+    ...(e.buchungen.length
+      ? {
+          bookings: e.buchungen.map((b) => ({
+            resource_id: String(b.ressource),
+            minpre: String(b.vorlauf),
+            minpost: String(b.nachlauf),
+            status_id: b.status,
+          })),
+        }
+      : {}),
   };
 }

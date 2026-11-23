@@ -21,7 +21,7 @@ const STUNDEN = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
 const MINUTEN = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
 
 /** Eine Zeile „Beschriftung links, Feld rechts“ – wie im ChurchTools-Dialog. Mit `fuer` wird die Beschriftung zum Label. */
-function Reihe({
+export function Reihe({
   label,
   children,
   gruppe,

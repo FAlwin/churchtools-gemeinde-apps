@@ -184,3 +184,81 @@ describe('terminLegen mit den Feldern des Reiters „Kalender“ (W15-1)', () =>
     });
   });
 });
+
+/** Ressourcen (W15-2): Ein `201` ist kein Beleg – die Buchungen werden nachgelesen. */
+describe('terminLegen mit Buchungen', () => {
+  const buchung = (ressource: number, extra = {}) => ({
+    ressource,
+    vorlauf: 30,
+    nachlauf: 15,
+    status: 1 as const,
+    menge: 1,
+    ...extra,
+  });
+  const mitBuchungen = (...b: ReturnType<typeof buchung>[]) => ({ ...MIT_UHR, buchungen: b });
+
+  it('alle gebucht: der Rumpf trägt die Buchungen, das Nachlesen findet sie – nichts fehlt', async () => {
+    const r = await terminLegen({ eintrag: mitBuchungen(buchung(1), buchung(5)), zeitzone: ZONE });
+    expect(r.buchungen).toEqual({ fehlend: [], unklar: false });
+    expect(ct.terminRumpf?.bookings).toHaveLength(2);
+    expect(ct.buchungen.map((b) => b.resourceId)).toEqual([1, 5]);
+    expect(ct.buchungen.every((b) => b.appointmentId === r.id)).toBe(true);
+  });
+
+  it('ohne Buchungen wird gar nicht erst in /bookings gelesen', async () => {
+    const r = await terminLegen({ eintrag: MIT_UHR, zeitzone: ZONE });
+    expect(r.buchungen).toBeUndefined();
+    expect(ct.aufrufe.some((a) => a.includes('/bookings'))).toBe(false);
+  });
+
+  it('ChurchTools sagt 201, bucht aber eine Ressource nicht: genau diese fehlt – der Termin bleibt', async () => {
+    ct.buchungenSchlucken.add(5);
+    const r = await terminLegen({ eintrag: mitBuchungen(buchung(1), buchung(5)), zeitzone: ZONE });
+    expect(r.art).toBe('angelegt');
+    expect(r.buchungen).toEqual({ fehlend: [5], unklar: false });
+    expect(ct.termine).toHaveLength(1);
+  });
+
+  it('eine Buchung eines ANDEREN Termins zählt nicht', async () => {
+    ct.buchungen.push({ resourceId: 1, appointmentId: 9999, statusId: 1, quantity: undefined });
+    ct.buchungenSchlucken.add(1);
+    const r = await terminLegen({ eintrag: mitBuchungen(buchung(1)), zeitzone: ZONE });
+    expect(r.buchungen).toEqual({ fehlend: [1], unklar: false });
+  });
+
+  it('Nachlesen scheitert (500): unklar, NICHT „fehlt“ – und der Termin bleibt', async () => {
+    ct.buchungenLesenFehler = true;
+    const r = await terminLegen({ eintrag: mitBuchungen(buchung(1)), zeitzone: ZONE });
+    expect(r.art).toBe('angelegt');
+    expect(r.buchungen).toEqual({ fehlend: [], unklar: true });
+    expect(ct.termine).toHaveLength(1);
+  });
+
+  it('liest mit einem Tag Luft zu beiden Seiten (Vorlauf/Nachlauf über Mitternacht)', async () => {
+    await terminLegen({ eintrag: mitBuchungen(buchung(1)), zeitzone: ZONE });
+    const gelesen = ct.buchungenAnfrage ?? '';
+    expect(gelesen).toContain('resource_ids[]=1');
+    expect(gelesen).toContain('from=2027-12-23');
+    expect(gelesen).toContain('to=2027-12-25');
+  });
+
+  it('„Nur verknüpfen“ bucht nichts und liest nichts', async () => {
+    const r = await terminLegen({
+      eintrag: mitBuchungen(buchung(1)),
+      zeitzone: ZONE,
+      verknuepfen: { id: 161, titel: 'Heiligabend', beginn: '2027-12-24T09:00:00Z' },
+    });
+    expect(r).toEqual({ art: 'verknuepft', id: 161 });
+    expect(ct.buchungen).toEqual([]);
+    expect(ct.aufrufe.some((a) => a.includes('/bookings'))).toBe(false);
+  });
+
+  it('ChurchTools lehnt das Anlegen ab (4xx wegen einer Buchung): Fehler geht weiter, nichts angelegt, nichts gebucht', async () => {
+    ct.terminFehler = { status: 403, angelegt: false, ctVerbot: true };
+    await expect(
+      terminLegen({ eintrag: mitBuchungen(buchung(1)), zeitzone: ZONE }),
+    ).rejects.toThrow();
+    expect(ct.termine).toEqual([]);
+    expect(ct.buchungen).toEqual([]);
+  });
+});

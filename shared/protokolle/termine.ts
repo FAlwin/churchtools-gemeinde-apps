@@ -14,6 +14,7 @@ import { aehnlich, woerter } from './doppelt';
 import { ableiten, type Punkt } from './dokument';
 import { terminStandId } from './terminStand';
 import { dokumentDerSitzung, type ProtokollTeil } from './speicher';
+import { LAUF_VORGABE, type Buchung } from './terminRessourcen';
 import type { Sitzung } from './sitzungen';
 import {
   istAutomatisch,
@@ -156,6 +157,11 @@ export interface Eintrag extends Wiederholung {
   tags: (number | string)[];
   /** „Ersteller über Änderungen informieren“ (`informOwner`). */
   informieren: boolean;
+  /** Reiter „Ressourcen“ (W15-2): Vorlauf und Nachlauf in Minuten – die Vorgabe für neue Buchungen. */
+  vorlauf: number;
+  nachlauf: number;
+  /** Die Buchungen (nur Ressourcen, die die Person buchen darf). */
+  buchungen: Buchung[];
 }
 
 /** Eine Stunde später, am selben Tag (nach 23:00 bleibt es 23:59 – ChurchTools-Termine hier enden nie am Folgetag). */
@@ -200,6 +206,9 @@ export function eintragVorbelegung(
     tags: [],
     // ChurchTools hakt es vor.
     informieren: true,
+    vorlauf: LAUF_VORGABE,
+    nachlauf: LAUF_VORGABE,
+    buchungen: [],
   };
 }
 

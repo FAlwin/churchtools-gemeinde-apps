@@ -4,8 +4,8 @@ import { ApiError } from '@ui/ct/fehler';
 import { UnklarObVerschickt, platzhalterAus, rundmailSenden, vorschauLaden } from './rundmail';
 
 /**
- * Rundmail senden (A7-5) gegen ein nachgestelltes ChurchTools – wie am 22.10.2026 gemessen: `sendEMailToPersonIds`
- * antwortet `success`, das Protokoll schreibt je Mail „Speichere Mail an <Adresse> von … - <Betreff>“.
+ * Rundmail (A7-5): Platzhalter, Vorschau und `rundmailSenden`. Das Senden selbst (Zweige, Nachlesen) steht seit W3b-3 im
+ * gemeinsamen Baustein und wird in `ui/ct/mailSenden.test.ts` geprüft.
  */
 vi.mock('@ui/ct/verbindung', async (original) => ({
   ...(await original<typeof import('@ui/ct/verbindung')>()),
@@ -15,102 +15,8 @@ vi.mock('@ui/ct/verbindung', async (original) => ({
 }));
 const ct = vi.mocked(V);
 
-const AN = [
-  { personId: 10, email: 'friesen.alwin+a7n@ecg-donrath.de' },
-  { personId: 20, email: 'Friesen.Alwin+a7h@ecg-donrath.de' },
-];
-const jetzt = () => new Date().toISOString();
-const eintrag = (mail: string, date = jetzt()) => ({
-  date,
-  message: `Speichere Mail an ${mail} von Alwin Friesen <friesen.alwin@ecg-donrath.de> - Test`,
-});
-
 beforeEach(() => {
   vi.clearAllMocks();
-  ct.ctAltAnfrage.mockResolvedValue(null);
-  ct.ctDaten.mockResolvedValue([
-    eintrag('friesen.alwin+a7n@ecg-donrath.de'),
-    eintrag('friesen.alwin+a7h@ecg-donrath.de'),
-    // Älter als das Senden – zählt nicht.
-    eintrag('friesen.alwin+a7n@ecg-donrath.de', '2026-10-01T10:00:00Z'),
-  ]);
-});
-
-describe('Meldung bei verweigertem Senden', () => {
-  it('ohne Angabe die bisherige Meldung, mit Angabe die des Aufrufers (Nachweise sagen es anders)', async () => {
-    await rundmailSenden(165, AN, 'Test', '<p>Hallo</p>');
-    expect(ct.ctAltAnfrage.mock.calls[0][2]).toEqual({
-      verweigert: 'Mails über ChurchTools schicken darfst du hier nicht.',
-    });
-    ct.ctAltAnfrage.mockClear();
-    await rundmailSenden(165, AN, 'Test', '<p>Hallo</p>', 'Eigene Meldung.');
-    expect(ct.ctAltAnfrage.mock.calls[0][2]).toEqual({ verweigert: 'Eigene Meldung.' });
-  });
-});
-
-describe('Senden', () => {
-  it('eine Anfrage mit allen Personen und der Gruppe; im Protokoll nachgelesen (Groß-/Kleinschreibung egal)', async () => {
-    await expect(rundmailSenden(165, AN, 'Test', '<p>Hallo</p>')).resolves.toEqual({
-      bestaetigt: 2,
-    });
-    expect(ct.ctAltAnfrage).toHaveBeenCalledWith('sendEMailToPersonIds', {}, expect.anything(), {
-      modul: 'churchhome',
-      json: {
-        ids: '10,20',
-        betreff: 'Test',
-        inhalt: '<p>Hallo</p>',
-        attachments: '',
-        domain_id: null,
-        group_id: 165,
-        template_id: null,
-      },
-    });
-  });
-
-  it('eine Adresse steht nur mit einem alten Eintrag im Protokoll → zählt nicht', async () => {
-    ct.ctDaten.mockResolvedValue([
-      eintrag('friesen.alwin+a7n@ecg-donrath.de'),
-      eintrag('friesen.alwin+a7h@ecg-donrath.de', '2026-10-01T10:00:00Z'),
-    ]);
-    await expect(rundmailSenden(165, AN, 'Test', '')).resolves.toEqual({ bestaetigt: 1 });
-  });
-
-  it('Protokoll nicht lesbar (Recht, Aussetzer) → verschickt, aber unbestätigt – kein Fehler', async () => {
-    ct.ctDaten.mockRejectedValue(new ApiError(403, 'verboten'));
-    await expect(rundmailSenden(165, AN, 'Test', '')).resolves.toEqual({ bestaetigt: null });
-    ct.ctDaten.mockRejectedValue(new ApiError(504, 'Zeit'));
-    await expect(rundmailSenden(165, AN, 'Test', '')).resolves.toEqual({ bestaetigt: null });
-  });
-
-  it('abgelehnt oder gebremst → sicher nicht verschickt, Fehler kommt an, kein Nachlesen', async () => {
-    ct.ctAltAnfrage.mockRejectedValue(new V.AltFehler(502, 'Keine Empfänger', 'abgelehnt'));
-    await expect(rundmailSenden(165, AN, 'Test', '')).rejects.toMatchObject({
-      status: 422,
-      message: 'ChurchTools hat die Mails nicht angenommen: Keine Empfänger',
-    });
-    ct.ctAltAnfrage.mockRejectedValue(new ApiError(403, 'verboten'));
-    await expect(rundmailSenden(165, AN, 'Test', '')).rejects.toMatchObject({ status: 403 });
-    ct.ctAltAnfrage.mockRejectedValue(new V.ChurchToolsBremst(5000));
-    await expect(rundmailSenden(165, AN, 'Test', '')).rejects.toBeInstanceOf(V.ChurchToolsBremst);
-    expect(ct.ctDaten).not.toHaveBeenCalled();
-  });
-
-  it('keine Antwort beim Senden: steht es im Protokoll → verschickt; sonst „unklar“ statt „noch einmal“', async () => {
-    ct.ctAltAnfrage.mockRejectedValue(new ApiError(504, 'Zeitgrenze'));
-    await expect(rundmailSenden(165, AN, 'Test', '')).resolves.toEqual({ bestaetigt: 2 });
-    ct.ctDaten.mockResolvedValue([]);
-    await expect(rundmailSenden(165, AN, 'Test', '')).rejects.toBeInstanceOf(UnklarObVerschickt);
-    ct.ctAltAnfrage.mockRejectedValue(new TypeError('Failed to fetch'));
-    await expect(rundmailSenden(165, AN, 'Test', '')).rejects.toBeInstanceOf(UnklarObVerschickt);
-    // Unlesbare Antwort (z. B. eine HTML-Seite) – ob es lief, weiß niemand.
-    ct.ctAltAnfrage.mockRejectedValue(new V.AltFehler(502, 'unlesbar', 'unlesbar'));
-    await expect(rundmailSenden(165, AN, 'Test', '')).rejects.toBeInstanceOf(UnklarObVerschickt);
-  });
-
-  it('niemand ausgewählt → nichts geschickt', async () => {
-    await expect(rundmailSenden(165, [], 'Test', '')).rejects.toMatchObject({ status: 422 });
-    expect(ct.ctAltAnfrage).not.toHaveBeenCalled();
-  });
 });
 
 describe('Platzhalter', () => {
@@ -156,5 +62,31 @@ describe('Vorschau', () => {
       betreff: 'B',
       html: '<p>h</p>',
     });
+  });
+});
+
+describe('Senden mit den Worten der Anmeldungen', () => {
+  const AN = [{ personId: 10, email: 'friesen.alwin+a7n@ecg-donrath.de' }];
+  beforeEach(() => {
+    ct.ctAltAnfrage.mockResolvedValue(null);
+    ct.ctDaten.mockResolvedValue([]);
+  });
+
+  it('die bisherige Meldung bei verweigertem Senden, auf Wunsch die des Aufrufers', async () => {
+    await rundmailSenden(165, AN, 'Test', '<p>Hallo</p>');
+    expect(ct.ctAltAnfrage.mock.calls[0][2]).toEqual({
+      verweigert: 'Mails über ChurchTools schicken darfst du hier nicht.',
+    });
+    await rundmailSenden(165, AN, 'Test', '<p>Hallo</p>', 'Eigene Meldung.');
+    expect(ct.ctAltAnfrage.mock.calls[1][2]).toEqual({ verweigert: 'Eigene Meldung.' });
+  });
+
+  it('„unklar“ spricht von einer Familie – wie bisher, und es ist DIESELBE Klasse wie im Baustein', async () => {
+    ct.ctAltAnfrage.mockRejectedValue(new ApiError(504, 'Zeitgrenze'));
+    const e = await rundmailSenden(165, AN, 'Test', '').catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(UnklarObVerschickt);
+    expect((e as Error).message).toBe(
+      'ChurchTools hat beim Senden nicht geantwortet – ob die Mails rausgingen, ist unklar. Bitte erst nachsehen (z. B. bei einer Familie nachfragen), bevor du noch einmal sendest.',
+    );
   });
 });

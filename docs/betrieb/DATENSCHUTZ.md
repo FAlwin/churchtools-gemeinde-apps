@@ -117,7 +117,7 @@ Aufteilung in `client/src/services/churchtoolsApi.ts:96-122`).
   Kontakt-Text der Veranstalter**, keine Teilnehmerdaten.
 - Termine im Kalender (absichtlich nicht mit der Gruppe verknüpft). Routinen für Bestätigungs-, Wartelisten- und
   Erinnerungs-Mails sowie für das Löschen (`anmeldungen/src/ablaeufe.ts`).
-- Rundmail über die alte ChurchTools-Schnittstelle `sendEMailToPersonIds` (`anmeldungen/src/rundmail.ts:93`).
+- Rundmail über die alte ChurchTools-Schnittstelle `sendEMailToPersonIds` (seit W3b-3 im gemeinsamen Sende-Baustein `ui/ct/mailSenden.ts`; `anmeldungen/src/rundmail.ts` ruft ihn auf – dort stehen nur noch Platzhalter und Vorschau).
   Absagen auf der Warteliste über `mailto:` bzw. die Zwischenablage.
 - Titelbild und Logo als Gruppenbild (`/files/groupimage/{id}`).
 - Erweiterungs-Speicher `anmeldungen-einstellungen`: Vorgaben für neue Personen (IDs), Formular-Adresse, Zahlarten

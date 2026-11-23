@@ -478,3 +478,15 @@
     color: var(--text2);
   }
 }
+
+// Filter-Chips und „n von m Anmeldungen“ (R2) – eingerückt wie die Werkzeugzeile darüber.
+.filterKopf {
+  padding: 0 12px;
+}
+
+// „n von m Anmeldungen“ unter den Filter-Chips – die Summen der Tabelle zählen nur das Gefilterte.
+.filterStand {
+  margin: 4px 0 8px;
+  color: var(--text2);
+  font-size: 13px;
+}

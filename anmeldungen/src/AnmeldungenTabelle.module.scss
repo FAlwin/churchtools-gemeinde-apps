@@ -38,6 +38,13 @@
   font-weight: 700;
 }
 
+// Titel (sortiert) und Trichter (filtert, R2) nebeneinander – zwei Knöpfe, nicht ineinander.
+.kopfInhalt {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+
 .sortKnopf {
   display: inline-flex;
   align-items: center;
@@ -80,6 +87,10 @@
   font-variant-numeric: tabular-nums;
 
   .sortKnopf {
+    flex-direction: row-reverse;
+  }
+  // Zahlen stehen rechts – der Trichter steht dann vor dem Titel, damit der Titel bündig mit den Zahlen bleibt.
+  .kopfInhalt {
     flex-direction: row-reverse;
   }
 }

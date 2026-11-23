@@ -76,3 +76,33 @@ Eintrag schließt das Menü und öffnet sein Fenster. Ohne Anmeldungen gibt es d
 - **Historie:** Ruhige Bedienung B7 (20.11.2026, E24)
 
 </details>
+
+### TF-ANM-04 · Anmeldungen: Filter über die Spaltenüberschrift
+
+**Das brauchst du:** Eine freigegebene Veranstaltung mit mehreren Anmeldungen, die unterschiedlich geantwortet haben
+(mindestens eine Auswahl- oder Ja/Nein-Frage, eine Textfrage), einige bezahlt, einige offen.
+
+**Das muss passieren:** Neben jeder Spaltenüberschrift (außer Name, Nr. und Angemeldet am) steht ein Trichter. Er öffnet
+das Filterfenster direkt dort, am Handy als Fenster. Gesetzte Filter stehen als Chips über der Tabelle, darunter „n von m
+Anmeldungen“; die Summen zählen nur das Gefilterte. Rundmail und Druckliste nehmen nur die gefilterten Anmeldungen.
+
+1. Trichter bei **Bezahlt** öffnen: Hinter „bezahlt“ und „offen“ steht die Anzahl. „offen“ anhaken, **Anwenden**: Nur die
+   offenen bleiben, über der Tabelle „… von …“, der Betrag unten zählt nur sie.
+2. Trichter einer Textfrage: **ist leer** → **Anwenden**: Beide Filter gelten zusammen.
+3. Chip antippen: Das Fenster geht am Trichter der Spalte auf, die Wahl ist gesetzt. **×** am Chip entfernt nur diesen
+   Filter, **Alle Filter entfernen** alle.
+4. **Je Person**, Filter auf eine Frage je Person (z. B. Allergien **ist ausgefüllt**): nur diese Personen. Zurück zu
+   **Je Anmeldung**: Der Filter bleibt, es stehen die Anmeldungen mit mindestens einer solchen Person da.
+5. **⋯**: „Rundmail an diese n“ und „Druckliste (nur diese n)“. Die Rundmail nennt die Filter und hat keine Wahl
+   „Alle / Zahlung offen / Warteliste“ (nicht senden!); die Druckliste zeigt nur die passenden Personen.
+6. Reiter **Zahlung offen** antippen: Die Filter sind weg.
+7. Am Handy (375 px): Das Filterfenster kommt als Fenster in voller Breite, die Chips brechen um, nichts ragt über den Rand.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `anmeldungen/src/AnmeldungenReiter.tsx`, `anmeldungen/src/SpaltenFilterFenster.tsx`, `anmeldungen/src/AnmeldungenTabelle.tsx`, `anmeldungen/src/listenAnsicht.ts`, `shared/anmeldung/tabellenFilter.ts`, `ui/bedienung/SpaltenFilter.tsx`
+- **Automatisiert:** ja – `tabellenFilter.test.ts` (jede Filterart, „eine Person erfüllt alle“, Druckliste nur passende Personen, Bereinigen) und `AnmeldungenReiter.test.tsx` („Filter über die Spaltenüberschrift (R2)“); von Hand bleiben die Lage des Fensters am Trichter und das Handy
+- **Historie:** R2 (23.11.2026, Entwurf `r2-u3-filter-ansichten-v1`, abgenommen in Klick-Runde 23.11.)
+
+</details>

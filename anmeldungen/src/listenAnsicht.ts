@@ -1,4 +1,4 @@
-import type { OeffentlicheEinstellungen } from '@shared/anmeldung/formular';
+import type { OeffentlicheEinstellungen, SpaltenFilter } from '@shared/anmeldung/formular';
 import type { Absage, ListenAnmeldung } from '@shared/anmeldung/liste';
 import {
   obenZuerst,
@@ -9,13 +9,16 @@ import {
   sortiert,
   type Sortierung,
 } from '@shared/anmeldung/tabelle';
+import { passtAnmeldung, passtPerson } from '@shared/anmeldung/tabellenFilter';
 
 /** Was die Liste zeigt – auch das Ziel der Kennzahl-Kacheln oben auf der Seite (U1). */
 export type ListenFilter = 'alle' | 'offen' | 'warte' | 'abgesagt';
 
-/** Was in der Liste gewählt ist: Reiter, Suche, Sortierung, je Person, angeheftete Zeilen. */
+/** Was in der Liste gewählt ist: Reiter, Filter der Spalten (R2), Suche, Sortierung, je Person, angeheftete Zeilen. */
 export interface ListenWahl {
   filter: ListenFilter;
+  /** Die Filter der Spalten (R2) – mehrere gelten zusammen; leer = ungefiltert. */
+  spaltenFilter?: SpaltenFilter[];
   suche: string;
   sortierung: Sortierung;
   jePerson: boolean;
@@ -31,7 +34,7 @@ export function listenAnsicht(
   e: OeffentlicheEinstellungen,
   liste: ListenAnmeldung[],
   alleAbsagen: Absage[],
-  { filter, suche, sortierung, jePerson, oben }: ListenWahl,
+  { filter, spaltenFilter = [], suche, sortierung, jePerson, oben }: ListenWahl,
 ) {
   const wartende = liste
     .flatMap((x) => x.personen.filter((p) => p.status === 'wartet').map((p) => ({ p, x })))
@@ -43,13 +46,18 @@ export function listenAnsicht(
     offen: liste.filter((x) => x.zahlungOffen),
     warte: liste.filter((x) => x.personen.some((p) => p.status === 'wartet')),
   };
+  // Die Filter der Spalten (R2) – EINE Regel (`tabellenFilter.ts`) für Zeilen, Summen und „n von m“.
+  const gefiltert =
+    filter === 'abgesagt'
+      ? []
+      : imReiter[filter].filter((x) => passtAnmeldung(e, spaltenFilter, x));
   const zeilen =
     filter === 'abgesagt'
       ? []
       : obenZuerst(
           sortiert(
             e,
-            imReiter[filter].filter((x) => passtZurSuche(x, suche)),
+            gefiltert.filter((x) => passtZurSuche(x, suche)),
             sortierung,
             filter === 'warte',
           ),
@@ -67,8 +75,10 @@ export function listenAnsicht(
       : obenZuerst(
           personenSortiert(
             e,
-            personenImReiter[filter].filter((y) =>
-              passtZurSuche({ wer: y.x.wer, nr: y.x.nr, personen: [y.p] }, suche),
+            personenImReiter[filter].filter(
+              (y) =>
+                passtPerson(e, spaltenFilter, y) &&
+                passtZurSuche({ wer: y.x.wer, nr: y.x.nr, personen: [y.p] }, suche),
             ),
             sortierung,
             filter === 'warte',
@@ -85,5 +95,22 @@ export function listenAnsicht(
         warte: personenImReiter.warte.length,
       }
     : { alle: liste.length, offen: imReiter.offen.length, warte: imReiter.warte.length };
-  return { wartende, absagen, zeilen, personenGezeigt, absageZeilen, zahlen };
+  // „n von m“ über der Tabelle (R2): m = alle im Reiter, n = was Filter und Suche übrig lassen.
+  const imReiterGesamt =
+    filter === 'abgesagt'
+      ? absagen.length
+      : jePerson
+        ? personenImReiter[filter].length
+        : imReiter[filter].length;
+  return {
+    wartende,
+    absagen,
+    zeilen,
+    personenGezeigt,
+    absageZeilen,
+    zahlen,
+    imReiterGesamt,
+    /** Die Anmeldungen des Reiters ohne Filter – Rundmail und Druckliste filtern sie über `gefilterteListe`. */
+    imReiter: filter === 'abgesagt' ? [] : imReiter[filter],
+  };
 }

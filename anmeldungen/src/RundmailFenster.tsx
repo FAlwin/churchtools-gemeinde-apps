@@ -34,6 +34,7 @@ export function RundmailFenster({
   veranstaltung,
   liste,
   startFilter,
+  gefiltert = null,
   onClose,
 }: {
   id: number;
@@ -41,6 +42,11 @@ export function RundmailFenster({
   veranstaltung: string;
   liste: ListenAnmeldung[];
   startFilter: RundmailFilter;
+  /**
+   * Die Filter der Tabelle als Text (R2, „Rundmail nimmt immer das Gefilterte“) – `liste` ist dann schon gefiltert;
+   * statt der Wahl „Alle / Zahlung offen / Warteliste“ steht da, an wen es geht. `null`: ungefiltert.
+   */
+  gefiltert?: string | null;
   onClose: () => void;
 }) {
   const [schritt, setSchritt] = useState<Schritt>('schreiben');
@@ -296,16 +302,23 @@ export function RundmailFenster({
       </p>
       <section className={a.teil}>
         <h3>An</h3>
-        <Segment
-          value={filter}
-          options={[
-            { value: 'alle', label: `Alle Anmeldungen ${zahl('alle')}` },
-            { value: 'offen', label: `Zahlung offen ${zahl('offen')}` },
-            { value: 'warte', label: `Warteliste ${zahl('warte')}` },
-          ]}
-          onChange={setFilter}
-          ariaLabel="An"
-        />
+        {gefiltert ? (
+          <p className={a.hinweisBlau}>
+            Die gefilterten Anmeldungen der Tabelle: {gefiltert}. Für alle vorher die Filter
+            entfernen.
+          </p>
+        ) : (
+          <Segment
+            value={filter}
+            options={[
+              { value: 'alle', label: `Alle Anmeldungen ${zahl('alle')}` },
+              { value: 'offen', label: `Zahlung offen ${zahl('offen')}` },
+              { value: 'warte', label: `Warteliste ${zahl('warte')}` },
+            ]}
+            onChange={setFilter}
+            ariaLabel="An"
+          />
+        )}
         <p className={a.leise}>
           <b>
             {an.length} {an.length === 1 ? 'Mail' : 'Mails'}

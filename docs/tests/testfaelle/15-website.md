@@ -595,3 +595,49 @@ Freigabe-Weg**; ist er aus, geht keine Mail und es erscheint kein Hinweis. Eine 
 - **Historie:** neu mit W3b-3 (23.11.2026)
 
 </details>
+
+### TF-WEBSITE-18 · Untergruppen einrichten: Kategorie, Rechte, „Wer darf was“ und Hinweis beim Start
+
+**Das brauchst du:** Die Website in der Test-Instanz (Gruppe „Website“ 344, Alwin Leiter); die Untergruppe **„Website – Jugend“** (347) mit Spike
+als Mitarbeiter, dazu eine **zweite, neue Untergruppe** direkt unter „Website“ (z. B. „Website – Technik“) und eine Gruppe **unter** „Website –
+Jugend“ (Enkel). Ein Admin-Konto mit „Personen administrieren“. Für die Rollen-Wechsel von Spike das Werkzeug benutzen, **nicht** „Person
+simulieren“. Seit der Messung W3b-4-0 gibt es schon die Kategorie **117** `veroeffentlicht-g347`.
+
+**Das muss passieren:** Unter **Einstellungen → Wer darf was** steht unter der Gruppe „Website“ je **direkte** Untergruppe ein Abschnitt (der
+Enkel nicht). Eine noch nicht eingerichtete Untergruppe zeigt „noch nicht eingerichtet“ und die Vorbelegung (Leiter = Leitung, sonst Redakteur);
+**Rechte setzen** legt ihre Kategorie „Website: Veröffentlicht · …“ an, vergibt die Rechte ihrer Rollen und zieht **danach** die Rollen der
+Website nach – mit den Stufen, die sie schon haben. Beim Start sieht der Admin einen Hinweis, solange eine Untergruppe nicht eingerichtet ist oder
+ihre Rechte abweichen.
+
+1. **Hinweis beim Start:** Als Admin die Erweiterung öffnen: Oben steht „Die Untergruppe „Website – Technik“ ist noch nicht eingerichtet.“ Bei
+   „Website – Jugend“ steht (seit der Messung fehlt dort das Lesen an „Veröffentlicht“ der Website) „In der Untergruppe „Website – Jugend“ weichen
+   die Rechte ab: …“.
+2. **Wer darf was:** **Wer darf was** im Hinweis tippen. Unter der Liste der Website zwei Abschnitte „Website – Jugend“ und „Website – Technik“,
+   der Enkel fehlt. Bei „Website – Jugend“ steht bei der Mitarbeiter-Rolle „Weicht ab“, bei „Website – Technik“ der Hinweis „noch nicht
+   eingerichtet“ mit Leiter = Leitung, Mitarbeiter = Redakteur.
+3. **Jugend richten:** Bei „Website – Jugend“ **Rechte setzen** → „Die Rechte sind gesetzt und nachgelesen.“ In ChurchTools (Administration →
+   Berechtigungen, Erweiterung „Website“): Jugend-Mitarbeiter (3320) hat Modul sehen, „Entwürfe“ alles, **„Veröffentlicht“ (107) nur
+   sehen** und an **117 nur sehen**; Jugend-Leiter (3323) zusätzlich **117 anlegen/ändern/löschen** – aber **nie** Schreiben an 107. Es wurde
+   **keine** zweite Kategorie `veroeffentlicht-g347` angelegt.
+4. **Technik einrichten:** Bei „Website – Technik“ eine Rolle auf „Kein Zugriff“ stellen, **Rechte setzen**: Die neue Kategorie „Website:
+   Veröffentlicht · Website – Technik“ steht in der Erweiterung; die Rollen von Technik haben ihre Rechte; **die Rollen der Website** haben an der
+   neuen Kategorie: Leiter lesen + schreiben, Mitarbeiter nur lesen – mit den Stufen, die sie vorher hatten (wer Redakteur war, bleibt es).
+   Der Abschnitt zeigt jetzt keinen Hinweis „noch nicht eingerichtet“ mehr.
+5. **Website-Stufen ändern entzieht nichts:** Bei der Gruppe „Website“ eine Stufe ändern und zurück, jeweils **Rechte setzen**: Die Rechte der
+   Website-Rollen an 117 und an der Technik-Kategorie bleiben (bzw. folgen der Stufe); die Rechte der Rollen der Untergruppen bleiben unberührt.
+6. **Leitung je Gruppe:** In „Entwürfe“ stehen jetzt Werte `website-leitung` – einer **ohne** `gruppe` (Website) und je Untergruppe einer mit
+   `"gruppe": 347` bzw. der ID von Technik. Die Mails im Freigabe-Weg der Website (TF-WEBSITE-17) gehen weiter an die Leitung der Website.
+7. **Hinweis weg:** Fenster schließen: Der Hinweis oben ist verschwunden.
+8. **Als Spike (Mitarbeiter in 347):** Die Erweiterung öffnen: Er arbeitet als **Redakteur der ganzen Website** (Zwischenstand bis W3b-4b – er sieht
+   alle Seiten). Als **Leiter in 347** (Rolle per Werkzeug wechseln): ebenfalls Redakteur in der Oberfläche; in ChurchTools darf er in 117 schreiben.
+9. **Nicht-Admin der Website-Leitung schreibt in 117** (in der Messung offen geblieben): Spike per Werkzeug als **Leiter in 344** – er darf in
+   117 schreiben (z. B. über die API-Probe des Werkzeugs).
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/organigramm/gruppen.ts`, `shared/website/einrichten.ts`, `shared/website/rechte.ts`, `shared/website/mailWerte.ts`, `shared/website/zugang.ts`, `website/src/rechte.ts`, `website/src/WerDarfWas.tsx`, `website/src/RechteHinweis.tsx`, `website/src/leitungFehler.ts`, `website/src/demo.ts`
+- **Automatisiert:** teilweise – `shared/organigramm/gruppen.test.ts` (direkte Kinder, Enkel nicht), `shared/website/einrichten.test.ts` (Untergruppen aus der Hierarchie, Website nur über `entwuerfe-g`, Untergruppen-Kategorien), `shared/website/rechte.test.ts` (Soll Website/Untergruppe, nie fremde Veröffentlicht-Kategorie, `verwaltetVon`, Stufen zum Nachziehen, Hinweise), `shared/website/mailWerte.test.ts` (Leitung je Gruppe, alter Wert ohne `gruppe`), `website/src/rechte.test.ts` (Ablauf einrichten → nachziehen, Kategorie wiederverwendet, Teilfehler), `website/src/WerDarfWas.test.tsx`, `website/src/App.test.tsx`, `website/src/demo.test.ts`; die echten Rechte in ChurchTools und Spikes Rollen nur in der Test-Instanz
+- **Historie:** neu mit W3b-4a (23.11.2026)
+
+</details>

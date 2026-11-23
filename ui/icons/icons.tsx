@@ -78,6 +78,7 @@ export type IconName =
   | 'user-slash'
   | 'flag'
   | 'regler'
+  | 'trichter'
   | 'zauberstab'
   | 'zahnrad'
   | 'liste'
@@ -360,6 +361,13 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
       );
     // Werkzeuge des Liedblatts (02.10.2026): drei Regler wie in iOS – ein Knopf für Aussehen, Tempo,
     // Notizen von anderen und Anmerken.
+    // Trichter in der Spaltenüberschrift der Anmeldungen (R2) – „nach dieser Spalte filtern“.
+    case 'trichter':
+      return (
+        <svg {...p}>
+          <path d="M4 5h16l-6 7v6l-4 2v-8z" />
+        </svg>
+      );
     case 'regler':
       return (
         <svg {...p}>

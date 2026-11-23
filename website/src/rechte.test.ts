@@ -6,8 +6,14 @@ import { leitungAusWerten } from '@shared/website/mailWerte';
 import type { Wert } from '@shared/ct/modulDaten';
 import { sollRechte, type Kategorien } from '@shared/website/rechte';
 import { datenRechteNummernAus, type Recht } from '@shared/ct/rollenRechte';
-import { LeitungNichtFestgehalten } from './leitungFehler';
-import { ladeRollen, ladeWerDarfWas, pruefeRechte, rechteSetzen } from './rechte';
+import { LeitungNichtFestgehalten, WebsiteNichtNachgezogen } from './leitungFehler';
+import {
+  ladeRollen,
+  ladeWerDarfWas,
+  pruefeRechte,
+  rechteSetzen,
+  untergruppeRechteSetzen,
+} from './rechte';
 
 vi.mock('@ui/ct/verbindung', async (original) => ({
   ...(await original<typeof import('@ui/ct/verbindung')>()),
@@ -57,6 +63,22 @@ let wertFehler: 503 | 401 | null;
 let rechteBeimWertSchreiben: Recht[] | null;
 const MODUL = 7;
 const WERTE_PFAD = `/custommodules/${MODUL}/customdatacategories/${KAT.entwuerfe}/customdatavalues`;
+/**
+ * **Untergruppen (W3b-4a)** – wie auf der Test-Instanz: 347 „Website – Jugend“ mit eigenen `group_role`-IDs (3323 Leiter,
+ * 3320 Mitarbeiter; an den Mitgliedern 16/15 – bewusst andere Zahlen). Hierarchie und Kategorien sind je Test einstellbar;
+ * ohne Hierarchie (leer) gibt es keine Untergruppen – so laufen die Tests von W3b-1/W3b-3 unverändert.
+ */
+const KAT_PFAD = `/custommodules/${MODUL}/customdatacategories`;
+const JUGEND = 347;
+const ROLLEN_JUGEND = [
+  { id: 3323, groupTypeRoleId: 16, name: 'Leiter', isLeader: true, isActive: true },
+  { id: 3320, groupTypeRoleId: 15, name: 'Mitarbeiter', isLeader: false, isActive: true },
+];
+let hierarchie: { groupId: number; parents?: number[]; children?: number[] }[];
+let kategorien: { id: number; shorty: string; name: string }[];
+let kategorieAufrufe: string[];
+/** Option: Schreibaufrufe an diese Rolle scheitern (503) – z. B. eine Website-Rolle beim Nachziehen. */
+let scheitereAnRolle: number | null;
 
 const r = (rolle: number, authId: number, dataId: number | null = null): Recht => ({
   rolle,
@@ -73,6 +95,10 @@ beforeEach(() => {
   rechteBeimWertSchreiben = null;
   rechte = [];
   aufrufe = [];
+  hierarchie = [];
+  kategorien = [];
+  kategorieAufrufe = [];
+  scheitereAnRolle = null;
   scheitereBei = null;
   ignoriere = null;
   leseFehler = false;
@@ -85,6 +111,11 @@ beforeEach(() => {
       return Promise.resolve([{ id: MODUL, shorty: 'website' }] as never);
     if (pfad === WERTE_PFAD) return Promise.resolve(werte.map((w) => ({ ...w })) as never);
     if (pfad === `/groups/${GRUPPE}/roles`) return Promise.resolve(ROLLEN as never);
+    if (pfad === `/groups/${JUGEND}/roles`) return Promise.resolve(ROLLEN_JUGEND as never);
+    if (pfad === `/groups/${JUGEND}`)
+      return Promise.resolve({ id: JUGEND, name: 'Website – Jugend' } as never);
+    if (pfad === '/groups/hierarchies') return Promise.resolve(hierarchie as never);
+    if (pfad === KAT_PFAD) return Promise.resolve(kategorien.map((k) => ({ ...k })) as never);
     const rolle = Number(/group_role\/(\d+)$/.exec(pfad)?.[1]);
     return Promise.resolve(
       rechte
@@ -105,9 +136,16 @@ beforeEach(() => {
       else werte = werte.map((w) => (w.id === j.id ? { ...w, value: j.value } : w));
       return Promise.resolve(null as never);
     }
+    if (pfad === KAT_PFAD) {
+      const k = JSON.parse(String(init?.body)) as { shorty: string; name: string };
+      kategorieAufrufe.push(`${init?.method ?? 'GET'} ${k.shorty}`);
+      kategorien.push({ id: 200 + kategorien.length, shorty: k.shorty, name: k.name });
+      return Promise.resolve(null as never);
+    }
     schreibAufrufe += 1;
     if (scheitereBei === schreibAufrufe) return Promise.reject(new ApiError(503, 'kurz weg'));
     const rolle = Number(/group_role\/(\d+)$/.exec(pfad)?.[1]);
+    if (rolle === scheitereAnRolle) return Promise.reject(new ApiError(503, 'kurz weg'));
     const j = JSON.parse(String(init?.body)) as { authId: number; dataId?: number[] };
     const methode = init?.method as 'PUT' | 'DELETE';
     aufrufe.push(`${methode} ${rolle} ${j.authId}:${j.dataId?.[0] ?? '-'}`);
@@ -353,5 +391,201 @@ describe('ladeRollen / pruefeRechte', () => {
   it('pruefeRechte: ein Lesefehler macht keinen Hinweis (und keinen Fehler)', async () => {
     leseFehler = true;
     expect(await pruefeRechte(GRUPPE, KAT)).toBeNull();
+  });
+});
+
+describe('Untergruppen (W3b-4a): einrichten, nachziehen, nichts entziehen', () => {
+  const UG = { id: JUGEND, name: 'Website – Jugend' };
+  const WAHL_UG = [
+    { rolle: 3323, stufe: 'leitung' as const },
+    { rolle: 3320, stufe: 'redakteur' as const },
+  ];
+  /** Die Kategorie der Untergruppe, wie sie auf der Test-Instanz seit der Messung steht (117). */
+  const JUGEND_DA = {
+    id: 117,
+    shorty: 'veroeffentlicht-g347',
+    name: 'Website: Veröffentlicht · Website – Jugend',
+  };
+  const VOLL = (kategorie = 117): Kategorien => ({
+    ...KAT,
+    untergruppen: [{ gruppe: JUGEND, kategorie }],
+  });
+  const sollUG = (kategorie = 117) =>
+    sollRechte(WAHL_UG, VOLL(kategorie), N, { gruppe: JUGEND, kategorie });
+  const sollOber = (
+    kategorie: number | null,
+    ...p: [number, 'keine' | 'redakteur' | 'leitung'][]
+  ) =>
+    sollRechte(
+      p.map(([rolle, stufe]) => ({ rolle, stufe })),
+      kategorie === null ? KAT : VOLL(kategorie),
+      N,
+    );
+
+  beforeEach(() => {
+    hierarchie = [
+      { groupId: GRUPPE, children: [JUGEND] },
+      { groupId: JUGEND, parents: [GRUPPE], children: [360] },
+    ];
+    // Die Website ist eingerichtet, ihre Rollen haben ihre Stufen (Leiter = Leitung, Mitarbeiter = Redakteur).
+    rechte = sollOber(null, [3290, 'leitung'], [3287, 'redakteur']);
+  });
+
+  it('noch nicht eingerichtet: legt die Kategorie an, setzt die Rechte der Untergruppe und zieht DANACH die Website-Rollen mit ihren heutigen Stufen nach', async () => {
+    await untergruppeRechteSetzen(GRUPPE, KAT, UG, WAHL_UG);
+    expect(kategorieAufrufe).toEqual(['POST veroeffentlicht-g347']);
+    const neu = kategorien[0].id;
+    expect(sortiert(rechte)).toEqual(
+      sortiert([...sollOber(neu, [3290, 'leitung'], [3287, 'redakteur']), ...sollUG(neu)]),
+    );
+    // Reihenfolge: erst die Rollen der Untergruppe, dann die der Website.
+    const schreib = aufrufe.filter((a) => !a.startsWith('GET')).map((a) => Number(a.split(' ')[1]));
+    const ersteOber = schreib.findIndex((x) => x === 3290 || x === 3287);
+    const letzteUG = schreib.map((x) => x === 3323 || x === 3320).lastIndexOf(true);
+    expect(ersteOber).toBeGreaterThan(letzteUG);
+  });
+
+  it('die Kategorie aus der Messung (117) wird wiederverwendet – nichts wird angelegt', async () => {
+    kategorien = [JUGEND_DA];
+    await untergruppeRechteSetzen(GRUPPE, KAT, UG, WAHL_UG);
+    expect(kategorieAufrufe).toEqual([]);
+    expect(rechte.filter((x) => x.dataId === 117).length).toBeGreaterThan(0);
+  });
+
+  it('alte Stufen der Website bleiben: eine Leiter-Rolle, die heute Redakteur ist, wird beim Nachziehen nicht zur Leitung', async () => {
+    kategorien = [JUGEND_DA];
+    rechte = sollOber(null, [3290, 'redakteur'], [3287, 'redakteur']);
+    await untergruppeRechteSetzen(GRUPPE, KAT, UG, WAHL_UG);
+    const leiter = rechte.filter((x) => x.rolle === 3290 && x.dataId === 117).map((x) => x.authId);
+    expect(leiter.sort()).toEqual([N.kategorieSehen, N.datenSehen].sort());
+    expect(
+      rechte.some(
+        (x) => x.rolle === 3290 && x.dataId === KAT.veroeffentlicht && x.authId === N.datenAnlegen,
+      ),
+    ).toBe(false);
+  });
+
+  it('Stufen der Website setzen entzieht keine Untergruppen-Rechte – im Gegenteil, sie gehören zum Soll', async () => {
+    kategorien = [JUGEND_DA];
+    rechte = [...sollOber(117, [3290, 'leitung'], [3287, 'redakteur']), ...sollUG()];
+    await rechteSetzen(GRUPPE, KAT, [
+      { rolle: 3290, stufe: 'leitung' },
+      { rolle: 3287, stufe: 'redakteur' },
+    ]);
+    expect(aufrufe.filter((a) => a.startsWith('DELETE'))).toEqual([]);
+    expect(sortiert(rechte)).toEqual(
+      sortiert([...sollOber(117, [3290, 'leitung'], [3287, 'redakteur']), ...sollUG()]),
+    );
+  });
+
+  it('Herabstufen einer Website-Rolle entzieht auch ihre Rechte an der Untergruppen-Kategorie (sie gehört uns)', async () => {
+    kategorien = [JUGEND_DA];
+    rechte = [...sollOber(117, [3290, 'leitung'], [3287, 'redakteur']), ...sollUG()];
+    await rechteSetzen(GRUPPE, KAT, [{ rolle: 3287, stufe: 'keine' }]);
+    expect(rechte.some((x) => x.rolle === 3287 && x.dataId === 117)).toBe(false);
+    // Die Rollen der Untergruppe bleiben unberührt.
+    expect(sortiert(rechte.filter((x) => x.rolle === 3323 || x.rolle === 3320))).toEqual(
+      sortiert(sollUG()),
+    );
+  });
+
+  it('erneut setzen ändert nichts (Soll gegen Ist)', async () => {
+    kategorien = [JUGEND_DA];
+    await untergruppeRechteSetzen(GRUPPE, KAT, UG, WAHL_UG);
+    aufrufe = [];
+    await untergruppeRechteSetzen(GRUPPE, KAT, UG, WAHL_UG);
+    expect(aufrufe.filter((a) => !a.startsWith('GET'))).toEqual([]);
+  });
+
+  it('die Leitung der Untergruppe wird je Gruppe festgehalten – der Wert der Website bleibt unberührt', async () => {
+    kategorien = [JUGEND_DA];
+    await rechteSetzen(GRUPPE, KAT, [{ rolle: 3290, stufe: 'leitung' }]);
+    await untergruppeRechteSetzen(GRUPPE, KAT, UG, WAHL_UG);
+    expect(leitungAusWerten(werte)).toEqual([3290]);
+    expect(leitungAusWerten(werte, JUGEND)).toEqual([3323]);
+  });
+
+  it('Website-Rollen nachziehen scheitert: eigene Meldung – die Untergruppe IST eingerichtet; der nächste Versuch holt den Rest nach', async () => {
+    kategorien = [JUGEND_DA];
+    scheitereAnRolle = 3290;
+    const e = await untergruppeRechteSetzen(GRUPPE, KAT, UG, WAHL_UG).catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(WebsiteNichtNachgezogen);
+    expect((e as Error).message).toMatch(/„Website – Jugend“ ist eingerichtet/);
+    expect(sortiert(rechte.filter((x) => x.rolle === 3323 || x.rolle === 3320))).toEqual(
+      sortiert(sollUG()),
+    );
+    expect(leitungAusWerten(werte, JUGEND)).toBeNull(); // erst nach dem Nachziehen
+    scheitereAnRolle = null;
+    await untergruppeRechteSetzen(GRUPPE, KAT, UG, WAHL_UG);
+    expect(sortiert(rechte)).toEqual(
+      sortiert([...sollOber(117, [3290, 'leitung'], [3287, 'redakteur']), ...sollUG()]),
+    );
+  });
+
+  it('Rechte der Untergruppe scheitern: NICHT als „eingerichtet“ gemeldet, die Website-Rollen werden nicht angefasst', async () => {
+    kategorien = [JUGEND_DA];
+    scheitereAnRolle = 3323;
+    await expect(untergruppeRechteSetzen(GRUPPE, KAT, UG, WAHL_UG)).rejects.toMatchObject({
+      status: 503,
+    });
+    expect(aufrufe.some((a) => / (3290|3287) /.test(a) && !a.startsWith('GET'))).toBe(false);
+  });
+
+  it('keine direkte Untergruppe (mehr): nichts wird angelegt oder gesetzt', async () => {
+    hierarchie = [];
+    await expect(untergruppeRechteSetzen(GRUPPE, KAT, UG, WAHL_UG)).rejects.toMatchObject({
+      status: 409,
+    });
+    expect(kategorieAufrufe).toEqual([]);
+    expect(schreibAufrufe).toBe(0);
+  });
+
+  it('ladeWerDarfWas: die Untergruppe mit Name, Rollen und Stufen; nicht eingerichtet = ohne Kategorie, Enkel nicht', async () => {
+    let w = await ladeWerDarfWas(GRUPPE, KAT);
+    expect(w.untergruppen).toEqual([
+      {
+        gruppe: JUGEND,
+        name: 'Website – Jugend',
+        kategorie: null,
+        rollen: [
+          { id: 3323, name: 'Leiter', leitung: true },
+          { id: 3320, name: 'Mitarbeiter', leitung: false },
+        ],
+        ist: [],
+      },
+    ]);
+    kategorien = [JUGEND_DA];
+    rechte = [...sollOber(117, [3290, 'leitung'], [3287, 'redakteur']), ...sollUG()];
+    w = await ladeWerDarfWas(GRUPPE, KAT);
+    expect(w.ist.map((x) => x.stufe)).toEqual(['leitung', 'redakteur', 'keine']);
+    expect(w.untergruppen[0].ist).toEqual([
+      { rolle: 3323, stufe: 'leitung' },
+      { rolle: 3320, stufe: 'redakteur' },
+    ]);
+  });
+
+  it('pruefeRechte: nicht eingerichtete Untergruppe → Hinweis; eingerichtet → keiner; fehlt den Website-Rollen das Recht an ihr → „weicht ab“', async () => {
+    expect(await pruefeRechte(GRUPPE, KAT)).toEqual({
+      art: 'untergruppen',
+      untergruppen: [{ name: 'Website – Jugend', art: 'nicht-eingerichtet' }],
+    });
+    kategorien = [JUGEND_DA];
+    rechte = [...sollOber(117, [3290, 'leitung'], [3287, 'redakteur']), ...sollUG()];
+    expect(await pruefeRechte(GRUPPE, KAT)).toBeNull();
+    rechte = [...sollOber(null, [3290, 'leitung'], [3287, 'redakteur']), ...sollUG()];
+    expect(await pruefeRechte(GRUPPE, KAT)).toEqual({
+      art: 'abweicht',
+      rollen: ['Leiter', 'Mitarbeiter'],
+    });
+  });
+
+  it('pruefeRechte: Lesefehler der Hierarchie → kein Hinweis (vorübergehend ist nicht ungültig)', async () => {
+    // Alles andere wie sonst – nur die Hierarchie antwortet nicht. Ohne sie: Hinweis „nicht eingerichtet“ (Gegenstück oben).
+    const sonst = vi.mocked(ctDaten).getMockImplementation()!;
+    vi.mocked(ctDaten).mockImplementation((pfad: string) =>
+      pfad === '/groups/hierarchies' ? Promise.reject(new ApiError(504, 'weg')) : sonst(pfad),
+    );
+    expect(await pruefeRechte(GRUPPE, KAT)).toBeNull();
+    expect(aufrufe).toContain('GET /permissions/definitions');
   });
 });

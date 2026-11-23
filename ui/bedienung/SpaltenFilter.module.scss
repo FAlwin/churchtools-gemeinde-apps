@@ -1,0 +1,136 @@
+@use '../design/mixins' as m;
+
+// Filtern über die Spaltenüberschrift (Anmeldungen R2, Entwurf `r2-u3-filter-ansichten-v1`).
+
+// Der Trichter neben der Überschrift: leise grau, blau sobald gefiltert wird.
+.trichter {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-left: 2px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-ctrl);
+  background: none;
+  color: var(--text3);
+  cursor: pointer;
+  vertical-align: middle;
+
+  @media (hover: hover) {
+    &:hover {
+      background: var(--blue-soft);
+      color: var(--blue-ink);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 1px;
+  }
+}
+
+.aktiv {
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+}
+
+// Die gesetzten Filter als Chips (antippen = ändern, × = weg).
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0 2px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  border: 1px solid var(--blue);
+  border-radius: 999px;
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+  font-size: 13px;
+}
+
+.chipText {
+  min-width: 0;
+  padding: 5px 4px 5px 12px;
+  overflow: hidden;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+
+  b {
+    font-weight: 700;
+  }
+}
+
+.chipWeg {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.leise {
+  color: var(--text3);
+  font-size: 13px;
+}
+
+.rechts {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+// Das kleine Fenster am Trichter (am Rechner; am Handy ein `Sheet`).
+.fenster {
+  position: fixed;
+  z-index: var(--ebene-fenster);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 280px;
+  max-width: calc(100vw - 32px);
+  max-height: min(70vh, 460px);
+  padding: 12px 14px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  color: var(--text);
+  font-family: var(--ui);
+}
+
+.titel {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.fuss {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 4px;
+}

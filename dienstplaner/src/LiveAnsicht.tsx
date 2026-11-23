@@ -3,6 +3,7 @@ import { BodyPortal } from '@ui/fenster/BodyPortal';
 import { Icon } from '@ui/icons/icons';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { NachbarKnopf } from '@ui/ablauf/NachbarKnopf';
+import { TextKnopf } from '@ui/bedienung/TextKnopf';
 import { useVollbild } from '@ui/bedienung/useVollbild';
 import { useWakeLock } from '@ui/bedienung/useWakeLock';
 import { itemTitleParts, type AblaufZeile } from '@shared/ct/ablaufZeile';
@@ -23,14 +24,24 @@ import {
   type LiveStand,
   type LiveZiel,
 } from '@shared/ct/liveAgenda';
+import {
+  abweichungen,
+  laeufeAus,
+  prognose,
+  warumPunkte,
+  wechselBeiKlick,
+  wirksamerStand,
+} from '@shared/ct/liveVerlauf';
 import { ortszeitAus } from '@shared/ct/zeit';
 import type { CtAgenda, CtAgendaItem } from '@shared/ct/typen';
 import type { InfoGruppe } from '@shared/types/index';
 import { ladeAblauf } from './ladeBeiwerk';
 import type { EinstellungenStand } from '@shared/dienstplan/liveEinstellungen';
 import { ladeLive, schreibeLive } from './ladeLive';
+import { ladeVerlauf, schreibeVerlauf } from './ladeVerlauf';
 import { useBetriebsart } from './useBetriebsart';
 import { useLive } from './useLive';
+import { useVerlauf } from './useVerlauf';
 import styles from './LiveAnsicht.module.scss';
 
 /** Uhrzeit eines Zeitpunkts (ms) in der Zeitzone der Gemeinde: „10:08“. */
@@ -72,6 +83,9 @@ function steuerFehlerText(grund: LiveGrund): string {
 
 type Schalten = 'weiter' | 'zurueck' | 'plus' | 'minus';
 
+/** Wie lange der Hinweis „Fehlklick nicht gezählt“ unten steht (A19). */
+export const FEHLKLICK_HINWEIS_MS = 5_000;
+
 /**
  * **„Live“ zum Folgen** (Bauplan E6b-2 L2, Entwurf `e6b-2-live.html` Variante A, Alwin 02.11.2026): der Live-Stand von
  * ChurchTools – derselbe wie in dessen „Live-Agenda“ – im Aufbau der Live-Agenda, aber im Look der App: **Jetzt** mit
@@ -88,6 +102,12 @@ type Schalten = 'weiter' | 'zurueck' | 'plus' | 'minus';
  * **Betriebsart + Zeitkonto** (L4-2, Alwin 23.11.2026): Wie lange „Jetzt“ ohne Klick der Uhr folgt, stellen die Planer unter
  * „Einstellungen“ ein (`useBetriebsart`, Standard: bis Beginn nach der Uhr, ab Beginn klicken); das **Zeitkonto** (+ grün =
  * gespart, − rot = Rückstand) ersetzt das alte „Gesamt“. Beides rechnet `liveLage` – diese Datei zeigt nur an.
+ *
+ * **Live-Verlauf** (L4-3, Alwin 23.11.2026): Die Wechsel der Live-Agenda hält `useVerlauf` je Termin fest (klickendes Gerät schreibt, ein
+ * offenes Gerät mit Steuer-Recht trägt nach, gleicher `switchdate` = kein Doppel); daraus rechnet `shared/ct/liveVerlauf.ts` das ± je
+ * erledigtem Punkt, „Ende voraussichtlich“, „Warum“ und den **Fehlklick** (A19: zurück auf einen Punkt, alles dazwischen unter 30 s →
+ * der Punkt läuft mit seiner alten Zeit weiter; unten ca. 5 s der Hinweis mit „Neu starten“). Die Anzeige rechnet nichts nach – mit dem
+ * wirksamen Stand (`wirksamerStand`) rechnet `liveLage`, geschrieben wird der rohe Stand von ChurchTools.
  *
  * **Steuern** (L3, Alwin 02.11.2026: „genau wie ChurchTools“): Wer an diesem Termin in einem Dienst mit „Live-Agenda
  * steuern“ eingeteilt ist (`steuern`), bekommt ‹ Zurück, Weiter ›, −1/+1 Min bzw. „Starten“ – ChurchTools selbst prüft
@@ -112,6 +132,8 @@ export function LiveAnsicht({
   schreiben = schreibeLive,
   ablaufLesen = ladeAblauf,
   betriebsartLesen,
+  verlaufLesen = ladeVerlauf,
+  verlaufSchreiben = schreibeVerlauf,
 }: {
   titel: string;
   /** Tag des Termins (`JJJJ-MM-TT`, Gemeinde-Zeit). */
@@ -137,6 +159,8 @@ export function LiveAnsicht({
   schreiben?: typeof schreibeLive;
   ablaufLesen?: (terminId: number) => Promise<CtAgenda | null>;
   betriebsartLesen?: () => Promise<EinstellungenStand>;
+  verlaufLesen?: typeof ladeVerlauf;
+  verlaufSchreiben?: typeof schreibeVerlauf;
 }) {
   const wurzel = useRef<HTMLDivElement>(null);
   const aktuell = useRef<HTMLLIElement>(null);
@@ -149,11 +173,25 @@ export function LiveAnsicht({
   const liste = useMemo(() => liveListe(items, terminId), [items, terminId]);
   const [beschaeftigt, setBeschaeftigt] = useState(false);
   const [steuerFehler, setSteuerFehler] = useState<LiveGrund | null>(null);
+  /** Der Fehlklick, der gerade als „nicht gezählt“ gemeldet ist: der Wechsel (Zeit + Stelle), den „Neu starten“ zurücknimmt. */
+  const [fehlklick, setFehlklick] = useState<{ zeit: number; stelle: number } | null>(null);
+  // Wer steuern darf, hält die Wechsel fest (T4); alle anderen lesen nur.
+  const verlauf = useVerlauf({
+    terminId,
+    liste,
+    stand: live.stand,
+    schreibenErlaubt: steuern,
+    lesen: verlaufLesen,
+    schreiben: verlaufSchreiben,
+  });
+  const { laeufe } = useMemo(() => laeufeAus(verlauf.verlauf), [verlauf.verlauf]);
+  // Der Stand mit wirksamem Beginn und Zusatzzeit (Fehlklick, A19) – mit ihm rechnet alles; geschrieben wird der rohe Stand.
+  const wirksam = useMemo(() => wirksamerStand(live.stand, laeufe), [live.stand, laeufe]);
   const zeileVon = useMemo(() => new Map(zeilen.map((z) => [z.id, z])), [zeilen]);
   const indexVon = useMemo(() => new Map(liste.map((p, i) => [p.id, i])), [liste]);
   // Gerechnet wird in der Uhr von ChurchTools, damit Restzeit und Abweichung auf allen Geräten gleich sind.
   const jetzt = live.jetzt - live.versatz;
-  const lage = liveLage(liste, live.stand, jetzt, betriebsart);
+  const lage = liveLage(liste, wirksam, jetzt, betriebsart);
 
   /**
    * Schalten: Ablauf frisch lesen und die Stelle nachziehen, wenn er sich geändert hat; dann schreiben. Scheitert das
@@ -167,7 +205,13 @@ export function LiveAnsicht({
       let punkte = liste;
       let lageSchalten = lage;
       let stand: LiveStand | null = live.stand;
-      const frisch = await ablaufLesen(terminId).catch(() => null);
+      const wechselt = art === 'weiter' || art === 'zurueck';
+      // Beim Wechsel zugleich den Verlauf frisch lesen: Die Fehlklick-Regel braucht ALLE bisherigen Wechsel (ein anderes
+      // Gerät kann dazugeschrieben haben). Scheitert das Lesen, gilt der bekannte Verlauf.
+      const [frisch, verlaufJetzt] = await Promise.all([
+        ablaufLesen(terminId).catch(() => null),
+        wechselt ? verlauf.frisch().catch(() => verlauf.verlauf) : Promise.resolve(verlauf.verlauf),
+      ]);
       if (frisch) {
         const neu = liveListe(frisch.items, terminId);
         if (neu.map((p) => p.id).join() !== liste.map((p) => p.id).join()) {
@@ -188,12 +232,89 @@ export function LiveAnsicht({
               ? zusatzZiel(stand, art === 'plus' ? 1 : -1)
               : { stelle: 0, zusatzSek: 0 };
       const r = await schreiben(terminId, agendaId, ziel);
-      if (r.ok) live.uebernehmen(r.stand, Date.now());
-      else setSteuerFehler(r.grund);
+      if (!r.ok) {
+        setSteuerFehler(r.grund);
+        return;
+      }
+      let neuerStand = r.stand;
+      if (wechselt) {
+        // Festhalten, was geschaltet wurde (T4). Wird daraus nach der Regel (A19) ein Fehlklick, gleicht CT die Restzeit per
+        // `addseconds` aus (T9) – erst danach kommt der Wechsel samt Ausgleich in den Verlauf.
+        const k = wechselBeiKlick(
+          verlaufJetzt,
+          punkte,
+          live.stand,
+          wirksam?.zusatzSek ?? 0,
+          r.stand,
+        );
+        let neue = k.neue;
+        const f = k.fortsetzung;
+        if (f && r.stand.stelle !== null && r.stand.seit !== null) {
+          const { stelle, seit } = r.stand;
+          let ausgeglichen = f.ausgleich === r.stand.zusatzSek;
+          if (!ausgeglichen) {
+            const r2 = await schreiben(terminId, agendaId, { stelle, zusatzSek: f.ausgleich });
+            if (r2.ok) {
+              neuerStand = r2.stand;
+              ausgeglichen = true;
+            }
+          }
+          // Ohne gelungenen Ausgleich steht der Wechsel ohne ihn da: Unsere Anzeige rechnet trotzdem richtig, nur die
+          // Restzeit in CT-App und CT-Web bleibt vorerst bei der vollen Dauer.
+          if (ausgeglichen) {
+            neue = neue.map((w) =>
+              w.zeit === seit && w.stelle === stelle ? { ...w, ausgleich: f.ausgleich } : w,
+            );
+          }
+          setFehlklick({ zeit: seit, stelle });
+        } else {
+          setFehlklick(null);
+        }
+        verlauf.notieren(neue);
+      }
+      live.uebernehmen(neuerStand, Date.now());
     } finally {
       setBeschaeftigt(false);
     }
   }
+
+  /**
+   * **„Neu starten“** (A19): Der Punkt beginnt doch von vorn – ein normaler Wechsel. CT bekommt die Zusatzzeit 0 zurück (der
+   * Ausgleich fällt weg), der Verlauf den Vermerk „neu“ am Wechsel; ohne gelungenes Schreiben in CT bleibt alles, wie es war.
+   */
+  async function neuStarten(): Promise<void> {
+    if (!fehlklick) return;
+    setBeschaeftigt(true);
+    setSteuerFehler(null);
+    try {
+      const r = await schreiben(terminId, agendaId, { stelle: fehlklick.stelle, zusatzSek: 0 });
+      if (!r.ok) {
+        setSteuerFehler(r.grund);
+        return;
+      }
+      const w = verlauf.verlauf.find(
+        (x) => x.zeit === fehlklick.zeit && x.stelle === fehlklick.stelle,
+      );
+      if (w) verlauf.notieren([{ ...w, neu: true }]);
+      live.uebernehmen(r.stand, Date.now());
+      setFehlklick(null);
+    } finally {
+      setBeschaeftigt(false);
+    }
+  }
+
+  // Der Hinweis steht nur kurz da – und gilt nur, solange der Stand noch der des Fehlklicks ist.
+  useEffect(() => {
+    if (!fehlklick) return;
+    const id = window.setTimeout(() => setFehlklick(null), FEHLKLICK_HINWEIS_MS);
+    return () => window.clearTimeout(id);
+  }, [fehlklick]);
+  const standSeit = live.stand?.seit ?? null;
+  const standStelle = live.stand?.stelle ?? null;
+  useEffect(() => {
+    if (!fehlklick || standSeit === null) return;
+    if (standSeit !== fehlklick.zeit || standStelle !== fehlklick.stelle) setFehlklick(null);
+  }, [fehlklick, standSeit, standStelle]);
 
   function schliessen(): void {
     vollbild.beenden();
@@ -256,6 +377,10 @@ export function LiveAnsicht({
   const ueber = rest !== null && rest.sek < 0;
   const anteil = rest && rest.dauer > 0 ? Math.min(1, Math.max(0, rest.sek / rest.dauer)) : 0;
   const konto = lage.konto;
+  // ± je Punkt, „Warum“ und „Ende voraussichtlich“ – gerechnet in `shared/ct/liveVerlauf.ts` (T8), hier nur gezeigt.
+  const abw = abweichungen(liste, laeufe, jetzt, wirksam?.stelle ?? null);
+  const warum = warumPunkte(liste, abw);
+  const prog = lage.art === 'ende' ? null : prognose(liste, konto);
 
   const label =
     lage.art === 'ende'
@@ -424,6 +549,9 @@ export function LiveAnsicht({
                   .join(' ');
                 // Infos der eigenen Dienstgruppen klein darunter – auch beim laufenden Punkt, nicht bei erledigten (A16).
                 const infos = erledigt || p.weggelassen ? [] : infosVon(t.zeile);
+                const a = abw.get(p.id);
+                const delta =
+                  erledigt && !p.weggelassen && i !== index && a && !a.laeuft ? a.sek : null;
                 return (
                   <Fragment key={p.id}>
                     {grenze}
@@ -440,6 +568,14 @@ export function LiveAnsicht({
                         {t.titel}
                       </span>
                       <span className={styles.werKlein}>{t.wer}</span>
+                      {delta !== null && (
+                        <span
+                          className={`${styles.delta}${delta > 0 ? ` ${styles.deltaPlus}` : delta < 0 ? ` ${styles.deltaMinus}` : ''}`}
+                          aria-label={`Plus/Minus ${kontoText(delta)}`}
+                        >
+                          {kontoText(delta)}
+                        </span>
+                      )}
                       {infos.map((x) => (
                         <span key={x.gruppe} className={styles.infoKlein}>
                           <i>{x.gruppe}:</i> {x.text}
@@ -496,6 +632,31 @@ export function LiveAnsicht({
                 Zeitkonto
                 <b>{kontoText(konto)}</b>
                 <span>{kontoWort(konto)}</span>
+              </div>
+            )}
+            {prog && (
+              <div className={styles.prog} aria-label="Voraussichtliches Ende">
+                <div className={styles.progEnde}>
+                  <span>Ende voraussichtlich</span>
+                  <b className={Math.round(prog.konto) < 0 ? styles.progSpaeter : undefined}>
+                    {uhrzeit(prog.ende, zeitzone)}
+                  </b>
+                </div>
+                <div className={styles.progPlan}>
+                  Plan {uhrzeit(prog.plan, zeitzone)} · wenn der Rest nach Plan läuft
+                </div>
+                {warum.length > 0 && (
+                  <ul className={styles.warum} aria-label="Warum">
+                    {warum.map((x) => (
+                      <li key={x.punkt.id}>
+                        <span>{teile(x.punkt).titel}</span>
+                        <i className={x.sek > 0 ? styles.deltaPlus : styles.deltaMinus}>
+                          {kontoText(x.sek)}
+                        </i>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             )}
           </div>
@@ -558,6 +719,14 @@ export function LiveAnsicht({
                   hinweis={`Zum nächsten Punkt: ${weiterTitel}`}
                 />
               </>
+            )}
+            {fehlklick && (
+              <p className={styles.fehlklick} role="status">
+                <span>Zeit läuft weiter – Fehlklick nicht gezählt ·</span>
+                <TextKnopf onClick={() => void neuStarten()} disabled={beschaeftigt}>
+                  Neu starten
+                </TextKnopf>
+              </p>
             )}
             {steuerFehler && (
               <p className={styles.steuerFehler} role="alert">

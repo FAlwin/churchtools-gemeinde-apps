@@ -232,7 +232,7 @@ function folge(
 }
 
 /** Geplantes Ende des Ablaufs (ms): Beginn plus Dauer des letzten Punkts mit Plan-Zeit. */
-function planEnde(liste: readonly LivePunkt[]): number | null {
+export function planEnde(liste: readonly LivePunkt[]): number | null {
   for (let i = liste.length - 1; i >= 0; i--) {
     const p = liste[i];
     if (p.planBeginn !== null) return p.planBeginn + p.dauerSek * 1000;

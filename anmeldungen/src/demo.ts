@@ -290,6 +290,30 @@ const DEMO_PERSONEN = [
     city: 'Engelskirchen',
   },
 ];
+/**
+ * Weitere Anmeldungen der Lobpreisfreizeit (R2, 23.11.2026) – erfundene Namen, unterschiedliche Antworten, damit Filter,
+ * Summen und eigene Ansichten in der Demo etwas zu tun haben. Nicht in der Personensuche.
+ */
+const FREIZEIT_PERSONEN = [
+  [921, 'Petra', 'Albers', '1984-02-11'],
+  [922, 'Lukas', 'Albers', '2015-08-20'],
+  [923, 'Jonas', 'Brenner', '2001-05-03'],
+  [924, 'Ruth', 'Dietrich', '1957-10-30'],
+  [925, 'Daniel', 'Engel', '1990-01-15'],
+  [926, 'Mila', 'Engel', '2018-04-09'],
+  [927, 'Ben', 'Engel', '2021-12-01'],
+  [928, 'Lea', 'Fuchs', '1999-07-21'],
+].map(([id, firstName, lastName, birthday]) => ({
+  id: id as number,
+  firstName: firstName as string,
+  lastName: lastName as string,
+  email: `${String(firstName).toLowerCase()}@beispiel.test`,
+  birthday: birthday as string,
+  street: '',
+  zip: '',
+  city: '',
+}));
+
 const familie = (seit: string) => ({
   data: [
     // Maria: nicht im Team, aber „Technik“ (nur fürs Team).
@@ -312,13 +336,51 @@ const familie = (seit: string) => ({
         80: 'Leitung Technik',
       },
     ],
+    // R2: weitere Anmeldungen zum Filtern (Küche/Technik/anderer Bereich, bezahlt/offen, im Team oder nicht).
+    [921, { 73: '1', 74: 'DEMO03', 75: 'Petra Albers', 76: '4-Bett-Zimmer', 78: '782', 79: '791' }],
+    [922, { 73: '0', 74: 'DEMO03', 79: '791' }],
+    [
+      923,
+      {
+        73: '0',
+        74: 'DEMO04',
+        75: 'Jonas Brenner',
+        76: '2-Bett-Zimmer',
+        78: '781',
+        79: '792',
+        80: 'Mischpult',
+      },
+    ],
+    [
+      924,
+      { 73: '0', 74: 'DEMO05', 75: 'Ruth Dietrich', 76: '4-Bett-Zimmer', 78: '782', 79: '791' },
+    ],
+    [
+      925,
+      {
+        73: '1',
+        74: 'DEMO06',
+        75: 'Daniel Engel',
+        76: '4-Bett-Zimmer',
+        78: '781',
+        79: '793',
+        80: 'Bühne',
+        81: 'Aufbau',
+      },
+    ],
+    [926, { 73: '0', 74: 'DEMO06', 79: '791' }],
+    [927, { 73: '0', 74: 'DEMO06' }],
+    [928, { 73: '0', 74: 'DEMO07', 75: 'Lea Fuchs', 76: '4-Bett-Zimmer', 78: '782' }],
   ].map(([id, werte]) => {
-    const p = DEMO_PERSONEN.find((x) => x.id === id)!;
+    const p = [...DEMO_PERSONEN, ...FREIZEIT_PERSONEN].find((x) => x.id === id)!;
+    // Lea Fuchs wartet (R2: Filter „Status: Warteliste“ je Person).
+    const wartet = id === 928;
     return {
       personId: p.id,
       person: { domainAttributes: { firstName: p.firstName, lastName: p.lastName } },
       groupTypeRoleId: 15,
-      groupMemberStatus: 'active',
+      groupMemberStatus: wartet ? 'waiting' : 'active',
+      waitinglistPosition: wartet ? 1 : null,
       memberStartDate: seit,
       fields: Object.entries(werte as Record<string, string>).map(([f, value]) => ({
         id: Number(f),
@@ -730,7 +792,7 @@ export function demoStarten(fall: string): void {
   const personName = (id: number) =>
     id === 1
       ? { firstName: 'Alwin', lastName: '' }
-      : [...DEMO_PERSONEN, ...NACHWEIS_PERSONEN].find((p) => p.id === id);
+      : [...DEMO_PERSONEN, ...NACHWEIS_PERSONEN, ...FREIZEIT_PERSONEN].find((p) => p.id === id);
 
   window.fetch = (input, init) => {
     const url = new URL(
@@ -1030,7 +1092,7 @@ export function demoStarten(fall: string): void {
       url.searchParams.get('q') === 'churchhome/ajax'
     ) {
       const ids = (typeof body.ids === 'string' ? body.ids : '').split(',').map(Number);
-      for (const p of [...DEMO_PERSONEN, ...NACHWEIS_PERSONEN])
+      for (const p of [...DEMO_PERSONEN, ...NACHWEIS_PERSONEN, ...FREIZEIT_PERSONEN])
         if (ids.includes(p.id) && p.email)
           mailProtokoll.push({
             date: new Date().toISOString(),
@@ -1133,7 +1195,9 @@ export function demoStarten(fall: string): void {
     if (pfad === '/persons' && m === 'GET' && url.searchParams.has('ids[]')) {
       const ids = url.searchParams.getAll('ids[]').map(Number);
       return antwort({
-        data: [...DEMO_PERSONEN, ...NACHWEIS_PERSONEN].filter((p) => ids.includes(p.id)),
+        data: [...DEMO_PERSONEN, ...NACHWEIS_PERSONEN, ...FREIZEIT_PERSONEN].filter((p) =>
+          ids.includes(p.id),
+        ),
       });
     }
     if (pfad === '/groups' && m === 'GET') {

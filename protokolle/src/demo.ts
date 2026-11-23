@@ -726,7 +726,42 @@ interface Speicher {
   geloescht: Set<number>;
   /** Beiträge in Gruppen (S6-2, „In der Gruppe Bescheid geben“). */
   beitraege: { id: number; groupId: number; title: string; content: string }[];
+  /** Termin-Vorlagen (W15-1, „Als Vorlage speichern“) – wie ChurchTools sie liefert. */
+  vorlagen: Record<string, unknown>[];
 }
+
+/** Zwei Termin-Vorlagen für den Kalender „Gemeindeleitung“ (W15-1) – Formen wie gemessen (`messung-w15-0`). */
+const DEMO_VORLAGEN: Record<string, unknown>[] = [
+  {
+    id: 901,
+    calendarId: 4,
+    title: 'Gottesdienst',
+    subtitle: 'Sonntag',
+    description: 'Wir feiern gemeinsam Gottesdienst.',
+    isInternal: false,
+    allDay: false,
+    startTime: '10:00',
+    duration: 5400,
+    repeatId: 7,
+    repeatFrequency: 1,
+    repeatDuration: 86400 * 56,
+    address: { name: 'Gemeindehaus', street: 'Hauptstraße 1', zip: '53797', city: 'Lohmar' },
+    tags: [],
+  },
+  {
+    id: 902,
+    calendarId: 4,
+    title: 'Monatliches Treffen',
+    allDay: false,
+    startTime: '19:30',
+    duration: 7200,
+    repeatId: 32,
+    repeatFrequency: 1,
+    repeatOptionId: 1,
+    repeatDuration: 86400 * 180,
+    tags: [],
+  },
+];
 
 function speicherAnlegen(fall: string): Speicher {
   const k = (id: number, shorty: string, name: string) => ({
@@ -820,6 +855,7 @@ function speicherAnlegen(fall: string): Speicher {
     abgeschlossen: new Set([42]),
     geloescht: new Set(),
     beitraege: [],
+    vorlagen: [...DEMO_VORLAGEN],
   };
 }
 
@@ -878,7 +914,13 @@ function antwort(
       data: {
         churchcore: { 'administer persons': fall !== 'mitglied' },
         // Kalender, in die man Termine anlegen darf (W14, Reiter „Termine“): die Leitung ja, ein Mitglied in keinen.
-        churchcal: { 'edit category': fall === 'mitglied' ? [] : [4, 2] },
+        churchcal: {
+          'edit category': fall === 'mitglied' ? [] : [4, 2],
+          // W15-1: Termin-Vorlagen speichern und neue Tags anlegen – die Leitung ja, ein Mitglied nein.
+          ...(fall === 'mitglied'
+            ? {}
+            : { 'edit calendar entry template': [4, 2], 'admin appointment tags': true }),
+        },
         // Die Leitung schreibt Protokolle (S4-1); als Mitglied nur „Mitarbeit“.
         protokolle: {
           'view custom data': [60, 61, 70, 80, 81, 5],
@@ -943,6 +985,23 @@ function antwort(
         { id: 7, name: 'Jugendleitung', settings: { isHidden: false } },
         { id: 11, name: 'Leitungsteam', settings: { isHidden: true } },
         { id: 19, name: 'Technik-Team', settings: { isHidden: false } },
+      ],
+    };
+  // Termin-Vorlagen und Tags (W15-1): Lesen und „Als Vorlage speichern“ (legt keinen Termin an).
+  if (pfad === '/api/calendars/appointments/templates') {
+    if (methode === 'POST') {
+      const id = s.naechste++;
+      s.vorlagen.push({ ...rumpf, id });
+      return { status: 201, data: { id } };
+    }
+    return { status: 200, data: s.vorlagen };
+  }
+  if (pfad === '/api/tags/appointment')
+    return {
+      status: 200,
+      data: [
+        { id: 1, name: 'Jugend' },
+        { id: 2, name: 'Gemeinde' },
       ],
     };
   // Kalender 4: Termine mit Besprechungsanfrage (Sitzungen; einer heute für „Heute“ auf der Startseite) und einer

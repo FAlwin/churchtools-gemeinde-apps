@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
+import { SpaltenTrichter } from '@ui/bedienung/SpaltenFilter';
 import type { Sortierung, Summe, TabellenSpalte } from '@shared/anmeldung/tabelle';
 import t from './AnmeldungenTabelle.module.scss';
 
@@ -23,6 +24,7 @@ export function AnmeldungenTabelle<Z>({
   onSortieren,
   onZeile,
   anheften,
+  filter,
 }: {
   /** Beschriftung für Vorleser („Anmeldungen“, „Absagen“). */
   name: string;
@@ -42,6 +44,17 @@ export function AnmeldungenTabelle<Z>({
    * (Absagen).
    */
   anheften?: { an: (z: Z) => boolean; umschalten: (z: Z) => void };
+  /**
+   * Filtern über die Überschrift (R2): ein Trichter neben dem Titel jeder Spalte, nach der man filtern kann (`kann`),
+   * blau, solange gefiltert wird (`an`). Ein Tipp öffnet das Filterfenster am Trichter. Ohne: keine Trichter (Absagen).
+   */
+  filter?: {
+    kann: (spalte: string) => boolean;
+    an: (spalte: string) => boolean;
+    /** Die Spalte, deren Filterfenster gerade offen ist. */
+    offen: string | null;
+    oeffnen: (spalte: string, anker: HTMLElement) => void;
+  };
 }) {
   // Aufsteigend → absteigend → wie die Liste (ohne Wahl).
   const weiter = (k: string): Sortierung =>
@@ -117,22 +130,33 @@ export function AnmeldungenTabelle<Z>({
                   title={s.titel}
                   aria-sort={an ? (sortierung.absteigend ? 'descending' : 'ascending') : undefined}
                 >
-                  {onSortieren ? (
-                    <button
-                      type="button"
-                      className={t.sortKnopf}
-                      onClick={() => onSortieren(weiter(s.schluessel))}
-                    >
+                  <span className={t.kopfInhalt}>
+                    {onSortieren ? (
+                      <button
+                        type="button"
+                        className={t.sortKnopf}
+                        onClick={() => onSortieren(weiter(s.schluessel))}
+                      >
+                        <span className={t.titel}>{s.titel}</span>
+                        {an && (
+                          <span className={t.pfeil} aria-hidden>
+                            {sortierung.absteigend ? '▼' : '▲'}
+                          </span>
+                        )}
+                      </button>
+                    ) : (
                       <span className={t.titel}>{s.titel}</span>
-                      {an && (
-                        <span className={t.pfeil} aria-hidden>
-                          {sortierung.absteigend ? '▼' : '▲'}
-                        </span>
-                      )}
-                    </button>
-                  ) : (
-                    <span className={t.titel}>{s.titel}</span>
-                  )}
+                    )}
+                    {filter?.kann(s.schluessel) && (
+                      <SpaltenTrichter
+                        spalte={s.schluessel}
+                        name={s.titel}
+                        aktiv={filter.an(s.schluessel)}
+                        offen={filter.offen === s.schluessel}
+                        onOeffnen={(anker) => filter.oeffnen(s.schluessel, anker)}
+                      />
+                    )}
+                  </span>
                 </th>
               );
             })}

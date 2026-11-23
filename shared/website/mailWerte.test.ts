@@ -192,3 +192,42 @@ describe('beide Werte beim Lesen der Website', () => {
     expect(websiteAusWerten([kaputt]).probleme).toHaveLength(1);
   });
 });
+
+describe('website-leitung je Gruppe (W3b-4a)', () => {
+  it('ein alter Wert ohne `gruppe` gilt für die Website – und nur für sie', () => {
+    const w = [wert(1, roh({ art: LEITUNG_ART, fassung: 1, rollen: [3290] }))];
+    expect(leitungAusWerten(w)).toEqual([3290]);
+    expect(leitungAusWerten(w, null)).toEqual([3290]);
+    expect(leitungAusWerten(w, 347)).toBeNull();
+    expect(istLeitungsWert(w[0])).toBe(true);
+  });
+
+  it('je Gruppe ein Wert: Untergruppe und Website stören sich nicht – auch wenn der Untergruppen-Wert die kleinere ID hat', async () => {
+    const s = fakeSpeicher();
+    await leitungSetzen(s.ort, [3323], 347);
+    await leitungSetzen(s.ort, [3290]);
+    expect(s.werte).toHaveLength(2);
+    expect(leitungAusWerten(s.werte)).toEqual([3290]);
+    expect(leitungAusWerten(s.werte, 347)).toEqual([3323]);
+    expect(leitungAusWerten(s.werte, 350)).toBeNull();
+    expect(s.werte.every(istLeitungsWert)).toBe(true);
+  });
+
+  it('der Wert der Website bleibt OHNE `gruppe` (abwärtskompatibel), der einer Untergruppe trägt sie', async () => {
+    const s = fakeSpeicher();
+    await leitungSetzen(s.ort, [3290]);
+    await leitungSetzen(s.ort, [3323], 347);
+    const inhalte = s.werte.map((w) => JSON.parse(w.value) as { gruppe?: number });
+    expect(inhalte.map((i) => i.gruppe)).toEqual([undefined, 347]);
+  });
+
+  it('ändern trifft nur den Wert der eigenen Gruppe', async () => {
+    const s = fakeSpeicher();
+    await leitungSetzen(s.ort, [3290]);
+    await leitungSetzen(s.ort, [3323], 347);
+    await leitungSetzen(s.ort, [3320], 347);
+    expect(s.werte).toHaveLength(2);
+    expect(leitungAusWerten(s.werte)).toEqual([3290]);
+    expect(leitungAusWerten(s.werte, 347)).toEqual([3320]);
+  });
+});

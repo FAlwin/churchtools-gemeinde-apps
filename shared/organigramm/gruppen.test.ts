@@ -3,6 +3,7 @@ import {
   baumAus,
   baumOhneTypen,
   elternAus,
+  kinderVon,
   knotenNachId,
   nachfahren,
   orgGruppenAus,
@@ -70,6 +71,23 @@ describe('elternAus', () => {
 
   it('eine Gruppe ist nicht ihre eigene Obergruppe', () => {
     expect(elternAus([{ groupId: 3, parents: [3] }]).get(3)).toBeUndefined();
+  });
+});
+
+describe('kinderVon (W3b-4a: Untergruppen der Website)', () => {
+  it('direkte Kinder aus parents UND children, Enkel nicht, sortiert', () => {
+    const e = elternAus([
+      { groupId: 344, children: [347] }, // nur von oben bekannt
+      { groupId: 350, parents: [344] }, // nur von unten bekannt
+      { groupId: 347, parents: [344], children: [360] }, // 360 = Enkel
+    ]);
+    expect(kinderVon(e, 344)).toEqual([347, 350]);
+    expect(kinderVon(e, 347)).toEqual([360]);
+  });
+
+  it('eine Gruppe ohne Kinder (oder unbekannt): leer', () => {
+    expect(kinderVon(elternAus([{ groupId: 344, parents: [1] }]), 344)).toEqual([]);
+    expect(kinderVon(elternAus([]), 344)).toEqual([]);
   });
 });
 

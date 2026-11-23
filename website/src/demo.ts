@@ -29,6 +29,12 @@
  *  - `?demo=aussehen-gesperrt` – wie `seiten`, aber das Aussehen (die Einstellungen) bearbeitet gerade jemand anderes.
  *  - `?demo=fehler` – ChurchTools antwortet nicht.
  *
+ * **Untergruppen (W3b-4a):** Die Gruppe „Website“ hat zwei direkte Untergruppen – „Website – Jugend“ (in allen eingerichteten
+ * Fällen eingerichtet: Kategorie `veroeffentlicht-g21`, Rechte nach der Regel) und „Website – Technik“ (nicht eingerichtet:
+ * Hinweis beim Start, unter „Wer darf was“ mit der Vorbelegung). „Website – Jugend – Band“ ist ein Enkel und zählt nicht.
+ * Ihre Rollen tragen eigene `group_role`-IDs (2101 …), an den Mitgliedern dieselben Gruppenart-Rollen (16/15) – verschieden
+ * wie in ChurchTools.
+ *
  * Alle Fälle mit Seiten haben gespeicherte Einstellungen (Farben, Schriften Quicksand und Caveat Brush) – der Reiter „Aussehen“
  * zeigt damit etwas. Die Schriften werden im Entwicklungsmodus wie im Bau als `data:`-Adresse nachgeladen.
  *
@@ -37,7 +43,7 @@
  */
 import { teileBauen } from '@shared/ct/teile';
 import { sperreVon } from '@shared/ct/sperre';
-import { kategorienFuer } from '@shared/website/einrichten';
+import { kategorienFuer, untergruppenKategorie } from '@shared/website/einrichten';
 import {
   einstellungenAlsText,
   seiteAlsText,
@@ -65,6 +71,11 @@ const MODUL = 40;
 const GRUPPE = 7;
 const ENTWUERFE = 201;
 const VEROEFFENTLICHT = 202;
+/** Die Untergruppen (W3b-4a): Jugend ist eingerichtet, Technik nicht; Band ist ein Enkel. */
+const JUGEND = 21;
+const TECHNIK = 22;
+const BAND = 23;
+const VEROEFFENTLICHT_JUGEND = 203;
 
 export function demoStarten(fall: string): void {
   // ChurchTools gibt der Erweiterung einen Behälter mit fester Höhe (gemessen 07.10.2026); auf der nackten
@@ -99,10 +110,12 @@ export function demoStarten(fall: string): void {
   ].includes(fall);
   const kategorien: { id: number; shorty: string; name: string }[] = [];
   const [e, v] = kategorienFuer(GRUPPE, 'Website');
+  const jugend = untergruppenKategorie(JUGEND, 'Website – Jugend');
   if (eingerichtet)
     kategorien.push(
       { id: ENTWUERFE, shorty: e.kuerzel, name: e.name },
       { id: VEROEFFENTLICHT, shorty: v.kuerzel, name: v.name },
+      { id: VEROEFFENTLICHT_JUGEND, shorty: jugend.kuerzel, name: jugend.name },
     );
 
   const werte = new Map<number, { id: number; dataCategoryId: number; value: string }[]>([
@@ -398,17 +411,55 @@ export function demoStarten(fall: string): void {
     { id: 3, groupTypeRoleId: 15, name: 'Mitarbeiter', isLeader: false, isActive: true },
     { id: 4, groupTypeRoleId: 18, name: 'Coach', isLeader: false, isActive: true },
   ];
+  /** Rollen der Untergruppen (W3b-4a): eigene `group_role`-IDs, dieselben Gruppenart-Rollen wie die Website. */
+  const untergruppenRollen = (basis: number) => [
+    { id: basis + 1, groupTypeRoleId: 16, name: 'Leiter', isLeader: true, isActive: true },
+    { id: basis + 2, groupTypeRoleId: 15, name: 'Mitarbeiter', isLeader: false, isActive: true },
+  ];
+  const ROLLEN_JE_GRUPPE = new Map<number, typeof ROLLEN>([
+    [JUGEND, untergruppenRollen(2100)],
+    [TECHNIK, untergruppenRollen(2200)],
+    [BAND, untergruppenRollen(2300)],
+  ]);
+  const GRUPPEN_NAMEN = new Map<number, string>([
+    [GRUPPE, 'Website'],
+    [JUGEND, 'Website – Jugend'],
+    [TECHNIK, 'Website – Technik'],
+    [BAND, 'Website – Jugend – Band'],
+  ]);
+  const hierarchie = [
+    { groupId: GRUPPE, parents: [], children: [JUGEND, TECHNIK] },
+    { groupId: JUGEND, parents: [GRUPPE], children: [BAND] },
+    { groupId: TECHNIK, parents: [GRUPPE], children: [] },
+    { groupId: BAND, parents: [JUGEND], children: [] },
+  ];
+  const kat = {
+    entwuerfe: ENTWUERFE,
+    veroeffentlicht: VEROEFFENTLICHT,
+    untergruppen: [{ gruppe: JUGEND, kategorie: VEROEFFENTLICHT_JUGEND }],
+  };
   const rollenRechte: Recht[] =
     fall === 'rechte-leer' || !eingerichtet
       ? []
-      : sollRechteWebsite(
-          [
-            { rolle: 2, stufe: 'leitung' },
-            { rolle: 3, stufe: 'redakteur' },
-          ],
-          { entwuerfe: ENTWUERFE, veroeffentlicht: VEROEFFENTLICHT },
-          NUMMERN,
-        );
+      : [
+          ...sollRechteWebsite(
+            [
+              { rolle: 2, stufe: 'leitung' },
+              { rolle: 3, stufe: 'redakteur' },
+            ],
+            kat,
+            NUMMERN,
+          ),
+          ...sollRechteWebsite(
+            [
+              { rolle: 2101, stufe: 'leitung' },
+              { rolle: 2102, stufe: 'redakteur' },
+            ],
+            kat,
+            NUMMERN,
+            kat.untergruppen[0],
+          ),
+        ];
   // Von Hand verändert: Mitarbeiter dürfen in „Veröffentlicht“ schreiben (statt nur lesen).
   if (fall === 'rechte-abweicht')
     rollenRechte.push({ rolle: 3, authId: NUMMERN.datenAnlegen, dataId: VEROEFFENTLICHT });
@@ -455,7 +506,15 @@ export function demoStarten(fall: string): void {
     if (pfad === '/config') return antwort({});
     if (pfad === '/permissions/global') return antwort(rechte());
     if (pfad === '/permissions/definitions') return antwort(definitionen);
-    if (/^\/groups\/\d+\/roles$/.test(pfad)) return antwort(ROLLEN);
+    const rollenPfad = /^\/groups\/(\d+)\/roles$/.exec(pfad);
+    if (rollenPfad) return antwort(ROLLEN_JE_GRUPPE.get(Number(rollenPfad[1])) ?? ROLLEN);
+    if (pfad === '/groups/hierarchies') return antwort(hierarchie);
+    const gruppenPfad = /^\/groups\/(\d+)$/.exec(pfad);
+    if (gruppenPfad) {
+      const id = Number(gruppenPfad[1]);
+      const name = GRUPPEN_NAMEN.get(id);
+      return name ? antwort({ id, name }) : antwort(null, 404);
+    }
     // Mails im Freigabe-Weg (W3b-3): Mitglieder der Gruppe (Jonas = Leiter, Helene je nach Fall), das alte Mail-Senden und das Protokoll – gesendet
     // wird nichts, es wird nur „angenommen“.
     if (/^\/groups\/\d+\/members$/.test(pfad))
@@ -514,6 +573,8 @@ export function demoStarten(fall: string): void {
         { id: 3, name: 'Gottesdienstteam' },
         { id: GRUPPE, name: 'Website' },
         { id: 9, name: 'Jugend' },
+        { id: JUGEND, name: 'Website – Jugend' },
+        { id: TECHNIK, name: 'Website – Technik' },
       ]);
     if (pfad === '/custommodules') return antwort([{ id: MODUL, shorty: 'website' }]);
     if (pfad === '/calendars')

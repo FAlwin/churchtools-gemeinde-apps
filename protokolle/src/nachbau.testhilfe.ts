@@ -24,6 +24,11 @@
  * `{status}` (ohne: `absent`). Jeder Eintrag setzt `hasEditingStarted` am Treffen. `teilnahmeSchlucken` antwortet 200
  * und speichert nichts.
  *
+ * Termin-Vorlagen und Tags (W15-1, gemessen 23.11.2026): `GET /calendars/appointments/templates` liefert `vorlagen`,
+ * `POST` legt eine an (mit `id`; `vorlagenSchlucken` sagt 201 und speichert nichts, `vorlagenFehler` antwortet mit einem
+ * Fehler – `angelegt` heißt: trotzdem gespeichert, `vorlagenLesenFehler` lässt das Lesen mit 500 scheitern); `GET /tags/appointment`
+ * liefert `tags`. `terminRumpf` ist der zuletzt gesendete Rumpf des `POST …/appointments`.
+ *
  * Beiträge (S6-2, gemessen 11.11.2026): `GET /post/groups` nennt die Gruppen aus `beitragsGruppen` (`type: postPossible`);
  * `POST /posts` legt an und liefert die ID, `GET /posts/{id}` liest nach (404, wenn es ihn nicht gibt).
  * `beitragFehler` antwortet dem `POST` mit einem Fehler – `angelegt` heißt: trotzdem angelegt; `beitragLesenFehler`
@@ -97,6 +102,15 @@ export interface Nachbau {
   terminFehler: AnlegeFehler | null;
   /** `GET` eines einzelnen Termins scheitert (500). */
   terminLesenFehler: boolean;
+  /** Der Rumpf des letzten `POST /calendars/{id}/appointments` – wie gesendet (W15-1). */
+  terminRumpf: Record<string, unknown> | null;
+  /** Termin-Vorlagen wie ChurchTools sie liefert (W15-1). */
+  vorlagen: Record<string, unknown>[];
+  vorlagenFehler: AnlegeFehler | null;
+  vorlagenSchlucken: boolean;
+  vorlagenLesenFehler: boolean;
+  /** Vorhandene Termin-Tags. */
+  tags: { id: number; name: string }[];
   /** Diese Personen nimmt ChurchTools beim Anlegen nicht als eingeladen an. */
   anfrageVerschluckt: Set<number>;
   treffenFehler: AnlegeFehler | null;
@@ -179,6 +193,12 @@ export function nachbauStarten(): Nachbau {
     terminAendernFehler: null,
     terminFehler: null,
     terminLesenFehler: false,
+    terminRumpf: null,
+    vorlagen: [],
+    vorlagenFehler: null,
+    vorlagenSchlucken: false,
+    vorlagenLesenFehler: false,
+    tags: [],
     anfrageVerschluckt: new Set(),
     treffenFehler: null,
     treffen: new Map(),
@@ -321,8 +341,22 @@ export function nachbauStarten(): Nachbau {
       const b = s.beitraege.find((x) => x.id === Number(einB[1]));
       return b ? json(200, { data: b }) : json(404, { message: 'Nicht gefunden' });
     }
+    if (pfad === '/calendars/appointments/templates') {
+      if (m === 'GET')
+        return s.vorlagenLesenFehler
+          ? json(500, { message: 'weg' })
+          : json(200, { data: s.vorlagen });
+      if (m === 'POST') {
+        const id = s.naechste++;
+        const f = s.vorlagenFehler;
+        if ((!f || f.angelegt) && !s.vorlagenSchlucken) s.vorlagen.push({ ...body, id });
+        return f ? fehlerAntwort(f) : json(201, { data: { id } });
+      }
+    }
+    if (pfad === '/tags/appointment') return json(200, { data: s.tags });
     const neuT = /^\/calendars\/(\d+)\/appointments$/.exec(pfad);
     if (neuT && m === 'POST') {
+      s.terminRumpf = body;
       const id = s.naechste++;
       const f = s.terminFehler;
       if (!f || f.angelegt)

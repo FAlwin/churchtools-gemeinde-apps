@@ -68,7 +68,7 @@ const frageVon = (e: OeffentlicheEinstellungen, schluessel: string) =>
   anmeldungsFragen(e).find((f) => frageSchluessel(f) === schluessel);
 
 /** Eine Zahl aus einem Zahlenfeld („3“, „2,5“) – `null`, wenn keine. */
-function zahlAus(text: string | null): number | null {
+export function zahlAus(text: string | null): number | null {
   if (text === null || text.trim() === '') return null;
   const n = Number(text.trim().replace(',', '.'));
   return Number.isFinite(n) ? n : null;

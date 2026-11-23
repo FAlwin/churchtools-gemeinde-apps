@@ -619,6 +619,32 @@ export interface TabellenWahl {
   fest: string[];
 }
 
+/**
+ * **Ein Filter auf eine Spalte der Tabelle** (R2, Entwurf `r2-u3-filter-ansichten-v1`, abgenommen 23.11.2026) – je nach
+ * Art der Spalte (`filterArt` in `tabellenFilter.ts`): gewählte Antworten („eine davon“), eine Zahl ab/bis oder ein Text
+ * ausgefüllt/leer/enthält. `spalte` ist der Spaltenschlüssel der Tabelle (`frage:<id>`, `betrag` …) – keine Personendaten.
+ */
+export type SpaltenFilter =
+  | { spalte: string; werte: string[] }
+  | { spalte: string; ab: number | null; bis: number | null }
+  | { spalte: string; text: 'ausgefuellt' | 'leer' | 'enthaelt'; suche?: string };
+
+/**
+ * **Eine eigene Ansicht des Teams** (U3, Entwurf `r2-u3-filter-ansichten-v1`, Entscheidungsliste E2/E3): ein Reiter mit
+ * Namen neben „Alle“ – Filter, Sortierung, „je Person“ und (wenn abweichend) eigene Spalten. Steht in den Einstellungen
+ * der Veranstaltung wie die Spaltenwahl, nur Spaltenschlüssel und Antworten des Formulars, keine Personendaten.
+ */
+export interface EigeneAnsicht {
+  /** Fest, auch nach Umbenennen – der Reiter merkt sich die Ansicht daran. */
+  id: string;
+  name: string;
+  filter: SpaltenFilter[];
+  jePerson?: boolean;
+  sortierung?: { schluessel: string; absteigend: boolean };
+  /** Eigene Spalten je Modus; fehlt einer, gilt die Spaltenwahl des Teams (`tabelle`). */
+  tabelle?: { anmeldung?: TabellenWahl; person?: TabellenWahl };
+}
+
 /** Name von Schritt 1, solange keiner eingetragen ist (Klick-Runde 8). */
 export const ERSTER_SCHRITT = 'Deine Angaben';
 
@@ -687,6 +713,8 @@ export interface OeffentlicheEinstellungen {
    * Team. Fehlt eine Ansicht = Vorgabe (`tabelle.ts`). Nur Spaltenschlüssel, keine Personendaten.
    */
   tabelle?: { anmeldung?: TabellenWahl; person?: TabellenWahl };
+  /** **Eigene Ansichten** des Teams (U3) – höchstens `ANSICHTEN_MAX`; fehlt = keine. Bei „wie frühere“ mitkopiert. */
+  ansichten?: EigeneAnsicht[];
   /**
    * **Kopiert von** (A9-2a): die Veranstaltung, aus der diese mit „Wie eine frühere Veranstaltung“ entstand. Beim
    * Freigeben übernimmt die Erweiterung von dort den eigenen Mailtext (er steht in deren Routinen, die nicht mitkopiert
@@ -798,6 +826,37 @@ const tabellenWahlSchema = z.object({
   reihe: spaltenSchluessel,
   aus: spaltenSchluessel,
   fest: spaltenSchluessel,
+});
+
+const spaltenFilterSchema = z.union([
+  z.object({
+    spalte: z.string().max(60),
+    werte: z.array(z.string().max(120)).max(40),
+  }),
+  z.object({
+    spalte: z.string().max(60),
+    ab: z.number().finite().nullable(),
+    bis: z.number().finite().nullable(),
+  }),
+  z.object({
+    spalte: z.string().max(60),
+    text: z.enum(['ausgefuellt', 'leer', 'enthaelt']),
+    suche: z.string().max(40).optional(),
+  }),
+]);
+/** Höchstens so viele eigene Ansichten je Veranstaltung (Entscheidungsliste E3: Platz der Einstellungen). */
+export const ANSICHTEN_MAX = 12;
+/** Höchstlänge des Namens einer Ansicht (Reiter). */
+export const ANSICHT_NAME_MAX = 30;
+const eigeneAnsichtSchema = z.object({
+  id: z.string().regex(/^[a-z0-9]{1,12}$/),
+  name: z.string().min(1).max(ANSICHT_NAME_MAX),
+  filter: z.array(spaltenFilterSchema).max(20),
+  jePerson: z.boolean().optional(),
+  sortierung: z.object({ schluessel: z.string().max(60), absteigend: z.boolean() }).optional(),
+  tabelle: z
+    .object({ anmeldung: tabellenWahlSchema.optional(), person: tabellenWahlSchema.optional() })
+    .optional(),
 });
 
 const einstellungenSchema = z.object({
@@ -914,6 +973,8 @@ const einstellungenSchema = z.object({
   tabelle: z
     .object({ anmeldung: tabellenWahlSchema.optional(), person: tabellenWahlSchema.optional() })
     .optional(),
+  // Seit U3: nur, wenn das Team eigene Ansichten angelegt hat (hält die Einstellungen kurz).
+  ansichten: z.array(eigeneAnsichtSchema).max(ANSICHTEN_MAX).optional(),
   kopieVon: z.number().int().positive().optional(),
 });
 

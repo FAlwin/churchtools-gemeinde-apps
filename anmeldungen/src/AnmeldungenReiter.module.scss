@@ -478,3 +478,48 @@
     color: var(--text2);
   }
 }
+
+// Filter-Chips und „n von m Anmeldungen“ (R2) – eingerückt wie die Werkzeugzeile darüber.
+.filterKopf {
+  padding: 0 12px;
+}
+
+// „n von m Anmeldungen“ unter den Filter-Chips – die Summen der Tabelle zählen nur das Gefilterte.
+.filterStand {
+  margin: 4px 0 8px;
+  color: var(--text2);
+  font-size: 13px;
+}
+
+// Was eine neue Ansicht mitnimmt (U3, Fenster „Als Ansicht speichern“).
+.ansichtWas {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 12px;
+  font-size: 13.5px;
+
+  > div {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    gap: 8px;
+  }
+
+  dt {
+    color: var(--text2);
+    font-weight: 600;
+  }
+
+  dd {
+    margin: 0;
+  }
+}
+
+// „Ansicht … gelöscht. Rückgängig“ direkt unter den Reitern (U3).
+.ansichtWeg {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 12px 0;
+  font-size: 13.5px;
+}

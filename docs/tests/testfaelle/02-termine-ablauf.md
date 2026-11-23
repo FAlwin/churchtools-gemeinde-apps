@@ -487,6 +487,69 @@ Live-Agenda desselben Termins.
 
 </details>
 
+### TF-ABLAUF-47 · „Live“: Plus/Minus je Punkt, „Ende voraussichtlich“ und „Warum“
+
+**Das brauchst du:** Einen Test-Termin heute mit Ablauf (mehrere Punkte à 2–5 Minuten); du darfst steuern. Eine zweite Person,
+die den Ablauf sehen, aber **nicht** steuern darf. In ChurchTools hat die Ablage **„Live-Verlauf“** des Dienstplaners (legt die App
+beim ersten Wechsel selbst an, wenn du Kategorien anlegen darfst) für alle mit Ablauf **Daten sehen** und für alle, die steuern
+dürfen, **Daten anlegen, ändern** (`docs/betrieb/DIENSTPLANER.md`, Rechte-Tabelle).
+
+**Das muss passieren:** Jeder erledigte Punkt zeigt rechts sein **±** (geplante minus gelaufene Dauer, **grün +** = schneller,
+**rot −** = überzogen). Unter Kreis und Zeitkonto steht **„Ende voraussichtlich hh:mm“** (Plan-Ende minus Zeitkonto, „wenn der Rest
+nach Plan läuft“) und darunter **„Warum“** mit den drei Punkten, die am meisten abweichen.
+
+1. Live starten, einen Punkt **früher** weiterklicken (z. B. 40 Sekunden) → der erledigte Punkt zeigt **+0:40** (grün), das Zeitkonto
+   **+0:40 gespart**, „Ende voraussichtlich“ steht **eine Minute früher** als der Plan (auf die Minute gerundet), „Warum“ nennt den Punkt.
+2. Einen Punkt **überziehen** lassen und weiterklicken → **−…** in Rot am Punkt, „Ende voraussichtlich“ später und **rot**; „Warum“ ordnet
+   nach Betrag (Plus und Minus gemischt), höchstens drei. Zieht der **laufende** Punkt gerade über, steht er schon im „Warum“ (aber noch ohne ± in der Liste).
+3. **+1 Min** drücken → ± und Prognose bleiben unverändert (sie rechnen gegen den ursprünglichen Plan).
+4. Dieselbe Ansicht auf dem Gerät der zweiten Person (nur Folgen): **dieselben ±, dieselbe Prognose** – und es wird nichts geschrieben.
+5. Eine Person **ohne** Recht, den Live-Verlauf zu sehen: ± und „Warum“ fehlen **leise** (keine Fehlermeldung), Kreis, Zeitkonto und Liste laufen wie sonst.
+6. **Nachtragen:** In der **ChurchTools-App** (oder im Web) einen Punkt weiterschalten, während der Dienstplaner offen ist → nach
+   ca. 10 Sekunden steht das ± des erledigten Punkts auch hier. Der Wechsel steht **einmal** im Verlauf, auch wenn zwei Geräte offen sind.
+7. **Handy (375 px):** „Ende voraussichtlich“ und „Warum“ stehen unter Kreis und Zeitkonto, nichts läuft aus dem Bild; das ± steht am
+   rechten Rand der ersten Zeile des Punkts.
+8. **Demo** (`npm run dev -w dienstplaner`, `…/?demo`): „Gottesdienst (Live-Probe)“ → „Live“ → ein paar Mal **Weiter**: ±, Prognose und „Warum“ erscheinen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/ct/liveVerlauf.ts`, `shared/dienstplan/liveVerlaufSpeicher.ts`, `dienstplaner/src/useVerlauf.ts`, `dienstplaner/src/ladeVerlauf.ts`, `dienstplaner/src/LiveAnsicht.tsx`, `dienstplaner/src/LiveAnsicht.module.scss`, `dienstplaner/src/demo.ts`
+- **Automatisiert:** ja – `shared/ct/liveVerlauf.test.ts` (Zusammenführen ohne Doppel, ±, „Warum“, Prognose, Nachtragen), `shared/dienstplan/liveVerlaufSpeicher.test.ts` (Lesen/Schreiben, zwei Geräte, Fehlerzweige vorübergehend/403/401/verschluckt, zu groß), `dienstplaner/src/LiveAnsicht.verlauf.test.tsx` (Anzeige, Nachtragen mit Fake-Timern, ohne Recht/ohne Verlauf, überschrieben von einem anderen Gerät); von Hand bleiben die Rechte an der Ablage in ChurchTools, zwei Geräte und das Aussehen
+- **Historie:** Live-Ansicht 2, L4-3 (23.11.2026, Entwurf `entwurf/live-2.html` Abschnitt 3/3b, Entscheidungen A14, T4/T8)
+
+</details>
+
+### TF-ABLAUF-48 · „Live“: Fehlklick zählt nicht
+
+**Das brauchst du:** Wie TF-ABLAUF-47; dazu in ChurchTools die **Live-Agenda desselben Termins** (CT-App oder CT-Web) auf einem zweiten Gerät.
+
+**Das muss passieren:** Kommt man auf einen Punkt zurück und war **alles dazwischen kürzer als 30 Sekunden** dran, läuft der Punkt mit
+seiner alten Zeit weiter, als wäre man nie weg gewesen. Die kurzen Stopps zählen nicht als gelaufen. Unten steht etwa 5 Sekunden
+**„Zeit läuft weiter – Fehlklick nicht gezählt · Neu starten“**.
+
+1. Punkt A läuft schon eine Minute. **Weiter** (auf B) und nach wenigen Sekunden **Zurück** → A zeigt weiter die **alte Restzeit** (nicht
+   wieder die volle Dauer), das **Zeitkonto bleibt gleich**, unten steht der Hinweis und verschwindet nach ca. 5 Sekunden. B bekommt **kein ±**.
+2. In der **ChurchTools-Live-Agenda** zeigt der Punkt A **dieselbe Restzeit** (CT bekommt sie über die Zusatzzeit ausgeglichen; dort steht
+   dann eine krumme Zusatzzeit). **+1 Min** verlängert A danach um genau eine Minute.
+3. **Zurück → Weiter:** auf B, **Zurück** auf A und gleich wieder **Weiter** → B läuft mit seiner alten Zeit weiter (Hinweis wie oben).
+4. **Mehrere Schritte:** Weiter, Weiter, Zurück, Zurück innerhalb weniger Sekunden → wieder bei A, alte Zeit.
+5. **Neu starten** im Hinweis → der Punkt beginnt **von vorn** (volle Dauer, wie ein normaler Wechsel), der Hinweis ist weg; in der
+   ChurchTools-Live-Agenda steht wieder die volle Dauer ohne Zusatzzeit. Auch nach dem nächsten Neuladen bleibt es so.
+6. War der Punkt dazwischen **30 Sekunden oder länger** dran → ein normaler Wechsel: kein Hinweis, der Punkt beginnt von vorn.
+7. Auf einem zweiten Dienstplaner-Gerät (nur Folgen) zeigt die Restzeit nach ein paar Sekunden dieselbe Zahl; **ohne Steuer-Recht** gibt
+   es weder Hinweis noch „Neu starten“.
+8. **Demo:** „Gottesdienst (Live-Probe)“ → **Weiter**, gleich **Zurück** → Hinweis mit „Neu starten“.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/ct/liveVerlauf.ts`, `shared/ct/liveAgenda.ts`, `dienstplaner/src/LiveAnsicht.tsx`, `dienstplaner/src/useVerlauf.ts`, `dienstplaner/src/demo.ts`
+- **Automatisiert:** ja – `shared/ct/liveVerlauf.test.ts` (Fortsetzung bei < 30 s, Grenze 29/30 s, mehrere Schritte, „Neu starten“, `wirksamerStand`, Ausgleich = alte Zusatzzeit − gelaufene Sekunden), `dienstplaner/src/LiveAnsicht.verlauf.test.tsx` (Hinweis 5 s mit Fake-Timern, Restzeit, Ausgleichs-Schreiben, „Neu starten“, Ausgleich scheitert); von Hand bleiben der Vergleich mit der echten CT-Live-Agenda (krumme Zusatzzeit in CT-App/CT-Web) und zwei Geräte
+- **Historie:** Live-Ansicht 2, L4-3 (23.11.2026, Entscheidung A19, T9; `addseconds` nimmt Sekunden – gemessen L4-0)
+
+</details>
+
 ### TF-ABLAUF-16 · „Weitere Infos“ am Termin
 
 **Das brauchst du:** Einen Test-Termin, an dem in ChurchTools unter „i“ (Weitere Infos) zwei Zeilen stehen; eine

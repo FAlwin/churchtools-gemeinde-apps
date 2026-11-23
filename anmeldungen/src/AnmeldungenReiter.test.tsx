@@ -26,6 +26,7 @@ import {
   stand,
 } from '@shared/anmeldung/liste.testdaten';
 import { mitgliederstandAus } from '@shared/anmeldung/liste';
+import { antworten } from '@shared/anmeldung/senden.testdaten';
 import { EMPFOHLEN } from '@shared/anmeldung/baukasten';
 import type { Feld } from '@shared/anmeldung/formular';
 
@@ -346,15 +347,15 @@ describe('Tabelle (U2-1)', () => {
     zeigen(zwei());
     expect(nummern()).toEqual(['AAAAAA', 'BBBBBB']);
     const personen = () => screen.getByRole('columnheader', { name: /Personen/ });
-    fireEvent.click(within(personen()).getByRole('button'));
+    fireEvent.click(within(personen()).getByRole('button', { name: 'Personen' }));
     expect(personen().getAttribute('aria-sort')).toBe('ascending');
     expect(nummern()).toEqual(['BBBBBB', 'AAAAAA']);
-    fireEvent.click(within(personen()).getByRole('button'));
+    fireEvent.click(within(personen()).getByRole('button', { name: 'Personen' }));
     expect(personen().getAttribute('aria-sort')).toBe('descending');
     expect(nummern()).toEqual(['AAAAAA', 'BBBBBB']);
-    fireEvent.click(within(personen()).getByRole('button'));
+    fireEvent.click(within(personen()).getByRole('button', { name: 'Personen' }));
     expect(personen().getAttribute('aria-sort')).toBeNull();
-    fireEvent.click(within(personen()).getByRole('button'));
+    fireEvent.click(within(personen()).getByRole('button', { name: 'Personen' }));
     fireEvent.click(screen.getByRole('button', { name: /^Zahlung offen/ }));
     expect(personen().getAttribute('aria-sort')).toBeNull();
   });
@@ -428,7 +429,7 @@ describe('Je Person (U2-2)', () => {
     zeigen(fertig());
     jePerson();
     const alter = () => screen.getByRole('columnheader', { name: /Alter/ });
-    fireEvent.click(within(alter()).getByRole('button'));
+    fireEvent.click(within(alter()).getByRole('button', { name: 'Alter' }));
     expect(personen()[0]).toMatch(/^Lena/);
     fireEvent.click(screen.getByRole('button', { name: 'Je Anmeldung' }));
     jePerson();
@@ -1300,6 +1301,388 @@ describe('Rundmail (A7-5)', () => {
     expect(
       screen.getByRole<HTMLButtonElement>('button', { name: 'Ja, 1 Mail senden' }).disabled,
     ).toBe(true);
+  });
+});
+
+describe('Filter über die Spaltenüberschrift (R2)', () => {
+  // AAAAAA bezahlt, BBBBBB und CCCCCC offen; in CCCCCC keine Allergien und kein Telefon.
+  const ohneAllergie = () => {
+    const a = antworten();
+    a.anmeldung.tel = '';
+    a.personen = a.personen.map((p) => ({ ...p, allergy: '' }));
+    return a;
+  };
+  // Jede Anmeldung mit eigener Adresse – die Rundmail zählt Mails je Anmeldung.
+  const mitAdresse = new Map([
+    ...PERSONEN,
+    ...[20, 21, 30, 31].map(
+      (id) => [id, { ...PERSONEN.get(10)!, email: `p${id}@beispiel.test` }] as const,
+    ),
+  ]);
+  const drei = () =>
+    ({
+      art: 'fertig',
+      stand: {
+        ...mitgliederstandAus(
+          [
+            ...mitglieder('AAAAAA', [true, true], 10, { bezahlt: true }),
+            ...mitglieder('BBBBBB', [true, false], 20),
+            ...mitglieder('CCCCCC', [true, true], 30, { antworten: ohneAllergie() }),
+          ],
+          [dazu(10, '2026-10-17'), dazu(20, '2026-10-18'), dazu(30, '2026-10-19')],
+          FELDER,
+          new Set([35]),
+          mitAdresse,
+        ),
+        verlaufGekuerzt: false,
+      },
+    }) as const;
+  const nummern = () =>
+    within(screen.getByRole('table', { name: 'Anmeldungen' }))
+      .getAllByRole('row')
+      .map((r) => /[A-Z]{6}/.exec(r.textContent ?? '')?.[0])
+      .filter(Boolean);
+  // Über dem Fenster steht der Kurzname der Spalte (lange Fragen gekürzt).
+  const fenster = (name: string) =>
+    screen.getByRole('dialog', { name: new RegExp(`^${name.slice(0, 20)}`) });
+  /** Eine Antwort ankreuzen bzw. eine Art wählen – Antworten heißen mit ihrer Anzahl („offen (2)“). */
+  const wahlIn = (f: HTMLElement, wahl: string) =>
+    within(f).queryByRole('checkbox', { name: new RegExp(`^${wahl} \\(`) }) ??
+    within(f).getByLabelText(wahl);
+  const chips = () => screen.queryAllByTitle('Filter ändern').map((c) => c.textContent);
+  const filtern = (spalte: string, wahl: string, weiter?: () => void) => {
+    fireEvent.click(screen.getByRole('button', { name: `Nach „${spalte}“ filtern` }));
+    const f = fenster(spalte);
+    fireEvent.click(wahlIn(f, wahl));
+    weiter?.();
+    fireEvent.click(within(f).getByRole('button', { name: 'Anwenden' }));
+  };
+  const summe = () =>
+    screen.getByRole('table', { name: 'Anmeldungen' }).querySelector('tfoot')!.textContent;
+
+  it('Trichter öffnet das Fenster dort: Antworten mit Anzahl; Anwenden filtert Zeilen und Summen, „n von m“', () => {
+    zeigen(drei());
+    expect(nummern()).toEqual(['AAAAAA', 'BBBBBB', 'CCCCCC']);
+    expect(screen.queryByText(/von 3/)).toBeNull();
+    // Name, Nr. und „Angemeldet am“ findet die Suche bzw. gibt es nicht zum Filtern.
+    for (const k of ['Name', 'Nr.', 'Angemeldet am'])
+      expect(screen.queryByRole('button', { name: `Nach „${k}“ filtern` })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Nach „Bezahlt“ filtern' }));
+    const f = fenster('Bezahlt');
+    expect(within(f).getByRole('checkbox', { name: 'bezahlt (1)' })).toBeTruthy();
+    expect(within(f).getByRole('checkbox', { name: 'offen (2)' })).toBeTruthy();
+    expect(within(f).getByRole<HTMLButtonElement>('button', { name: 'Anwenden' }).disabled).toBe(
+      true,
+    );
+    fireEvent.click(wahlIn(f, 'offen'));
+    fireEvent.click(within(f).getByRole('button', { name: 'Anwenden' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(nummern()).toEqual(['BBBBBB', 'CCCCCC']);
+    expect(screen.getByText('2 von 3').parentElement!.textContent).toBe('2 von 3 Anmeldungen');
+    expect(chips()).toEqual(['Bezahlt: offen']);
+    // Summen nur über das Gefilterte: 6 € + 12 € offen.
+    expect(summe()).toMatch(/2 Anmeldungen/);
+    expect(summe()).toMatch(/18,00 €/);
+    // Die festen Reiter zählen weiter alle.
+    expect(screen.getByRole('button', { name: 'Alle 3' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Filter „Bezahlt“ ändern' })).toBeTruthy();
+  });
+
+  it('mehrere Filter gelten zusammen; × und „Alle Filter entfernen“; ein anderer Reiter beginnt ohne Filter', () => {
+    zeigen(drei());
+    filtern('Bezahlt', 'offen');
+    filtern('Telefon', 'ist leer');
+    expect(nummern()).toEqual(['CCCCCC']);
+    expect(screen.getByText('1 von 3')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Filter „Telefon“ entfernen' }));
+    expect(nummern()).toEqual(['BBBBBB', 'CCCCCC']);
+    fireEvent.click(screen.getByRole('button', { name: 'Alle Filter entfernen' }));
+    expect(nummern()).toEqual(['AAAAAA', 'BBBBBB', 'CCCCCC']);
+    expect(chips()).toEqual([]);
+    filtern('Telefon', 'ist ausgefüllt');
+    expect(nummern()).toEqual(['AAAAAA', 'BBBBBB']);
+    fireEvent.click(screen.getByRole('button', { name: /^Zahlung offen/ }));
+    expect(chips()).toEqual([]);
+    expect(nummern()).toEqual(['BBBBBB', 'CCCCCC']);
+  });
+
+  it('Zahl ab/bis; passt nichts, steht es da – mit „Alle Filter entfernen“', () => {
+    zeigen(drei());
+    fireEvent.click(screen.getByRole('button', { name: 'Nach „Betrag“ filtern' }));
+    fireEvent.change(within(fenster('Betrag')).getByLabelText('ab'), { target: { value: '7' } });
+    fireEvent.click(within(fenster('Betrag')).getByRole('button', { name: 'Anwenden' }));
+    expect(nummern()).toEqual(['AAAAAA', 'CCCCCC']);
+    expect(chips()).toEqual(['Betrag: ab 7 €']);
+    filtern('Bezahlt', 'bezahlt');
+    filtern('Telefon', 'ist leer');
+    expect(screen.queryByRole('table', { name: 'Anmeldungen' })).toBeNull();
+    expect(screen.getByText(/Keine Anmeldung passt zu den Filtern/)).toBeTruthy();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Alle Filter entfernen' })[0]);
+    expect(nummern()).toEqual(['AAAAAA', 'BBBBBB', 'CCCCCC']);
+  });
+
+  it('Chip antippen öffnet den Filter wieder (gewählt, was gilt); „Filter entfernen“; Escape schließt', () => {
+    zeigen(drei());
+    filtern('Bezahlt', 'offen');
+    fireEvent.click(screen.getByTitle('Filter ändern'));
+    const f = fenster('Bezahlt');
+    expect(wahlIn(f, 'offen')).toHaveProperty('checked', true);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Filter „Bezahlt“ ändern' }));
+    fireEvent.click(within(fenster('Bezahlt')).getByRole('button', { name: 'Filter entfernen' }));
+    expect(nummern()).toEqual(['AAAAAA', 'BBBBBB', 'CCCCCC']);
+    expect(chips()).toEqual([]);
+  });
+
+  it('je Person filtert Personen; zurück je Anmeldung zählt eine Anmeldung, wenn eine Person passt (E4)', () => {
+    zeigen(drei());
+    fireEvent.click(screen.getByRole('button', { name: 'Je Person' }));
+    filtern('Allergien oder Unverträglichkeiten', 'ist ausgefüllt');
+    const leute = within(screen.getByRole('table', { name: 'Personen' }))
+      .getAllByRole('row')
+      .slice(1, -1)
+      .map((r) => /^(Jonas|Lena)/.exec(r.textContent ?? '')?.[0]);
+    expect(leute).toEqual(['Jonas', 'Jonas']);
+    expect(screen.getByText('2 von 6').parentElement!.textContent).toBe('2 von 6 Personen');
+    // Die Anzahl hinter jeder Antwort rechnet mit den übrigen Filtern: nur noch die beiden mit Allergie.
+    fireEvent.click(screen.getByRole('button', { name: /^Nach „Dürfen Fotos/ }));
+    const fotos = fenster('Dürfen Fotos');
+    expect(within(fotos).getByRole('checkbox', { name: 'Ja (2)' })).toBeTruthy();
+    expect(within(fotos).getByRole('checkbox', { name: 'Nein (0)' })).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.click(screen.getByRole('button', { name: 'Je Anmeldung' }));
+    expect(nummern()).toEqual(['AAAAAA', 'BBBBBB']);
+    expect(chips()[0]).toMatch(/^Allergien.*: ausgefüllt$/);
+  });
+
+  it('Rundmail nimmt das Gefilterte – ohne Wahl „Alle / Zahlung offen / Warteliste“', async () => {
+    rm.platzhalterLaden.mockResolvedValue(new Map());
+    zeigen(drei());
+    filtern('Bezahlt', 'offen');
+    menuPunkt('Rundmail an diese 2');
+    const f = screen.getByRole('dialog', { name: /Rundmail/ });
+    expect(
+      within(f).getByText(/Die gefilterten Anmeldungen der Tabelle: Bezahlt: offen/),
+    ).toBeTruthy();
+    expect(within(f).queryByRole('button', { name: /^Alle Anmeldungen/ })).toBeNull();
+    expect(within(f).getByText(/2 Mails/)).toBeTruthy();
+    // Ohne Filter wie bisher: die Wahl und alle drei.
+    fireEvent.click(within(f).getByRole('button', { name: 'Fenster schließen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Alle Filter entfernen' }));
+    menuPunkt('Rundmail');
+    const g = screen.getByRole('dialog', { name: /Rundmail/ });
+    expect(within(g).getByRole('button', { name: 'Alle Anmeldungen 3' })).toBeTruthy();
+    expect(within(g).getByText(/3 Mails/)).toBeTruthy();
+  });
+
+  it('⋯ zählt je Person die Personen der Druckliste, die Rundmail Anmeldungen (eine Mail je Anmeldung)', () => {
+    zeigen(drei());
+    fireEvent.click(screen.getByRole('button', { name: 'Je Person' }));
+    filtern('Bezahlt', 'offen');
+    fireEvent.click(screen.getByRole('button', { name: 'Mehr zur Liste' }));
+    const punkte = screen.getAllByRole('menuitem').map((m) => m.textContent);
+    expect(punkte).toContain('Druckliste (nur diese 4)');
+    expect(punkte).toContain('Rundmail an diese 2');
+  });
+
+  it('Druckliste nimmt das Gefilterte – mit Filter je Person nur die passenden Personen', async () => {
+    zeigen(drei());
+    filtern('Telefon', 'ist ausgefüllt');
+    fireEvent.click(screen.getByRole('button', { name: 'Je Person' }));
+    filtern('Allergien oder Unverträglichkeiten', 'ist ausgefüllt');
+    // Je Person zählt der Menüpunkt die Personen – wie die Tabelle.
+    menuPunkt('Druckliste (nur diese 2)');
+    const f = screen.getByRole('dialog', { name: /Druckliste/ });
+    expect(within(f).getByText(/Nur, wer zu den Filtern der Tabelle passt/)).toBeTruthy();
+    const vorschau = within(f).getByLabelText('Vorschau');
+    expect(within(vorschau).getAllByText('Beispiel, Jonas')).toHaveLength(2);
+    expect(within(vorschau).queryByText('Beispiel, Lena')).toBeNull();
+  });
+
+  describe('Eigene Ansichten (U3)', () => {
+    beforeEach(() => {
+      em.aendereEinstellungen.mockReset();
+      em.aendereEinstellungen.mockResolvedValue(e());
+    });
+    /** Was gespeichert würde – die Änderung, angewandt auf die frisch gelesenen Einstellungen. */
+    const gespeichert = (x = e(), nr = 0) =>
+      em.aendereEinstellungen.mock.calls[nr][1](x).ansichten ?? [];
+    const mitAnsichten = () => ({
+      ...e(),
+      ansichten: [
+        { id: 'offen', name: 'Noch offen', filter: [{ spalte: 'bezahlt', werte: ['offen'] }] },
+        {
+          id: 'allerg',
+          name: 'Allergien',
+          filter: [{ spalte: 'frage:allergy', text: 'ausgefuellt' as const }],
+          jePerson: true,
+        },
+      ],
+    });
+    const zeigenMit = (darf = true) =>
+      zeigen(drei(), 10, false, darf, false, false, mitAnsichten());
+    const reiter = (name: RegExp) => screen.getByRole('button', { name });
+
+    it('„Als Ansicht speichern“: Name, was mitkommt, fürs Team – danach eigener Reiter mit Punkt', () => {
+      zeigen(drei());
+      // Ohne Filter gibt es nichts zu speichern.
+      expect(screen.queryByRole('button', { name: 'Als Ansicht speichern' })).toBeNull();
+      filtern('Bezahlt', 'offen');
+      fireEvent.click(screen.getByRole('button', { name: 'Als Ansicht speichern' }));
+      const f = screen.getByRole('dialog', { name: 'Als Ansicht speichern' });
+      expect(within(f).getByText('Bezahlt: offen')).toBeTruthy();
+      expect(within(f).getByText(/ganze Team/)).toBeTruthy();
+      fireEvent.click(within(f).getByRole('button', { name: 'Speichern' }));
+      expect(within(f).getByRole('alert').textContent).toBe('Bitte einen Namen eingeben.');
+      fireEvent.change(within(f).getByLabelText('Name der Ansicht'), { target: { value: 'alle' } });
+      fireEvent.click(within(f).getByRole('button', { name: 'Speichern' }));
+      expect(within(f).getByRole('alert').textContent).toBe('„alle“ gibt es schon.');
+      fireEvent.change(within(f).getByLabelText('Name der Ansicht'), {
+        target: { value: 'Noch offen' },
+      });
+      fireEvent.click(within(f).getByRole('button', { name: 'Speichern' }));
+      expect(screen.queryByRole('dialog')).toBeNull();
+      const neu = reiter(/^Noch offen 2/);
+      expect(neu.getAttribute('aria-pressed')).toBe('true');
+      expect(neu.getAttribute('title')).toBe('Eigene Ansicht des Teams');
+      expect(chips()).toEqual(['Bezahlt: offen']);
+      const [a] = gespeichert();
+      expect(a).toMatchObject({
+        name: 'Noch offen',
+        filter: [{ spalte: 'bezahlt', werte: ['offen'] }],
+      });
+      expect(a.id).toMatch(/^[a-z0-9]+$/);
+      // Zurück in „Alle“: dort gilt der Filter nicht – in der Ansicht schon.
+      fireEvent.click(reiter(/^Alle \d/));
+      expect(nummern()).toEqual(['AAAAAA', 'BBBBBB', 'CCCCCC']);
+      fireEvent.click(reiter(/^Noch offen/));
+      expect(nummern()).toEqual(['BBBBBB', 'CCCCCC']);
+    });
+
+    it('Ansicht öffnen bringt Filter und „je Person“ mit; ändern → „Verwerfen“ / „Änderungen speichern“', () => {
+      zeigenMit();
+      expect(reiter(/^Noch offen 2/)).toBeTruthy();
+      expect(reiter(/^Allergien 2/)).toBeTruthy();
+      fireEvent.click(reiter(/^Allergien/));
+      expect(screen.getByRole('table', { name: 'Personen' })).toBeTruthy();
+      expect(chips()).toEqual(['Allergien oder Unverträglichk…: ausgefüllt']);
+      expect(screen.queryByRole('button', { name: 'Änderungen speichern' })).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Alle Filter entfernen' }));
+      expect(screen.getByText('Diese Ansicht hat keinen Filter.')).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Verwerfen' }));
+      expect(chips()).toEqual(['Allergien oder Unverträglichk…: ausgefüllt']);
+      fireEvent.click(screen.getByRole('button', { name: 'Je Anmeldung' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Änderungen speichern' }));
+      expect(gespeichert(mitAnsichten())[1]).toEqual({
+        id: 'allerg',
+        name: 'Allergien',
+        filter: [{ spalte: 'frage:allergy', text: 'ausgefuellt' }],
+      });
+      expect(screen.queryByRole('button', { name: 'Änderungen speichern' })).toBeNull();
+    });
+
+    it('⋯ → Diese Ansicht: umbenennen, nach rechts, löschen mit „Rückgängig“ direkt darunter', () => {
+      zeigenMit();
+      fireEvent.click(reiter(/^Noch offen/));
+      fireEvent.click(screen.getByRole('button', { name: 'Mehr zur Liste' }));
+      const punkte = screen.getAllByRole('menuitem').map((m) => m.textContent);
+      expect(punkte.slice(0, 5)).toEqual([
+        'Ansicht umbenennen',
+        'Spalten dieser Ansicht',
+        'Ansicht nach links',
+        'Ansicht nach rechts',
+        'Ansicht löschen',
+      ]);
+      expect(
+        screen.getByRole<HTMLButtonElement>('menuitem', { name: 'Ansicht nach links' }).disabled,
+      ).toBe(true);
+      expect(punkte).not.toContain('Spalten');
+      expect(punkte).toContain('Rundmail an diese 2');
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Ansicht nach rechts' }));
+      expect(gespeichert(mitAnsichten()).map((x: { id: string }) => x.id)).toEqual([
+        'allerg',
+        'offen',
+      ]);
+      menuPunkt('Ansicht umbenennen');
+      const f = screen.getByRole('dialog', { name: 'Ansicht umbenennen' });
+      fireEvent.change(within(f).getByLabelText('Name der Ansicht'), {
+        target: { value: 'Offen' },
+      });
+      fireEvent.click(within(f).getByRole('button', { name: 'Speichern' }));
+      expect(reiter(/^Offen 2/)).toBeTruthy();
+      menuPunkt('Ansicht löschen');
+      expect(screen.queryByRole('button', { name: /^Offen/ })).toBeNull();
+      expect(reiter(/^Alle \d/).getAttribute('aria-pressed')).toBe('true');
+      expect(screen.getByRole('status').textContent).toMatch(/^Ansicht „Offen“ gelöscht\./);
+      fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+      expect(reiter(/^Offen 2/).getAttribute('aria-pressed')).toBe('true');
+      expect(chips()).toEqual(['Bezahlt: offen']);
+      expect(em.aendereEinstellungen).toHaveBeenCalledTimes(4);
+    });
+
+    it('„Spalten dieser Ansicht“ merkt die Spalten in der Ansicht – die des Teams bleiben', () => {
+      zeigenMit();
+      fireEvent.click(reiter(/^Noch offen/));
+      menuPunkt('Spalten dieser Ansicht');
+      const f = screen.getByRole('dialog');
+      fireEvent.click(within(f).getByRole('checkbox', { name: 'Angemeldet am' }));
+      fireEvent.click(within(f).getByRole('button', { name: 'Übernehmen' }));
+      expect(spaltenKoepfe().map((k) => k.textContent)).not.toContain('Angemeldet am');
+      const [offen] = gespeichert(mitAnsichten());
+      expect(offen.tabelle?.anmeldung?.aus).toContain('am');
+      expect(em.aendereEinstellungen.mock.calls[0][1](mitAnsichten()).tabelle).toBeUndefined();
+      // In „Alle“ steht die Spalte weiter.
+      fireEvent.click(reiter(/^Alle \d/));
+      expect(spaltenKoepfe().map((k) => k.textContent)).toContain('Angemeldet am');
+    });
+
+    it('„＋ Ansicht“ legt eine leere Ansicht an; höchstens 12', () => {
+      zeigen(drei());
+      fireEvent.click(screen.getByRole('button', { name: '＋ Ansicht' }));
+      const f = screen.getByRole('dialog', { name: 'Neue Ansicht' });
+      expect(within(f).getByText(/keiner – du kannst ihn danach/)).toBeTruthy();
+      fireEvent.change(within(f).getByLabelText('Name der Ansicht'), { target: { value: 'Leer' } });
+      fireEvent.click(within(f).getByRole('button', { name: 'Speichern' }));
+      expect(reiter(/^Leer 3/).getAttribute('aria-pressed')).toBe('true');
+      expect(screen.getByText('Diese Ansicht hat keinen Filter.')).toBeTruthy();
+      cleanup();
+      const voll = {
+        ...e(),
+        ansichten: Array.from({ length: 12 }, (_, i) => ({
+          id: `v${i}`,
+          name: `V${i}`,
+          filter: [],
+        })),
+      };
+      zeigen(drei(), 10, false, true, false, false, voll);
+      fireEvent.click(screen.getByRole('button', { name: '＋ Ansicht' }));
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(screen.getByRole('alert').textContent).toMatch(/Höchstens 12 eigene Ansichten/);
+    });
+
+    it('ohne Recht: Ansichten nutzen und filtern ja – anlegen, ändern, löschen nein', () => {
+      zeigenMit(false);
+      expect(screen.queryByRole('button', { name: '＋ Ansicht' })).toBeNull();
+      filtern('Bezahlt', 'offen');
+      expect(screen.queryByRole('button', { name: 'Als Ansicht speichern' })).toBeNull();
+      fireEvent.click(reiter(/^Noch offen/));
+      fireEvent.click(screen.getByRole('button', { name: 'Alle Filter entfernen' }));
+      expect(screen.getByRole('button', { name: 'Verwerfen' })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'Änderungen speichern' })).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Mehr zur Liste' }));
+      expect(screen.getAllByRole('menuitem').map((m) => m.textContent)).toEqual([
+        'Spalten dieser Ansicht',
+        'Druckliste (nur diese 3)',
+      ]);
+      // Spalten umstellen geht – nur hier, bis die Seite neu lädt.
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Spalten dieser Ansicht' }));
+      const f = screen.getByRole('dialog');
+      fireEvent.click(within(f).getByRole('checkbox', { name: 'Angemeldet am' }));
+      fireEvent.click(within(f).getByRole('button', { name: 'Übernehmen' }));
+      expect(spaltenKoepfe().map((k) => k.textContent)).not.toContain('Angemeldet am');
+      expect(em.aendereEinstellungen).not.toHaveBeenCalled();
+    });
   });
 });
 

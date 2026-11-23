@@ -14,3 +14,18 @@ export class LeitungNichtFestgehalten extends ApiError {
     this.name = 'LeitungNichtFestgehalten';
   }
 }
+
+/**
+ * Die Untergruppe ist eingerichtet (Kategorie + Rechte ihrer Rollen nachgelesen), aber **die Rollen der Website ließen sich
+ * noch nicht nachziehen** (W3b-4a) – sie lesen bzw. schreiben die neue Kategorie also noch nicht. Eigene Klasse aus demselben
+ * Grund wie oben: Gesetzt ist schon etwas, „Noch nicht gesetzt“ wäre falsch. Ein zweiter Versuch holt den Rest nach.
+ */
+export class WebsiteNichtNachgezogen extends ApiError {
+  constructor(untergruppe: string) {
+    super(
+      422,
+      `Die Untergruppe „${untergruppe}“ ist eingerichtet. Die Rollen der Website haben ihre Rechte daran aber noch nicht bekommen – „Rechte setzen“ bei der Untergruppe noch einmal versucht es erneut.`,
+    );
+    this.name = 'WebsiteNichtNachgezogen';
+  }
+}

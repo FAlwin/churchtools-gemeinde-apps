@@ -49,6 +49,7 @@ import { leseAuswahl, merkeAuswahl } from './auswahl';
 import { gemeindeZeitzone, heuteImKalender } from '@shared/ct/zeit';
 import { entwurfAnschluss } from './ladeEntwuerfe';
 import { EinstellungenFenster } from './EinstellungenFenster';
+import { MeineAnzeigeAnschluss } from './MeineAnzeigeAnschluss';
 
 /** Solange keine Termine da sind – ein fester Wert, damit `useVertretung` nicht bei jedem Zeichnen neu rechnet. */
 const KEINE_ZEILEN: TerminZeile[] = [];
@@ -255,126 +256,130 @@ export function App() {
           gruss={terminId === null}
           onNochmal={laden}
         >
-          {start && terminId !== null && (
-            <TerminAnsicht
-              key={terminId}
-              start={start}
-              terminId={terminId}
-              zeitzone={zeitzone}
-              vorher={stelle > 0 ? reihe[stelle - 1] : null}
-              nachher={stelle >= 0 && stelle < reihe.length - 1 ? reihe[stelle + 1] : null}
-              zurueck={ALLE_REITER.find((r) => r.id === aktiv)?.label ?? 'Start'}
-              onTermin={terminZeigen}
-              onZurueck={() => {
-                window.location.hash = herkunftAdresse.current;
-              }}
-              // Infos oder Dateien geändert: Start, Termine und Planen zeigen dieselben Termine – leise neu, sonst stünde
-              // in der Matrix bis zum Neuladen der Seite noch der alte Stand (Test-Instanz T2b, 03.11.2026).
-              onGeaendert={() => termineLaden(start, geladen, true)}
-              tausch={tausch}
-              vertretung={vertretung}
-              entwuerfe={entwuerfe}
-              ladeAntworten={antwortenLaden}
-              heute={heuteImKalender()}
-              handy={handy}
-            />
-          )}
-          {start && vorlagenAdresse !== null && (
-            <VorlagenBereich
-              zugriff={vorlagenZugriff}
-              darfIn={(kalenderId) => vorlageBearbeitbar(start, kalenderId)}
-              dienste={[...start.dienste.values()].map((d) => ({ id: d.id, name: d.name }))}
-              // Infos je Dienstgruppe wie in `TerminAblauf`; die Spalten-Wahl gehört der Vorlagen-Seite allein.
-              infoGruppen={infoGruppen(start.rechte, start.dienstgruppen)}
-              gruppenVerborgen={!siehtAlleDienstgruppen(start.rechte, start.dienstgruppen)}
-              infoSpaltenSchluessel="dienstplaner.vorlage.infoSpalten"
-              offeneId={vorlagenAdresse.id}
-              onOeffnen={(id) => {
-                window.location.hash = id === null ? ADRESSE_VORLAGEN : adresseFuerVorlage(id);
-              }}
-              zurueck={{ label: 'Planen', onClick: () => wechseln('planen') }}
-            />
-          )}
-          {start && hauptSicht && aktiv === 'start' && (
-            <Startseite
-              start={start}
-              termine={termineSicht}
-              antworten={antworten}
-              tausch={tausch}
-              vertretung={vertretung}
-              zeitzone={zeitzone}
-              heute={heuteImKalender()}
-              onNochmal={() => termineLaden(start, wochen)}
-              onTermin={terminZeigen}
-              onMeineTermine={() => {
-                merkeAuswahl({ ...leseAuswahl(), nurMeine: true });
-                wechseln('termine');
-              }}
-            />
-          )}
-          {hauptSicht && aktiv === 'termine' && termine && start && (
-            <Termine
-              onTermin={terminZeigen}
-              zustand={termineSicht ?? termine}
-              antworten={antworten}
-              tausch={tausch}
-              vertretung={vertretung}
-              zeitzone={zeitzone}
-              ich={{
-                id: start.ichId,
-                name: [start.vorname, start.nachname].filter(Boolean).join(' '),
-                gemeinde: start.gemeinde,
-              }}
-              planer={darfPlanen}
-              handy={handy}
-              onNochmal={() => termineLaden(start, wochen)}
-              onMehr={mehrLaden}
-            />
-          )}
-          {hauptSicht && aktiv === 'planen' && termine && start && (
-            <Planen
-              // Neu aufbauen, wenn der Besuch beginnt oder endet – sonst bliebe sein Zeitraum stehen.
-              key={fokusGruppe ?? 'gewohnt'}
-              fokusGruppe={fokusGruppe}
-              onFokusEnde={() => wechseln('planen')}
-              onTermin={terminZeigen}
-              zustand={termine}
-              handy={handy}
-              onNochmal={() => termineLaden(start, wochen)}
-              onMehr={mehrLaden}
-              onAktualisieren={() => termineLaden(start, geladen, true)}
-              mehrMoeglich={geladen < MAX_WOCHEN}
-              ladeZeitraum={zeitraumLaden}
-              heute={heuteImKalender()}
-              entwuerfe={entwuerfe}
-              ablauf={{ start, zeitzone }}
-              katalog={katalogAus(start)}
-              ladeVorlagen={ladeTerminVorlagen}
-              ladePersonen={personenLaden}
-              ladeAntworten={antwortenLaden}
-              ladeMarkierungen={antwortenLaden}
-              erinnern={ERINNERN}
-              onVorlagen={() => {
-                window.location.hash = ADRESSE_VORLAGEN;
-              }}
-              lupeOrt={lupeOrt}
-            />
-          )}
-          {hauptSicht && aktiv === 'abwesenheiten' && start && (
-            <Abwesenheiten
-              ichId={start.ichId}
-              zeitzone={zeitzone}
-              heute={heuteImKalender()}
-              dienstgruppen={eigeneGruppen}
-              eigeneDienste={meineDienste}
-            />
-          )}
-          {start && einstellungenOffen && (
-            <EinstellungenFenster
-              darfAendern={darfPlanen}
-              ich={{ personId: start.ichId, name: start.vorname }}
-              onSchliessen={() => setEinstellungenOffen(false)}
-            />
+          {start && (
+            <MeineAnzeigeAnschluss person={start.ichId}>
+              {start && terminId !== null && (
+                <TerminAnsicht
+                  key={terminId}
+                  start={start}
+                  terminId={terminId}
+                  zeitzone={zeitzone}
+                  vorher={stelle > 0 ? reihe[stelle - 1] : null}
+                  nachher={stelle >= 0 && stelle < reihe.length - 1 ? reihe[stelle + 1] : null}
+                  zurueck={ALLE_REITER.find((r) => r.id === aktiv)?.label ?? 'Start'}
+                  onTermin={terminZeigen}
+                  onZurueck={() => {
+                    window.location.hash = herkunftAdresse.current;
+                  }}
+                  // Infos oder Dateien geändert: Start, Termine und Planen zeigen dieselben Termine – leise neu, sonst stünde
+                  // in der Matrix bis zum Neuladen der Seite noch der alte Stand (Test-Instanz T2b, 03.11.2026).
+                  onGeaendert={() => termineLaden(start, geladen, true)}
+                  tausch={tausch}
+                  vertretung={vertretung}
+                  entwuerfe={entwuerfe}
+                  ladeAntworten={antwortenLaden}
+                  heute={heuteImKalender()}
+                  handy={handy}
+                />
+              )}
+              {start && vorlagenAdresse !== null && (
+                <VorlagenBereich
+                  zugriff={vorlagenZugriff}
+                  darfIn={(kalenderId) => vorlageBearbeitbar(start, kalenderId)}
+                  dienste={[...start.dienste.values()].map((d) => ({ id: d.id, name: d.name }))}
+                  // Infos je Dienstgruppe wie in `TerminAblauf`; die Spalten-Wahl gehört der Vorlagen-Seite allein.
+                  infoGruppen={infoGruppen(start.rechte, start.dienstgruppen)}
+                  gruppenVerborgen={!siehtAlleDienstgruppen(start.rechte, start.dienstgruppen)}
+                  infoSpaltenSchluessel="dienstplaner.vorlage.infoSpalten"
+                  offeneId={vorlagenAdresse.id}
+                  onOeffnen={(id) => {
+                    window.location.hash = id === null ? ADRESSE_VORLAGEN : adresseFuerVorlage(id);
+                  }}
+                  zurueck={{ label: 'Planen', onClick: () => wechseln('planen') }}
+                />
+              )}
+              {start && hauptSicht && aktiv === 'start' && (
+                <Startseite
+                  start={start}
+                  termine={termineSicht}
+                  antworten={antworten}
+                  tausch={tausch}
+                  vertretung={vertretung}
+                  zeitzone={zeitzone}
+                  heute={heuteImKalender()}
+                  onNochmal={() => termineLaden(start, wochen)}
+                  onTermin={terminZeigen}
+                  onMeineTermine={() => {
+                    merkeAuswahl({ ...leseAuswahl(), nurMeine: true });
+                    wechseln('termine');
+                  }}
+                />
+              )}
+              {hauptSicht && aktiv === 'termine' && termine && start && (
+                <Termine
+                  onTermin={terminZeigen}
+                  zustand={termineSicht ?? termine}
+                  antworten={antworten}
+                  tausch={tausch}
+                  vertretung={vertretung}
+                  zeitzone={zeitzone}
+                  ich={{
+                    id: start.ichId,
+                    name: [start.vorname, start.nachname].filter(Boolean).join(' '),
+                    gemeinde: start.gemeinde,
+                  }}
+                  planer={darfPlanen}
+                  handy={handy}
+                  onNochmal={() => termineLaden(start, wochen)}
+                  onMehr={mehrLaden}
+                />
+              )}
+              {hauptSicht && aktiv === 'planen' && termine && start && (
+                <Planen
+                  // Neu aufbauen, wenn der Besuch beginnt oder endet – sonst bliebe sein Zeitraum stehen.
+                  key={fokusGruppe ?? 'gewohnt'}
+                  fokusGruppe={fokusGruppe}
+                  onFokusEnde={() => wechseln('planen')}
+                  onTermin={terminZeigen}
+                  zustand={termine}
+                  handy={handy}
+                  onNochmal={() => termineLaden(start, wochen)}
+                  onMehr={mehrLaden}
+                  onAktualisieren={() => termineLaden(start, geladen, true)}
+                  mehrMoeglich={geladen < MAX_WOCHEN}
+                  ladeZeitraum={zeitraumLaden}
+                  heute={heuteImKalender()}
+                  entwuerfe={entwuerfe}
+                  ablauf={{ start, zeitzone }}
+                  katalog={katalogAus(start)}
+                  ladeVorlagen={ladeTerminVorlagen}
+                  ladePersonen={personenLaden}
+                  ladeAntworten={antwortenLaden}
+                  ladeMarkierungen={antwortenLaden}
+                  erinnern={ERINNERN}
+                  onVorlagen={() => {
+                    window.location.hash = ADRESSE_VORLAGEN;
+                  }}
+                  lupeOrt={lupeOrt}
+                />
+              )}
+              {hauptSicht && aktiv === 'abwesenheiten' && start && (
+                <Abwesenheiten
+                  ichId={start.ichId}
+                  zeitzone={zeitzone}
+                  heute={heuteImKalender()}
+                  dienstgruppen={eigeneGruppen}
+                  eigeneDienste={meineDienste}
+                />
+              )}
+              {start && einstellungenOffen && (
+                <EinstellungenFenster
+                  darfAendern={darfPlanen}
+                  ich={{ personId: start.ichId, name: start.vorname }}
+                  onSchliessen={() => setEinstellungenOffen(false)}
+                />
+              )}
+            </MeineAnzeigeAnschluss>
           )}
         </ErweiterungsSeite>
       </LiedZugriffKontext.Provider>

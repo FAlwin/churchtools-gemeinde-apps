@@ -596,24 +596,24 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
         .getAllByRole('button')
         .map((b) => b.getAttribute('aria-label') ?? b.textContent?.trim());
 
-    it('Tipp auf den Punkt öffnet die Einzelansicht „Position 1 von 2“; › blättert, der Rand ist gesperrt', async () => {
+    it('Tipp auf den Punkt öffnet die Einzelansicht „Position 1/2“ (auch breit als Seite); „Danach“ blättert, der Rand ist gesperrt', async () => {
       breite(false);
       ctMitAblauf();
       zeige({ start: darfKalender([2]) });
       fireEvent.click(await screen.findByRole('button', { name: '„Soundcheck“ ansehen' }));
       const fenster = await screen.findByRole('dialog', { name: 'Soundcheck' });
-      expect(within(fenster).getByText(/^Position 1 von 2/)).toBeTruthy();
-      expect(within(fenster).getByRole('button', { name: 'Voriger Punkt' })).toHaveProperty(
+      expect(within(fenster).getByText('Position 1/2')).toBeTruthy();
+      expect(within(fenster).getByRole('button', { name: 'Davor' })).toHaveProperty(
         'disabled',
         true,
       );
-      fireEvent.click(within(fenster).getByRole('button', { name: 'Nächster Punkt' }));
-      expect(within(fenster).getByText(/^Position 2 von 2/)).toBeTruthy();
-      expect(within(fenster).getByRole('button', { name: 'Nächster Punkt' })).toHaveProperty(
+      fireEvent.click(within(fenster).getByRole('button', { name: 'Danach' }));
+      expect(within(fenster).getByText('Position 2/2')).toBeTruthy();
+      expect(within(fenster).getByRole('button', { name: 'Danach' })).toHaveProperty(
         'disabled',
         true,
       );
-      fireEvent.click(within(fenster).getByRole('button', { name: 'Fenster schließen' }));
+      fireEvent.keyDown(document, { key: 'Escape' });
       expect(screen.queryByText(/^Position \d/)).toBeNull();
     });
 

@@ -1287,28 +1287,29 @@ Fall – eines ohne kommende Dienste.
 Bemerkung, Zuständigen (auch einem offenen Dienst) und einer Info je Dienstgruppe; einmal am Rechner/iPad, einmal am Handy (390 px).
 
 **Das muss passieren:** Ein Tipp auf den **Punkt** (nicht auf die Lied-Karte, nicht auf die Kreise) zeigt **alle** Infos dieses Punkts und
-lässt sich weiterblättern – wie in der ChurchTools-App. Am iPad und Rechner ist es ein Fenster im Aussehen des Punkt-Fensters,
-am Handy eine eigene Seite. Bearbeiten ändert sich nicht.
+lässt sich weiterblättern – wie in der ChurchTools-App. Überall (Rechner, iPad, Handy) ist es eine eigene Seite; am Rechner und iPad
+steht der Inhalt in Lesebreite in der Mitte. Bearbeiten ändert sich nicht.
 
-1. **Rechner/iPad:** einen Punkt ohne Lied antippen → Fenster mit dem Titel, „Position 3 von 10 · 10:04 – 10:07“ und ‹ ›, darunter
-   Uhrzeit, Dauer, Zuständig (Kreis, Name, Dienst; offener Dienst rot mit „offen“), Bemerkung, Lied (nur bei Liedern) und
-   „Infos je Gruppe“ (nur Gruppen mit Text). Es gibt keine Fußzeile; geschlossen wird mit **✕** oder **Escape**.
-2. **›** und **‹** blättern von Punkt zu Punkt; **Überschriften werden übersprungen und nicht mitgezählt**. Am ersten Punkt ist ‹
-   gesperrt, am letzten ›. Es steht immer nur ein Fenster da.
+1. **Rechner/iPad (1280 und 1024 px):** einen Punkt ohne Lied antippen → **Seite** (kein kleines Fenster): oben **‹ Ablauf** und „Position 3/10“,
+   darunter der Titel groß, dann Uhrzeit, Dauer, Zuständig (Kreis, Name, Dienst; offener Dienst rot mit „offen“), Bemerkung, Lied (nur bei
+   Liedern) und „Infos je Gruppe“ (nur Gruppen mit Text). Der Inhalt steht **mittig, etwa 720 px breit**, Beschriftung links daneben; die Leiste
+   **DAVOR / DANACH** unten geht über die **ganze Breite**. Zurück mit **‹ Ablauf** oder **Escape**.
+2. **DANACH/DAVOR** blättern von Punkt zu Punkt, am Rechner auch **→** und **←** (nicht, solange der Cursor in einem Textfeld steht);
+   **Überschriften werden übersprungen und nicht mitgezählt**. Am ersten Punkt ist DAVOR gesperrt, am letzten DANACH (die Pfeiltaste tut dort
+   nichts). Es steht immer nur eine Seite da.
 3. Ein **Lied** antippen (Punkt, nicht die Karte) → die Ansicht zeigt dazu die Lied-Karte mit Tonart · Tempo. Die Karte dort antippen →
    in der Musik-App das Liedblatt, im Dienstplaner die Lied-Ansicht; die Einzelansicht ist dann zu.
 4. **Lied-Karte in der Liste** antippen → direkt das Liedblatt bzw. die Lied-Ansicht, **nicht** die Einzelansicht. Die **Kreise** öffnen weiter die
    Zuständigen am Knopf.
-5. **Handy:** derselbe Punkt öffnet eine **Seite**: oben **‹ Ablauf** und „Position 3/10“, der Titel groß, darunter dieselben Zeilen wie im
-   Fenster, unten **DAVOR** und **DANACH** mit Uhrzeit · Dauer und Titel des Nachbarn. Antippen blättert; am Rand ist der Knopf grau und leer.
-   **‹ Ablauf** (oder Escape) führt zur Liste zurück.
+5. **Handy (375 px):** dieselbe Seite, nur schmal: die **Beschriftung steht über dem Wert** (nicht mehr daneben), **DAVOR** und **DANACH** zeigen
+   Uhrzeit · Dauer und Titel des Nachbarn. Antippen blättert; am Rand ist der Knopf grau und leer. **‹ Ablauf** (oder Escape) führt zur Liste zurück.
 6. **Bearbeiten** (Musik-App): Zeile antippen öffnet wie bisher das Fenster „Punkt bearbeiten“ (Position, Titel, Dauer, Lied, Zuständig,
    Bemerkung, Infos je Gruppe) – unverändert. Der **blaue Streifen** an der Lied-Zeile und der rote Hinweis **„Moderation ?“** bei einem
    unbesetzten Dienst stehen in der Liste wie bisher.
 7. **Dienstplaner, Matrix** (schmale Spalten): dort gibt es die Einzelansicht nicht – die Spalten bleiben wie vorher.
 8. **Dienstplaner, Termin-Ansicht** (seit 21.11.2026, wie die Musik-App): Im Ablauf-Kopf stehen **Live** · **Musik-App** · **⋯** · **Bearbeiten**
    (am Handy alle mit Rahmen). **⋯** nennt **Spalten wählen** (kleines Fenster mit Häkchen, gemerkt auf dem Gerät) und **Ablauf zeigen**;
-   jeden Eintrag einzeln antippen – das Fenster bzw. die Anzeige geht auf. **Bearbeiten** → grünes **Eintrag hinzufügen** (am Handy der
+   jeden Eintrag einzeln antippen – die Anzeige geht auf. **Bearbeiten** → grünes **Eintrag hinzufügen** (am Handy der
    grüne Kreis), **⋯** (**Neu aufsetzen …**, mit Recht **Als Vorlage …**), blaues **Fertig**; an den Zeilen **kein Stift**, Zeile antippen
    öffnet „Punkt bearbeiten“. Die Lied-Karte öffnet die Lied-Ansicht, der Punkt daneben die Einzelansicht.
 
@@ -1316,7 +1317,7 @@ am Handy eine eigene Seite. Bearbeiten ändert sich nicht.
 
 - **Priorität:** normal
 - **Betrifft:** `ui/ablauf/PunktAnsicht.tsx`, `ui/ablauf/usePunktAnsicht.tsx`, `ui/ablauf/AblaufListe.tsx`, `ui/ablauf/liedMeta.ts`, `client/src/components/AgendaFullView.tsx`, `dienstplaner/src/TerminAblauf.tsx`, `dienstplaner/src/TerminAnsicht.tsx`
-- **Automatisiert:** ja – `ui/ablauf/PunktAnsicht.test.tsx` (alle Infos, Überschriften übersprungen, Ränder, Escape/X, Seite am Handy mit Davor/Danach, Tipp-Ziele Karte gegen Punkt), `client/src/components/AgendaFullView.test.tsx`, `dienstplaner/src/TerminAnsicht.test.tsx` (Abschnitt „wie in der Musik-App (B8)“: Einzelansicht mit ‹ ›, Handy-Seite, Kopf in Stufen, kein Stift, Menüpunkt „Ablauf zeigen“, leises „Ablauf anlegen“); Gegenproben (Überschriften mitgezählt, Handy/Fenster vertauscht) einzeln rot; von Hand bleibt der Blick am Gerät
+- **Automatisiert:** ja – `ui/ablauf/PunktAnsicht.test.tsx` (alle Infos, Überschriften übersprungen, Ränder, ← → mit Schutz im Eingabefeld, Escape/„‹ Ablauf“, Seite in allen Breiten mit Lesebreiten-Rahmen und Davor/Danach, Tipp-Ziele Karte gegen Punkt), `ui/design/punktSeite.test.ts` (Lesebreite 720 px, Beschriftung nur am Handy darüber), `client/src/components/AgendaFullView.test.tsx`, `dienstplaner/src/TerminAnsicht.test.tsx` (Abschnitt „wie in der Musik-App (B8)“: Einzelansicht als Seite mit Davor/Danach, Kopf in Stufen, kein Stift, Menüpunkt „Ablauf zeigen“, leises „Ablauf anlegen“); Gegenproben (Überschriften mitgezählt, Fenster statt Seite, Lesebreite, Pfeiltasten, Eingabefeld-Schutz, Handy-Beschriftung) einzeln rot; von Hand bleibt der Blick am Gerät
 - **Historie:** „Ruhige Bedienung“ B8 (21.11.2026, Entwurf `musik-app-ruhiger-v5.html`, Entscheidungen E16–E21)
 
 </details>

@@ -151,7 +151,7 @@ describe('AgendaFullView – Lied antippen', () => {
     fireEvent.click(screen.getByRole('button', { name: '„Predigt“ ansehen' }));
     expect(onSelect).not.toHaveBeenCalled();
     const fenster = screen.getByRole('dialog', { name: 'Predigt' });
-    expect(fenster.textContent).toContain('Position 1 von 1');
+    expect(fenster.textContent).toContain('Position 1/1');
     expect(fenster.textContent).toContain('Thema Hoffnung');
   });
 

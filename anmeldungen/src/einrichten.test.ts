@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
 import { ApiError } from '@ui/ct/fehler';
 import { mitSpaltenWahl, spalteZeigen, vorgabeWahl } from '@shared/anmeldung/tabelle';
+import { mitNeuerAnsicht } from '@shared/anmeldung/ansichten';
 import {
   EINSTELLUNGEN_KENNUNG,
   SYSTEMFELDER,
@@ -511,8 +512,18 @@ describe('kopiereVeranstaltung', () => {
     const e = einstellungenLesen(g.note)!;
     // U2-3: Spaltenwahl der Tabelle – wie die Druckliste (`druck`) Teil der Einstellungen, also mitkopiert.
     const spalten = spalteZeigen(vorgabeWahl(e, 'anmeldung'), 'am');
+    // U3: eigene Ansichten ebenso (Entscheidungsliste E2).
+    const ansicht = {
+      id: 'kueche',
+      name: 'Küchenteam',
+      stand: {
+        filter: [{ spalte: 'betrag', ab: 10, bis: null }],
+        sortierung: null,
+        jePerson: false,
+      },
+    };
     await aendereEinstellungen(quelle, (x) => ({
-      ...mitSpaltenWahl(x, 'anmeldung', spalten),
+      ...mitNeuerAnsicht(mitSpaltenWahl(x, 'anmeldung', spalten), ansicht),
       termin: { beginn: '2026-11-15T12:00', ende: null, ort: 'Saal', terminId: 5 },
       // K1: „im Kalender verschoben“ gehört zur Vorlage, nicht zur Kopie.
       terminVerschoben: {
@@ -528,6 +539,9 @@ describe('kopiereVeranstaltung', () => {
     expect(k.terminVerschoben).toBeUndefined();
     expect(k.tabelle).toEqual({ anmeldung: spalten });
     expect(k.druck).toEqual({ spalten: ['alter'], sortierung: 'alter' });
+    expect(k.ansichten).toEqual([
+      { id: 'kueche', name: 'Küchenteam', filter: [{ spalte: 'betrag', ab: 10, bis: null }] },
+    ]);
     // A9-2a: Die Kopie merkt sich die Vorlage – deren eigener Mailtext steht in Routinen, die nicht mitkopiert werden.
     expect(k.kopieVon).toBe(quelle);
     expect(e.kopieVon).toBeUndefined();

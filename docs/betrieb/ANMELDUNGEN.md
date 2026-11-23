@@ -146,7 +146,15 @@ filtern Fragen je Person (und Status, Alter) die einzelne Person; je Anmeldung z
 alle diese Filter erfüllt. Ein Filter gilt nur für jetzt und nur im gewählten Reiter. **Rundmail und Druckliste nehmen
 immer das Gefilterte** („Rundmail an diese 4“, „Druckliste (nur diese 4)“, im Fenster steht, welche Filter gelten); die
 Druckliste zeigt bei Filtern je Person nur die passenden Personen. Die eine Regel steht in
-`shared/anmeldung/tabellenFilter.ts`. **Zeilen anheften** (U2-4): Die Nadel am Zeilenanfang heftet eine Anmeldung oder
+`shared/anmeldung/tabellenFilter.ts`. **Eigene Ansichten** (U3, 23.11.2026): „Als Ansicht speichern“ (neben den
+Chips) legt Name, Filter, Sortierung, „je Anmeldung / je Person“ und – wenn sie von denen des Teams abweichen – die
+Spalten als eigenen Reiter mit blauem Punkt hinter „Abgesagt“ ab; „＋ Ansicht“ rechts neben den Reitern legt eine leere
+an. Eine Ansicht zeigt alle Anmeldungen mit ihren Filtern; weicht man ab, erscheinen „Verwerfen“ und „Änderungen
+speichern“. „⋯ → Diese Ansicht“: umbenennen, „Spalten dieser Ansicht“, nach links/rechts, löschen („Rückgängig“ direkt
+unter den Reitern). Gespeichert in den Einstellungen der Veranstaltung wie die Spaltenwahl (nur Spaltenschlüssel und
+Antworten, keine Namen), höchstens 12, bei „wie eine frühere Veranstaltung“ mitkopiert; Filter auf gelöschte Fragen
+fallen still weg. Anlegen, ändern und löschen darf, wer die Anmeldungen bearbeitet – alle anderen nutzen die Ansichten
+und können sie bis zum Neuladen umstellen. Regeln in `shared/anmeldung/ansichten.ts`. **Zeilen anheften** (U2-4): Die Nadel am Zeilenanfang heftet eine Anmeldung oder
 Person oben an – sie bleibt beim Sortieren oben und steht nur in den Reitern, in die sie ohnehin gehört. Das merkt sich
 nur dieses Gerät (je Veranstaltung, im Speicher des Browsers); im privaten Fenster gilt es bis zum Neuladen. Mit Maus
 erscheint die Nadel beim Darüberfahren, am Handy steht sie immer da und bleibt mit der ersten Spalte links stehen. Ein

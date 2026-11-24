@@ -135,7 +135,10 @@ Gespeichert ist sie als **ein Wert** in der Ablage **„Einstellungen“** (Kür
 App legt sie beim ersten Speichern an, wenn jemand Kategorien anlegen darf). **Ändern dürfen Planer** (prüft die App) – damit ChurchTools
 es auch durchlässt, braucht die Ablage für die Planer **Daten anlegen, ändern** und für **alle, die den Dienstplaner nutzen, Daten
 sehen** (sonst gilt für sie der Standard). Ohne Wert oder bei einem Lesefehler gilt immer der Standard; ein vorübergehender Fehler
-ändert nichts. Wer weiterklicken darf, steht weiter am Dienst („Erlaubt, die Live-Agenda zu steuern“).
+ändert nichts. Wer weiterklicken darf, steht weiter am Dienst („Erlaubt, die Live-Agenda zu steuern“). **Vor dem Einsatz prüfen:** Hat
+**kein** Dienst diesen Haken, fehlt allen die Leiste „Zurück / Weiter“ – so war es in der Test-Instanz bis zur Abnahme am 23.11.2026
+(dort seitdem bei „Ton“). Ebenso braucht der Gruppentyp „Dienst“ das Recht **„Dienstplaner sehen“**, sonst sehen nur Admins die
+Erweiterung (in der Test-Instanz am 23.11.2026 nachgetragen).
 
 **Live-Verlauf** (Live-Ansicht 2, L4-3, Alwin 23.11.2026): Die Live-Ansicht hält jeden Wechsel der Live-Agenda (Stelle, Punkt-ID, Titel,
 Zeitpunkt aus dem `switchdate` von ChurchTools) je Termin in der Ablage „Live-Verlauf“ fest – **ein Wert je Termin**, kurze Schlüssel,

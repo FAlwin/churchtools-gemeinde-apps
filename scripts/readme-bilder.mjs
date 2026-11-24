@@ -271,6 +271,14 @@ async function aufnehmen(browser) {
     await p(1800);
     await knopf('Zusagen').click();
     await p(1600);
+    // Seit L4-5 (#1135) steht am Termintag „Live“ in „Als Nächstes“ – er erscheint, sobald der Ablauf geladen ist.
+    await page
+      .getByRole('button', { name: /^Live-Agenda/ })
+      .first()
+      .click();
+    await p(2800);
+    await knopf('Schließen').click();
+    await p(1000);
     await knopf('Dienste').click();
     await p(2000);
     // Seit E5c-1c (#1031) heißt der Reiter „Wann kann ich?“ und hat je Termin Ja · Vielleicht · Nein statt des Hakens.

@@ -137,13 +137,14 @@ Die Chord Charts der Setlist kommen direkt aus ChurchTools – in der Tonart, di
 ## Dienstplaner
 
 <p align="center">
-  <img src="docs/bilder/dienstplaner-demo.gif" width="640" alt="Dienstplaner: Dienst zusagen, eigene Dienste, „Wann kann ich?“ beantworten, Planen">
+  <img src="docs/bilder/dienstplaner-demo.gif" width="640" alt="Dienstplaner: Dienst zusagen, Live-Ansicht, eigene Dienste, „Wann kann ich?“ beantworten, Planen">
 </p>
 
 Ein Dienstplan für alle Dienstgruppen der Gemeinde – gespeichert in ChurchTools.
 
-- **Startseite** mit dem nächsten Dienst samt Team und Liedern, offenen Anfragen und freien Plätzen
-- **Zusagen, absagen, tauschen** mit einem Tipp; eigene Dienste als PDF teilen
+- **Startseite** mit dem nächsten Dienst samt Team und Liedern, offenen Anfragen und freien Plätzen – am Termintag direkt in die Live-Ansicht
+- **Zusagen, absagen, tauschen** mit einem Tipp, kurzfristig **Vertretung suchen**; eigene Dienste als PDF teilen
+- **Live** im Gottesdienst: was jetzt dran ist, Zeitkonto und „Ende voraussichtlich“, Weiterklicken mit Schutz vor Fehlklicks; danach ein **Rückblick** mit dem Schnitt der bisherigen Gottesdienste
 - **Wann kann ich?** – je Termin Ja, Vielleicht oder Nein (Nein = Abwesenheit in ChurchTools), mit Notiz; Urlaub als Zeitraum
 - **Planen** für Planer: Termine als Spalten, freier Platz → „Wer kann?“ (sortiert nach den Antworten), Vorschläge per Zauberstab, „Personen“ mit den Antworten als Farbe, „Wer wie oft?“
 - **Erinnern** – eine Mail an alle, die noch nicht geantwortet haben, mit ihren offenen Terminen; **Plan teilen** als PDF: nach Terminen, nach Personen oder je Person

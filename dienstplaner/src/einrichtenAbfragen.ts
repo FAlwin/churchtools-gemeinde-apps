@@ -219,6 +219,7 @@ async function lageLesenOhneFangen(
   const recht = await modulRechtHolen(p, PLANER_RECHT.modul, PLANER_RECHT.recht, PLANER_RECHT.name);
   const rechtIds = personenIdsAusRecht(
     await p.holen<unknown>(planerRechtPfad(recht.authId, dienstgruppe.id)),
+    dienstgruppe.id,
   );
   if (rechtIds === null)
     throw new Stopp(

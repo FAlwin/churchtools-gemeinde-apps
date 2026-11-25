@@ -59,11 +59,29 @@ describe('Planer-Liste', () => {
     expect(gruppenIdsDerDienste(dienste, 8)).toEqual([]);
   });
 
-  it('die Antwort des Rechts wird streng gelesen: eine halbe Liste ist keine Liste', () => {
-    expect(personenIdsAusRecht([1, '2', { personId: 3 }, { id: 4 }])).toEqual([1, 2, 3, 4]);
-    expect(personenIdsAusRecht([])).toEqual([]);
-    for (const roh of [null, {}, 'x', [1, null], [1, {}], [0], [1.5], [true]])
-      expect(personenIdsAusRecht(roh)).toBeNull();
+  it('die Antwort des Rechts wird in der gemessenen Form streng gelesen: eine halbe Liste ist keine Liste', () => {
+    // Gemessen 25.11.2026 (Test-Instanz), nach dem Auspacken von `data`.
+    const antwort = (personIds: unknown, dataId: unknown = 4) => ({
+      authId: 305,
+      selections: [{ dataId, personIds }],
+    });
+    expect(personenIdsAusRecht(antwort([1, 19]), 4)).toEqual([1, 19]);
+    expect(personenIdsAusRecht(antwort([]), 4)).toEqual([]);
+    // Nur der Eintrag DIESER Dienstgruppe zählt.
+    expect(personenIdsAusRecht(antwort([1], 3), 4)).toBeNull();
+    for (const roh of [
+      null,
+      {},
+      'x',
+      [1, 2],
+      { selections: 'x' },
+      antwort('x'),
+      antwort([1, null]),
+      antwort([0]),
+      antwort([1.5]),
+      antwort([true]),
+    ])
+      expect(personenIdsAusRecht(roh, 4)).toBeNull();
   });
 });
 

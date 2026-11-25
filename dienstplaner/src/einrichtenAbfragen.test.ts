@@ -66,7 +66,10 @@ function welt(
     routinen: o.routinen ?? [],
     mitglieder: o.mitglieder ?? [],
     // Recht „Dienste bearbeiten“ für Musik: Person 1 und 2. Leiter der CT-Gruppe 21: 2 und 3; 9 ist nur Mitarbeiter.
-    rechtPersonen: o.rechtPersonen ?? [1, 2],
+    rechtPersonen: o.rechtPersonen ?? {
+      authId: 305,
+      selections: [{ dataId: 4, personIds: [1, 2] }],
+    },
     ctGruppe: [
       { personId: 2, person: { title: 'Bea Beispiel' }, groupTypeRoleId: R_CT_LEITER },
       { personId: 3, person: { title: 'Carl Test' }, groupTypeRoleId: R_CT_LEITER },
@@ -292,8 +295,16 @@ describe('lageLesen – nur lesen, nichts schreiben', () => {
   });
 
   it.each([
-    ['keine Liste', { fehler: 1 }],
-    ['ein Eintrag ohne Nummer', [1, { name: 'x' }]],
+    ['keine Auswahl', { fehler: 1 }],
+    ['eine Liste statt der gemessenen Form', [1, 2]],
+    [
+      'ein Eintrag ohne Nummer',
+      { authId: 305, selections: [{ dataId: 4, personIds: [1, { name: 'x' }] }] },
+    ],
+    [
+      'kein Eintrag für diese Dienstgruppe',
+      { authId: 305, selections: [{ dataId: 3, personIds: [1] }] },
+    ],
   ])('Planer nicht vollständig lesbar (%s) → Stopp, nie „keine Planer“', async (_n, roh) => {
     const { w, a } = welt({ rechtPersonen: roh });
     const l = await lageLesen(MUSIK, GRUPPEN_IDS, a);

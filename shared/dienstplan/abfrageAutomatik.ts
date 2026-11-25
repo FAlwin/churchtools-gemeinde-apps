@@ -54,18 +54,26 @@ export const planerRechtPfad = (authId: number, dienstgruppeId: number): string 
   `/permissions/global/auths/${authId}/persons?data_id=${dienstgruppeId}`;
 
 /**
- * Personennummern aus der Antwort auf `planerRechtPfad` – **streng:** Eine Liste, deren Einträge Nummern sind (oder Objekte mit
- * `personId`/`id`). `null`, wenn die Antwort keine Liste ist oder ein Eintrag keine Nummer hat: Eine halbe Liste darf nie
- * „weniger Planer“ heißen (dann entstünde eine Gruppe ohne Leiter, und Soll/Ist meldete „nichts fehlt“).
+ * Personennummern aus der Antwort auf `planerRechtPfad` – **in der gemessenen Form** (Test-Instanz, 25.11.2026, nach dem
+ * Auspacken von `data`): `{ authId, selections: [{ dataId, personIds: number[] }] }`. Wer das Recht für **alle**
+ * Dienstgruppen (−1) hat, steht bei jeder einzelnen `data_id` mit drin (gemessen). Gelesen wird genau der Eintrag dieser
+ * Dienstgruppe. **Streng:** `null`, wenn die Form nicht stimmt, der Eintrag fehlt oder eine Nummer keine ist – eine halbe
+ * Liste darf nie „weniger Planer“ heißen (dann entstünde eine Gruppe ohne Leiter, und Soll/Ist meldete „nichts fehlt“).
  */
-export function personenIdsAusRecht(roh: unknown): number[] | null {
-  if (!Array.isArray(roh)) return null;
+export function personenIdsAusRecht(roh: unknown, dienstgruppeId: number): number[] | null {
+  if (roh === null || typeof roh !== 'object') return null;
+  const auswahl = (roh as { selections?: unknown }).selections;
+  if (!Array.isArray(auswahl)) return null;
+  const eintrag = (auswahl as unknown[]).find(
+    (e) =>
+      e !== null &&
+      typeof e === 'object' &&
+      ctId((e as { dataId?: unknown }).dataId) === dienstgruppeId,
+  ) as { personIds?: unknown } | undefined;
+  if (!eintrag || !Array.isArray(eintrag.personIds)) return null;
   const ids: number[] = [];
-  for (const e of roh as unknown[]) {
-    const id =
-      e !== null && typeof e === 'object'
-        ? (ctId((e as { personId?: unknown }).personId) ?? ctId((e as { id?: unknown }).id))
-        : ctId(e);
+  for (const e of eintrag.personIds as unknown[]) {
+    const id = ctId(e);
     if (id === null || id <= 0) return null;
     ids.push(id);
   }

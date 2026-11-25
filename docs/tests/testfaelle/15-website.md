@@ -651,14 +651,17 @@ in der Kategorie der Website).
 
 **Das muss passieren:** Eine Seite gehört der Website oder einer Untergruppe (**Seite einstellen → Bereich**, nur die Leitung der Website).
 Mitglieder einer Untergruppe sehen in „Seiten“ und „Freigaben“ nur die Seiten ihres Bereichs, die Vorschau zeigt aber Menü und Aussehen der ganzen
-Website. Die Leitung der Untergruppe gibt ihre Seiten frei – in die Kategorie der Untergruppe. Eine Seite, deren Bereich geändert wurde, wird beim
-nächsten Freigeben verschoben; was dabei nicht gelingt, steht in der Meldung.
+Website. Die Leitung der Untergruppe gibt ihre Seiten frei – in die Kategorie der Untergruppe. **Ändert die Leitung der Website den Bereich einer
+Seite, die online steht, wandert die veröffentlichte Fassung sofort mit** (W3b-4b-2) – nur ihr Bereich ändert sich, ungeprüfte Änderungen im
+Entwurf gehen nicht online; was dabei nicht gelingt, steht in der Meldung.
 
-1. **Bereich setzen (Alwin):** „Jugendabend“ → **Seite einstellen**: Das Feld **Bereich** zeigt „Website“, „Website – Jugend“ (keine nicht
-   eingerichtete Untergruppe). „Website – Jugend“ wählen, **Fertig**. Dasselbe für „Freizeit 2027“. Unter **Freigaben** stehen beide als
-   „Geändert“ mit „Steht online noch in einem anderen Bereich – Freigeben verschiebt sie · Bereich „Website – Jugend““.
-2. **Verschieben (Alwin):** „Jugendabend“ **Veröffentlichen**: „„Jugendabend“ ist online.“ – ohne Zusatz. In ChurchTools (Werte der Erweiterung)
-   steht die Seite jetzt in **117**, nicht mehr in „Veröffentlicht“ der Website (107). „Freizeit 2027“ **nicht** freigeben (für Schritt 5).
+1. **Bereich ändern → sofort verschoben (Alwin):** „Jugendabend“ → **Seite einstellen**: Das Feld **Bereich** zeigt „Website“, „Website – Jugend“
+   (keine nicht eingerichtete Untergruppe). „Website – Jugend“ wählen, **Fertig**. Oben „Gespeichert“, darunter die Meldung „„Jugendabend“ steht
+   online jetzt im Bereich „Website – Jugend“.“; das Etikett zeigt **Online**. In ChurchTools (Werte der Erweiterung) steht die Seite jetzt in
+   **117**, nicht mehr in „Veröffentlicht“ der Website (107). Unter **Freigaben** steht sie nicht.
+2. **Die Online-Fassung wandert, nicht der Entwurf (Alwin):** In „Freizeit 2027“ einen Text ändern (**nicht** veröffentlichen), dann **Seite
+   einstellen → Bereich** „Website – Jugend“, **Fertig**. Dieselbe Meldung; das Etikett zeigt **Geändert**. In 117 steht der **alte** Text (ohne die
+   Änderung), in 107 nichts mehr. Unter **Freigaben** steht „Freizeit 2027“ als „Geändert“ mit „· Bereich „Website – Jugend““ (für Schritt 5).
 3. **Als Spike, Mitarbeiter in 347:** Die Erweiterung zeigt nur „Jugendabend“ und „Freizeit 2027“ (keine Startseite, kein Impressum, „Im Menü“
    leer, kein Hinweis „Startseite anlegen“); kein Reiter Aussehen, kein Einstellungen. Die Vorschau zeigt Kopf und Menü der Website.
    **Neue Seite** mit dem Titel einer Website-Seite, die Spike nicht sieht (z. B. „Impressum“): Die Adresse wird `/impressum-2/`. Anlegen: Die
@@ -667,9 +670,10 @@ nächsten Freigeben verschoben; was dabei nicht gelingt, steht in der Meldung.
    sieht die Leitung der Website nicht.) Noch **nicht** freigeben.
 5. **Als Spike, Leiter in 347** (Rolle per Werkzeug, Erweiterung neu laden): Reiter **Freigaben** mit Zähler 1; die Liste zeigt nur Seiten von
    Jugend, **kein** Menü, **keine** Einstellungen. Spikes Seite **Freigeben** → online in 117. **„Freizeit 2027“ Veröffentlichen**: „„Freizeit 2027“
-   ist online. „Freizeit 2027“ steht zusätzlich noch online im Bereich „Website“ – dort ließ sie sich gerade nicht entfernen …“ – sie steht in
-   117 **und** in 107 (Spike darf in 107 nicht schreiben) und bleibt unter „Freigaben“ als „Geändert“.
-6. **Als Alwin:** „Freizeit 2027“ erneut **Veröffentlichen** → jetzt nur noch in 117. „Freigaben“ zeigt sie nicht mehr.
+   ist online.“ – **ohne** Zusatz „steht zusätzlich noch online“: Sie steht nur in 117, jetzt mit der Änderung aus Schritt 2 (kein Doppel mehr wie
+   bei der Abnahme am 25.11.2026).
+6. **Zurück auf „Website“ (Alwin):** „Jugendabend“ → **Seite einstellen → Bereich** „Website“, **Fertig**: „„Jugendabend“ steht online jetzt im
+   Bereich „Website“.“ – in 107, nicht mehr in 117; Etikett **Online**. Danach wieder auf „Website – Jugend“ stellen.
 7. **Ohne Bereich:** Eine Person, die in „Entwürfe“ schreiben darf, aber weder in 344 noch in 347 ist (z. B. Spike kurz aus 347 nehmen, Rolle
    mit Rechten über eine andere Gruppe): Statt der Seiten steht „Du darfst an der Website mitarbeiten, bist aber in keiner ihrer Gruppen
    eingetragen …“. Danach Spike wieder in 347.
@@ -680,8 +684,8 @@ nächsten Freigeben verschoben; was dabei nicht gelingt, steht in der Meldung.
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `shared/website/modell.ts`, `shared/website/zugang.ts`, `shared/website/freigabe.ts`, `shared/website/einrichten.ts`, `website/src/start.ts`, `website/src/App.tsx`, `website/src/Seiten.tsx`, `website/src/Freigaben.tsx`, `website/src/SeiteEinstellen.tsx`, `website/src/NeueSeite.tsx`, `website/src/daten.ts`, `website/src/freigabeAnzeige.ts`, `website/src/WerDarfWas.tsx`, `website/src/RollenStufen.tsx`, `website/src/demo.ts`
-- **Automatisiert:** teilweise – `shared/website/zugang.test.ts` (alle Zweige des Zugangs, Website geht vor, ohne Bereich, Rechte je Bereich), `shared/website/freigabe.test.ts` (richtige Kategorie, nicht eingerichtet, Verschieben in der Reihenfolge, alt löschen scheitert, Entfernen aus allen Kategorien, Online-Vergleich mit falschem Bereich, Liste/Zähler je Bereich), `website/src/start.test.ts` (Untergruppen, Mitgliedschaften, Lesefehler), `website/src/Seiten.bereiche.test.tsx`, `website/src/Freigaben.bereiche.test.tsx`, `website/src/Seitenarbeit.test.tsx` (Feld „Bereich“), `website/src/App.test.tsx`, `website/src/WerDarfWas.test.tsx`, `website/src/demo.test.ts` (Demo-Fälle `jugend-redakteur`, `jugend-leitung`, `bereiche`); die echten Rechte in ChurchTools und Spikes Rollen nur in der Test-Instanz
-- **Historie:** neu mit W3b-4b (23.11.2026)
+- **Betrifft:** `shared/website/modell.ts`, `shared/website/zugang.ts`, `shared/website/freigabe.ts`, `shared/website/einrichten.ts`, `website/src/start.ts`, `website/src/App.tsx`, `website/src/Seiten.tsx`, `website/src/Seitenarbeit.tsx`, `website/src/Freigaben.tsx`, `website/src/SeiteEinstellen.tsx`, `website/src/NeueSeite.tsx`, `website/src/daten.ts`, `website/src/freigabeAnzeige.ts`, `website/src/WerDarfWas.tsx`, `website/src/RollenStufen.tsx`, `website/src/demo.ts`
+- **Automatisiert:** teilweise – `shared/website/zugang.test.ts` (alle Zweige des Zugangs, Website geht vor, ohne Bereich, Rechte je Bereich), `shared/website/freigabe.test.ts` (richtige Kategorie, nicht eingerichtet, Verschieben in der Reihenfolge, alt löschen scheitert, Entfernen aus allen Kategorien, Online-Vergleich mit falschem Bereich, Liste/Zähler je Bereich; Bereichswechsel: Online-Fassung statt Entwurf, nur `bereich` geändert, Reihenfolge, „danach Online“, Fehlerzweige einzeln), `website/src/start.test.ts` (Untergruppen, Mitgliedschaften, Lesefehler), `website/src/Seiten.bereiche.test.tsx` (auch: erst speichern, dann verschieben; Meldungen getrennt), `website/src/Freigaben.bereiche.test.tsx`, `website/src/Seitenarbeit.test.tsx` (Feld „Bereich“; Auslöser nur nach gelungenem Speichern, nie bei fremdem Stand), `website/src/App.test.tsx`, `website/src/WerDarfWas.test.tsx`, `website/src/demo.test.ts` (Demo-Fälle `jugend-redakteur`, `jugend-leitung`, `bereiche`); die echten Rechte in ChurchTools und Spikes Rollen nur in der Test-Instanz
+- **Historie:** neu mit W3b-4b (23.11.2026); W3b-4b-2 (25.11.2026): Bereich ändern verschiebt sofort (Schritte 1, 2, 5, 6 neu)
 
 </details>

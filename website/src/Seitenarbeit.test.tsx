@@ -1077,7 +1077,9 @@ describe('Bereich gewechselt → Online-Fassung wandert mit (W3b-4b-2, E-W32)', 
     fireEvent.click(screen.getByRole('button', { name: 'Seite einstellen' }));
     await waitFor(() => expect(d.beginneBearbeiten).toHaveBeenCalled());
     await einstellen('Titel', 'Neuer Titel');
-    await waitFor(() => expect(speicherte().at(-1)).toMatchObject({ titel: 'Neuer Titel', bereich: 347 }));
+    await waitFor(() =>
+      expect(speicherte().at(-1)).toMatchObject({ titel: 'Neuer Titel', bereich: 347 }),
+    );
     expect(onBereichGewechselt).not.toHaveBeenCalled();
   });
 });

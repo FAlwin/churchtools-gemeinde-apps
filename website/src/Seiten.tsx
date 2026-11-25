@@ -329,15 +329,18 @@ export function Seiten({
   const bereichNachziehen = (s: Seite, alt: number | null) => {
     if (!kategorien || !freigabe) return;
     const n = namen ?? { website: 'Website', untergruppen: [] };
-    void handle(async () => {
-      try {
-        const r = await wechsleBereich(kategorien, s.id, alt, bereichVon(s));
-        if (r.verschoben) setMeldung(verschobenHinweis(s.titel, bereichVon(s), r.bleibtIn, n));
-      } finally {
-        online.neu();
-        freigabe.onGeaendert();
-      }
-    }, nichtVerschobenText(s.titel, alt, n));
+    void handle(
+      async () => {
+        try {
+          const r = await wechsleBereich(kategorien, s.id, alt, bereichVon(s));
+          if (r.verschoben) setMeldung(verschobenHinweis(s.titel, bereichVon(s), r.bleibtIn, n));
+        } finally {
+          online.neu();
+          freigabe.onGeaendert();
+        }
+      },
+      nichtVerschobenText(s.titel, alt, n),
+    );
   };
 
   /** Eine gespeicherte Seite (und ggf. das Menü) in den gelesenen Stand übernehmen – ohne neu zu lesen. */

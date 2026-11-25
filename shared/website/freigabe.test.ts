@@ -1005,7 +1005,7 @@ describe('Bereichswechsel: Fehlerzweige einzeln', () => {
     expect(textIn(s, ONLINE, 'j')).toBe(vorher);
   });
 
-  it('Nachlesen in 117 ohne Beleg (201, nichts angelegt): wirft 502, die alte bleibt unberührt', async () => {
+  it('Schreiben in 117 ohne Ergebnis (201, nichts angelegt): wirft 502, die alte bleibt unberührt', async () => {
     const { s, vorher } = await onlineBeiDerWebsite();
     const echt = s.port.schreibe;
     s.port.schreibe = (pfad, a) =>
@@ -1013,6 +1013,27 @@ describe('Bereichswechsel: Fehlerzweige einzeln', () => {
     await expect(bereichWechseln(s.bereichsOrt, 'j', null, JUGEND)).rejects.toMatchObject({
       status: 502,
     });
+    expect(s.schreibzugriffe(ONLINE)).toEqual([]);
+    expect(textIn(s, ONLINE, 'j')).toBe(vorher);
+  });
+
+  it('steht beim Nachlesen in 117 ein anderer Stand (jemand schrieb dazwischen): wirft 502, in 2 wird NICHTS gelöscht', async () => {
+    const { s, vorher } = await onlineBeiDerWebsite();
+    // Lesezugriffe auf 117: 1 = Suche nach der Seite, 2–4 = `einheitSpeichern` (vorher, nach Teilen, nach Kopf), 5 = Nachlesen.
+    let lesen = 0;
+    let gestoert = false;
+    s.steuerung.ausfall = (z) => {
+      if (z.kategorie === JUGEND_ONLINE && z.art === 'LESEN' && ++lesen === 5) {
+        gestoert = true;
+        const kopf = s.werte[JUGEND_ONLINE].find((w) => w.value.includes('"website-kopf"'))!;
+        kopf.value = kopf.value.replace(/"stand":"[0-9a-f]+"/, '"stand":"fremd000"');
+      }
+      return undefined;
+    };
+    await expect(bereichWechseln(s.bereichsOrt, 'j', null, JUGEND)).rejects.toMatchObject({
+      status: 502,
+    });
+    expect(gestoert).toBe(true);
     expect(s.schreibzugriffe(ONLINE)).toEqual([]);
     expect(textIn(s, ONLINE, 'j')).toBe(vorher);
   });

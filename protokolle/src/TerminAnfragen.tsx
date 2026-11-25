@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { kandidatenFiltern, type Kandidat } from '@shared/protokolle/besprechungsanfrage';
-import { Schalter } from '@ui/bedienung/Schalter';
 import { TextKnopf } from '@ui/bedienung/TextKnopf';
 import type { Fehlermeldung } from '@ui/ct/fehlerMeldung';
+import { TerminSchalter } from './TerminSchalter';
 import formular from './TerminFormular.module.scss';
 import felder from './Fensterfelder.module.scss';
 import styles from './TerminAnfragen.module.scss';
@@ -53,18 +53,9 @@ export function TerminAnfragen(p: Props) {
 
   return (
     <div className={styles.anfragen}>
-      <label className={styles.schalter}>
-        <input
-          type="checkbox"
-          role="switch"
-          className={styles.versteckt}
-          checked={p.an}
-          disabled={aus}
-          onChange={(ev) => p.onAn(ev.target.checked)}
-        />
-        <Schalter an={p.an} />
-        <span>Besprechungsanfrage erstellen</span>
-      </label>
+      <TerminSchalter an={p.an} onAn={p.onAn} disabled={aus}>
+        Besprechungsanfrage erstellen
+      </TerminSchalter>
       <p className={styles.leise}>
         Es können alle Personen angefragt werden, die berechtigt sind, den Gruppenkalender „
         {p.kalenderName}“ zu sehen.

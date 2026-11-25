@@ -76,6 +76,7 @@ const START: Start = {
   ressourcenBuchen: [],
   ressourcenVerwalten: [],
   eventsAnlegen: [],
+  gruppentypenAnlegen: [],
   schreibbar: [],
   gruppen: [
     { id: 11, name: 'Leitungsteam', lage: 'eingerichtet', protokolle: 60, mitarbeit: 61 },

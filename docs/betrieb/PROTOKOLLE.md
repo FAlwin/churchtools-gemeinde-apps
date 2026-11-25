@@ -581,7 +581,7 @@ Kalender, Termin-Nummer, Name und Zeit) – nicht im Protokoll (freigegebene ble
 „Mitarbeit“, nie wird hart gelöscht (wird das Protokoll gelöscht, bekommen seine Stände den Vermerk `geloescht`, W6; ebenso der Stand eines Bausteins, der beim Bearbeiten aus dem Protokoll entfernt wird – kommt er zurück, fällt der Vermerk beim nächsten Speichern weg, `termineAbgleichen`), und „Nicht eintragen“ überschreibt einen Eintrag im Kalender nie. Wer in keinem Kalender anlegen darf, sieht weder „Eintragen“ noch „Nicht eintragen“, dafür einen Satz.
 
 **Das Fenster wie der ChurchTools-Kalender (W15-1, 23.11.2026):** Seit W15-1 baut „In Kalender eintragen“ den **Reiter „Kalender“ des ChurchTools-Dialogs „Termin erstellen“** nach (Messung
-`protokolle-planung/docs/messung-w15-0-2026-11-23.md`); der Reiter Anmeldung folgt in W15-5, **Ressourcen** gibt es seit W15-2, **Events** seit W15-3 und **Besprechungsanfragen** seit W15-4 (unten); die Reiterleiste zeigt sich erst, wenn es mehr als
+`protokolle-planung/docs/messung-w15-0-2026-11-23.md`); **Ressourcen** gibt es seit W15-2, **Events** seit W15-3, **Besprechungsanfragen** seit W15-4 und **Anmeldung** seit W15-5 (unten); die Reiterleiste zeigt sich erst, wenn es mehr als
 einen gibt. **Links** die Spalte „Termin-Vorlagen <Kalender>“ (`GET /calendars/appointments/templates`, nur die des gewählten Kalenders; am Handy eine Auswahl oben), **rechts** Kalender, Titel, Untertitel,
 „Nur für eingeloggte Personen sichtbar“ (`isInternal`), Ganztägig, **Beginn/Ende** (Datum, Stunde, Minute – mehrtägig), **Wiederholungen** (`repeatId` 0/1/7/31/32/365/999; Monatlich nach Wochentag mit
 `repeatOption` 1–5 und 6 = letzter), **Bis** (`repeatUntil`) und **Alle x** (`repeatFrequency`), **Weitere Termine** (`additionals`), **Ausnahmen** (`exceptions`), Beschreibung, Link, Ort (`address`:
@@ -604,7 +604,7 @@ steht seine Meldung im Fenster, nichts ist halb angelegt. Bei „Nur verknüpfen
 status_id}` (Zahlen als Text): Anwenden → Tabelle (nur buchbare, Status ohne Recht 1), „Als Vorlage speichern“ schreibt dasselbe Format. Offen: Notiz je Buchung (die Schnittstelle kennt sie beim Anlegen
 nicht), `isAutoAccept` wird nicht ausgewertet.
 
-**Reiter „Besprechungsanfragen“ (W15-4, 25.11.2026):** Reiterleiste **Kalender · Besprechungsanfragen · Events · Ressourcen** (Reihenfolge wie ChurchTools). Am Handy (`HANDY_BREITE`) statt der Leiste eine Auswahl **„Bereich“** mit denselben Einträgen (Alwin 25.11.2026: der Rest war nur durch Wischen zu finden). Den Reiter gibt es **nur, wenn der gewählte
+**Reiter „Besprechungsanfragen“ (W15-4, 25.11.2026):** Reiterleiste **Kalender · Besprechungsanfragen · Anmeldung · Events · Ressourcen** (Reihenfolge wie ChurchTools). Am Handy (`HANDY_BREITE`) statt der Leiste eine Auswahl **„Bereich“** mit denselben Einträgen (Alwin 25.11.2026: der Rest war nur durch Wischen zu finden). Den Reiter gibt es **nur, wenn der gewählte
 Kalender ein Gruppenkalender ist** (`type: 'group'` aus `GET /calendars`, `KalenderEintrag.gruppe`; bei `church` fehlt er auch in ChurchTools). Ein Schalter „Besprechungsanfrage erstellen“ (aus = Vorgabe), dann
 Suchfeld und Tabelle Name (mit Gruppe) | Status; **ich** bin vorgewählt und nicht abwählbar. Kandidaten: `GET /calendars/{id}/meetingrequest/candidates` (`protokolle/src/besprechungsanfragen.ts`; das alte
 `…/meetingrequestpersons` ist veraltet) – nur `person.domainType === 'person'`, **nach Personen-ID entdoppelt** (der Eintrag mit Gruppenname gewinnt; `shared/protokolle/besprechungsanfrage.ts`).
@@ -615,6 +615,21 @@ beim Festlegen, Bearbeiten, Absagen und Löschen einer Sitzung). **Unklare Antwo
 Prüfung „steht schon da?“ läuft neu – findet sie den Termin, wird daraus „Verknüpfen“ (gilt auch ohne Einladungen). **Erfolg ist kein Beleg:** `terminLegen` liest danach `…/appointments/{id}/meetingrequests`
 (`anfragenNachlesen`); fehlt eine Person, bleibt der Termin, der Vermerk entsteht, und `hinweiseZusammen` nennt sie mit Buchungen/Events; ein Lesefehler heißt „unklar“, nie „fehlt“. Termin-Vorlagen kennen keine
 Besprechungsanfragen – es wird nichts übernommen oder gespeichert. Handtest: TF-PROT-32 Schritt 12 (nur mit dem eigenen Konto als Eingeladenem).
+
+**Reiter „Anmeldung“ (W15-5, 25.11.2026, gemessen an der Test-Instanz – `protokolle-planung/docs/messung-w15-0-2026-11-23.md`, „Nachtrag W15-5 Anmeldung“):** Reihenfolge **Kalender · Besprechungsanfragen · Anmeldung · Events · Ressourcen**
+(am Handy dieselben Einträge in der Auswahl „Bereich“). Den Reiter gibt es **nur, wenn `GET /permissions/global` → `churchdb` „create groups of grouptype“ (Liste der Gruppentyp-IDs) nicht leer ist** (`shared/ct/gruppenTypRechte.ts`, über `start.ts`
+bis ins Fenster; **nicht** an den Kalender gebunden). Der Schalter **„Gruppen für Anmeldung erstellen“** (bei genau einem Einzeltermin Einzahl; aus = Vorgabe) trägt den CT-Satz („Für einen Kalendereintrag wird automatisch eine Gruppe erstellt …“, bei Wiederholung
+zusätzlich „Für jede Wiederholung wird eine separate Gruppe erstellt.“). An: **Gruppentyp** (`GET /group/grouptypes`, `nameTranslated`, nur die erlaubten; Vorgabe „Kleingruppe“ = 1, sonst der erste erlaubte), **Tage im Voraus** (1/7/14/30/90/365, Vorgabe 14),
+**Gruppe als Kopiervorlage** (leer + `GET /groups?group_type_ids[]=<Typ>` über alle Seiten, `ctAlleSeiten`; ein Typwechsel leert die Auswahl) und **Tage nach dem Termin bis zum Beenden** (leer + dieselben Tage). Es geht als `signup {signupGroupTypeId,
+signupDaysForwardNo, signupTemplateGroupId?, signupDaysArchiveGroupNo?}` an `POST …/appointments` (leere Auswahlen fehlen; `terminRumpf`, `shared/protokolle/terminAnmeldung.ts` → `signupRumpf`). **ChurchTools legt mit dem Speichern SOFORT echte Gruppen an:**
+je Einzeltermin zwischen heute und „heute + Tage im Voraus“ eine Gruppe „<Titel> – TT.MM.JJJJ, HH:MM“ (Ortszeit; nicht öffentlich, ohne Mitglieder; Termin löschen löscht sie mit). Die Vorschau („Folgende Gruppen werden direkt erstellt und mit dem Kalender verknüpft:
+– TT.MM.JJJJ HH:MM“, sonst „Mit der aktuellen Konfiguration werden keine Gruppen erstellt.“), die Zahl im Fuß („Beim Speichern legt ChurchTools sofort N Gruppen an.“) und das Nachlesen rechnen alle mit **einer** Funktion (`anmeldungTermine`; Einzeltermine aus
+`terminReihe.ts`, Ortstage, **beide Grenzen einschließlich** – gemessen 25.11.2026: 09.12. ja, 10.12. nein). Die Anmeldung geht nur mit, wenn der Reiter da ist, der Schalter an ist, ein **erlaubter** Gruppentyp gewählt ist und nicht „Nur verknüpfen“ gilt (der
+Fuß rechnet bei „Nur verknüpfen“ mit 0). **Erfolg ist kein Beleg:** `terminLegen` liest den Termin nach und prüft `signup` (`signupFehlt`), danach die Gruppen des Typs (`anmeldungNachlesen`, `protokolle/src/anmeldungLesen.ts`: Name beginnt mit „<Titel> –
+TT.MM.JJJJ, HH:MM“, ganztägig nur Datum); fehlt etwas, bleibt der Termin, der Vermerk entsteht, `hinweiseZusammen` nennt es; ein Lesefehler heißt „unklar“, nie „fehlt“; **gelöscht wird nie etwas**. **Termin-Vorlagen** tragen `grouptypeId`, `daysForwardNo`,
+`daysArchiveGroupNo`, `templateGroupId` (laut Schnittstelle Zahlen oder `null`): Anwenden schaltet den Schalter an (nur bei erlaubtem Typ, sonst aus – auch eine Vorlage ohne Anmeldung schaltet ihn aus), „Als Vorlage speichern“ schreibt sie bei Schalter an. Handtest: TF-PROT-32
+Schritt 13 (legt echte Gruppen an – danach den TEST-Termin löschen). Offen: `einzeltermine`
+hört bei 200 auf – bei „täglich“ mit 365 Tagen im Voraus zählt die Vorschau darum weniger, als ChurchTools anlegt; die Schreibweise der Vorlagen-Felder (Zahlen) beim Speichern ist ungemessen.
 
 **Reiter „Events“ (W15-3, 23.11.2026):** Reiterleiste **Kalender · Events · Ressourcen** (Reihenfolge wie ChurchTools). Den Reiter gibt es nur, wenn `GET /permissions/global` → `churchservice` „edit
 events“ (Kalender-IDs) den **gewählten Kalender** enthält (`shared/ct/eventRechte.ts`; Kalender wechseln → Reiter kommt/geht, gesendet werden Events nur, wo das Recht gilt). Die Tabelle
@@ -663,6 +678,8 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit schon (gem
   Rechte `vorlagenKalender`/`darfTagsVerwalten` in `shared/ct/kalenderRechte.ts` (über `start.ts` bis ins Fenster).
 - Ressourcen im Fenster (W15-2): Regeln `shared/protokolle/terminRessourcen.ts` (+ `terminRessourcenZeit.ts`), Rechte `shared/ct/ressourcenRechte.ts` (`buchbareRessourcen`,
   `verwaltbareRessourcen`), Lesen/Nachlesen `protokolle/src/buchungenLesen.ts`, Oberfläche `TerminRessourcen.tsx`; `Eintrag.vorlauf/nachlauf/buchungen`, `terminLegen` → `buchungen`.
+- Anmeldung im Fenster (W15-5): Regeln `shared/protokolle/terminAnmeldung.ts` (`anmeldungVorgabe`, `anmeldungTermine`, `signupRumpf`, `anmeldungHinweis`), Recht `shared/ct/gruppenTypRechte.ts` (`gruppenTypenAnlegen`), Lesen/Nachlesen
+  `protokolle/src/anmeldungLesen.ts`, Oberfläche `TerminAnmeldung.tsx` + `TerminSchalter.tsx` (gemeinsam mit `TerminAnfragen.tsx`) + `SofortHinweis`; `Eintrag.anmeldung`, `TerminVorlage.anmeldung…`, `terminLegen` → `anmeldung`.
 - Besprechungsanfragen im Fenster (W15-4): Regeln `shared/protokolle/besprechungsanfrage.ts` (`kandidatenAus`, `kandidatenFiltern`, `angefragte`, `anfrageHinweis`), Mail-Zählung
   `shared/protokolle/einladungsmail.ts` (`mailsAnAndere`), Lesen/Nachlesen `protokolle/src/besprechungsanfragen.ts`, Oberfläche `TerminAnfragen.tsx` + `EinladungHinweis.tsx`; `terminLegen({ eingeladen })` → `anfragen`.
 - Events im Fenster (W15-3): Reihe `shared/protokolle/terminReihe.ts`, Regeln `terminEvents.ts`, Recht `shared/ct/eventRechte.ts` (`eventKalender`), Lesen/Nachlesen `protokolle/src/eventsLesen.ts`,

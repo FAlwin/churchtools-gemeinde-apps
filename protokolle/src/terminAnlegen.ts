@@ -123,6 +123,8 @@ export function terminRumpf(q: TerminAnlegenFrage): Record<string, unknown> {
           })),
         }
       : {}),
+    // Anmeldung (W15-5): ChurchTools legt mit dem Termin SOFORT echte Gruppen an (je Einzeltermin bis „heute + Tage im Voraus“).
+    ...(q.signup ? { signup: q.signup } : {}),
     ...(q.informieren !== undefined ? { informOwner: q.informieren } : {}),
     ...(q.eingeladen ? { meetingrequests: q.eingeladen.map((inviteeId) => ({ inviteeId })) } : {}),
   };

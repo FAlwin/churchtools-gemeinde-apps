@@ -18,6 +18,11 @@
  * `GET /events` und sucht je Zeile ein Event mit diesem Termin und Beginn. Das Ergebnis steht in `events`, bricht nichts ab
  * und hat dieselbe Form wie `buchungen`.
  *
+ * **Besprechungsanfragen** (W15-4): Mit `eingeladen` geht `meetingrequests` mit – ChurchTools mailt jeder anderen Person sofort.
+ * Auch hier sagt ein `201` nichts: `anfragenNachlesen` liest die Anfragen des neuen Termins, das Ergebnis steht in
+ * `anfragen` (gleiche Form wie `buchungen`) und bricht nichts ab. Eine unklare Antwort beim Anlegen bleibt `Unklar`
+ * (`terminAnlegen`) – nie ein zweites `POST`, sonst gingen die Mails doppelt raus.
+ *
  * Zeitgrenzen und Netzfehler markieren nie etwas als „im Kalender“ oder „nicht eintragen“.
  */
 import {
@@ -31,9 +36,15 @@ import { eintragZusatz } from '@shared/protokolle/terminFelder';
 import { eventsFuer } from '@shared/protokolle/terminEvents';
 import { plusTage } from '@shared/ct/datum';
 import { Unklar } from '@ui/ct/fehler';
+import { anfragenNachlesen } from './besprechungsanfragen';
 import { buchungenNachlesen } from './buchungenLesen';
 import { eventsNachlesen } from './eventsLesen';
-import { kalenderTermineAmTag, terminAnlegen, UNKLAR_OHNE_EINLADUNG } from './terminAnlegen';
+import {
+  kalenderTermineAmTag,
+  terminAnlegen,
+  UNKLAR,
+  UNKLAR_OHNE_EINLADUNG,
+} from './terminAnlegen';
 import { terminLaden } from './termin';
 
 export const NICHT_NACHGELESEN =
@@ -58,6 +69,11 @@ export async function terminLegen(q: {
   verknuepfen?: KalenderTermin | null;
   /** Darf die Person neue Tags anlegen (`admin appointment tags`)? Sonst gehen Tags nur mit Nummer mit. */
   neueTagsErlaubt?: boolean;
+  /**
+   * **Besprechungsanfragen** (W15-4): Personen-IDs, die ChurchTools beim Anlegen einlädt – **jede andere Person bekommt sofort
+   * eine Mail**. Leer oder fehlend: keine Einladung. Bei „Nur verknüpfen“ geht nichts raus (kein Anlegen).
+   */
+  eingeladen?: readonly number[];
 }): Promise<{
   art: 'angelegt' | 'verknuepft';
   id: number;
@@ -65,12 +81,15 @@ export async function terminLegen(q: {
   buchungen?: { fehlend: number[]; unklar: boolean };
   /** Nur nach dem Anlegen mit Events: `fehlend` = die Tage ohne Event, `unklar` = nicht lesbar. */
   events?: { fehlend: string[]; unklar: boolean };
+  /** Nur nach dem Anlegen mit Besprechungsanfragen: `fehlend` = Personen ohne Anfrage, `unklar` = nicht lesbar. */
+  anfragen?: { fehlend: number[]; unklar: boolean };
 }> {
   if (q.verknuepfen) return { art: 'verknuepft', id: q.verknuepfen.id };
   const e = q.eintrag;
   const titel = e.titel.trim();
   const z = eintragZeitraum(e, q.zeitzone);
   const events = eventsFuer(e, q.zeitzone);
+  const eingeladen = q.eingeladen ?? [];
   const id = await terminAnlegen({
     kalender: e.kalender,
     titel,
@@ -80,7 +99,9 @@ export async function terminLegen(q: {
     ganztaegig: e.ganztaegig,
     ...eintragZusatz(e, q.neueTagsErlaubt === true),
     events,
-    unklar: UNKLAR_OHNE_EINLADUNG,
+    ...(eingeladen.length ? { eingeladen } : {}),
+    // Mit Einladungen sagt die Meldung, dass ein zweiter Versuch alle doppelt einlädt.
+    unklar: eingeladen.length ? UNKLAR : UNKLAR_OHNE_EINLADUNG,
   });
   try {
     const roh = await terminLaden({ kalender: e.kalender, id });
@@ -105,10 +126,14 @@ export async function terminLegen(q: {
   const eventsErgebnis = events.length
     ? await eventsNachlesen({ termin: id, gewuenscht: events })
     : undefined;
+  const anfragen = eingeladen.length
+    ? await anfragenNachlesen({ termin: { kalender: e.kalender, id }, gewuenscht: eingeladen })
+    : undefined;
   return {
     art: 'angelegt',
     id,
     ...(buchungen ? { buchungen } : {}),
     ...(eventsErgebnis ? { events: eventsErgebnis } : {}),
+    ...(anfragen ? { anfragen } : {}),
   };
 }

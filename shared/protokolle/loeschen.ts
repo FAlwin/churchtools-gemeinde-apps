@@ -5,6 +5,7 @@
  */
 import type { Aufgabe } from './aufgaben';
 import type { SitzungsStatus } from './speicher';
+import { mailsAnAndere } from './einladungsmail';
 
 /** Der Satz, der im Fenster nicht fehlen darf – hier, damit Fenster und Tests denselben Text meinen. */
 export const NICHT_RUECKGAENGIG = 'Das lässt sich nicht rückgängig machen.';
@@ -29,7 +30,7 @@ export function aufgabenAusProtokoll(
  * löscht (ChurchTools mailt ihm nicht; gemessen K2b 29.10.2026). Jede Person einmal.
  */
 export function eingeladeneMitMail(eingeladen: readonly number[], ich: number): number {
-  return new Set(eingeladen.filter((p) => p !== ich)).size;
+  return mailsAnAndere(eingeladen, ich);
 }
 
 /** Wie der Status in der Rückfrage heißt (die Liste sagt „freigegeben“, nicht „frei“). */

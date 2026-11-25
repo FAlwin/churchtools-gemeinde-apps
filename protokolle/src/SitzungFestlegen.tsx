@@ -13,9 +13,11 @@ import {
   zeitraum,
   type Planung,
 } from '@shared/protokolle/planen';
+import { mailsAnAndere } from '@shared/protokolle/einladungsmail';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
 import { ladeGruppenMitglieder } from './mitglieder';
 import { sitzungFestlegen } from './planen';
+import { EinladungHinweis } from './EinladungHinweis';
 import { Einladeliste, Planungsfelder } from './Planungsfelder';
 import felder from './Fensterfelder.module.scss';
 import styles from './SitzungFestlegen.module.scss';
@@ -93,7 +95,10 @@ export function SitzungFestlegen({
   // Scheitert das Laden der Mitglieder, steht der Fehler unten – Festlegen bleibt gesperrt.
   const meldung = fehler ?? (geladen.art === 'fehler' ? geladen.fehler : null);
   // Wer festlegt und sich einlädt, hat sofort zugesagt und bekommt keine Mail (gemessen 28.10.2026).
-  const mails = liste.filter((x) => eingeladen.has(x.id) && x.id !== ich.person).length;
+  const mails = mailsAnAndere(
+    liste.filter((x) => eingeladen.has(x.id)).map((x) => x.id),
+    ich.person,
+  );
   const problem = planungFehler(p, zeitzone, jetzt ?? new Date());
   const belegt = useMemo(
     () => !problem && schonBelegt(sitzungen, zeitraum(p, zeitzone).beginn),
@@ -218,15 +223,7 @@ export function SitzungFestlegen({
               </span>
             </div>
           </div>
-          {mails > 0 && (
-            <p className={styles.mail} role="note">
-              <Icon name="warnung" size={18} />
-              <span>
-                Die Einladung geht <b>sofort</b> per Mail an {mails}{' '}
-                {mails === 1 ? 'Person' : 'Personen'}.
-              </span>
-            </p>
-          )}
+          <EinladungHinweis mails={mails} />
           {problem && <p className={felder.leise}>{problem}</p>}
           {belegt && (
             <p className={felder.fehler} role="alert">

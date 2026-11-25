@@ -1,15 +1,16 @@
 /**
  * **Erinnerungen in ChurchTools einrichten – lesen und schreiben** (Bauplan R-5a, 25.11.2026). Je Dienstgruppe: Hilfsgruppe
- * (Gruppentyp „Dienstplaner“) + Routine daran + die Planer als Leiter, danach die Nummern im Abfragen-Dokument. Die Regeln
+ * (Gruppentyp „Dienstplaner“) + Routine daran + je Planer zwei globale Rechte nur für diese Gruppe („Planer wie alle“, Alwin 25.11.2026: kein Leiter, sondern
+ * normaler Teilnehmer), danach die Nummern im Abfragen-Dokument. Die Regeln
  * (Namen, Planer-Liste, Soll/Ist) stehen in `shared/dienstplan/abfrageAutomatik.ts`.
  *
  * **Zwei Teile:**
- * - `lageLesen` liest nur (Admin-Fenster zeigt damit **vor dem Klick**, was angelegt wird und wer Leiter wird).
+ * - `lageLesen` liest nur (Admin-Fenster zeigt damit **vor dem Klick**, was angelegt wird und welchen Planern welche Rechte gegeben werden).
  * - `einrichten` liest zuerst frisch (dieselbe Lage) und schreibt dann, Schritt für Schritt, jeden Schritt **mit Nachlesen**:
- *   ein 200/201 ist kein Beleg (Lehre vom 11.08.2026). Erfolg heißt: Gruppe, Routine und alle Leiter stehen nachgelesen da.
+ *   ein 200/201 ist kein Beleg (Lehre vom 11.08.2026). Erfolg heißt: Gruppe, Routine und die Rechte aller Planer stehen nachgelesen da.
  *
  * **Reihenfolge:** Gruppe → (Beschreibung, „Anfragen automatisch annehmen“, Status) → Routine → **Dokument speichern** →
- * Leiter. Das Dokument kommt erst nach nachgelesener Gruppe und Routine, die Leiter danach: Scheitert etwas dazwischen,
+ * Rechte. Das Dokument kommt erst nach nachgelesener Gruppe und Routine, die Rechte danach: Scheitert etwas dazwischen,
  * steht „eingerichtet“ nicht fälschlich da.
  *
  * **Wiederholbar, nie doppelt:** Steht die Einrichtung noch nicht im Dokument (Abbruch zwischen „angelegt“ und „gespeichert“),
@@ -18,12 +19,23 @@
  * Aussetzer eine zweite Gruppe. Eine fremde Routine an der Teilnehmer-Rolle bleibt unangetastet (Stopp).
  *
  * **Vorübergehend ist nicht ungültig:** Nichts wird zurückgerollt oder gelöscht, nichts automatisch wiederholt; die Meldung
- * sagt, was schon angelegt ist. **Nie entfernt:** Leiter, die keine Planer mehr sind, und Teilnehmer bleiben (nur gemeldet).
+ * sagt, was schon angelegt ist. **Nie entzogen:** Rechte von Personen, die keine Planer mehr sind, und Leiter früherer Probe-Einrichtungen
+ * bleiben unangetastet.
+ *
+ * **Die Rechte** (`PUT /permissions/person/{id}`, `type: grant`, `dataId: [Gruppe]`): gelesen wird vorher und nachher
+ * (`GET /permissions/person/{id}`); fehlt danach etwas, oder ist eine `dataId` von vorher weg (ein ersetzendes PUT hätte das
+ * Recht für eine andere Hilfsgruppe gekostet), bricht das Einrichten ab und sagt es. Eine nicht lesbare Antwort heißt nie „hat
+ * nichts“, sondern Stopp.
  */
 import { ApiError, NichtUebernommen } from '@ui/ct/fehler';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { ctPortMit } from '@ui/ct/ctPort';
-import { mitgliedAnlegen, type MitgliedAngaben } from '@ui/ct/mitglieder';
+import {
+  mitgliedAnlegen,
+  mitgliedEntfernen,
+  mitgliedOderNichts,
+  type MitgliedAngaben,
+} from '@ui/ct/mitglieder';
 import { personenRoh } from '@ui/ct/personen';
 import { ctAlleSeiten } from '@ui/ct/verbindung';
 import { ctId } from '@shared/ct/ctId';
@@ -40,6 +52,11 @@ import type { AbfragenStand } from '@shared/dienstplan/abfragenSpeicher';
 import {
   einrichtenPlan,
   gruppenIdsDerDienste,
+  gruppenRechteAus,
+  gruppenRechtGrund,
+  PLANER_GRUPPENRECHTE,
+  rechtDataIdsAus,
+  type GruppenRecht,
   hilfsgruppenBeschreibung,
   hilfsgruppenName,
   HILFSGRUPPEN_TYP,
@@ -61,6 +78,7 @@ import {
 import type { RoutineNeu } from '@shared/organigramm/gruppenwechsel';
 import type { RoutineRoh } from '@shared/organigramm/einrichtungStand';
 import type { AbfrageAnschluss } from './AbfrageFenster';
+import type { AutomatikAnschluss } from './abfrageAutomatikLauf';
 import { abfragenFehlerText } from './abfragenTexte';
 
 export { gruppenIdsDerDienste };
@@ -74,6 +92,10 @@ export interface EinrichtenAnschluss {
   port: EinrichtenPort;
   /** Der EINE Weg, eine Mitgliedschaft anzulegen (`ui/ct/mitglieder.ts`, Wächter `eineMitgliedschaft`). */
   mitgliedAnlegen: (gruppe: number, person: number, angaben: MitgliedAngaben) => Promise<void>;
+  /** Aus der Gruppe austragen – ebenfalls der EINE Weg (`ui/ct/mitglieder.ts`). */
+  mitgliedEntfernen: (gruppe: number, person: number) => Promise<void>;
+  /** Die Mitgliedschaft lesen – `null`: nicht in der Gruppe (404, gemessen); alles andere wirft. */
+  mitgliedOderNichts: (gruppe: number, person: number) => Promise<unknown>;
   /** Namen zu Personennummern – nur zur Anzeige; fehlt eine, steht „Person <Nr.>“ da. */
   namen: (ids: number[]) => Promise<ReadonlyMap<number, string>>;
   /** Die Abfragen der Dienstgruppe lesen/speichern (dasselbe Dokument wie Start und Einstellungen). */
@@ -82,13 +104,22 @@ export interface EinrichtenAnschluss {
 
 const VERWEIGERT = 'Dir fehlt in ChurchTools das Recht dafür (Berechtigungen verwalten).';
 
+/** Der echte Anschluss zu den Mitgliedern der Hilfsgruppe (Browser, angemeldet in ChurchTools) – ohne das Abfragen-Dokument. */
+export function ctAutomatikAnschluss(): AutomatikAnschluss {
+  return {
+    port: { ...ctPortMit(VERWEIGERT), liste: (pfad) => ctAlleSeiten(pfad) },
+    mitgliedAnlegen: (g, p, an) => mitgliedAnlegen(g, p, an, { verweigert: VERWEIGERT }),
+    mitgliedEntfernen: (g, p) => mitgliedEntfernen(g, p, { verweigert: VERWEIGERT }),
+    mitgliedOderNichts: (g, p) => mitgliedOderNichts(g, p),
+  };
+}
+
 /** Der echte Anschluss (Browser, angemeldet in ChurchTools). */
 export function ctEinrichtenAnschluss(
   abfragen: EinrichtenAnschluss['abfragen'],
 ): EinrichtenAnschluss {
   return {
-    port: { ...ctPortMit(VERWEIGERT), liste: (pfad) => ctAlleSeiten(pfad) },
-    mitgliedAnlegen: (g, p, an) => mitgliedAnlegen(g, p, an, { verweigert: VERWEIGERT }),
+    ...ctAutomatikAnschluss(),
     namen: async (ids) => {
       try {
         const personen = await personenRoh(ids);
@@ -140,7 +171,9 @@ export interface Lage {
   art: 'bereit';
   stand: AbfragenStand;
   typId: number;
-  rollen: { leiter: number; teilnehmer: number };
+  rollen: { teilnehmer: number };
+  /** Die Nummern der zwei Rechte in dieser Instanz (aus den Definitionen, nie feste Zahlen). */
+  gruppenRechtIds: Record<GruppenRecht, number>;
   gruppeName: string;
   routineName: string;
   /** Die Hilfsgruppe, falls es sie gibt (gespeicherte oder übernommene). */
@@ -153,9 +186,8 @@ export interface Lage {
   /** Die Routine steht da, ist aber ausgeschaltet – sie wird eingeschaltet. */
   routineAus: boolean;
   planer: Person[];
-  leiterNachtragen: Person[];
-  planerAlsTeilnehmer: Person[];
-  leiterZuviel: Person[];
+  /** Planer, denen eines der zwei Rechte für die Hilfsgruppe fehlt – mit den fehlenden (Namen wie im Fenster). */
+  rechteNachtragen: { person: Person; fehlt: { schluessel: GruppenRecht; name: string }[] }[];
   plan: EinrichtenPlan;
   /** Alles ist eingerichtet, es fehlt nichts. */
   fertig: boolean;
@@ -166,6 +198,33 @@ const ist404 = (e: unknown) => e instanceof ApiError && e.status === 404;
 const gruppenPfad = (id: number) => `/groups/${id}`;
 const mitgliederPfad = (id: number) => `/groups/${id}/members`;
 const routinenPfad = (id: number) => `/groups/${id}/members/routines`;
+const personenRechtePfad = (id: number) => `/permissions/person/${id}`;
+const rechtName = (k: GruppenRecht) => PLANER_GRUPPENRECHTE.find((r) => r.schluessel === k)!.name;
+
+/** Die zwei Rechte-Nummern dieser Instanz – aus den globalen Definitionen, je Schlüssel. */
+async function rechtIdsHolen(p: EinrichtenPort): Promise<Record<GruppenRecht, number>> {
+  const aus = {} as Record<GruppenRecht, number>;
+  for (const r of PLANER_GRUPPENRECHTE)
+    aus[r.schluessel] = (
+      await modulRechtHolen(p, r.modul, r.recht, r.name, '/permissions/definitions?scope=global')
+    ).authId;
+  return aus;
+}
+
+/** Die Rechte einer Person lesen – **streng:** eine Antwort in unbekannter Gestalt ist ein Stopp, nie „hat nichts“. */
+async function personenRechteLesen(
+  p: EinrichtenPort,
+  personId: number,
+  name: string,
+): Promise<unknown> {
+  const roh = await p.holen<unknown>(personenRechtePfad(personId));
+  if (!Array.isArray(roh))
+    throw new Stopp(
+      `ChurchTools hat die Rechte von ${name} nicht in der erwarteten Form geliefert. Es wurde nichts geschrieben.`,
+      true,
+    );
+  return roh;
+}
 
 /**
  * **Nur lesen.** Stoppt (ohne zu schreiben), wenn etwas nicht eindeutig ist: Abfragen-Dokument nicht lesbar, Gruppentyp
@@ -208,12 +267,13 @@ async function lageLesenOhneFangen(
     );
   const typId = typ.id;
   const r = await gruppenartRollen(p, typId);
-  if (r.leiter === null || r.teilnehmer === null)
+  if (r.teilnehmer === null)
     throw new Stopp(
-      `Der Gruppentyp „${HILFSGRUPPEN_TYP}“ hat nicht beide Rollen (Leiter und Teilnehmer) – bitte in ChurchTools ansehen.`,
+      `Der Gruppentyp „${HILFSGRUPPEN_TYP}“ hat keine Rolle „Teilnehmer“ – bitte in ChurchTools ansehen.`,
       false,
     );
-  const rollen = { leiter: r.leiter, teilnehmer: r.teilnehmer };
+  const rollen = { teilnehmer: r.teilnehmer };
+  const gruppenRechtIds = await rechtIdsHolen(p);
   // 3. Die Planer – beide Quellen müssen vollständig lesbar sein.
   const namen = new Map<number, string>();
   const recht = await modulRechtHolen(p, PLANER_RECHT.modul, PLANER_RECHT.recht, PLANER_RECHT.name);
@@ -299,25 +359,26 @@ async function lageLesenOhneFangen(
       routineAus = unsere.routine?.isEnabled === false;
     }
   }
-  // 6. Wer steht in der Hilfsgruppe?
-  let leiter: number[] = [];
-  let teilnehmer: number[] = [];
-  if (gruppeId !== null) {
-    const m = mitgliederAus(await p.liste<RohMitglied>(mitgliederPfad(gruppeId)));
-    for (const x of m.personen) if (!namen.has(x.id)) namen.set(x.id, x.name);
-    leiter = m.mitglieder.filter((x) => x.rolleId === rollen.leiter).map((x) => x.personId);
-    teilnehmer = m.mitglieder.filter((x) => x.rolleId === rollen.teilnehmer).map((x) => x.personId);
-  }
+  // 6. Welche Rechte haben die Planer schon für diese Hilfsgruppe? (Ohne Gruppe: keine – nichts zu lesen.)
+  const rechte = new Map<number, Set<GruppenRecht>>();
+  if (gruppeId !== null)
+    for (const id of planerIds) {
+      const da = gruppenRechteAus(
+        await personenRechteLesen(p, id, namen.get(id) ?? `Person ${id}`),
+        gruppenRechtIds,
+        gruppeId,
+      );
+      if (da === null) throw new Stopp('Die Rechte eines Planers sind nicht lesbar.', true);
+      rechte.set(id, da);
+    }
   const plan = einrichtenPlan(planerIds, {
     gruppe: gruppeId !== null,
     routine: routineId !== null,
     eingetragen: !!einr && einr.gruppeId === gruppeId && einr.routineId === routineId,
-    leiter,
-    teilnehmer,
+    rechte,
   });
-  // Namen für alle, die angezeigt werden (Planer, zu viele Leiter).
-  const gebraucht = [...planerIds, ...plan.leiterZuviel];
-  const fehlen = gebraucht.filter((id) => !namen.has(id));
+  // Namen für alle, die angezeigt werden (Planer).
+  const fehlen = planerIds.filter((id) => !namen.has(id));
   if (fehlen.length > 0) for (const [id, n] of await a.namen(fehlen)) if (n) namen.set(id, n);
   const mit = (ids: readonly number[]): Person[] =>
     ids.map((id) => ({ id, name: namen.get(id) ?? `Person ${id}` }));
@@ -326,6 +387,7 @@ async function lageLesenOhneFangen(
     stand,
     typId,
     rollen,
+    gruppenRechtIds,
     gruppeName: gName,
     routineName: rName,
     gruppeId,
@@ -334,9 +396,10 @@ async function lageLesenOhneFangen(
     routineId,
     routineAus,
     planer: mit(planerIds),
-    leiterNachtragen: mit(plan.leiterNachtragen),
-    planerAlsTeilnehmer: mit(plan.planerAlsTeilnehmer),
-    leiterZuviel: mit(plan.leiterZuviel),
+    rechteNachtragen: plan.rechteNachtragen.map((r) => ({
+      person: mit([r.personId])[0],
+      fehlt: r.fehlt.map((k) => ({ schluessel: k, name: rechtName(k) })),
+    })),
     plan,
     fertig: plan.nichtsZuTun && !routineAus,
   };
@@ -360,8 +423,6 @@ export type Lauf =
 
 const nummerAus = (antwort: unknown): number | null =>
   ctId((antwort as { id?: unknown } | null)?.id);
-
-const aufzaehlung = (namen: readonly string[]) => namen.join(', ');
 
 /** Die Hilfsgruppe nachlesen und prüfen: Typ, Name, Status; `note` und „Anfragen automatisch annehmen“ ergänzen. */
 async function gruppePflegen(
@@ -413,15 +474,7 @@ export async function einrichten(
   if (l.art === 'gestoppt') return l;
   const p = a.port;
   const angelegt: string[] = [];
-  const hinweise = [
-    ...l.planerAlsTeilnehmer.map(
-      (x) =>
-        `${x.name} steht in „${l.gruppeName}“ als Teilnehmer und wird nicht zum Leiter umgestellt (das beendete ihre Erinnerungen).`,
-    ),
-    ...l.leiterZuviel.map(
-      (x) => `${x.name} ist Leiter von „${l.gruppeName}“, aber kein Planer mehr – bleibt stehen.`,
-    ),
-  ];
+  const hinweise: string[] = [];
   if (l.fertig) return { art: 'gelaufen', ok: true, angelegt, hinweise, fehler: null };
   try {
     let gruppeId = l.gruppeId;
@@ -501,21 +554,37 @@ export async function einrichten(
       angelegt.push('Einrichtung im Dienstplaner gespeichert');
     }
 
-    // Die Planer als Leiter.
-    if (l.plan.leiterNachtragen.length > 0) {
-      for (const id of l.plan.leiterNachtragen)
-        await a.mitgliedAnlegen(gruppeId, id, {
-          groupTypeRoleId: l.rollen.leiter,
-          groupMemberStatus: 'active',
+    // Die Planer: zwei Rechte nur für diese Hilfsgruppe – vorher und nachher gelesen.
+    for (const r of l.rechteNachtragen) {
+      const name = r.person.name;
+      const vorher = await personenRechteLesen(p, r.person.id, name);
+      for (const k of r.fehlt)
+        await p.schicken(personenRechtePfad(r.person.id), 'PUT', {
+          authId: l.gruppenRechtIds[k.schluessel],
+          dataId: [gruppeId],
+          type: 'grant',
+          reason: gruppenRechtGrund(dienstgruppe.name),
         });
-      const jetzt = mitgliederAus(await p.liste<RohMitglied>(mitgliederPfad(gruppeId)));
-      const leiter = new Set(
-        jetzt.mitglieder.filter((x) => x.rolleId === l.rollen.leiter).map((x) => x.personId),
-      );
-      const fehlt = l.leiterNachtragen.filter((x) => !leiter.has(x.id));
+      const nachher = await personenRechteLesen(p, r.person.id, name);
+      const da = gruppenRechteAus(nachher, l.gruppenRechtIds, gruppeId);
+      const fehlt = r.fehlt.filter((k) => !da?.has(k.schluessel));
       if (fehlt.length > 0)
-        throw new NichtUebernommen(`die Leiter ${aufzaehlung(fehlt.map((x) => x.name))}`);
-      angelegt.push(`Leiter eingetragen: ${aufzaehlung(l.leiterNachtragen.map((x) => x.name))}`);
+        throw new NichtUebernommen(
+          `die Rechte von ${name} („${fehlt.map((k) => k.name).join('“, „')}“)`,
+        );
+      // Ein ersetzendes PUT würde ein Recht für eine andere Hilfsgruppe kosten – nachweisen, dass nichts verschwunden ist.
+      for (const k of PLANER_GRUPPENRECHTE) {
+        const frueher = rechtDataIdsAus(vorher, l.gruppenRechtIds[k.schluessel]);
+        const jetzt = rechtDataIdsAus(nachher, l.gruppenRechtIds[k.schluessel]);
+        if (frueher && jetzt && [...frueher].some((id) => !jetzt.has(id)))
+          throw new Stopp(
+            `ChurchTools hat beim Setzen von „${k.name}“ für ${name} ein früheres Recht (für eine andere Gruppe) ersetzt. Bitte in ChurchTools unter „Berechtigungen“ ansehen und nicht weiter einrichten.`,
+            false,
+          );
+      }
+      angelegt.push(
+        `Rechte für ${name}: ${r.fehlt.map((k) => k.name).join(', ')} (nur für „${l.gruppeName}“)`,
+      );
     }
     return { art: 'gelaufen', ok: true, angelegt, hinweise, fehler: null };
   } catch (e) {

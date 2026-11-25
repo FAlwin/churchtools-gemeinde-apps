@@ -192,4 +192,16 @@ describe('Texte', () => {
     expect(tagMonat(erster)).toBe('15.11.');
     expect(naechsteErinnerungText(inhalt, { ...ABFRAGE, beendet: HEUTE }, HEUTE)).toBeNull();
   });
+  it('bei laufender Abfrage erst ab MORGEN: die Erinnerung von heute ist um 0:15 bzw. beim Start schon raus', () => {
+    const inhalt = { plan: null, abfragen: [ABFRAGE], einrichtung: null };
+    // 15.11. ist selbst ein Erinnerungstag (2 Tage vor der Frist) – „nächste“ ist dann der 17.11.
+    expect(erinnerungsTage(STANDARD_PLAN, ABFRAGE, '2026-11-15')[0]).toBe('2026-11-15');
+    expect(naechsteErinnerungText(inhalt, ABFRAGE, '2026-11-15')).toBe(
+      `nächste Erinnerung ${tagKurz('2026-11-17')}`,
+    );
+    // Am Vortag ist es der 15.11. (morgen).
+    expect(naechsteErinnerungText(inhalt, ABFRAGE, '2026-11-14')).toBe(
+      `nächste Erinnerung ${tagKurz('2026-11-15')}`,
+    );
+  });
 });

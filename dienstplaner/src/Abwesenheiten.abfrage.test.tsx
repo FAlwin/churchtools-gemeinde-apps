@@ -14,6 +14,8 @@ import type { TerminZeile } from '@shared/dienstplan/termine';
 import type { Antworten } from '@shared/dienstplan/verfuegbarkeit';
 import type { AbwesenheitenDienst } from '@ui/abwesenheiten/ctDienst';
 import { Abwesenheiten } from './Abwesenheiten';
+import type { AutomatikAnschluss } from './abfrageAutomatikLauf';
+import { EINR, hilfsgruppe, R_TEILNEHMER } from './abfrageAutomatik.testutil';
 import { ladeAbfragen } from './ladeAbfragen';
 import { ladeAbwesenheiten, ladeMeineDienste } from './ladeBeiwerk';
 import { ladeZeitraum } from './ladeTermine';
@@ -39,6 +41,20 @@ const dienst = {
   loeschen: vi.fn<AbwesenheitenDienst['loeschen']>(),
 };
 vi.mock('@ui/abwesenheiten/ctDienst', () => ({ abwesenheitenDienst: () => dienst }));
+// Die Hilfsgruppe in ChurchTools (R-5b): Der echte Anschluss ginge ins Netz – die Tests geben eine nachgebaute.
+const anschluss = vi.hoisted(() => ({ aktuell: null as AutomatikAnschluss | null }));
+vi.mock('./einrichtenAbfragen', () => ({
+  ctAutomatikAnschluss: () => ({
+    port: {
+      holen: (p: string) => anschluss.aktuell!.port.holen(p),
+      liste: (p: string) => anschluss.aktuell!.port.liste(p),
+      schicken: () => Promise.reject(new Error('nein')),
+    },
+    mitgliedAnlegen: () => Promise.reject(new Error('nein')),
+    mitgliedEntfernen: (g: number, p: number) => anschluss.aktuell!.mitgliedEntfernen(g, p),
+    mitgliedOderNichts: (g: number, p: number) => anschluss.aktuell!.mitgliedOderNichts(g, p),
+  }),
+}));
 vi.mock('./ladeAbfragen', () => ({ ladeAbfragen: vi.fn(), speichereAbfragen: vi.fn() }));
 vi.mock('./ladeBeiwerk', () => ({ ladeMeineDienste: vi.fn(), ladeAbwesenheiten: vi.fn() }));
 vi.mock('./ladeTermine', () => ({ ladeZeitraum: vi.fn() }));
@@ -291,5 +307,111 @@ describe('Ohne gültige Abfrage ist die Seite wie heute', () => {
     abfragen.mockRejectedValue(new Error('weg'));
     zeige();
     await wieHeute();
+  });
+});
+
+describe('Austritt beim Antworten (R-5b)', () => {
+  const mitEinrichtung = () =>
+    abfragen.mockImplementation((id) =>
+      Promise.resolve({
+        ...abfrageStand(id === 4 ? ABFRAGE : null),
+        inhalt: { ...standardInhalt(), abfragen: id === 4 ? [ABFRAGE] : [], einrichtung: EINR },
+      }),
+    );
+  const ALLES: Antworten = {
+    '101': { a: 'ja', tag: TAGE[101] },
+    '102': { a: 'ja', tag: TAGE[102] },
+    '105': { a: 'ja', tag: TAGE[105] },
+  };
+  const speichereEine = async () => {
+    await klick(screen.getByRole('button', { name: `Ja – Gottesdienst, ${datumText(TAGE[104])}` }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
+  };
+
+  it('nach dem Speichern: ist nichts mehr offen und ich stehe in der Hilfsgruppe, trage ich mich selbst aus (nachgelesen)', async () => {
+    const { w, a } = hilfsgruppe({
+      mitglieder: [
+        { person: START.ichId, rolle: R_TEILNEHMER },
+        { person: 99, rolle: R_TEILNEHMER },
+      ],
+    });
+    anschluss.aktuell = a;
+    mitEinrichtung();
+    stand = bereit(ALLES);
+    zeige();
+    await screen.findByText(/noch 0 von 6 offen/);
+    await speichereEine();
+    await waitFor(() => expect(w.log).toContain(`DELETE /groups/50/members/${START.ichId}`));
+    expect(w.mitglieder.map((m) => m.person)).toEqual([99]);
+  });
+
+  it('ein zweites Speichern WÄHREND der Prüfung wird nicht verworfen: die Prüfung läuft danach noch einmal', async () => {
+    const { a } = hilfsgruppe({
+      mitglieder: [{ person: START.ichId, rolle: R_TEILNEHMER }],
+    });
+    // Die erste Prüfung hängt, bis wir sie freigeben.
+    let frei: () => void = () => {};
+    const gesperrt = new Promise<void>((r) => {
+      frei = r;
+    });
+    const echt = a.mitgliedOderNichts;
+    let erste = true;
+    a.mitgliedOderNichts = (g, p) => {
+      if (erste) {
+        erste = false;
+        return gesperrt.then(() => echt(g, p));
+      }
+      return echt(g, p);
+    };
+    anschluss.aktuell = a;
+    mitEinrichtung();
+    stand = bereit(ALLES);
+    zeige();
+    await screen.findByText(/noch 0 von 6 offen/);
+    await speichereEine();
+    // Zweites Speichern (Vielleicht statt Ja), solange die erste Prüfung noch hängt.
+    await klick(
+      screen.getByRole('button', { name: `Vielleicht – Gottesdienst, ${datumText(TAGE[104])}` }),
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    await waitFor(() => expect(speichern).toHaveBeenCalledTimes(2));
+    frei();
+    await waitFor(() => expect(vi.mocked(echt).mock.calls.length).toBeGreaterThanOrEqual(3));
+  });
+
+  it('ist noch etwas offen, bleibe ich in der Gruppe (kein DELETE)', async () => {
+    const { w, a } = hilfsgruppe({ mitglieder: [{ person: START.ichId, rolle: R_TEILNEHMER }] });
+    anschluss.aktuell = a;
+    mitEinrichtung();
+    zeige();
+    await screen.findByText(/noch 2 von 6 offen/);
+    await speichereEine();
+    await new Promise((r) => setTimeout(r, 30));
+    expect(w.log.filter((z) => z.startsWith('DELETE'))).toEqual([]);
+    expect(w.mitglieder).toHaveLength(1);
+  });
+
+  it('kann die Mitgliedschaft nicht gelesen werden, passiert nichts – und es bleibt leise (nichts im Log)', async () => {
+    const { w, a } = hilfsgruppe({ mitglieder: [{ person: START.ichId, rolle: R_TEILNEHMER }] });
+    w.stoerung.wirft = {
+      [`GET /groups/50/members/${START.ichId}`]: new TypeError('Failed to fetch'),
+    };
+    anschluss.aktuell = a;
+    mitEinrichtung();
+    stand = bereit(ALLES);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    zeige();
+    await screen.findByText(/noch 0 von 6 offen/);
+    await speichereEine();
+    await new Promise((r) => setTimeout(r, 30));
+    expect(w.mitglieder).toHaveLength(1);
+    expect(warn.mock.calls.flat().join(' ')).not.toContain('Failed');
   });
 });

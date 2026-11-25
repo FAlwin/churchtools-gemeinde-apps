@@ -648,7 +648,7 @@ drückt, hat den Dienst**, ohne dass ein Planer etwas tut. Übernimmt niemand, s
 
 </details>
 
-### TF-VERF-20 · Erinnerungen in ChurchTools einrichten: Hilfsgruppe, Routine, Planer als Leiter
+### TF-VERF-20 · Erinnerungen in ChurchTools einrichten: Hilfsgruppe, Routine, zwei Rechte je Planer
 
 **Das brauchst du:** Die **Test-Instanz** mit dem Gruppentyp **„Dienstplaner“** (Rollen Teilnehmer und Leiter, Anleitung
 `docs/betrieb/DIENSTPLANER.md`, Schritt 12), den Dienstplaner mit dem aktuellen Paket, ein Konto mit **„Berechtigungen verwalten“**
@@ -656,7 +656,7 @@ drückt, hat den Dienst**, ohne dass ein Planer etwas tut. Übernimmt niemand, s
 Dienstkategorien bearbeiten“ und/oder Leitung der Team-Gruppe). Nach dem Test die Hilfsgruppe in ChurchTools wieder löschen.
 
 **Das muss passieren:** Der Admin richtet die Erinnerungen einer Dienstgruppe ein – nachdem das Fenster vorher gesagt hat, was
-angelegt wird. Danach stehen in ChurchTools Gruppe, Routine und die Planer als Leiter, und der Dienstplaner zeigt „eingerichtet“.
+angelegt wird. Danach stehen in ChurchTools Gruppe, Routine und je Planer die zwei globalen Rechte „Gruppe inkl. ihrer Gruppenmitglieder sehen“ und „Gruppenmitgliedschaften einer Gruppe bearbeiten“ – nur für diese Gruppe, kein Leiter –, und der Dienstplaner zeigt „eingerichtet“.
 
 1. Als **Planer ohne Admin-Recht**: **Einstellungen → Abfragen – Erinnerungen**. Im Kasten **„In ChurchTools“** steht, warum es das
    braucht, und „Bitte einen Admin, die Erinnerungen einzurichten.“ – **kein** Knopf „Einrichten …“.
@@ -664,19 +664,17 @@ angelegt wird. Danach stehen in ChurchTools Gruppe, Routine und die Planer als L
    („Erst den Plan speichern, dann einrichten.“).
 3. **„Einrichten …“** öffnet „Erinnerungen für <Dienstgruppe> einrichten“. **Vor** dem Klick steht dort: die Gruppe „Dienstplaner:
    Antwort fehlt – <Dienstgruppe>“ (Gruppentyp „Dienstplaner“, ohne Obergruppe), die Routine „Dienstplaner: Erinnerungen
-   <Dienstgruppe>“, **die Namen der Planer, die als Leiter eingetragen werden**, dazu „Mitarbeitende sehen die Gruppe unter ‚Meine
+   <Dienstgruppe>“, **die Namen der Planer, die die zwei Rechte (genau so benannt, „nur für die Gruppe …“) bekommen**, dazu „Mitarbeitende sehen die Gruppe unter ‚Meine
    Gruppen‘ und können austreten“ und „Alles lässt sich in ChurchTools ansehen.“ In ChurchTools ist noch **nichts** angelegt.
 4. **Einrichten** klicken. Das Fenster zeigt, was angelegt wurde (Gruppe, Beschreibung, „automatisch annehmen“, Routine,
-   Einrichtung gespeichert, Leiter). In ChurchTools nachsehen: die Gruppe hat den Typ „Dienstplaner“, Status aktiv, keine
+   Einrichtung gespeichert, Rechte je Planer). In ChurchTools nachsehen: die Gruppe hat den Typ „Dienstplaner“, Status aktiv, keine
    Obergruppe, „Anfragen automatisch annehmen“ ist an, eine Beschreibung steht da; an der Gruppe hängt **eine** Routine (an der Rolle
-   Teilnehmer, eingeschaltet, noch ohne Schritte); **alle Planer** sind **Leiter**, sonst niemand.
-5. Zurück im Kasten: grünes Etikett **„eingerichtet“**, „Gruppe „…“ mit einer Routine für diesen Plan.“ und das leise **„Was ist das?“**
-   (klappt die Erklärung auf). Die Hinweise „noch nicht eingerichtet“ sind auch im Fenster „Abfrage“ weg; es steht dort leise, dass der Start
-   einer Abfrage noch nichts selbst verschickt.
+   Teilnehmer, eingeschaltet, noch ohne Schritte); **jeder Planer** hat unter „Berechtigungen“ die zwei Rechte mit genau dieser Gruppe als Einschränkung – und ist **nicht** Mitglied der Gruppe (kein Leiter). Hatte ein Planer schon Rechte für eine **andere** Hilfsgruppe (zweite Dienstgruppe), sind sie **noch da** (wäre das `PUT` ersetzend, bricht das Einrichten ab und nennt den Planer).
+5. Zurück im Kasten: grünes Etikett **„eingerichtet“**, „Gruppe „…“ mit einer Routine, die diesen Plan verschickt.“ und das leise **„Was ist das?“**
+   (klappt die Erklärung auf). Die Hinweise „noch nicht eingerichtet“ sind auch im Fenster „Abfrage“ weg; es steht dort leise, dass ChurchTools die Erinnerungen gegen 0:15 Uhr verschickt.
 6. **Wiederholen:** „Planer prüfen …“ → das Fenster sagt „Alles ist eingerichtet“. Einen neuen Planer anlegen (Recht für die
-   Dienstgruppe) → „Planer prüfen …“ → Knopf **„Leiter nachtragen“** → nur er wird Leiter, es entsteht keine zweite Gruppe und keine zweite Routine.
-7. **Nichts wird weggenommen:** Einen Leiter von Hand in der Hilfsgruppe stehen lassen, dem das Planer-Recht fehlt → er bleibt, das Fenster
-   nennt ihn nur.
+   Dienstgruppe) → „Planer prüfen …“ → Knopf **„Rechte nachtragen“** → nur er bekommt die zwei Rechte, es entsteht keine zweite Gruppe und keine zweite Routine.
+7. **Nichts wird weggenommen:** Einem Planer von Hand ein Recht der Hilfsgruppe lassen, obwohl er kein Planer mehr ist, und einen Leiter aus einer früheren Einrichtung in der Gruppe stehen lassen → beide bleiben unangetastet.
 8. **Fehlender Gruppentyp:** In einer Instanz ohne Typ „Dienstplaner“ sagt das Fenster „Gruppentyp ‚Dienstplaner‘ fehlt – siehe
    Anleitung“, es wird nichts angelegt.
 9. **Verschwundene Gruppe:** Die Hilfsgruppe in ChurchTools löschen → „Planer prüfen …“ meldet, dass es sie nicht mehr gibt, und legt eine neue an.
@@ -684,8 +682,50 @@ angelegt wird. Danach stehen in ChurchTools Gruppe, Routine und die Planer als L
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `shared/dienstplan/abfrageAutomatik.ts`, `dienstplaner/src/einrichtenAbfragen.ts`, `dienstplaner/src/EinrichtenFenster.tsx`, `dienstplaner/src/ErinnerungsplanAbschnitt.tsx`, `dienstplaner/src/useErinnerungsplan.ts`, `dienstplaner/src/abfragenTexte.ts`, `shared/dienstplan/abfragen.ts`
-- **Automatisiert:** weitgehend – `shared/dienstplan/abfrageAutomatik.test.ts` (Planer-Liste aus beiden Quellen, Soll gegen Ist), `dienstplaner/src/einrichtenAbfragen.test.ts` (Reihenfolge, Nachlesen, Fehlerzweige einzeln, Wiederholen ohne Doppel), `dienstplaner/src/EinstellungenFenster.einrichten.test.tsx` (Kasten für Admin und Nicht-Admin, Fenster nennt die Planer); **nur von Hand:** dass ChurchTools die Gruppe wirklich so anlegt (Typ, „automatisch annehmen“, Beschreibung, Routine, Leiter) und die Rechte der Rollen
-- **Historie:** Dienstplaner R-5a (25.11.2026), Bauplan „Abfragen mit Frist + Erinnerungsplan“; Messung `messung-runden.md`
+- **Betrifft:** `shared/dienstplan/abfrageAutomatik.ts`, `dienstplaner/src/einrichtenAbfragen.ts`, `dienstplaner/src/EinrichtenFenster.tsx`, `dienstplaner/src/ErinnerungsplanAbschnitt.tsx`, `dienstplaner/src/useErinnerungsplan.ts`, `dienstplaner/src/abfragenTexte.ts`, `shared/dienstplan/abfragen.ts`, `shared/ct/gruppenart.ts`
+- **Automatisiert:** weitgehend – `shared/dienstplan/abfrageAutomatik.test.ts` (Planer-Liste aus beiden Quellen, Soll gegen Ist mit den zwei Rechten), `dienstplaner/src/einrichtenAbfragen.test.ts` (Reihenfolge, Rechte vor und nach dem Schreiben gelesen, ersetzendes `PUT` erkannt, Fehlerzweige einzeln, Wiederholen ohne Doppel), `dienstplaner/src/EinstellungenFenster.einrichten.test.tsx` (Kasten für Admin und Nicht-Admin, Fenster nennt die Planer und die zwei Rechte); **nur von Hand:** dass ChurchTools die Gruppe wirklich so anlegt (Typ, „automatisch annehmen“, Beschreibung, Routine), dass `PUT /permissions/person/{id}` die Rechte **hinzufügt** statt zu ersetzen, und die Form der Antwort von `GET /permissions/person/{id}`
+- **Historie:** Dienstplaner R-5a (25.11.2026), umgestellt auf „Planer wie alle“ mit R-5b, Bauplan „Abfragen mit Frist + Erinnerungsplan“; Messung `messung-runden.md`
+
+</details>
+
+### TF-VERF-21 · Abfrage mit Automatik: Start, Austritt beim Antworten, Abgleich, Beenden
+
+**Das brauchst du:** Die **Test-Instanz**, eine Dienstgruppe, für die die Erinnerungen **eingerichtet** sind (TF-VERF-20), ein **Planer-Konto**
+(nicht Admin, hat die zwei Rechte der Hilfsgruppe) und **zwei Mitarbeitende** der Dienstgruppe mit E-Mail-Adresse (eine/r ohne Adresse
+zusätzlich, falls möglich). **Achtung:** Der Start trägt echte Personen in eine echte Gruppe ein und die Routine **verschickt echte Mails** –
+nur Test-Konten verwenden. Nach dem Test die Abfrage beenden.
+
+**Das muss passieren:** Beim Start trägt der Dienstplaner alle, die offen sind, in die Hilfsgruppe ein; ChurchTools verschickt die Erinnerungen
+selbst. Wer antwortet, steht danach nicht mehr in der Gruppe.
+
+1. Als Planer **Planen → ⋯ → Abfrage …**, Dienstgruppe wählen, Frist, Zeitraum und „Sofort“ einstellen, **Abfrage starten**. Darunter steht:
+   „Erinnerungen verschickt ChurchTools gegen 0:15 Uhr an alle, die dann noch offen sind.“
+2. Nach dem Start steht dort „Die Abfrage läuft. N Personen bekommen Erinnerungen.“ In ChurchTools: Die Hilfsgruppe enthält genau die
+   Offenen als **Teilnehmer** (Pausierte nicht, Planer im Team ja); an der Routine stehen die Schritte (Mail, „warten bis …“, …, „warten bis
+   Beginn des Zeitraums“, austragen); die **erste Mail kommt sofort** (nicht für Personen ohne Adresse – sie bleiben trotzdem in der Gruppe). Der
+   Absender ist der Planer, der gestartet hat; der Knopf in der Mail öffnet „Verfügbarkeit“ mit der Abfrage (**mit Band**).
+3. **Neu starten, solange jemand in der Gruppe steht:** Eine zweite Abfrage lässt sich nicht starten – das Fenster nennt die Namen („Reste einer
+   früheren Abfrage“), nichts wurde geändert; **„Gruppe leeren“** trägt sie aus, danach geht der Start.
+4. Als **Mitarbeitende/r**: Startseite zeigt die Karte. Alle Termine beantworten und **Speichern** (oder die Startseite neu laden): Die Person ist
+   **nicht mehr** Mitglied der Hilfsgruppe (ChurchTools: „Meine Gruppen“) – ihr Lauf endet, es kommt keine Mail mehr. Noch ein Termin offen →
+   sie bleibt drin.
+5. Als Planer **Abfrage … → Stand** öffnen: Eine Person, die inzwischen **eingeteilt wurde** (oder pausiert), steht nicht mehr in der Gruppe; leise
+   steht „N Personen ausgetragen, die inzwischen geantwortet haben.“ und „N Personen bekommen noch Erinnerungen.“ Der Abgleich **trägt nie ein**: Wer
+   mitten in der Abfrage neu ins Team kam, steht nicht in der Gruppe.
+6. **Fehlende nachtragen:** Beim Start scheitert das Eintragen einer Person (z. B. ihr in ChurchTools die Mitgliedschaft sperren) → die Meldung nennt
+   sie; am **Starttag** trägt **„Fehlende nachtragen“** nur sie ein; an einem späteren Tag fehlt der Knopf (Hinweis: per „Erinnern“).
+7. **Beenden:** „Abfrage beenden“ → alle Teilnehmer sind aus der Gruppe ausgetragen, dann steht die Abfrage als beendet da. Lässt sich jemand nicht
+   austragen, bleibt die Abfrage **offen** und die Meldung nennt sie.
+8. **Plan ändern während einer Abfrage:** Einstellungen → Abfragen – Erinnerungen zeigt leise „Eine Abfrage läuft gerade – Änderungen am Plan gelten
+   erst für die nächste.“; die laufende Routine ändert sich nicht.
+9. **Ohne Recht an der Hilfsgruppe** (Planer-Konto ohne die zwei Rechte): Die Abfrage startet trotzdem, mit Hinweis „ohne automatische Erinnerungen“;
+   nichts wird eingetragen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/dienstplan/abfrageAutomatik.ts`, `shared/ct/routinen.ts`, `dienstplaner/src/abfrageAutomatikLauf.ts`, `dienstplaner/src/AbfrageFenster.tsx`, `dienstplaner/src/AbfrageStand.tsx`, `dienstplaner/src/useAbfragen.ts`, `dienstplaner/src/Abwesenheiten.tsx`, `dienstplaner/src/abfragenTexte.ts`, `shared/dienstplan/abfrageStand.ts`
+- **Automatisiert:** weitgehend – `shared/dienstplan/abfrageAutomatik.test.ts` (Routine-Schritte aus `erinnerungsTage`), `dienstplaner/src/abfrageAutomatikLauf.test.ts` (Start-Stufen, Eintragen/Nachlesen, Leeren, Abgleich, Austritt, Fehlerzweige einzeln), `dienstplaner/src/Planen.abfrage.test.tsx` (Reihenfolge Schritte → Dokument → Eintragen, Beenden, Abgleich im Fenster), `dienstplaner/src/Startseite.abfrage.test.tsx` und `Abwesenheiten.abfrage.test.tsx` (Austritt nur bei sicherem „nichts mehr offen“); **nur von Hand:** dass ChurchTools die Schritte der Routine übernimmt und ausführt, die Mail wirklich kommt, Austragen den Lauf beendet und `skipIfEmailAddressMissing` greift
+- **Historie:** Dienstplaner R-5b (25.11.2026), Bauplan „Abfragen mit Frist + Erinnerungsplan“; Messung `messung-runden.md`
 
 </details>

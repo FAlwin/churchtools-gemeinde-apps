@@ -11,6 +11,7 @@ import { LEERER_PLAN, mein, zeile } from '@shared/dienstplan/zeile.testutil';
 import type { TerminZeile } from '@shared/dienstplan/termine';
 import type { Antworten } from '@shared/dienstplan/verfuegbarkeit';
 import { Startseite } from './Startseite';
+import { austrittFuerEigene, ladeKarten } from './useAbfragen';
 import type { Start } from './start';
 import { startFuer } from './start.testutil';
 import { ladeAbfragen, speichereAbfragen } from './ladeAbfragen';
@@ -400,5 +401,105 @@ describe('Zeile für Planer in der Karte „Planen“', () => {
     zeige(MITARBEITER);
     await screen.findByRole('region', { name: /^Wann kannst du/ });
     expect(screen.queryByRole('region', { name: 'Planen' })).toBeNull();
+  });
+});
+
+describe('Austritt beim Laden (R-5b): nur bei sicherem „nichts mehr offen“', () => {
+  const MIT_EINR = (a: Abfrage | null) => ({
+    ...stand(a),
+    inhalt: { ...stand(a).inhalt, einrichtung: { gruppeId: 50, routineId: 60 } },
+  });
+  /** Alle sechs Termine beantwortet oder abgedeckt: 101 und 105 kommen dazu. */
+  const ALLES: Antworten = {
+    ...ANTWORTEN,
+    '101': { a: 'ja', tag: '2027-02-07' },
+    '105': { a: 'ja', tag: '2027-03-14' },
+  };
+  const einrichtungDa = () =>
+    abfragen.mockImplementation((id) =>
+      Promise.resolve(id === 4 ? MIT_EINR(ABFRAGE) : stand(null)),
+    );
+
+  it('offen > 0: niemand trägt sich aus – die Karte bleibt', async () => {
+    einrichtungDa();
+    const austritt = vi.fn(() => Promise.resolve('ausgetragen'));
+    const karten = await ladeKarten(MITARBEITER, HEUTE, 'Europe/Berlin', undefined, austritt);
+    expect(karten).toHaveLength(1);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(austritt).not.toHaveBeenCalled();
+  });
+
+  it('genau EIN Termin offen: niemand trägt sich aus (die Grenze ist 0, nicht 1)', async () => {
+    einrichtungDa();
+    antwortenLader.mockResolvedValue(
+      bereit({ antworten: { ...ANTWORTEN, '101': { a: 'ja', tag: '2027-02-07' } } }),
+    );
+    const austritt = vi.fn(() => Promise.resolve('ausgetragen'));
+    const karten = await ladeKarten(MITARBEITER, HEUTE, 'Europe/Berlin', undefined, austritt);
+    expect(karten.map((k) => k.stand.offen)).toEqual([1]);
+    await austrittFuerEigene(MITARBEITER, HEUTE, 'Europe/Berlin', undefined, austritt);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(austritt).not.toHaveBeenCalled();
+  });
+
+  it('offen === 0: ein Austritt für diese Abfrage mit meiner Nummer, keine Karte', async () => {
+    einrichtungDa();
+    antwortenLader.mockResolvedValue(bereit({ antworten: ALLES }));
+    const austritt = vi.fn(() => Promise.resolve('ausgetragen'));
+    expect(await ladeKarten(MITARBEITER, HEUTE, 'Europe/Berlin', undefined, austritt)).toEqual([]);
+    await waitFor(() => expect(austritt).toHaveBeenCalledTimes(1));
+    expect(austritt).toHaveBeenCalledWith(
+      expect.objectContaining({ gruppe: expect.objectContaining({ id: 4 }) }),
+      MITARBEITER.ichId,
+    );
+  });
+
+  it('Antworten nicht lesbar (Lesefehler, kein bereiter Speicher): nie ein Austritt – „offen 0“ wäre geraten', async () => {
+    einrichtungDa();
+    const austritt = vi.fn(() => Promise.resolve('ausgetragen'));
+    for (const v of [
+      bereit({ antworten: ALLES, lesefehler: 'voruebergehend' }),
+      bereit({ antworten: ALLES, bereit: [] }),
+    ]) {
+      antwortenLader.mockResolvedValue(v);
+      await austrittFuerEigene(MITARBEITER, HEUTE, 'Europe/Berlin', undefined, austritt);
+    }
+    expect(austritt).not.toHaveBeenCalled();
+  });
+
+  it('Termine oder Abwesenheiten nicht ladbar: nie ein Austritt, nie ein Wurf', async () => {
+    einrichtungDa();
+    antwortenLader.mockResolvedValue(bereit({ antworten: ALLES }));
+    const austritt = vi.fn(() => Promise.resolve('ausgetragen'));
+    zeitraum.mockRejectedValueOnce(new Error('aus'));
+    await expect(
+      austrittFuerEigene(MITARBEITER, HEUTE, 'Europe/Berlin', undefined, austritt),
+    ).resolves.toBeUndefined();
+    abwesenheiten.mockRejectedValueOnce(new Error('aus'));
+    await expect(
+      austrittFuerEigene(MITARBEITER, HEUTE, 'Europe/Berlin', undefined, austritt),
+    ).resolves.toBeUndefined();
+    expect(austritt).not.toHaveBeenCalled();
+  });
+
+  it('ohne Einrichtung im Dokument: kein Austritt, auch nicht bei offen 0', async () => {
+    antwortenLader.mockResolvedValue(bereit({ antworten: ALLES }));
+    const austritt = vi.fn(() => Promise.resolve('ausgetragen'));
+    await austrittFuerEigene(MITARBEITER, HEUTE, 'Europe/Berlin', undefined, austritt);
+    expect(austritt).not.toHaveBeenCalled();
+  });
+
+  it('ein Austritt, der scheitert, bleibt leise (kein Wurf, keine Wiederholung)', async () => {
+    einrichtungDa();
+    antwortenLader.mockResolvedValue(bereit({ antworten: ALLES }));
+    const austritt = vi.fn(() => Promise.reject(new Error('Person 14 in Gruppe 50')));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await expect(
+      austrittFuerEigene(MITARBEITER, HEUTE, 'Europe/Berlin', undefined, austritt),
+    ).resolves.toBeUndefined();
+    expect(austritt).toHaveBeenCalledTimes(1);
+    expect(warn).not.toHaveBeenCalled();
+    expect(err).not.toHaveBeenCalled();
   });
 });

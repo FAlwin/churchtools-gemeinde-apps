@@ -30,7 +30,9 @@ import {
 import { EinrichtenFenster } from './EinrichtenFenster';
 import {
   automatikHinweis,
+  PLAN_GILT_AB_NAECHSTER,
   EINRICHTEN_GRUPPE,
+  EINRICHTEN_RECHTE,
   EINRICHTEN_ROUTINE,
   EINRICHTEN_WARUM,
 } from './abfragenTexte';
@@ -301,6 +303,11 @@ export function ErinnerungsplanAbschnitt({
           <p className={styles.leise}>
             {automatikHinweis(z.gruppe?.name ?? 'diese Dienstgruppe', z.eingerichtet)}
           </p>
+          {z.laufend && (
+            <p className={styles.leise} role="status">
+              {PLAN_GILT_AB_NAECHSTER}
+            </p>
+          )}
           {v && (
             <p className={styles.vorschau} aria-label="Vorschau">
               {v.kopf} →{' '}
@@ -370,10 +377,12 @@ function InChurchTools({ z }: { z: ErinnerungsplanZustand }) {
       </div>
       {z.eingerichtet ? (
         <p className={styles.leise}>
-          Gruppe „{hilfsgruppenName(name)}“ mit einer Routine für diesen Plan.
+          Gruppe „{hilfsgruppenName(name)}“ mit einer Routine, die diesen Plan verschickt.
         </p>
       ) : (
-        <p className={styles.leise}>{EINRICHTEN_WARUM}</p>
+        <p className={styles.leise}>
+          {EINRICHTEN_WARUM} {EINRICHTEN_RECHTE}
+        </p>
       )}
       <div className={styles.stille}>
         {z.eingerichtet && (
@@ -395,7 +404,7 @@ function InChurchTools({ z }: { z: ErinnerungsplanZustand }) {
       )}
       {erklaerung && (
         <p className={styles.leise}>
-          {EINRICHTEN_GRUPPE} {EINRICHTEN_ROUTINE}
+          {EINRICHTEN_GRUPPE} {EINRICHTEN_ROUTINE} {EINRICHTEN_RECHTE}
         </p>
       )}
     </div>

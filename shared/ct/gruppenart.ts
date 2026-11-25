@@ -149,8 +149,10 @@ export async function modulRechtHolen(
   modul: string,
   recht: string,
   name: string,
+  /** Standard: alle Definitionen; für globale Rechte der Kernmodule (z. B. `churchgroup`): `…?scope=global`. */
+  pfad = '/permissions/definitions',
 ): Promise<SollRecht> {
-  const roh = await port.holen<unknown>('/permissions/definitions');
+  const roh = await port.holen<unknown>(pfad);
   if (roh === null || typeof roh !== 'object')
     throw new GruppenartFehler(
       'unlesbar',

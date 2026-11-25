@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { Absence, AbsenceEvent, AbsenceReason, TerminArt } from '@shared/types/index';
 import type { MeinDienstKurz } from '@shared/dienstplan/meineDienste';
 import type { Dienstgruppe } from '@shared/ct/dienstgruppen';
@@ -19,7 +19,7 @@ import { Toast } from '@ui/fenster/Toast';
 import { Icon } from '@ui/icons/icons';
 import { ladeMeineDienste } from './ladeBeiwerk';
 import { AbfrageBand } from './AbfrageBand';
-import { useBand } from './useAbfragen';
+import { austrittFuerEigene, useBand } from './useAbfragen';
 import { adresseFuer } from './reiter';
 import type { Start } from './start';
 import type { Zeitraum } from '@shared/ct/zeitraum';
@@ -284,6 +284,26 @@ export function Abwesenheiten({
     antworten: zusagen.antworten,
     schreibStand: stand,
   });
+  // Austritt beim Antworten (R-5b): Nach jedem Speicherversuch prüft die App, ob in einer eingerichteten Abfrage nichts mehr offen
+  // ist, und trägt mich dann aus der Hilfsgruppe aus. Leise, ein Lauf zur Zeit, kein Wiederhol-Takt.
+  const austrittLaeuft = useRef(false);
+  const austrittNochmal = useRef(false);
+  useEffect(() => {
+    if (stand === 0 || !start) return;
+    // Kommt ein Speichern, während eine Prüfung läuft, gilt sie danach noch einmal (nie stillschweigend verworfen).
+    if (austrittLaeuft.current) {
+      austrittNochmal.current = true;
+      return;
+    }
+    austrittLaeuft.current = true;
+    void (async () => {
+      do {
+        austrittNochmal.current = false;
+        await austrittFuerEigene(start, heute, zeitzone);
+      } while (austrittNochmal.current);
+      austrittLaeuft.current = false;
+    })();
+  }, [stand, start, heute, zeitzone]);
   const anfang: Zeitraum | undefined = band
     ? { art: 'eigen', von: band.lage.abfrage.von, bis: band.lage.abfrage.bis }
     : undefined;

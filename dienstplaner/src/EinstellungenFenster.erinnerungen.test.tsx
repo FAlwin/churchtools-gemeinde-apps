@@ -311,6 +311,27 @@ describe('Mail und Vorschau', () => {
   });
 });
 
+describe('Plan während einer laufenden Abfrage (R-5b)', () => {
+  const SATZ = 'Eine Abfrage läuft gerade – Änderungen am Plan gelten erst für die nächste.';
+
+  it('läuft eine Abfrage der Gruppe, sagt ein leiser Satz: Änderungen gelten erst für die nächste', async () => {
+    zeige({
+      lesen: () =>
+        Promise.resolve(stand({ plan: null, abfragen: [abfrage], einrichtung: null }, 2)),
+    });
+    await geladen();
+    expect(screen.getByText(SATZ)).toBeTruthy();
+  });
+
+  it('läuft keine, steht er nicht da', async () => {
+    zeige({
+      lesen: () => Promise.resolve(stand({ plan: null, abfragen: [], einrichtung: null }, 2)),
+    });
+    await geladen();
+    expect(screen.queryByText(SATZ)).toBeNull();
+  });
+});
+
 describe('Speichern – nur, was sich geändert hat', () => {
   it('die Einrichtung in ChurchTools geht beim Speichern des Plans nicht verloren', async () => {
     const inhalt: AbfragenInhalt = {

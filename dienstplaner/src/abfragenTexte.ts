@@ -1,4 +1,5 @@
 import type { SpeicherGrund } from '@shared/ct/versionierterWert';
+import { PLANER_GRUPPENRECHTE } from '@shared/dienstplan/abfrageAutomatik';
 
 /** Hinweis, wenn der gespeicherte Wert nicht lesbar ist – er stammt dann womöglich aus einer neueren Fassung: nie überschreiben. */
 export const ABFRAGE_UNLESBAR =
@@ -25,14 +26,31 @@ export function abfragenFehlerText(grund: SpeicherGrund, lesen: boolean): string
 }
 
 /**
- * Der leise Hinweis zu den automatischen Erinnerungen – **die eine Stelle dafür** (Start-Dialog, Stand, Einstellungen). Ehrlich
- * statt versprochen: Auch eingerichtet (R-5a) verschickt der Start einer Abfrage noch nichts selbst – das kommt mit R-5b; dann
- * entfällt die zweite Fassung.
+ * Der leise Hinweis zu den automatischen Erinnerungen – **die eine Stelle dafür** (Start-Dialog, Stand, Einstellungen). Eingerichtet
+ * verschickt ChurchTools die Erinnerungen selbst (Routine, R-5b); sonst bleibt „Erinnern“ per Hand.
  */
 export const automatikHinweis = (gruppe: string, eingerichtet: boolean) =>
   eingerichtet
-    ? `Die Erinnerungen für ${gruppe} sind in ChurchTools eingerichtet. Der Start einer Abfrage verschickt aber noch nichts selbst – bis dahin per „Erinnern“.`
+    ? 'Erinnerungen verschickt ChurchTools gegen 0:15 Uhr an alle, die dann noch offen sind.'
     : `Automatische Erinnerungen sind für ${gruppe} noch nicht eingerichtet – bis dahin per „Erinnern“.`;
+
+/** Im Stand: wer noch in der Hilfsgruppe steht, bekommt noch Erinnerungen. */
+export const bekommenErinnerungenText = (n: number): string =>
+  n === 0
+    ? 'Niemand bekommt noch Erinnerungen.'
+    : n === 1
+      ? '1 Person bekommt noch Erinnerungen.'
+      : `${n} Personen bekommen noch Erinnerungen.`;
+
+/** Der Abgleich beim Öffnen des Stands: wer ausgetragen wurde, weil er inzwischen nicht mehr offen ist. */
+export const abgleichText = (n: number): string =>
+  n === 1
+    ? '1 Person ausgetragen, die inzwischen geantwortet hat.'
+    : `${n} Personen ausgetragen, die inzwischen geantwortet haben.`;
+
+/** Im Einstellungen-Abschnitt, solange für die Gruppe eine Abfrage läuft. */
+export const PLAN_GILT_AB_NAECHSTER =
+  'Eine Abfrage läuft gerade – Änderungen am Plan gelten erst für die nächste.';
 
 /** Was die Einrichtung in ChurchTools anlegt und warum – für „Was ist das?“ (Kasten) und das Einrichten-Fenster. */
 export const EINRICHTEN_WARUM =
@@ -46,9 +64,11 @@ export const EINRICHTEN_GRUPPE =
 export const EINRICHTEN_ROUTINE =
   'ChurchTools führt sie selbst aus, auch wenn niemand den Dienstplaner öffnet. Wer aus der Gruppe ausgetragen wird, bekommt ab sofort nichts mehr.';
 
-/** Warum die Planer Leiter werden. */
-export const EINRICHTEN_LEITER =
-  'Nur Leiter dürfen in ChurchTools die Mitglieder und die Routine der Gruppe ändern.';
+/**
+ * Was die Planer in ChurchTools bekommen – **die zwei Rechte, genau so benannt wie dort**, nur für diese Gruppe. Kein Leiter:
+ * Sie sind normale Teilnehmer und werden erinnert wie alle.
+ */
+export const EINRICHTEN_RECHTE = `Damit Planer die Mitglieder und die Routine der Gruppe ändern dürfen, bekommen sie in ChurchTools zwei Rechte – nur für diese Gruppe: „${PLANER_GRUPPENRECHTE[0].name}“ und „${PLANER_GRUPPENRECHTE[1].name}“. Sie werden dadurch nicht Leiter, sondern bleiben normale Teilnehmer und werden erinnert wie alle.`;
 
 /** Der Schlusssatz: alles ist ansehbar, und was passiert, wenn man es entfernt. */
 export const EINRICHTEN_ANSEHEN =

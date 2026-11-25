@@ -9,7 +9,7 @@ import {
 } from '@shared/dienstplan/abfrageFenster';
 import type { Abfrage } from '@shared/dienstplan/abfragen';
 import { AbfrageZeitleiste } from './AbfrageZeitleiste';
-import { automatikHinweis } from './abfragenTexte';
+import { abgleichText, automatikHinweis, bekommenErinnerungenText } from './abfragenTexte';
 import styles from './AbfrageFenster.module.scss';
 
 /**
@@ -28,6 +28,7 @@ export function AbfrageStand({
   onNochmal,
   zeilen,
   eingerichtet,
+  automatik = null,
 }: {
   abfrage: Abfrage;
   heute: string;
@@ -42,6 +43,8 @@ export function AbfrageStand({
   zeilen: Zeitzeile[];
   /** Die Erinnerungen sind in ChurchTools eingerichtet (`inhalt.einrichtung`). */
   eingerichtet: boolean;
+  /** Der Abgleich beim Öffnen: wer noch Erinnerungen bekommt, wer inzwischen ausgetragen wurde (`null`: noch nicht / nicht möglich). */
+  automatik?: { drin: number; ausgetragen: number } | null;
 }) {
   const etikett = abfrageEtikett(abfrage, heute);
   const am = tagMonat(tagAusIso(abfrage.gestartet.zeit, gemeindeZeitzone()));
@@ -112,6 +115,12 @@ export function AbfrageStand({
 
       <AbfrageZeitleiste zeilen={zeilen} />
       <p className={styles.leise}>{automatikHinweis(gruppeName, eingerichtet)}</p>
+      {automatik && (
+        <p className={styles.leise} role="status">
+          {bekommenErinnerungenText(automatik.drin)}
+          {automatik.ausgetragen > 0 && ` ${abgleichText(automatik.ausgetragen)}`}
+        </p>
+      )}
     </>
   );
 }

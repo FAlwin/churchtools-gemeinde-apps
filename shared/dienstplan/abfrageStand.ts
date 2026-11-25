@@ -11,7 +11,7 @@
  * - `pausiert`: nie – Mitarbeitende können ihre Pause nicht lesen, Pausierte sehen die Karte (Alwin, 25.11.2026).
  */
 import { decktTermin } from '../absences/index';
-import { MONATE, monatName, monatPlus, monateBis, tagKurz, tagMonat } from '../ct/datum';
+import { MONATE, monatName, monatPlus, monateBis, plusTage, tagKurz, tagMonat } from '../ct/datum';
 import type { CtAbsence } from '../ct/typen';
 import {
   abfrageZustand,
@@ -171,12 +171,16 @@ export function abfrageKartenEtikett(
     : abfrageEtikett(a, heute);
 }
 
-/** „nächste Erinnerung So, 03.01.“ – der erste Erinnerungstag ab heute (`erinnerungsTage`); `null`, wenn keiner mehr kommt. */
+/**
+ * „nächste Erinnerung So, 03.01.“ – der erste Erinnerungstag **ab morgen** (`erinnerungsTage`); `null`, wenn keiner mehr kommt.
+ * Bei laufender Abfrage ist die Erinnerung von heute schon raus (gegen 0:15 Uhr bzw. beim Start) – **eine Regel** für die
+ * Startseite und überall, wo sie steht.
+ */
 export function naechsteErinnerungText(
   inhalt: AbfragenInhalt,
   abfrage: Abfrage,
   heute: string,
 ): string | null {
-  const tag = erinnerungsTage(geltenderPlan(inhalt), abfrage, heute)[0];
+  const tag = erinnerungsTage(geltenderPlan(inhalt), abfrage, plusTage(heute, 1))[0];
   return tag ? `nächste Erinnerung ${tagKurz(tag)}` : null;
 }

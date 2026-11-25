@@ -49,7 +49,7 @@ import { ApiError, NichtUebernommen, Unklar } from '@ui/ct/fehler';
 import { modulPort } from '@ui/ct/modulPort';
 import { ctAnfrage, ctDaten, KeinSpeicherRecht } from '@ui/ct/verbindung';
 import { abgelehnt } from './planen';
-import { treffenAendern } from './anwesenheitSchreiben';
+import { TREFFEN_VERWEIGERT, treffenAendern } from './anwesenheitSchreiben';
 import { anfragenLesen, terminDaten, terminLaden, terminPfad, type TerminRef } from './termin';
 
 const json = (body: unknown) => JSON.stringify(body);
@@ -504,7 +504,10 @@ export async function terminAbsagen(q: {
  */
 export async function treffenLoeschen(gruppe: number, id: number): Promise<void> {
   try {
-    await ctAnfrage(`/groups/${gruppe}/meetings/${id}`, { method: 'DELETE' });
+    await ctAnfrage(`/groups/${gruppe}/meetings/${id}`, {
+      method: 'DELETE',
+      verweigert: TREFFEN_VERWEIGERT,
+    });
   } catch (e) {
     if (!weg404(e)) throw e;
   }

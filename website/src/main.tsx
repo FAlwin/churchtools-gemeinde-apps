@@ -8,8 +8,9 @@ import './main.scss';
  */
 void erweiterungStarten({
   App,
-  // Ohne Recht sagt die Verbindung das allgemein; hier passt es genauer.
+  // Ersatztext für jedes fehlende Recht ohne eigenen Text – trifft also auch das Lesen. Einrichten, Bearbeiten, Rechte und
+  // Mails sagen es genauer (`einrichten.ts`, `shared/website/*`, `rechte.ts`, `mailVersand.ts`).
   keinRecht:
-    'ChurchTools erlaubt dir das nicht. Die Website einrichten darf nur ein Admin; bearbeiten dürfen sie Admins und die Leitung der Website-Gruppe.',
+    'ChurchTools erlaubt dir das nicht. Frag die Leitung der Website-Gruppe oder die Verantwortlichen deiner Gemeinde nach dem passenden Recht.',
   demo: import.meta.env.DEV ? () => import('./demo') : undefined,
 });

@@ -7,11 +7,11 @@ import { kategorieSicherstellen } from '@shared/ct/modulDaten';
 import { KATEGORIEN } from '@shared/gebetsabend/einrichten';
 import { modulPort } from '@ui/ct/modulPort';
 
-const VERWEIGERT =
+export const EINRICHTEN_VERWEIGERT =
   'Einrichten darf nur, wer in ChurchTools bei der Erweiterung „Kategorien erstellen“ hat.';
 
 export async function einrichten(modul: number): Promise<void> {
   for (const k of KATEGORIEN) {
-    await kategorieSicherstellen(modulPort, modul, k, VERWEIGERT);
+    await kategorieSicherstellen(modulPort, modul, k, EINRICHTEN_VERWEIGERT);
   }
 }

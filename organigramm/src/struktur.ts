@@ -11,7 +11,7 @@ import { aktivStatus, archivStatus, type StrukturZugriff } from '@shared/organig
 import type { UmbauStatus, UmbauZugriff } from '@shared/organigramm/umbau';
 import type { RohGruppe } from '@shared/organigramm/gruppen';
 
-const VERWEIGERT = 'Du darfst die Gruppen in ChurchTools nicht so ändern.';
+export const STRUKTUR_VERWEIGERT = 'Du darfst die Gruppen in ChurchTools nicht so ändern.';
 
 /** „Die Gruppe ist bereits als Obergruppe gesetzt.“ – 400 mit `group.reference.already…` (O0 §1): Ziel erreicht. */
 function schonGesetzt(e: unknown): boolean {
@@ -36,7 +36,7 @@ export const strukturZugriff: StrukturZugriff = {
       await ctAnfrage(`/groups/${gruppeId}/parents/${elternId}`, {
         method: 'PUT',
         body: '{}',
-        verweigert: VERWEIGERT,
+        verweigert: STRUKTUR_VERWEIGERT,
       });
     } catch (e) {
       if (!schonGesetzt(e)) throw e;
@@ -45,7 +45,7 @@ export const strukturZugriff: StrukturZugriff = {
   async loesen(gruppeId, elternId) {
     await ctAnfrage(`/groups/${gruppeId}/parents/${elternId}`, {
       method: 'DELETE',
-      verweigert: VERWEIGERT,
+      verweigert: STRUKTUR_VERWEIGERT,
     });
   },
   async anlegen(d) {
@@ -58,7 +58,7 @@ export const strukturZugriff: StrukturZugriff = {
         // Ohne Obergruppe: ein neuer Bereich (Umbau O7-3) – das Feld bleibt dann weg (so gemessen 24.10.2026).
         ...(d.elternId === null ? {} : { parentGroupId: d.elternId }),
       }),
-      verweigert: VERWEIGERT,
+      verweigert: STRUKTUR_VERWEIGERT,
     });
     const id = ctId(body?.data?.id);
     if (id === null) throw new NichtUebernommen('die neue Gruppe');
@@ -75,7 +75,7 @@ export const strukturZugriff: StrukturZugriff = {
     }
   },
   async loeschen(gruppeId) {
-    await ctAnfrage(`/groups/${gruppeId}`, { method: 'DELETE', verweigert: VERWEIGERT });
+    await ctAnfrage(`/groups/${gruppeId}`, { method: 'DELETE', verweigert: STRUKTUR_VERWEIGERT });
   },
   nichtUebernommen: (was) => new NichtUebernommen(was),
 };
@@ -144,7 +144,7 @@ export const umbauZugriff: UmbauZugriff = {
       method: 'PATCH',
       // Nicht genannte Felder sind `undefined` – die lässt `JSON.stringify` weg, ChurchTools ändert sie nicht.
       body: JSON.stringify({ name: felder.name, groupStatusId: felder.statusId }),
-      verweigert: VERWEIGERT,
+      verweigert: STRUKTUR_VERWEIGERT,
     });
   },
 };

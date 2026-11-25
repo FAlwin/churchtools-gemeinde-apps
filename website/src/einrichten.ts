@@ -12,7 +12,7 @@ import { ctAlleSeiten } from '@ui/ct/verbindung';
 import { gruppenAus } from '@shared/ct/gruppen';
 import { modulPort } from '@ui/ct/modulPort';
 
-const VERWEIGERT =
+export const EINRICHTEN_VERWEIGERT =
   'Einrichten darf nur, wer in ChurchTools bei der Erweiterung „Kategorien erstellen“ hat.';
 
 export async function einrichten(
@@ -21,7 +21,7 @@ export async function einrichten(
 ): Promise<Kategorien> {
   const ids: number[] = [];
   for (const k of kategorienFuer(gruppe.id, gruppe.name)) {
-    ids.push(await kategorieSicherstellen(modulPort, modul, k, VERWEIGERT));
+    ids.push(await kategorieSicherstellen(modulPort, modul, k, EINRICHTEN_VERWEIGERT));
   }
   const [entwuerfe, veroeffentlicht] = ids;
   return { entwuerfe, veroeffentlicht };

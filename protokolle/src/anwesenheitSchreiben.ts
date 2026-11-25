@@ -19,7 +19,8 @@ import { ctAlleSeiten, ctAnfrage, ctDaten } from '@ui/ct/verbindung';
  */
 
 const json = (body: unknown) => JSON.stringify(body);
-const VERWEIGERT =
+/** Die Meldung, wenn ChurchTools das Pflegen eines Gruppentreffens verweigert – Anwesenheit, Verschieben, Abschließen, Löschen. */
+export const TREFFEN_VERWEIGERT =
   'Dir fehlt in ChurchTools das Recht, Gruppentreffen zu pflegen – ein Admin richtet die Gruppe ein.';
 
 /** Was ein Gruppentreffen beim Zurückschreiben braucht. */
@@ -42,7 +43,7 @@ export async function treffenAendern(
   gruppe: number,
   id: number,
   aendern: (r: TreffenRumpf) => TreffenRumpf | null,
-  verweigert?: string,
+  verweigert: string = TREFFEN_VERWEIGERT,
 ): Promise<Partial<TreffenRumpf> | null> {
   const pfad = `/groups/${gruppe}/meetings/${id}`;
   const d = await ctDaten<Record<string, unknown>>(pfad);
@@ -58,7 +59,7 @@ export async function treffenAendern(
   await ctAnfrage(pfad, {
     method: 'PUT',
     body: json(rumpf),
-    ...(verweigert ? { verweigert } : {}),
+    verweigert,
   });
   return ctDaten<Partial<TreffenRumpf>>(pfad);
 }
@@ -72,7 +73,7 @@ export async function treffenAbschliessen(gruppe: number, id: number): Promise<v
     gruppe,
     id,
     (r) => (r.isCompleted ? null : { ...r, isCompleted: true }),
-    VERWEIGERT,
+    TREFFEN_VERWEIGERT,
   );
   if (nach?.isCompleted !== true) throw new NichtUebernommen('das Abschließen des Gruppentreffens');
 }
@@ -96,13 +97,13 @@ async function schreiben(
     await ctAnfrage(`/groups/${gruppe}/checkin/${person}`, {
       method: 'POST',
       body: json({ groupMeetingId: treffen }),
-      verweigert: VERWEIGERT,
+      verweigert: TREFFEN_VERWEIGERT,
     });
   else
     await ctAnfrage(`/groups/${gruppe}/meetings/${treffen}/members/${person}`, {
       method: 'DELETE',
       body: json({ status: ctStatus(status) }),
-      verweigert: VERWEIGERT,
+      verweigert: TREFFEN_VERWEIGERT,
     });
 }
 

@@ -79,7 +79,8 @@ describe('formularFehler', () => {
           for (const art of ['sofort', 'tag'] as const)
             for (const tag of tage) {
               const f = form({ von, bis, frist, oeffnen: art, oeffnenTag: tag });
-              const geht = abfragenAus({ plan: null, abfragen: [abfrageVon(f)] }) !== null;
+              const geht =
+                abfragenAus({ plan: null, abfragen: [abfrageVon(f)], einrichtung: null }) !== null;
               if (formularFehler(f, HEUTE) === null) {
                 gut++;
                 expect(geht, JSON.stringify(f)).toBe(true);
@@ -133,15 +134,26 @@ describe('Inhalt: neue und beendete Abfrage', () => {
   it('der eigene Plan bleibt, die Abfragen werden ergänzt', () => {
     const plan: Erinnerungsplan = { punkte: [{ art: 'frist' }], mail: null };
     const neu = abfrageVon(form());
-    const r = mitNeuerAbfrage({ plan, abfragen: [beendet(1)] }, neu, HEUTE);
+    const r = mitNeuerAbfrage({ plan, abfragen: [beendet(1)], einrichtung: null }, neu, HEUTE);
     expect(r.plan).toBe(plan);
     expect(r.abfragen.map((a) => a.id)).toEqual(['b1', 'a']);
     expect(abfragenAus(r)).not.toBeNull();
   });
 
+  it('die Einrichtung in ChurchTools bleibt beim Starten und Beenden (nicht Feld für Feld nachgebaut)', () => {
+    const einrichtung = { gruppeId: 5, routineId: 6 };
+    const inhalt = { plan: null, abfragen: [laufend], einrichtung };
+    expect(mitNeuerAbfrage(inhalt, abfrageVon(form()), HEUTE).einrichtung).toEqual(einrichtung);
+    expect(mitBeendeterAbfrage(inhalt, 'laufend', HEUTE).einrichtung).toEqual(einrichtung);
+  });
+
   it(`bei ${GRENZEN.abfragen} Abfragen gehen die ältesten beendeten zuerst – laufende nie`, () => {
     const alle = [laufend, ...Array.from({ length: GRENZEN.abfragen - 1 }, (_, i) => beendet(i))];
-    const r = mitNeuerAbfrage({ plan: null, abfragen: alle }, abfrageVon(form()), HEUTE);
+    const r = mitNeuerAbfrage(
+      { plan: null, abfragen: alle, einrichtung: null },
+      abfrageVon(form()),
+      HEUTE,
+    );
     expect(r.abfragen).toHaveLength(GRENZEN.abfragen);
     expect(r.abfragen.map((a) => a.id)).toContain('laufend');
     expect(r.abfragen.map((a) => a.id)).not.toContain('b0');
@@ -151,7 +163,11 @@ describe('Inhalt: neue und beendete Abfrage', () => {
 
   it('beenden setzt nur diese Abfrage auf den Tag von heute – Plan und andere bleiben', () => {
     const plan: Erinnerungsplan = { punkte: [], mail: null };
-    const r = mitBeendeterAbfrage({ plan, abfragen: [beendet(1), laufend] }, 'laufend', HEUTE);
+    const r = mitBeendeterAbfrage(
+      { plan, abfragen: [beendet(1), laufend], einrichtung: null },
+      'laufend',
+      HEUTE,
+    );
     expect(r.plan).toBe(plan);
     expect(r.abfragen[0]).toEqual(beendet(1));
     expect(r.abfragen[1]).toEqual({ ...laufend, beendet: HEUTE });

@@ -62,10 +62,23 @@ export const STANDARD_PLAN: Erinnerungsplan = {
   mail: null,
 };
 
-/** Das Dokument je Dienstgruppe: der eigene Plan (`null` = `STANDARD_PLAN`) und die Abfragen (Liste, anfangs höchstens eine). */
+/**
+ * Was die Einrichtung „Erinnerungen in ChurchTools“ (R-5a) angelegt hat: die Hilfsgruppe und die Routine daran. Beide
+ * Nummern stehen hier, damit die App sie wiederfindet – gesucht wird nie nach dem Namen allein.
+ */
+export interface Einrichtung {
+  gruppeId: number;
+  routineId: number;
+}
+
+/**
+ * Das Dokument je Dienstgruppe: der eigene Plan (`null` = `STANDARD_PLAN`), die Abfragen (Liste, anfangs höchstens eine) und
+ * die Einrichtung in ChurchTools (`null` = noch nicht eingerichtet).
+ */
 export interface AbfragenInhalt {
   plan: Erinnerungsplan | null;
   abfragen: Abfrage[];
+  einrichtung: Einrichtung | null;
 }
 
 /** Der Plan, der gilt: der eigene oder der Standard. */
@@ -141,10 +154,19 @@ const abfrageSchema = z
   })
   .refine((a) => a.von <= a.bis && a.oeffnen <= a.frist && a.frist < a.von);
 
+const einrichtungSchema = z.strictObject({
+  gruppeId: z.number().int().positive(),
+  routineId: z.number().int().positive(),
+});
+
 const inhaltSchema = z
   .strictObject({
     plan: planSchema.nullable(),
     abfragen: z.array(abfrageSchema).max(GRENZEN.abfragen),
+    // **Das einzige Feld, das beim Lesen fehlen darf** (R-5a, 25.11.2026): Dokumente aus R-1 bis R-4 (nur in Test-Instanzen,
+    // nichts davon ist veröffentlicht) kennen es nicht und gelten als „nicht eingerichtet“. Fassung 1 bleibt; alles andere
+    // – auch ein unbekanntes Feld, auch eines in `einrichtung` – macht den Wert weiter unlesbar. Geschrieben wird es immer.
+    einrichtung: einrichtungSchema.nullable().default(null),
   })
   // Die ID macht eine Abfrage kenntlich (später je Abfrage eine Hilfsgruppe): doppelte gibt es nicht.
   .refine((i) => new Set(i.abfragen.map((a) => a.id)).size === i.abfragen.length);

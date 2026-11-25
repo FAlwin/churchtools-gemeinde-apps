@@ -19,7 +19,7 @@ export function AbfrageStart({
   onNochmal,
   keineTermine,
   zeilen,
-  automatik,
+  eingerichtet,
 }: {
   gruppeName: string;
   formular: AbfrageFormular;
@@ -34,8 +34,8 @@ export function AbfrageStart({
   keineTermine: boolean;
   /** `null`: noch nichts zu zeigen. */
   zeilen: Zeitzeile[] | null;
-  /** Gibt es die automatische Erinnerung für diese Gruppe schon? (R-5) */
-  automatik: boolean;
+  /** Die Erinnerungen sind in ChurchTools eingerichtet (`inhalt.einrichtung`). */
+  eingerichtet: boolean;
 }) {
   const set = (teil: Partial<AbfrageFormular>) => onFormular({ ...formular, ...teil });
   return (
@@ -129,7 +129,7 @@ export function AbfrageStart({
       {!fehler && !planFehler && !keineTermine && zeilen && (
         <>
           <AbfrageZeitleiste zeilen={zeilen} />
-          {!automatik && <p className={styles.leise}>{automatikHinweis(gruppeName)}</p>}
+          <p className={styles.leise}>{automatikHinweis(gruppeName, eingerichtet)}</p>
         </>
       )}
     </>

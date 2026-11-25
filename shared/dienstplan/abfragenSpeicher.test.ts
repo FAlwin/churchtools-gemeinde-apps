@@ -28,7 +28,7 @@ const ABFRAGE: Abfrage = {
   gestartet: { personId: 1, name: 'Alex', zeit: '2026-12-01T10:00:00.000Z' },
   beendet: null,
 };
-const INHALT: AbfragenInhalt = { plan: STANDARD_PLAN, abfragen: [ABFRAGE] };
+const INHALT: AbfragenInhalt = { plan: STANDARD_PLAN, abfragen: [ABFRAGE], einrichtung: null };
 
 /** Wie bei `liveEinstellungen.test.ts`: nachgebauter Speicher samt Kategorien-Liste (`aufbau`). */
 function aufbau(mitKategorie = true) {
@@ -101,6 +101,22 @@ describe('abfragenLesen', () => {
     expect(r.inhalt).toEqual(INHALT);
     expect(r.gespeichert).toMatchObject({ version: 3, inhalt: INHALT });
     expect(r).toMatchObject({ unlesbar: false, fehler: null });
+  });
+
+  it('Altbestand ohne `einrichtung` (R-1 bis R-4, Test-Instanz) gilt als „nicht eingerichtet“, nicht als unlesbar', async () => {
+    const { s, p, wert } = aufbau();
+    const { einrichtung: _weg, ...alt } = INHALT;
+    s.werte.push({ id: 900, dataCategoryId: KAT, value: wert(MUSIK, alt, 3) });
+    const r = await lesen(p);
+    expect(r).toMatchObject({ unlesbar: false, fehler: null, gespeichert: { version: 3 } });
+    expect(r.inhalt).toEqual(INHALT);
+  });
+
+  it('die Einrichtung wird mitgespeichert und nachgelesen', async () => {
+    const { p } = aufbau();
+    const mit: AbfragenInhalt = { ...INHALT, einrichtung: { gruppeId: 12, routineId: 34 } };
+    expect(await speichern(p, null, mit)).toMatchObject({ ok: true });
+    expect((await lesen(p)).inhalt.einrichtung).toEqual({ gruppeId: 12, routineId: 34 });
   });
 
   it('Wert in unbekannter Form → Standard, „unlesbar“, Version bleibt fürs Ersetzen', async () => {
@@ -191,7 +207,11 @@ describe('abfragenSpeichern', () => {
 
   it('Inhalt, den `abfragenAus` nicht lesen würde, wird nie geschrieben', async () => {
     const { s, p } = aufbau();
-    const kaputt = { plan: null, abfragen: [{ ...ABFRAGE, frist: '2027-02-01' }] };
+    const kaputt = {
+      plan: null,
+      abfragen: [{ ...ABFRAGE, frist: '2027-02-01' }],
+      einrichtung: null,
+    };
     await expect(speichern(p, null, kaputt)).rejects.toThrow();
     expect(s.schreibvorgaenge).toEqual([]);
   });
@@ -280,14 +300,14 @@ describe('fremde Werte in derselben Kategorie bleiben unberührt', () => {
 
   it('Abfragen einer anderen Dienstgruppe: unberührt, eigene Version, eigener Konflikt', async () => {
     const { s, p, wert } = aufbau();
-    const technik: AbfragenInhalt = { plan: null, abfragen: [] };
+    const technik: AbfragenInhalt = { plan: null, abfragen: [], einrichtung: null };
     s.werte.push({ id: 900, dataCategoryId: KAT, value: wert(TECHNIK, technik, 7, BEA) });
     expect(await speichern(p, null)).toMatchObject({ ok: true, daten: { version: 1 } });
     expect(s.werte[0].value).toBe(wert(TECHNIK, technik, 7, BEA));
     expect((await lesen(p, TECHNIK)).gespeichert).toMatchObject({ version: 7, von: BEA });
     expect((await lesen(p, MUSIK)).gespeichert).toMatchObject({ version: 1, von: ALEX });
     // Die Version der anderen Gruppe ist kein Konflikt für diese.
-    expect(await speichern(p, 1, { plan: null, abfragen: [] })).toMatchObject({
+    expect(await speichern(p, 1, { plan: null, abfragen: [], einrichtung: null })).toMatchObject({
       ok: true,
       daten: { version: 2 },
     });

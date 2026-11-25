@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { useLaden } from '@ui/ct/useLaden';
 import type { Dienstgruppe } from '@shared/ct/dienstgruppen';
-import { abfragenAus, laufendeAbfrage } from '@shared/dienstplan/abfragen';
+import { abfragenAus, laufendeAbfrage, type AbfragenInhalt } from '@shared/dienstplan/abfragen';
 import {
   entwuerfeGleich,
   entwurfGeaendert,
@@ -12,6 +12,7 @@ import {
 } from '@shared/dienstplan/abfragePlan';
 import { standardInhalt, type AbfragenStand } from '@shared/dienstplan/abfragenSpeicher';
 import type { AbfrageAnschluss } from './AbfrageFenster';
+import type { EinrichtenAnschluss } from './einrichtenAbfragen';
 import { ABFRAGE_UNLESBAR, abfragenFehlerText } from './abfragenTexte';
 
 /** Was der Abschnitt „Abfragen – Erinnerungen“ von außen braucht. */
@@ -21,6 +22,16 @@ export interface ErinnerungenAnschluss {
   gruppen: readonly Dienstgruppe[];
   /** Heute (Zeitzone der Gemeinde) – für die Vorschau. */
   heute: string;
+  /**
+   * „In ChurchTools einrichten“ (R-5a). Ohne: Der Kasten zeigt nur den Stand und bittet um einen Admin. `darf`: Recht
+   * „Berechtigungen verwalten“ (wie die App es sonst prüft: `start.verwalten`).
+   */
+  einrichten?: {
+    darf: boolean;
+    anschluss: EinrichtenAnschluss;
+    /** Die ChurchTools-Gruppen der Dienste einer Dienstgruppe. */
+    gruppenIds: (dienstgruppeId: number) => number[];
+  };
 }
 
 /** Ergebnis von `speichern`: nichts zu tun, gespeichert oder der Satz für den Planer. */
@@ -32,14 +43,15 @@ export type TeilErgebnis = { art: 'nichts' } | { art: 'ok' } | { art: 'fehler'; 
  * ein **unlesbarer** Wert wird nie überschrieben (kann aus einer neueren Fassung stammen), bei einem Konflikt wird nichts
  * überschrieben und der neue Stand erscheint, nichts wird automatisch wiederholt.
  *
- * Gespeichert wird nur der Plan der gewählten Gruppe; die `abfragen` des Dokuments bleiben, wie gelesen, mit der gelesenen
- * Version. **Gruppenwechsel mit ungespeicherten Änderungen:** erst Rückfrage (`wechselFrage`), dann verwerfen – schlichter
+ * Gespeichert wird nur der Plan der gewählten Gruppe; `abfragen` und `einrichtung` des Dokuments bleiben, wie gelesen, mit der
+ * gelesenen Version. **Gruppenwechsel mit ungespeicherten Änderungen:** erst Rückfrage (`wechselFrage`), dann verwerfen – schlichter
  * als Entwürfe je Gruppe zu merken, die einzeln scheitern könnten.
  */
 export function useErinnerungsplan(a: ErinnerungenAnschluss | undefined) {
   const gruppen = a?.gruppen ?? [];
   const [gewaehlt, setGewaehlt] = useState<number | null>(gruppen[0]?.id ?? null);
   const [wechselFrage, setWechselFrage] = useState<number | null>(null);
+  const [einrichtenOffen, setEinrichtenOffen] = useState(false);
   const [bearb, setBearb] = useState<{ fuer: AbfragenStand; wert: PlanEntwurf } | null>(null);
 
   const lesen = a?.anschluss.lesen;
@@ -86,7 +98,8 @@ export function useErinnerungsplan(a: ErinnerungenAnschluss | undefined) {
     if (!a || !gruppe || !lese || !schreibbar || entwurf === null || !geaendert)
       return { art: 'nichts' };
     try {
-      const wunsch = { plan: planFuerSpeicher(entwurf), abfragen: lese.inhalt.abfragen };
+      // Gespreizt: `abfragen` und `einrichtung` bleiben, wie gelesen – nur der Plan ändert sich.
+      const wunsch: AbfragenInhalt = { ...lese.inhalt, plan: planFuerSpeicher(entwurf) };
       const r = await a.anschluss.speichern(
         gruppe.id,
         wunsch,
@@ -152,7 +165,13 @@ export function useErinnerungsplan(a: ErinnerungenAnschluss | undefined) {
     geaendert,
     laufend,
     heute: a?.heute ?? '',
-    automatik: gruppe !== null && (a?.anschluss.automatik?.(gruppe.id) ?? false),
+    // Eingerichtet = die Einrichtung steht im Dokument; bei Lesefehler/unlesbar sagt der Kasten nichts (kein Doppel-Einrichten).
+    eingerichtet: schreibbar && lese.inhalt.einrichtung !== null,
+    einrichtung: schreibbar ? lese.inhalt.einrichtung : null,
+    einrichten: a?.einrichten ?? null,
+    einrichtenOffen,
+    einrichtenOeffnen: () => setEinrichtenOffen(true),
+    einrichtenSchliessen: () => setEinrichtenOffen(false),
     speichern,
   };
 }

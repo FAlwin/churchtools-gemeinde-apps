@@ -955,6 +955,12 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **`protokolle-v1.7.0` (25.11.2026):** W15 komplett – das Fenster „In Kalender eintragen“ hat jetzt alle Reiter des
+  ChurchTools-Dialogs „Termin erstellen“: dazu **Events** (Zeile je Einzeltermin, `terminReihe.ts` rechnet die Reihe wie CT inkl.
+  Überlauf beim 31./29.02., #1136), **Besprechungsanfragen** (nur Gruppenkalender, Mail-Schutz, `mailsAnAndere` als eine Regel, #1150)
+  und **Anmeldung** (Anmeldegruppen, CT legt sie sofort an, #1152); am Handy Auswahl „Bereich“ statt Reiterleiste. Dazu W16-Folgen:
+  Löschen vermerkt Termin-Stände als gelöscht (#1145), „Schreibt mit“ ohne Sicht ist nicht Leitung (#1146), entfernter
+  Termin-Baustein wird als gelöscht vermerkt (#1148).
 - **`protokolle-v1.6.0` (24.11.2026):** W16 (Mitlesen `useMitlesen`, Anwesenheit als Schnappschuss `zumLesen`, Stufe „Schreibt mit“ –
   `shared/protokolle/zugang.ts`, #1132), W15-1/-2 (Termin-Fenster wie der ChurchTools-Kalender: Reiter Kalender + Ressourcen, #1127/#1131;
   Events/Besprechungsanfragen/Anmeldung folgen) und #1125 (Rückgängig nach KI, Kalender-Link).

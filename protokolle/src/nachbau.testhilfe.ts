@@ -98,6 +98,8 @@ export interface Nachbau {
   werte: Map<number, { id: number; value: string }[]>;
   naechste: number;
   aufrufe: string[];
+  /** Wie `aufrufe`, aber mit Abfrage (`?start_date=…`) – zum Zählen doppelter Abrufe derselben Adresse. */
+  adressen: string[];
   admin: boolean;
   schlucken: Set<string>;
   schluckeWert: ((value: string) => boolean) | null;
@@ -245,6 +247,7 @@ export function nachbauStarten(): Nachbau {
     werte: new Map(),
     naechste: 50,
     aufrufe: [],
+    adressen: [],
     admin: true,
     schlucken: new Set(),
     schluckeWert: null,
@@ -354,6 +357,7 @@ export function nachbauStarten(): Nachbau {
     const body =
       typeof init?.body === 'string' ? (JSON.parse(init.body) as Record<string, unknown>) : {};
     s.aufrufe.push(`${m} ${pfad}`);
+    s.adressen.push(`${m} ${pfad}${adresse.search}`);
     if (pfad === '/csrftoken') return json(200, { data: 't' });
     if (s.fehlerBei && s.fehlerBei.methode === m)
       return json(s.fehlerBei.status, { message: 'weg' });

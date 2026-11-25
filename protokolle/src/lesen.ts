@@ -7,11 +7,12 @@
  * Person die Gruppentreffen nicht sehen (403, je nach Gruppentyp), fehlen nur die Treffen, und das wird gemeldet
  * (`treffenNichtFreigegeben`) statt einer stillen Lücke.
  */
-import { kategorienLesen, werteLesen } from '@shared/ct/modulDaten';
+import { kategorienLesen, werteLesen, type ModulPort } from '@shared/ct/modulDaten';
 import { gemeindeZeitzone, heuteImKalender, tagAusIso } from '@shared/ct/zeit';
 import { plusTage } from '@shared/ct/datum';
 import { mapLimit } from '@shared/ct/mapLimit';
 import { terminPfad } from '@shared/ct/kalenderTermine';
+import { merkeVersprechen } from '@shared/ct/versprechenMerker';
 import {
   istEinstellung,
   type PunkteVonMitgliedern,
@@ -45,7 +46,25 @@ import {
 import { ApiError } from '@ui/ct/fehler';
 import { modulPort } from '@ui/ct/modulPort';
 import { ctDaten, KeinSpeicherRecht } from '@ui/ct/verbindung';
-import { anfragenLesen, terminLaden } from './termin';
+import { anfragenLesen, terminLaden, type Leser } from './termin';
+
+/**
+ * **Ein Leser für EINEN Ladevorgang** – jede Adresse wird darin nur einmal gefragt, auch wenn mehrere Gruppen sie
+ * gleichzeitig brauchen (`merkeVersprechen`: gemerkt wird das Versprechen, ein Fehlschlag wird vergessen). Gemessen am
+ * 25.11.2026 live im Reiter „Termine“: Ohne ihn las `ladeUebersicht` bei Gruppen im selben Kalender dieselben Termine,
+ * Besprechungsanfragen, Kategorien und Protokoll-Werte je Gruppe noch einmal (`andereImKalender`, `termineMitAnfrage`) –
+ * bis zu 5× dieselbe Adresse.
+ *
+ * **Bewusst je Ladevorgang, nicht für die ganze Seite:** Nach „Eintragen“ oder „Erneut versuchen“ muss frisch gelesen
+ * werden; ein Merker ohne Verfallszeit lieferte sonst alte Termine.
+ */
+export function einmalLesen(): Leser {
+  const merker = merkeVersprechen<unknown>();
+  return <T>(pfad: string) => merker.hole(pfad, () => ctDaten<T>(pfad)) as Promise<T>;
+}
+
+/** Der Speicher-Anschluss, der über `lies` liest (geschrieben wird hier nicht). */
+const portMit = (lies: Leser): ModulPort => ({ ...modulPort, daten: lies });
 
 /** Wie weit „Kommend“ in die Zukunft schaut. */
 export const KOMMEND_TAGE = 180;
@@ -77,8 +96,13 @@ interface TerminRoh {
 }
 
 /** Kommende Termine im Kalender – nur die mit Besprechungsanfrage (Alwin, 23.10.2026), samt den Antworten. */
-async function termineMitAnfrage(kalender: number, von: string, bis: string): Promise<Termin[]> {
-  const roh = (await ctDaten<TerminRoh[]>(terminPfad(kalender, von, bis))) ?? [];
+async function termineMitAnfrage(
+  kalender: number,
+  von: string,
+  bis: string,
+  lies: Leser = ctDaten,
+): Promise<Termin[]> {
+  const roh = (await lies<TerminRoh[]>(terminPfad(kalender, von, bis))) ?? [];
   const alle: Omit<Termin, 'anfragen'>[] = [];
   for (const r of roh) {
     const b = r.base ?? r.appointment?.base;
@@ -90,7 +114,7 @@ async function termineMitAnfrage(kalender: number, von: string, bis: string): Pr
   // Je Termin einmal fragen (die Liste zeigt es nicht – gemessen); eine Serie hat dieselbe ID → einmal genügt.
   const anfragen = new Map<number, Anfrage[]>();
   await mapLimit([...new Set(alle.map((t) => t.id))], GLEICHZEITIG, async (id) => {
-    const liste = await anfragenLesen({ kalender, id });
+    const liste = await anfragenLesen({ kalender, id }, lies);
     if (liste.length)
       anfragen.set(
         id,
@@ -117,6 +141,7 @@ async function termineAusserhalb(
   bis: string,
   zeitzone: string,
   imFenster: readonly Termin[],
+  lies: Leser = ctDaten,
 ): Promise<Termin[]> {
   const hinten = koepfe.filter((k) => {
     if (k.termin === null || k.status === 'frei') return false;
@@ -133,7 +158,7 @@ async function termineAusserhalb(
     GLEICHZEITIG,
     async (t) => {
       try {
-        const [roh, anfragen] = await Promise.all([terminLaden(t), anfragenLesen(t)]);
+        const [roh, anfragen] = await Promise.all([terminLaden(t, lies), anfragenLesen(t, lies)]);
         gelesen.set(schluessel(t), {
           roh,
           anfragen: anfragen.map(({ person, antwort }) => ({ person, antwort })),
@@ -172,12 +197,13 @@ export async function treffenLesen(
   gruppe: number,
   von: string,
   bis: string,
+  lies: Leser = ctDaten,
 ): Promise<Treffen[] | null> {
   try {
     const roh =
-      (await ctDaten<
-        { id: number; startDate: string; isCanceled?: boolean; isCompleted?: boolean }[]
-      >(`/groups/${gruppe}/meetings?start_date=${von}&end_date=${plusTage(bis, 1)}`)) ?? [];
+      (await lies<{ id: number; startDate: string; isCanceled?: boolean; isCompleted?: boolean }[]>(
+        `/groups/${gruppe}/meetings?start_date=${von}&end_date=${plusTage(bis, 1)}`,
+      )) ?? [];
     return roh
       .filter((t) => !t.isCanceled)
       .map((t) => ({
@@ -213,10 +239,12 @@ async function andereImKalender(
   kalender: number,
   von: string,
   bis: string,
+  lies: Leser,
 ): Promise<GruppeImSelbenKalender[]> {
+  const port = portMit(lies);
   let gruppen: ProtokollGruppe[];
   try {
-    gruppen = protokollGruppen(null, await kategorienLesen(modulPort, modul)).filter(
+    gruppen = protokollGruppen(null, await kategorienLesen(port, modul)).filter(
       (g) => g.id !== eigene && g.protokolle !== null,
     );
   } catch (e) {
@@ -228,14 +256,14 @@ async function andereImKalender(
     try {
       const koepfe: ProtokollKopf[] = [];
       let teiltKalender = false;
-      for (const w of await werteLesen(modulPort, modul, g.protokolle!)) {
+      for (const w of await werteLesen(port, modul, g.protokolle!)) {
         const x = wertInhalt(w);
         if (istKopf(x)) koepfe.push(x);
         else if (istEinstellung(x) && x.gruppe === g.id && x.kalender === kalender)
           teiltKalender = true;
       }
       if (!teiltKalender) return;
-      const treffen = await treffenLesen(g.id, plusTage(von, -1), bis);
+      const treffen = await treffenLesen(g.id, plusTage(von, -1), bis, lies);
       if (treffen === null) {
         console.warn('Protokolle: Gruppentreffen einer anderen Gruppe nicht lesbar (kein Recht).');
         return;
@@ -260,21 +288,24 @@ async function ohneFremdeTermine(
   sitzungen: Sitzung[],
   zeitraum: Zeitraum,
   serieImmer = false,
+  lies: Leser = ctDaten,
 ): Promise<Sitzung[]> {
   if (kalender === null || !sitzungen.some(nurTermin)) return sitzungen;
-  const andere = await andereImKalender(modul, eigene, kalender, zeitraum.von, zeitraum.bis);
+  const andere = await andereImKalender(modul, eigene, kalender, zeitraum.von, zeitraum.bis, lies);
   return fremdeTermineAus(sitzungen, { andere, serieImmer });
 }
 
 /**
  * **Die Sitzungen einer Gruppe** – Protokolle aus dem Speicher, Termine (mit Besprechungsanfrage) und Treffen.
- * `zeitzone` = die der Gemeinde (Standard: die des Geräts, wie im Dienstplaner).
+ * `zeitzone` = die der Gemeinde (Standard: die des Geräts, wie im Dienstplaner). `lies`: der Leser des Ladevorgangs
+ * (`einmalLesen`) – `ladeUebersicht` teilt ihn über alle Gruppen.
  */
 export async function ladeSitzungen(
   modul: number,
   gruppe: Pick<ProtokollGruppe, 'id' | 'protokolle'>,
   zeitzone = gemeindeZeitzone(),
   jetzt = new Date(),
+  lies: Leser = einmalLesen(),
 ): Promise<GruppenSitzungen> {
   const koepfe: ProtokollKopf[] = [];
   const teile: ProtokollTeil[] = [];
@@ -282,7 +313,7 @@ export async function ladeSitzungen(
   let punkte: PunkteVonMitgliedern = 'vorschlagen';
   let stufen: RollenStufe[] | null = null;
   if (gruppe.protokolle !== null) {
-    for (const w of await werteLesen(modulPort, modul, gruppe.protokolle)) {
+    for (const w of await werteLesen(portMit(lies), modul, gruppe.protokolle)) {
       const x = wertInhalt(w);
       if (istKopf(x)) koepfe.push(x);
       else if (istTeil(x)) teile.push(x);
@@ -297,20 +328,25 @@ export async function ladeSitzungen(
   const heute = heuteImKalender(jetzt, zeitzone);
   const bis = plusTage(heute, KOMMEND_TAGE);
   const [imFenster, treffen] = await Promise.all([
-    kalender === null ? Promise.resolve([]) : termineMitAnfrage(kalender, heute, bis),
-    treffenLesen(gruppe.id, heute, bis),
+    kalender === null ? Promise.resolve([]) : termineMitAnfrage(kalender, heute, bis, lies),
+    treffenLesen(gruppe.id, heute, bis, lies),
   ]);
   const termine = [
     ...imFenster,
-    ...(await termineAusserhalb(koepfe, heute, bis, zeitzone, imFenster)),
+    ...(await termineAusserhalb(koepfe, heute, bis, zeitzone, imFenster, lies)),
   ];
   const geordnet = sitzungenOrdnen({ termine, treffen: treffen ?? [], koepfe, heute, zeitzone });
   return {
     ...geordnet,
-    kommend: await ohneFremdeTermine(modul, gruppe.id, kalender, geordnet.kommend, {
-      von: heute,
-      bis,
-    }),
+    kommend: await ohneFremdeTermine(
+      modul,
+      gruppe.id,
+      kalender,
+      geordnet.kommend,
+      { von: heute, bis },
+      false,
+      lies,
+    ),
     teile,
     kalender,
     punkte,
@@ -441,7 +477,8 @@ export interface GruppenUebersicht {
 }
 
 /**
- * **Alles für die Startseite** (S3-3): Sitzungen und Aufgaben jeder Gruppe, höchstens zwei Gruppen gleichzeitig.
+ * **Alles für die Startseite** (S3-3): Sitzungen und Aufgaben jeder Gruppe, höchstens zwei Gruppen gleichzeitig – und
+ * jede Adresse nur einmal (`einmalLesen`).
  * Scheitert eine Gruppe, wird geworfen – lieber „Erneut versuchen“ als eine Startseite, der still eine Gruppe fehlt.
  */
 export async function ladeUebersicht(
@@ -451,9 +488,11 @@ export async function ladeUebersicht(
   jetzt = new Date(),
 ): Promise<GruppenUebersicht[]> {
   const ergebnis = new Map<number, GruppenUebersicht>();
+  // EIN Leser für alle Gruppen: Gruppen im selben Kalender lesen sonst dieselben Adressen je Gruppe noch einmal.
+  const lies = einmalLesen();
   await mapLimit([...gruppen], 2, async (gruppe) => {
     const [sitzungen, mitarbeit] = await Promise.all([
-      ladeSitzungen(modul, gruppe, zeitzone, jetzt),
+      ladeSitzungen(modul, gruppe, zeitzone, jetzt, lies),
       ladeMitarbeit(modul, gruppe),
     ]);
     ergebnis.set(gruppe.id, {

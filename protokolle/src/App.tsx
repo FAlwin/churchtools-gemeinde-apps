@@ -75,7 +75,7 @@ export function App() {
     modul: start?.modul ?? null,
     person: start?.id ?? null,
     gruppen: start?.gruppen ?? [],
-    seiteLiefert: aktiv === 'start' || aktiv === 'todos',
+    seiteLiefert: aktiv === 'start' || aktiv === 'todos' || aktiv === 'termine',
   });
   const mitZaehler = reiterMitZaehler(reiter, faellig.zahl);
   const zu = () => setSuche({ offen: false, begriff: '' });
@@ -163,6 +163,7 @@ export function App() {
           eventsAnlegen={start.eventsAnlegen}
           gruppentypenAnlegen={start.gruppentypenAnlegen}
           onZeigen={(gruppe, sitzung, punkt) => zuSitzungen({ gruppe, sitzung, punkt })}
+          onAufgaben={faellig.melden}
         />
       )}
       {start && !suche.offen && aktiv === 'sitzungen' && (

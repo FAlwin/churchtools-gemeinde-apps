@@ -1104,13 +1104,16 @@ und merkt sich das. Wer nicht in den Kalender darf, sieht nur die Liste.
    unklar. Bitte erst im Kalender nachsehen …“, **nichts** steht danach unter „Im Kalender“ oder „Nicht eintragen“. Ist der Termin doch da: erneut **Eintragen** → das Fenster bietet „Nur verknüpfen“ an.
 8. Hell und dunkel, PC und 375 px: nichts läuft über den Rand, am Handy stehen „Eintragen“ und ⋯ unter dem Text.
 9. **Link:** „In ChurchTools öffnen“ führt zur **Kalender-Seite** von ChurchTools (`/?q=churchcal`, keine 404-Seite – bis 1.5.1 führte er auf `/calendars`), nicht zu genau diesem Termin (eine Adresse dafür ist nicht gemessen; wenn sie bekannt ist, steht sie in `terminLink`).
+10. **Baustein entfernen** (nur in einem Entwurf): Im Protokoll den Baustein **„TEST Nächste Sitzung“** löschen und kurz warten (gespeichert). Im Reiter **Termine** ist er weg; der Wert
+    `termin-stand` in „Mitarbeit · <Gruppe>“ ist **nicht** gelöscht, sondern trägt `"geloescht"` (wer, wann). Im Protokoll **Rückgängig** (Strg/⌘+Z) und wieder warten: Der Termin steht wieder
+    im Reiter, mit seinem alten Stand, und der Wert hat **kein** `"geloescht"` mehr.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
 - **Betrifft:** `protokolle/src/Termine.tsx`, `protokolle/src/TerminFenster.tsx`, `protokolle/src/terminEintragen.ts`, `protokolle/src/terminAnlegen.ts`, `protokolle/src/terminStandSchreiben.ts`, `protokolle/src/kalenderListe.ts`, `protokolle/src/planen.ts`, `protokolle/src/lesen.ts`, `protokolle/src/start.ts`, `protokolle/src/reiter.ts`, `shared/protokolle/termine.ts`, `shared/protokolle/terminStand.ts`, `shared/ct/kalenderRechte.ts`
-- **Automatisiert:** größtenteils – `shared/protokolle/termine.test.ts` (Sammeln aus echten Dokumenten, Uhrzeit/Titel, Vorbelegung, Zeitraum ganztägig/UTC, Doppelt), `shared/protokolle/terminStand.test.ts`, `protokolle/src/terminAnlegen.test.ts` (Kern: Rumpf, abgelehnt, unklar, ganztägig), `protokolle/src/terminEintragen.test.ts` (verknüpfen, nachlesen), `protokolle/src/terminStandSchreiben.test.ts` (Vermerk, nicht überschreiben, Fehler), `protokolle/src/Termine.test.tsx` (ganzer Weg gegen den Nachbau), `protokolle/src/TerminFenster.test.tsx`, `protokolle/src/planen.test.ts` (Sitzung festlegen unverändert); **nur von Hand:** dass ChurchTools einen ganztägigen Termin (reiner Tag + `allDay`) wirklich als ganztägig anlegt, keine Mails, das Aussehen hell/dunkel/Handy, „Im Protokoll zeigen“ am Gerät
-- **Historie:** 21.11.2026 (W14, nach der Festplanung)
+- **Automatisiert:** größtenteils – `shared/protokolle/termine.test.ts` (Sammeln aus echten Dokumenten, Uhrzeit/Titel, Vorbelegung, Zeitraum ganztägig/UTC, Doppelt), `shared/protokolle/terminStand.test.ts`, `protokolle/src/terminAnlegen.test.ts` (Kern: Rumpf, abgelehnt, unklar, ganztägig), `protokolle/src/terminEintragen.test.ts` (verknüpfen, nachlesen), `protokolle/src/terminStandSchreiben.test.ts` (Vermerk, nicht überschreiben, Fehler; Baustein entfernt/zurückgeholt: `termineAbgleichen` gegen den Nachbau – doppelte, andere Sitzungen, nur ein Lesen ohne Änderung, Nachlesen, 502), `protokolle/src/ProtokollSchreiben.test.tsx` (Speichern gibt alle Termin-Bausteine des Texts an `termineAbgleichen`, auch ohne gültiges Datum), `protokolle/src/Termine.test.tsx` (ganzer Weg gegen den Nachbau), `protokolle/src/TerminFenster.test.tsx`, `protokolle/src/planen.test.ts` (Sitzung festlegen unverändert); **nur von Hand:** dass ChurchTools einen ganztägigen Termin (reiner Tag + `allDay`) wirklich als ganztägig anlegt, keine Mails, das Aussehen hell/dunkel/Handy, „Im Protokoll zeigen“ am Gerät
+- **Historie:** 21.11.2026 (W14, nach der Festplanung); 25.11.2026 Schritt 10 (entfernter Baustein wird als gelöscht vermerkt)
 
 </details>
 

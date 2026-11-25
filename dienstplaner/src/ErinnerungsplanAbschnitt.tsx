@@ -301,7 +301,6 @@ export function ErinnerungsplanAbschnitt({
           <p className={styles.leise}>
             {automatikHinweis(z.gruppe?.name ?? 'diese Dienstgruppe', z.eingerichtet)}
           </p>
-          <InChurchTools z={z} />
           {v && (
             <p className={styles.vorschau} aria-label="Vorschau">
               {v.kopf} →{' '}
@@ -310,6 +309,7 @@ export function ErinnerungsplanAbschnitt({
                 : 'keine Erinnerung'}
             </p>
           )}
+          <InChurchTools z={z} />
         </>
       )}
 

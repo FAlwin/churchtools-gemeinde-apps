@@ -1063,6 +1063,29 @@ function speicherDemo(fall: string) {
     tagsVon: { '9|52': ['b', 'l'], '9|19': ['b'] },
     pause: { '46': { bis: tagVon(10) }, '52': { bis: tagVon(7) } },
   };
+  // Die laufende Abfrage von Musik (Dienstgruppe 4, R-2): Termine 101, 102, 103, 105 und 106 haben dort einen Gesang-Platz.
+  const abfrageMusik = {
+    art: 'dienstplaner-abfragen-4',
+    fassung: 1,
+    version: 1,
+    zeit: zeit(-2, '07:30'),
+    von: { personId: 1, name: 'Alwin Friesen' },
+    inhalt: {
+      plan: null,
+      abfragen: [
+        {
+          id: 'demo-abfrage-musik',
+          von: tagVon(3),
+          bis: tagVon(45),
+          frist: tagVon(2),
+          oeffnen: tagVon(-2),
+          termine: [101, 102, 103, 105, 106],
+          gestartet: { personId: 1, name: 'Alwin Friesen', zeit: zeit(-2, '07:30') },
+          beendet: null,
+        },
+      ],
+    },
+  };
   // Technik: Reihenfolge Anna · Alwin · Spike · David · Ben; Tags Einweisung (E) und Springer (S) – Anna ist nur im Ton
   // „Einweisung“; Ben (49) macht Pause ohne Ende und steht unten, blass. Anna pausiert hier bis nach dem 1. Dezember –
   // der Zauberstab schlägt sie für den Ton am 01.12. nicht vor (PL-3), obwohl sie die beste Punktzahl hat.
@@ -1113,7 +1136,14 @@ function speicherDemo(fall: string) {
       ],
     ],
     [42, [{ id: 420, dataCategoryId: 42, value: JSON.stringify(personenlisteTechnik) }]],
-    [43, []],
+    [
+      43,
+      [
+        // „Abfrage …“ (R-2): Musik hat eine laufende Abfrage – die Frist ist in 2 Tagen (blaues Etikett), der Zeitraum beginnt in 3.
+        // Das Fenster „Abfrage“ zeigt dafür den Stand; Technik hat keine (dort das Formular zum Starten).
+        { id: 430, dataCategoryId: 43, value: JSON.stringify(abfrageMusik) },
+      ],
+    ],
     [
       44,
       [

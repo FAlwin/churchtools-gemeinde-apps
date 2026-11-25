@@ -36,6 +36,7 @@ import type { AnzahlErgebnis } from '@shared/dienstplan/anzahl';
 import { PlaetzeFach } from './PlaetzeFach';
 import { PlatzFenster } from './PlatzFenster';
 import { ErinnernFenster, type ErinnernAnschluss } from './ErinnernFenster';
+import { AbfrageFenster, type AbfrageAnschluss } from './AbfrageFenster';
 import { usePlatzDazu } from './usePlatzDazu';
 import { usePlaetzeFrisch } from './usePlaetzeFrisch';
 import { AlteEntwuerfeFach, type AlterEntwurf } from './AlteEntwuerfeFach';
@@ -134,6 +135,11 @@ interface Props {
    */
   erinnern?: ErinnernAnschluss;
   /**
+   * „Abfrage …“ (R-2): Lesen und Speichern der Abfragen mit Frist. Ohne – oder ohne planbare Dienstgruppe und ohne
+   * `ladePersonen`/`ladeAntworten` (wie bei „Erinnern“) – gibt es den Menüpunkt nicht.
+   */
+  abfragen?: AbfrageAnschluss;
+  /**
    * Von der Startseite (Wunsch 7, `#/planen/gruppe/3`): nur diese Dienstgruppe und die nächsten 6 Wochen – nur für diesen
    * Besuch, der gemerkte Filter und Zeitraum bleiben. `null`/fehlt: Planen wie gewohnt.
    */
@@ -188,6 +194,7 @@ export function Planen({
   ladeAntworten,
   ladeMarkierungen,
   erinnern,
+  abfragen,
   fokusGruppe = null,
   onFokusEnde,
   onVorlagen,
@@ -397,14 +404,17 @@ export function Planen({
   // „Erinnern“ (E5c-5): die planbaren Dienstgruppen, die der Plan zeigt – als ganze Gruppen (mit allen Diensten, auch den
   // ausgeblendeten: wer dort eingeteilt ist, ist eingeteilt). Ohne planbare Gruppe gibt es den Knopf nicht.
   const [erinnernOffen, setErinnernOffen] = useState(false);
+  const [abfrageOffen, setAbfrageOffen] = useState(false);
   // „Hilfe“ liegt im „⋯“-Menü (R6) – das Fenster gehört der Seite, nicht dem Menü.
   const [hilfeOffen, setHilfeOffen] = useState(false);
-  const erinnernGruppen: PlanGruppe[] =
-    plan && erinnern && ladePersonen && ladeAntworten
+  // Dieselben Gruppen brauchen „Abfrage …“ (R-2) – ohne Anschluss `erinnern` gibt es dann nur diesen Menüpunkt.
+  const planbareGruppen: PlanGruppe[] =
+    plan && ladePersonen && ladeAntworten
       ? gezeigteGruppen(plan, gruppenAus(ansicht))
           .filter((g) => g.planbar && g.gruppe !== null)
           .map((g) => plan.gruppen.find((x) => schluessel(x) === schluessel(g)) ?? g)
       : [];
+  const erinnernGruppen: PlanGruppe[] = erinnern ? planbareGruppen : [];
 
   // Die gezeigten Dienstgruppen, deren Personenliste man ändern darf – ohne sie gibt es „Liste bearbeiten“ nicht. Der Modus
   // gehört zur Ansicht „Personen“: in einer anderen Ansicht ist er aus.
@@ -505,6 +515,16 @@ export function Planen({
               label: 'Erinnern',
               symbol: <Icon name="brief" size={16} />,
               onClick: () => setErinnernOffen(true),
+            },
+          ]
+        : []),
+      // „Abfrage …“ (R-2): direkt neben „Erinnern“, dieselben planbaren Dienstgruppen.
+      ...(planbareGruppen.length > 0 && abfragen
+        ? [
+            {
+              label: 'Abfrage …',
+              symbol: <Icon name="todo-liste" size={16} />,
+              onClick: () => setAbfrageOffen(true),
             },
           ]
         : []),
@@ -896,6 +916,21 @@ export function Planen({
           anschluss={erinnern}
           personenlisten={daten?.personenlisten}
           onClose={() => setErinnernOffen(false)}
+        />
+      )}
+      {abfrageOffen && plan && abfragen && ladePersonen && ladeAntworten && (
+        <AbfrageFenster
+          plan={plan}
+          // Vorbelegung des Zeitraums: der gezeigte – dieselben Termine wie „Teilen“ und „Erinnern“.
+          spalten={teilenSpalten}
+          gruppen={planbareGruppen}
+          heute={heute}
+          ladeZeitraum={ladeZeitraum}
+          ladePersonen={ladePersonen}
+          ladeAntworten={ladeAntworten}
+          personenlisten={daten?.personenlisten}
+          anschluss={abfragen}
+          onClose={() => setAbfrageOffen(false)}
         />
       )}
       {vorgabeFach && plan && (

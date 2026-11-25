@@ -28,6 +28,7 @@ import * as V from './vorschlaegeSchreiben';
 import * as BS from './beitragSchreiben';
 import { Unklar } from '@ui/ct/fehler';
 import * as LO from './loeschen';
+import * as TS from './terminStandSchreiben';
 import { ProtokollSchreiben } from './ProtokollSchreiben';
 import type { FestePunkteWert } from './festePunkteKontext';
 
@@ -91,6 +92,11 @@ vi.mock('./aufgabenSchreiben', () => ({
   aufgabenWerte: vi.fn(() => Promise.resolve([])),
   aufgabenSchreiben: vi.fn(() => Promise.resolve([])),
   aufgabeAendern: vi.fn(),
+}));
+// Termin-Stände beim Speichern abgleichen: als Attrappe – was es bei ChurchTools tut, prüft `terminStandSchreiben.test.ts`.
+vi.mock('./terminStandSchreiben', async (orig) => ({
+  ...(await orig<typeof import('./terminStandSchreiben')>()),
+  termineAbgleichen: vi.fn(() => Promise.resolve()),
 }));
 // „Mitarbeit“ wird beim Öffnen einmal gelesen – To-Dos und Vorschläge (S5-4).
 vi.mock('./mitarbeitWerte', async (orig) => ({
@@ -331,6 +337,30 @@ describe('ProtokollSchreiben', () => {
     expect(plan.anlegen.map((a) => [a.id, a.text, a.gruppe, a.sitzung])).toEqual([
       ['t1', 'Beamer', 194, 's1'],
     ]);
+  });
+
+  it('Speichern gleicht auch die Termin-Stände ab – mit allen Termin-Bausteinen im Text, auch ohne gültiges Datum', async () => {
+    vi.mocked(S.sperreNehmen).mockResolvedValue({ art: 'ok', kopf: KOPF });
+    vi.mocked(S.speichern).mockImplementation(async (_o, _i, _s, _d, _j, vorher) => {
+      await vorher?.();
+      return { art: 'ok', kopf: { ...KOPF, stand: 'b' } };
+    });
+    const termin = (id: string, datum: string) => ({
+      id,
+      type: 'termin',
+      props: { datum },
+      content: [{ type: 'text', text: 'Gemeindefest', styles: {} }],
+      children: [],
+    });
+    E.zusatz.push(termin('tb1', '2026-12-24'), termin('tb2', 'kaputt'));
+    zeige();
+    fireEvent.click(await screen.findByRole('button', { name: 'tippen' }));
+    await waitFor(() => expect(TS.termineAbgleichen).toHaveBeenCalled());
+    const [ort, sitzung, bloecke, von] = vi.mocked(TS.termineAbgleichen).mock.calls[0];
+    expect(ort).toEqual({ modul: 24, kategorie: 65 });
+    expect(sitzung).toBe('s1');
+    expect([...(bloecke ?? [])]).toEqual(['tb1', 'tb2']);
+    expect(von).toBe(1);
   });
 
   it('Wer/Bis/Status gehen direkt ins To-Do (aufgabeAendern) und erscheinen sofort', async () => {

@@ -146,7 +146,7 @@ export async function schreibenUebernehmen(
  * **Speichern** (S4-1, automatisch kurz nach der letzten Eingabe). `basisStand` = der Stand, den dieses Fenster zuletzt
  * geladen oder gespeichert hat. Ist das Dokument unverändert, wird nur das Lebenszeichen der Sperre erneuert.
  *
- * `vorher` (S4-2: die To-Dos in „Mitarbeit“ abgleichen) läuft erst, **nachdem** feststeht, dass dieses Fenster schreiben
+ * `vorher` (S4-2: die To-Dos und Termin-Stände in „Mitarbeit“ abgleichen) läuft erst, **nachdem** feststeht, dass dieses Fenster schreiben
  * darf, und **bevor** am Protokoll etwas geschrieben wird: Ein Fenster ohne Sperre fasst die To-Dos nie an, und scheitert
  * der Abgleich, bleibt das Protokoll, wie es war (das nächste Speichern rechnet ihn neu).
  */
@@ -227,7 +227,7 @@ async function alteTeileWeg(ort: ProtokollOrt, f3: Frisch, stand: string): Promi
 /**
  * **Freigeben** (S6-1) – wie Speichern, nur dass der Kopf danach „frei“ ist (ohne Sperre, mit Vermerk und Verlauf,
  * `freigegebenerKopf`). `dokument` ist schon festgehalten (`festhaltenFuerFreigabe`). Darf nur, wer gerade schreiben
- * darf (`schreibLage`); `vorher` gleicht die To-Dos ab wie beim Speichern. Das Gruppentreffen schließt der Aufrufer
+ * darf (`schreibLage`); `vorher` gleicht To-Dos und Termin-Stände ab wie beim Speichern. Das Gruppentreffen schließt der Aufrufer
  * danach ab – scheitert das, ist das Protokoll trotzdem frei.
  */
 export async function freigeben(

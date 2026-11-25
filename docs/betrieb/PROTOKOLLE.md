@@ -67,6 +67,12 @@ geschützt, nicht nur in der Oberfläche (gemessen 16.10.2026):
   Gruppe. Der Vorschlag beim Einrichten bleibt: Leiter-Rollen „Leitung“, alle anderen „Lesen + eigene To-Dos“ – jede
   Gemeinde stellt „Schreibt mit“ je Gruppe selbst ein. Einstellungen von vor W16 kennen die Stufe nicht; dort gilt
   weiter: wer schreibt, ist Leitung.
+  **Wenn die Rolle die Gruppe nicht sehen darf** (manche Gruppentypen verbergen die Gruppe vor ihren Teilnehmern): Dann
+  kennt die Erweiterung die eigene Rolle nicht. Seit v1.6.1 entscheidet in diesem Fall, ob ChurchTools „Gruppentreffen
+  pflegen“ meldet (oder man Admin ist) – das hat nach dem Einrichten nur die Leitung. In v1.6.0 bekam „Schreibt mit“ dann
+  die Leitungsknöpfe (Handtest TF-PROT-33, 25.11.2026). Beobachtet im selben Test: Ohne Sicht auf die Gruppe ließ
+  ChurchTools „Schreibt mit“ trotz „Gruppentreffen durchführen“ die Gruppentreffen nicht lesen – die Anwesenheit zeigt
+  dann den Stand aus dem Protokoll; eintragen ließ sie sich so nicht (Ursache nicht geklärt).
 - Wird eine Rolle herabgestuft, entzieht das Einrichten die Rechte auf die eigenen Kategorien **sofort wirksam**.
   Kalender-Rechte und „versteckte Gruppe sehen“ entzieht es nur, wenn die Einstellungen sie **selbst gesetzt** haben
   (sie merkt sich das in der Einstellung der Gruppe); was ein Admin vorher von Hand gesetzt hatte, bleibt.
@@ -295,7 +301,9 @@ und Status und sagt: **Das lässt sich nicht rückgängig machen.** Darin:
 
 **Reihenfolge:** erst prüfen, ob jemand anderes (oder ein anderes eigenes Fenster) schreibt – dann wird **nichts**
 gelöscht –, dann die To-Dos, dann Termin und Gruppentreffen (jeweils nachgelesen: ein „gelöscht“ von ChurchTools ist kein
-Beleg), **zuletzt das Protokoll**: erst alle Textteile, dann der Kopf der Sitzung. Bricht es dazwischen ab, steht der Kopf
+Beleg), dann die **Vermerke im Reiter „Termine“** dieser Sitzung (immer, ohne eigenes Häkchen: **als gelöscht vermerkt**,
+nie hart gelöscht – in „Mitarbeit“ darf niemand Werte löschen; erst nach einer zweiten Sperrprüfung), **zuletzt das
+Protokoll**: erst alle Textteile, dann der Kopf der Sitzung. Bricht es dazwischen ab, steht der Kopf
 noch da (ohne lesbaren Text: „nicht vollständig lesbar“), das Fenster bleibt offen und sagt, was schon erledigt ist und
 was nicht; **„Nochmal versuchen“** macht nichts doppelt (ein vermerktes To-Do, ein schon gelöschter Termin oder ein
 schon gelöschtes Treffen zählt als erledigt). Danach geht es zurück zur Liste mit dem Hinweis „Protokoll gelöscht“; bleiben
@@ -570,7 +578,7 @@ des kürzeren Titels im längeren stehen) bietet **„Nur verknüpfen – nichts
 **Sicher bei Aussetzern:** angelegt wird mit `terminAnlegen` (derselbe Kern wie beim Festlegen einer Sitzung; unklare Antwort → im Kalender nachsehen), danach **nachgelesen**; erst dann gilt der Termin als
 eingetragen. **Wo der Stand steht:** je Baustein ein Wert `termin-stand` in **„Mitarbeit · <Gruppe>“** (Schlüssel `termin-<Sitzung>-<Block-ID>`, Stand `offen`/`nichtEintragen`/`imKalender` mit
 Kalender, Termin-Nummer, Name und Zeit) – nicht im Protokoll (freigegebene bleiben unangetastet, keine Schreibsperre nötig); wie To-Dos und Vorschläge schreiben dort alle mit Schreibrecht in
-„Mitarbeit“, nie wird hart gelöscht, und „Nicht eintragen“ überschreibt einen Eintrag im Kalender nie. Wer in keinem Kalender anlegen darf, sieht weder „Eintragen“ noch „Nicht eintragen“, dafür einen Satz.
+„Mitarbeit“, nie wird hart gelöscht (wird das Protokoll gelöscht, bekommen seine Stände den Vermerk `geloescht`, W6; ebenso der Stand eines Bausteins, der beim Bearbeiten aus dem Protokoll entfernt wird – kommt er zurück, fällt der Vermerk beim nächsten Speichern weg, `termineAbgleichen`), und „Nicht eintragen“ überschreibt einen Eintrag im Kalender nie. Wer in keinem Kalender anlegen darf, sieht weder „Eintragen“ noch „Nicht eintragen“, dafür einen Satz.
 
 **Das Fenster wie der ChurchTools-Kalender (W15-1, 23.11.2026):** Seit W15-1 baut „In Kalender eintragen“ den **Reiter „Kalender“ des ChurchTools-Dialogs „Termin erstellen“** nach (Messung
 `protokolle-planung/docs/messung-w15-0-2026-11-23.md`); die weiteren Reiter (Besprechungsanfragen, Anmeldung) folgen in W15-4/5, **Ressourcen** gibt es seit W15-2 und **Events** seit W15-3 (unten); die Reiterleiste zeigt sich erst, wenn es mehr als
@@ -677,7 +685,11 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit schon (gem
   `wer`. Ohne Transkript rechnet das Fenster mit leerer Zuordnung und ohne Funde.
 - **Wer darf was (W16):** `shared/protokolle/zugang.ts` – `darfSchreibenIn` (eigene Rechte: anlegen, ändern, löschen in
   „Protokolle“) und `istLeitungIn` (zusätzlich: die eigene Rolle `ProtokollGruppe.rolle` steht in der Einstellung
-  `GruppenSitzungen.stufen` nicht auf „schreibtMit“; unbekannt → wie vor W16). Die EINE Stelle für `Sitzungen.tsx`,
+  `GruppenSitzungen.stufen` nicht auf „schreibtMit“; keine Stufen oder keine Rolle auf „schreibtMit“ → wie vor W16; Rolle
+  unbekannt bei eingestelltem „schreibtMit“ → `ProtokollGruppe.treffenPflegen`, seit v1.6.1). `treffenPflegen` setzt
+  `ladeStart` aus `/permissions/internal/groups` (`churchdb['+admin meetings']` = 10124, gelesen über
+  `shared/ct/gruppenRechteListe.ts`, dieselbe Auswertung wie der Dienstplaner) oder Admin; nicht lesbar → `null` = keine
+  Leitungsknöpfe, der Start lädt trotzdem. Die EINE Stelle für `Sitzungen.tsx`,
   `ProtokollSchreiben.tsx` (Eigenschaft `leitung`), `ToDos.tsx`, `Startseite.tsx`, `Suche.tsx`; `schreibbar.includes(…)`
   steht sonst nirgends mehr. Die Einstellung speichert je Rolle `typ` (= `groupTypeRoleId`, `rollenMitTyp` beim Einrichten).
 - **Mitlesen (W16):** `protokolle/src/useMitlesen.ts` (`MITLESEN_MS` = 10 s, Pause bei `document.hidden`, nie zwei

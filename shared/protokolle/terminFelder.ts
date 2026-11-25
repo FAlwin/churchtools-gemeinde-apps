@@ -15,7 +15,7 @@ export interface TerminAdresse {
   street?: string;
   zip?: string;
   city?: string;
-  /** „Zusatz“ (nicht gemessen – der Handtest TF-PROT-32 prüft, ob ChurchTools ihn so annimmt). */
+  /** „Zusatz“ – ChurchTools nimmt ihn so an (Handtest TF-PROT-32, 25.11.2026). */
   addition?: string;
 }
 

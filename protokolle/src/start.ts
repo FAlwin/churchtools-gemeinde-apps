@@ -19,6 +19,7 @@ import {
 } from '@shared/ct/kalenderRechte';
 import { eventKalender } from '@shared/ct/eventRechte';
 import { buchbareRessourcen, verwaltbareRessourcen } from '@shared/ct/ressourcenRechte';
+import { gruppenMitRecht } from '@shared/ct/gruppenRechteListe';
 import { ctDaten } from '@ui/ct/verbindung';
 
 export interface Start {
@@ -56,15 +57,27 @@ export async function ladeStart(): Promise<Start> {
     modulId('Die Erweiterung „Protokolle“'),
     ctDaten('/permissions/global'),
   ]);
-  const kategorien = await kategorienLesen(modulPort, modul);
+  const [kategorien, intern] = await Promise.all([
+    kategorienLesen(modulPort, modul),
+    // Nur für „Rolle unbekannt + Schreibt mit“ (`istLeitungIn`, v1.6.1). Scheitert es, lädt der Start trotzdem – `null`
+    // heißt dort „keine Leitungsknöpfe“, beim nächsten Laden stimmt es wieder (vorübergehend ist nicht ungültig).
+    ctDaten('/permissions/internal/groups').then(
+      (roh) => gruppenMitRecht(roh, 'churchdb', '+admin meetings'),
+      () => null,
+    ),
+  ]);
+  const admin = darfVerwalten(rechte);
   return {
     id: ich.id,
     vorname: ich.vorname,
     nachname: ich.nachname ?? '',
     gemeinde: ich.gemeinde,
     modul,
-    gruppen: protokollGruppen(ich.mitgliedschaften, kategorien),
-    darfVerwalten: darfVerwalten(rechte),
+    gruppen: protokollGruppen(ich.mitgliedschaften, kategorien).map((g) => ({
+      ...g,
+      treffenPflegen: admin || (intern === null ? null : intern.has(g.id)),
+    })),
+    darfVerwalten: admin,
     schreibbar: modulRechteAus(
       (rechte as Record<string, unknown> | null)?.[modulPort.kuerzel() ?? 'protokolle'],
     ).aendern,

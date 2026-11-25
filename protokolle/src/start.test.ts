@@ -81,4 +81,43 @@ describe('ladeStart', () => {
     kategorien.mockRejectedValue(new Error('502'));
     await expect(ladeStart()).rejects.toThrow('502');
   });
+
+  /** v1.6.1 (TF-PROT-33): „Gruppentreffen pflegen“ je Gruppe – für „Rolle unbekannt + Schreibt mit“ (`istLeitungIn`). */
+  describe('treffenPflegen', () => {
+    const KAT = [
+      { id: 60, shorty: 'protokolle-g11', name: 'Protokolle · Leitungsteam' },
+      { id: 62, shorty: 'protokolle-g194', name: 'Protokolle · TEST' },
+    ];
+    const antworten = (intern: unknown, global: unknown = { churchcore: {} }) =>
+      daten.mockImplementation((pfad: string) =>
+        pfad === '/permissions/internal/groups'
+          ? intern instanceof Error
+            ? Promise.reject(intern)
+            : Promise.resolve(intern)
+          : Promise.resolve(global),
+      );
+    const pflegen = async () =>
+      Object.fromEntries((await ladeStart()).gruppen.map((g) => [g.id, g.treffenPflegen]));
+
+    beforeEach(() => kategorien.mockResolvedValue(KAT));
+
+    it('aus `/permissions/internal/groups`: `+admin meetings` im Block `churchdb`', async () => {
+      antworten({
+        '194': { churchdb: { '+admin meetings': true } },
+        '11': { churchdb: { '+do group meeting': true } },
+      });
+      expect(await pflegen()).toEqual({ 11: false, 194: true });
+      expect(daten).toHaveBeenCalledWith('/permissions/internal/groups');
+    });
+
+    it('Admin: überall – auch wenn die Liste nichts meldet', async () => {
+      antworten({}, { churchcore: { 'administer persons': true } });
+      expect(await pflegen()).toEqual({ 11: true, 194: true });
+    });
+
+    it('Liste nicht lesbar (502): Start lädt trotzdem, `null` = nicht bekannt', async () => {
+      antworten(new Error('502'));
+      expect(await pflegen()).toEqual({ 11: null, 194: null });
+    });
+  });
 });

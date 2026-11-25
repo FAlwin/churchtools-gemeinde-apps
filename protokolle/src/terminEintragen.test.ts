@@ -370,3 +370,73 @@ describe('terminLegen mit Buchungen', () => {
     expect(ct.buchungen).toEqual([]);
   });
 });
+
+describe('terminLegen mit Besprechungsanfragen (W15-4)', () => {
+  it('Rumpf: `meetingrequests` aus `eingeladen` – genau diese Personen; Mails nur an die anderen (ich bekomme keine)', async () => {
+    const r = await terminLegen({ eintrag: MIT_UHR, zeitzone: ZONE, eingeladen: [1, 19, 20] });
+    expect(ct.terminRumpf?.meetingrequests).toEqual([
+      { inviteeId: 1 },
+      { inviteeId: 19 },
+      { inviteeId: 20 },
+    ]);
+    expect(ct.mails).toEqual([
+      { person: 19, art: 'neu' },
+      { person: 20, art: 'neu' },
+    ]);
+    expect(r.anfragen).toEqual({ fehlend: [], unklar: false });
+  });
+
+  it('ohne `eingeladen` (oder leer): kein `meetingrequests`, keine Mail', async () => {
+    await terminLegen({ eintrag: MIT_UHR, zeitzone: ZONE });
+    expect(ct.terminRumpf).not.toHaveProperty('meetingrequests');
+    await terminLegen({ eintrag: MIT_UHR, zeitzone: ZONE, eingeladen: [] });
+    expect(ct.terminRumpf).not.toHaveProperty('meetingrequests');
+    expect(ct.mails).toEqual([]);
+  });
+
+  it('„Nur verknüpfen“: nichts wird angelegt, keine Mail – auch wenn Personen übergeben werden', async () => {
+    const r = await terminLegen({
+      eintrag: MIT_UHR,
+      zeitzone: ZONE,
+      eingeladen: [1, 19],
+      verknuepfen: { id: 161, titel: 'Heiligabend', beginn: '2027-12-24T09:00:00Z' },
+    });
+    expect(r).toEqual({ art: 'verknuepft', id: 161 });
+    expect(posts()).toEqual([]);
+    expect(ct.mails).toEqual([]);
+  });
+
+  it('ChurchTools hat eine Person nicht eingeladen (201, aber keine Anfrage): sie steht in `anfragen.fehlend`, der Termin bleibt', async () => {
+    ct.anfrageVerschluckt.add(19);
+    const r = await terminLegen({ eintrag: MIT_UHR, zeitzone: ZONE, eingeladen: [1, 19, 20] });
+    expect(r.anfragen).toEqual({ fehlend: [19], unklar: false });
+    expect(ct.termine).toHaveLength(1);
+  });
+
+  it('Anfragen nicht lesbar: `unklar`, nicht „fehlt“ – der Termin bleibt', async () => {
+    ct.anfragenLesenFehler = true;
+    const r = await terminLegen({ eintrag: MIT_UHR, zeitzone: ZONE, eingeladen: [1, 19] });
+    expect(r.anfragen).toEqual({ fehlend: [], unklar: true });
+    expect(ct.termine).toHaveLength(1);
+  });
+
+  it('unklare Antwort, aber angelegt: gefunden – ein POST, die Mails genau einmal', async () => {
+    ct.terminFehler = { status: 504, angelegt: true };
+    const r = await terminLegen({ eintrag: MIT_UHR, zeitzone: ZONE, eingeladen: [1, 19] });
+    expect(r.art).toBe('angelegt');
+    expect(posts()).toHaveLength(1);
+    expect(ct.mails).toEqual([{ person: 19, art: 'neu' }]);
+  });
+
+  it('unklar und nicht da: Unklar mit Wort von den Einladungen („doppelt“) – kein zweiter POST von allein', async () => {
+    ct.terminFehler = { status: 504, angelegt: false };
+    const e: unknown = await terminLegen({
+      eintrag: MIT_UHR,
+      zeitzone: ZONE,
+      eingeladen: [1, 19],
+    }).catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(Unklar);
+    expect(fehlerMeldung(e).text).toMatch(/Einladung doppelt/);
+    expect(posts()).toHaveLength(1);
+  });
+});

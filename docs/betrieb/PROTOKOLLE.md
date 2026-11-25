@@ -581,7 +581,7 @@ Kalender, Termin-Nummer, Name und Zeit) – nicht im Protokoll (freigegebene ble
 „Mitarbeit“, nie wird hart gelöscht (wird das Protokoll gelöscht, bekommen seine Stände den Vermerk `geloescht`, W6; ebenso der Stand eines Bausteins, der beim Bearbeiten aus dem Protokoll entfernt wird – kommt er zurück, fällt der Vermerk beim nächsten Speichern weg, `termineAbgleichen`), und „Nicht eintragen“ überschreibt einen Eintrag im Kalender nie. Wer in keinem Kalender anlegen darf, sieht weder „Eintragen“ noch „Nicht eintragen“, dafür einen Satz.
 
 **Das Fenster wie der ChurchTools-Kalender (W15-1, 23.11.2026):** Seit W15-1 baut „In Kalender eintragen“ den **Reiter „Kalender“ des ChurchTools-Dialogs „Termin erstellen“** nach (Messung
-`protokolle-planung/docs/messung-w15-0-2026-11-23.md`); die weiteren Reiter (Besprechungsanfragen, Anmeldung) folgen in W15-4/5, **Ressourcen** gibt es seit W15-2 und **Events** seit W15-3 (unten); die Reiterleiste zeigt sich erst, wenn es mehr als
+`protokolle-planung/docs/messung-w15-0-2026-11-23.md`); der Reiter Anmeldung folgt in W15-5, **Ressourcen** gibt es seit W15-2, **Events** seit W15-3 und **Besprechungsanfragen** seit W15-4 (unten); die Reiterleiste zeigt sich erst, wenn es mehr als
 einen gibt. **Links** die Spalte „Termin-Vorlagen <Kalender>“ (`GET /calendars/appointments/templates`, nur die des gewählten Kalenders; am Handy eine Auswahl oben), **rechts** Kalender, Titel, Untertitel,
 „Nur für eingeloggte Personen sichtbar“ (`isInternal`), Ganztägig, **Beginn/Ende** (Datum, Stunde, Minute – mehrtägig), **Wiederholungen** (`repeatId` 0/1/7/31/32/365/999; Monatlich nach Wochentag mit
 `repeatOption` 1–5 und 6 = letzter), **Bis** (`repeatUntil`) und **Alle x** (`repeatFrequency`), **Weitere Termine** (`additionals`), **Ausnahmen** (`exceptions`), Beschreibung, Link, Ort (`address`:
@@ -603,6 +603,18 @@ Luft zu beiden Seiten) und sucht eine Buchung mit `base.appointment.id` = neuer 
 steht seine Meldung im Fenster, nichts ist halb angelegt. Bei „Nur verknüpfen“ wird nichts gebucht (Reiter gesperrt). Termin-Vorlagen tragen Buchungen im Altformat `{resource_id, minpre, minpost,
 status_id}` (Zahlen als Text): Anwenden → Tabelle (nur buchbare, Status ohne Recht 1), „Als Vorlage speichern“ schreibt dasselbe Format. Offen: Notiz je Buchung (die Schnittstelle kennt sie beim Anlegen
 nicht), `isAutoAccept` wird nicht ausgewertet.
+
+**Reiter „Besprechungsanfragen“ (W15-4, 25.11.2026):** Reiterleiste **Kalender · Besprechungsanfragen · Events · Ressourcen** (Reihenfolge wie ChurchTools). Am Handy (`HANDY_BREITE`) statt der Leiste eine Auswahl **„Bereich“** mit denselben Einträgen (Alwin 25.11.2026: der Rest war nur durch Wischen zu finden). Den Reiter gibt es **nur, wenn der gewählte
+Kalender ein Gruppenkalender ist** (`type: 'group'` aus `GET /calendars`, `KalenderEintrag.gruppe`; bei `church` fehlt er auch in ChurchTools). Ein Schalter „Besprechungsanfrage erstellen“ (aus = Vorgabe), dann
+Suchfeld und Tabelle Name (mit Gruppe) | Status; **ich** bin vorgewählt und nicht abwählbar. Kandidaten: `GET /calendars/{id}/meetingrequest/candidates` (`protokolle/src/besprechungsanfragen.ts`; das alte
+`…/meetingrequestpersons` ist veraltet) – nur `person.domainType === 'person'`, **nach Personen-ID entdoppelt** (der Eintrag mit Gruppenname gewinnt; `shared/protokolle/besprechungsanfrage.ts`).
+**Mail-Schutz – die Test-Instanz verschickt echte Mails:** `meetingrequests` geht nur mit, wenn der Reiter sichtbar ist **und** der Schalter an ist **und** nicht „Nur verknüpfen“ gilt; ein Kalenderwechsel **leert**
+die Auswahl (`onKalender` setzt sie zurück, zusätzlich gehört die Auswahl zu einem Kalender), und Speichern wartet, bis die Kandidaten geladen sind. Der Fuß sagt „Die Einladung geht **sofort** per Mail an N Personen“
+(`EinladungHinweis`, derselbe Baustein wie „Nächste Sitzung festlegen“); N zählt `mailsAnAndere` (`shared/protokolle/einladungsmail.ts` – ich bekomme keine Mail, sonst jede Person genau eine; dieselbe Regel gilt
+beim Festlegen, Bearbeiten, Absagen und Löschen einer Sitzung). **Unklare Antwort beim Anlegen:** `terminAnlegen` sieht im Kalender nach (kein zweites `POST`); bleibt es `Unklar`, ist „Speichern“ gesperrt und die
+Prüfung „steht schon da?“ läuft neu – findet sie den Termin, wird daraus „Verknüpfen“ (gilt auch ohne Einladungen). **Erfolg ist kein Beleg:** `terminLegen` liest danach `…/appointments/{id}/meetingrequests`
+(`anfragenNachlesen`); fehlt eine Person, bleibt der Termin, der Vermerk entsteht, und `hinweiseZusammen` nennt sie mit Buchungen/Events; ein Lesefehler heißt „unklar“, nie „fehlt“. Termin-Vorlagen kennen keine
+Besprechungsanfragen – es wird nichts übernommen oder gespeichert. Handtest: TF-PROT-32 Schritt 12 (nur mit dem eigenen Konto als Eingeladenem).
 
 **Reiter „Events“ (W15-3, 23.11.2026):** Reiterleiste **Kalender · Events · Ressourcen** (Reihenfolge wie ChurchTools). Den Reiter gibt es nur, wenn `GET /permissions/global` → `churchservice` „edit
 events“ (Kalender-IDs) den **gewählten Kalender** enthält (`shared/ct/eventRechte.ts`; Kalender wechseln → Reiter kommt/geht, gesendet werden Events nur, wo das Recht gilt). Die Tabelle
@@ -651,6 +663,8 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit schon (gem
   Rechte `vorlagenKalender`/`darfTagsVerwalten` in `shared/ct/kalenderRechte.ts` (über `start.ts` bis ins Fenster).
 - Ressourcen im Fenster (W15-2): Regeln `shared/protokolle/terminRessourcen.ts` (+ `terminRessourcenZeit.ts`), Rechte `shared/ct/ressourcenRechte.ts` (`buchbareRessourcen`,
   `verwaltbareRessourcen`), Lesen/Nachlesen `protokolle/src/buchungenLesen.ts`, Oberfläche `TerminRessourcen.tsx`; `Eintrag.vorlauf/nachlauf/buchungen`, `terminLegen` → `buchungen`.
+- Besprechungsanfragen im Fenster (W15-4): Regeln `shared/protokolle/besprechungsanfrage.ts` (`kandidatenAus`, `kandidatenFiltern`, `angefragte`, `anfrageHinweis`), Mail-Zählung
+  `shared/protokolle/einladungsmail.ts` (`mailsAnAndere`), Lesen/Nachlesen `protokolle/src/besprechungsanfragen.ts`, Oberfläche `TerminAnfragen.tsx` + `EinladungHinweis.tsx`; `terminLegen({ eingeladen })` → `anfragen`.
 - Events im Fenster (W15-3): Reihe `shared/protokolle/terminReihe.ts`, Regeln `terminEvents.ts`, Recht `shared/ct/eventRechte.ts` (`eventKalender`), Lesen/Nachlesen `protokolle/src/eventsLesen.ts`,
   Oberfläche `TerminEvents.tsx`; `Eintrag.events`, `TerminVorlage.eventVorlage`, `terminLegen` → `events`.
 - Bausteine (W12, Stil A „ruhig“): Beschluss, To-Do und Termin haben **keine Fläche**, nur einen 3-px-Farbrand links (grün, grau, blau; Etikett

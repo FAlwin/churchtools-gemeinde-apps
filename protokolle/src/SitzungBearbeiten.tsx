@@ -20,6 +20,7 @@ import {
 } from '@shared/protokolle/bearbeiten';
 import { planungFehler, schonBelegt, zeitraum, type Planung } from '@shared/protokolle/planen';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
+import { mailsAnAndere } from '@shared/protokolle/einladungsmail';
 import { ladeGruppenMitglieder } from './mitglieder';
 import { ANMELDUNG, sitzungAbsagen, sitzungAendern, terminStand } from './bearbeiten';
 import { wannLang } from './anzeige';
@@ -284,7 +285,7 @@ export function SitzungBearbeiten({
     );
 
   if (absagen) {
-    const andere = vorher.filter((x) => x !== ich.person).length;
+    const andere = mailsAnAndere(vorher, ich.person);
     const art: SerienAbsage | null = serie ? absageArt : null;
     const mailt = art === null || art === 'serie';
     const wege: { art: SerienAbsage; titel: string; text: string }[] = serie

@@ -11,6 +11,7 @@
 import { plusTage, tageBis } from '../ct/datum';
 import { ortszeitAus, tagAusIso, utcAus } from '../ct/zeit';
 import { minute, type Sitzung } from './sitzungen';
+import { mailsAnAndere } from './einladungsmail';
 import { OHNE_VORBILD, type Planung } from './planen';
 import type { ProtokollKopf } from './speicher';
 
@@ -64,7 +65,7 @@ export function mailsVon(
   a: Aenderung,
   q: { nachher: readonly number[]; neuEinladen: boolean; ich: number },
 ): { geaendert: number; eingeladen: number; ausgeladen: number } {
-  const andere = (liste: readonly number[]) => liste.filter((p) => p !== q.ich).length;
+  const andere = (liste: readonly number[]) => mailsAnAndere(liste, q.ich);
   const dazu = new Set(a.dazu);
   return {
     geaendert: a.zeit && q.neuEinladen ? andere(q.nachher.filter((p) => !dazu.has(p))) : 0,
@@ -294,10 +295,10 @@ export function mailsSerie(
   q: { nachher: readonly number[]; neuEinladen: boolean; ich: number },
 ): { geaendert: number; eingeladen: number; ausgeladen: number } {
   if (weg === null || weg === 'serie') return mailsVon(a, q);
-  const andere = q.nachher.filter((p) => p !== q.ich).length;
+  const andere = mailsAnAndere(q.nachher, q.ich);
   return {
     geaendert: 0,
     eingeladen: andere,
-    ausgeladen: weg === 'teilen-diese' ? a.weg.filter((p) => p !== q.ich).length : 0,
+    ausgeladen: weg === 'teilen-diese' ? mailsAnAndere(a.weg, q.ich) : 0,
   };
 }

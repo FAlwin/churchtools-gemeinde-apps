@@ -5,5 +5,5 @@
   einrichten und starten darf die Technik“ oder „Protokolle sehen die Rollen, die ein Admin … freigegeben hat“. Jetzt
   steht dort allgemein, wen man fragt. Einrichten, Starten, Gruppen ändern und Bearbeiten behalten ihre eigenen
   Hinweise.
-- **Protokolle:** Ein Gruppentreffen löschen oder verschieben ohne Recht sagt jetzt „Dir fehlt in ChurchTools das Recht,
-  Gruppentreffen zu pflegen“ – wie schon die Anwesenheit.
+- **Protokolle:** Wer ein Protokoll löscht, dessen Gruppentreffen er in ChurchTools nicht löschen darf, liest als Grund
+  jetzt „Dir fehlt in ChurchTools das Recht, Gruppentreffen zu pflegen“ statt „Protokolle sehen die Rollen …“.

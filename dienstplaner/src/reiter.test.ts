@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  abwesenheitenAbfrageAusAdresse,
+  adresseFuerAbwesenheitenAbfrage,
   ADRESSE_VORLAGEN,
   adresseFuer,
   adresseFuerPlanenGruppe,
@@ -98,5 +100,34 @@ describe('Adressen der Ablaufvorlagen (E10-V3a)', () => {
     expect(reiterAusAdresse('#/vorlagen', sichtbareReiter(true))).toBe('planen');
     expect(reiterAusAdresse('#/vorlage/5', sichtbareReiter(true))).toBe('planen');
     expect(reiterAusAdresse('#/vorlagen', sichtbareReiter(false))).toBe('start');
+  });
+});
+
+describe('Adresse „Wann kann ich?“ mit einer Abfrage (R-3)', () => {
+  it('#/abwesenheiten?abfrage=<id> → Dienstgruppe und Reiter „Wann kann ich?“; hin und zurück gleich', () => {
+    expect(abwesenheitenAbfrageAusAdresse(adresseFuerAbwesenheitenAbfrage(4))).toBe(4);
+    expect(adresseFuerAbwesenheitenAbfrage(4)).toBe('#/abwesenheiten?abfrage=4');
+    expect(reiterAusAdresse('#/abwesenheiten?abfrage=4', sichtbareReiter(false))).toBe(
+      'abwesenheiten',
+    );
+    expect(reiterAusAdresse('#/abwesenheiten?abfrage=4', sichtbareReiter(true))).toBe(
+      'abwesenheiten',
+    );
+  });
+
+  it('ohne oder mit kaputtem Anhang ist es die Seite wie immer', () => {
+    for (const h of [
+      '',
+      '#/abwesenheiten',
+      '#/abwesenheiten?abfrage=',
+      '#/abwesenheiten?abfrage=x',
+      '#/abwesenheiten?abfrage=4&x=1',
+      '#/termine?abfrage=4',
+    ]) {
+      expect(abwesenheitenAbfrageAusAdresse(h)).toBeNull();
+    }
+    expect(reiterAusAdresse('#/abwesenheiten', sichtbareReiter(true))).toBe('abwesenheiten');
+    // Eine fremde Adresse mit Anhang ist keine Abwesenheiten-Adresse.
+    expect(reiterAusAdresse('#/termine?abfrage=4', sichtbareReiter(true))).toBe('start');
   });
 });

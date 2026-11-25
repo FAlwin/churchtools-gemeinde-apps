@@ -152,6 +152,11 @@ export interface AbwesenheitenSeiteProps {
   zusagen?: Zusagen;
   /** Setzt die Teile in den Rahmen der App. */
   rahmen: (teile: AbwesenheitenTeile) => ReactNode;
+  /**
+   * Der Zeitraum beim Öffnen – im Dienstplaner der einer laufenden Abfrage (R-3). Nur der Anfang: danach wählt man wie
+   * immer. Ohne: „ab heute“ wie bisher (Musik-App).
+   */
+  anfangsZeitraum?: Zeitraum;
 }
 
 type Seite = 'termine' | 'eintraege';
@@ -216,11 +221,12 @@ export function AbwesenheitenSeite({
   terminZusatz,
   zusagen,
   rahmen,
+  anfangsZeitraum = AB_HEUTE,
 }: AbwesenheitenSeiteProps) {
   const laufend = monatVon(heute);
   const bisMonat = monatPlus(laufend, RASTER_MONATE - 1);
   /** Gezeigter Zeitraum – beim Öffnen „ab heute“, nicht gemerkt (Vergangenes zählt hier nicht). */
-  const [zeitraum, setZeitraum] = useState<Zeitraum>(AB_HEUTE);
+  const [zeitraum, setZeitraum] = useState<Zeitraum>(anfangsZeitraum);
   const grenzen = zeitraumGrenzen(zeitraum, heute) ?? {
     von: heute,
     bis: plusTage(heute, AB_HEUTE_TAGE - 1),

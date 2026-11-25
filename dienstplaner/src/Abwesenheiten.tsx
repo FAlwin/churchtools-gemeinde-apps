@@ -18,6 +18,11 @@ import { useToast } from '@ui/fenster/useToast';
 import { Toast } from '@ui/fenster/Toast';
 import { Icon } from '@ui/icons/icons';
 import { ladeMeineDienste } from './ladeBeiwerk';
+import { AbfrageBand } from './AbfrageBand';
+import { useBand } from './useAbfragen';
+import { adresseFuer } from './reiter';
+import type { Start } from './start';
+import type { Zeitraum } from '@shared/ct/zeitraum';
 import {
   einrichtbareGruppen,
   ladeVerfuegbarkeit,
@@ -232,6 +237,8 @@ export function Abwesenheiten({
   heute,
   dienstgruppen,
   eigeneDienste = KEINE_DIENSTE,
+  start,
+  abfrageGruppe = null,
 }: {
   ichId: number;
   zeitzone: string;
@@ -240,6 +247,12 @@ export function Abwesenheiten({
   dienstgruppen: Dienstgruppe[];
   /** Die eigenen Dienste (`eigeneDienste`) – für „nur bestimmte Dienste“ bei der Notiz. Eine feste Liste je Start. */
   eigeneDienste?: { id: number; name: string }[];
+  /**
+   * „Wann kann ich?“ mit einer Abfrage (R-3, `#/abwesenheiten?abfrage=<Dienstgruppe>`): Mit gültiger laufender Abfrage steht über
+   * der Liste ein Band, und die Liste zeigt genau ihren Zeitraum. Ohne `start` oder ohne gültige Abfrage: die Seite wie bisher.
+   */
+  start?: Start;
+  abfrageGruppe?: number | null;
 }) {
   const dienst = useMemo(
     () => abwesenheitenDienst({ ich: () => Promise.resolve(ichId), zeitzone }),
@@ -263,10 +276,34 @@ export function Abwesenheiten({
   };
   const quelle = useMemo(() => ({ dienst, heute, stand }), [dienst, heute, stand]);
   const zusagen = useZusagen(ichId, dienstgruppen, heute, eigeneDienste, stand);
+  const { wartet, band } = useBand({
+    start,
+    dienstgruppeId: start ? abfrageGruppe : null,
+    heute,
+    zeitzone,
+    antworten: zusagen.antworten,
+    schreibStand: stand,
+  });
+  const anfang: Zeitraum | undefined = band
+    ? { art: 'eigen', von: band.lage.abfrage.von, bis: band.lage.abfrage.bis }
+    : undefined;
+
+  // Mit Abfrage in der Adresse erst deren Zeitraum kennen, dann die Seite aufbauen (kein Springen von „ab heute“).
+  if (wartet)
+    return (
+      <div className={styles.seite}>
+        <p className={styles.hinweis} role="status">
+          Wird geladen …
+        </p>
+      </div>
+    );
 
   return (
     <QuelleKontext.Provider value={quelle}>
       <AbwesenheitenSeite
+        // Neu aufbauen, wenn die Abfrage beginnt oder endet („Alle Termine zeigen“) – sonst bliebe ihr Zeitraum stehen.
+        key={band ? band.lage.abfrage.id : 'ohne'}
+        anfangsZeitraum={anfang}
         online
         onToast={showToast}
         heute={heute}
@@ -282,6 +319,19 @@ export function Abwesenheiten({
           <div className={styles.seite}>
             {/* Die Werkzeugzeile steht über der Karte, nicht darin (B4, R5). */}
             {t.werkzeug}
+            {band && (
+              <AbfrageBand
+                gruppe={band.lage.gruppe.name}
+                abfrage={band.lage.abfrage}
+                stand={
+                  band.stand ? { offen: band.stand.offen.length, gesamt: band.stand.gesamt } : null
+                }
+                heute={heute}
+                onAlle={() => {
+                  window.location.hash = adresseFuer('abwesenheiten');
+                }}
+              />
+            )}
             <section className={styles.karte} aria-label="Wann kann ich?">
               {t.fehler ? (
                 <div className={styles.hinweis}>

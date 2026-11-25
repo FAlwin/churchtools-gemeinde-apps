@@ -1,13 +1,20 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useLaden } from '@ui/ct/useLaden';
 import { Icon } from '@ui/icons/icons';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { KachelLink, TitelLink } from './TerminLink';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { kachel, plusTage, tagKurz } from '@shared/ct/datum';
+import type { Dienstgruppe } from '@shared/ct/dienstgruppen';
 import { gemeindeZeitzone } from '@shared/ct/zeit';
-import { decktTermin } from '@shared/absences/index';
+import { abwesendAm as deckt } from '@shared/dienstplan/abfrageStand';
 import type { CtAbsence } from '@shared/ct/typen';
+import type { Plan, PlanGruppe } from '@shared/dienstplan/plan';
+import {
+  abfrageKartenEtikett,
+  abfrageZeilenTitel,
+  naechsteErinnerungText,
+} from '@shared/dienstplan/abfrageStand';
 import type { TerminZeile } from '@shared/dienstplan/termine';
 import { bisDahin, startUebersicht, type DienstAmTermin } from '@shared/dienstplan/start';
 import { planbareDienstgruppen, type Start } from './start';
@@ -26,7 +33,21 @@ import type { Tausch } from './useTausch';
 import { TauschAmDienst, TauschEingang, TauschGetauscht, type EigenerDienst } from './TauschTeile';
 import type { VertretungZugriff } from './useVertretung';
 import { VertretungEingang } from './VertretungTeile';
-import { adresseFuer, adresseFuerPlanenGruppe, type ReiterId } from './reiter';
+import {
+  adresseFuer,
+  adresseFuerAbwesenheitenAbfrage,
+  adresseFuerPlanenGruppe,
+  type ReiterId,
+} from './reiter';
+import { AbfrageKarte } from './AbfrageKarte';
+import { AbfrageFensterStart } from './AbfrageFensterStart';
+import type { AbfrageAnschluss } from './AbfrageFenster';
+import type { AntwortenLader } from './ladeAntworten';
+import type { PersonenLader } from './ladePersonen';
+import type { TermineDaten } from './ladeTermine';
+import { useStartAbfragen } from './useAbfragen';
+import { KlickZeile } from '@ui/bedienung/KlickZeile';
+import { Etikett } from '@ui/bedienung/Etikett';
 import styles from './Startseite.module.scss';
 
 interface Props {
@@ -50,6 +71,16 @@ interface Props {
   vertretung?: VertretungZugriff;
   /** Zeitzone der Gemeinde – für die Tage der Tausch-Anfragen. */
   zeitzone?: string;
+  /**
+   * Die Zeile „Abfrage …“ in der Karte „Planen“ öffnet das Fenster „Abfrage“ (R-3) – dafür braucht es dieselben Lader wie in
+   * Planen. Ohne: keine Zeile (die Karte für Mitarbeitende gibt es trotzdem).
+   */
+  abfrage?: {
+    anschluss: AbfrageAnschluss;
+    ladeZeitraum: (von: string, bis: string) => Promise<TermineDaten>;
+    ladePersonen: PersonenLader;
+    ladeAntworten: AntwortenLader;
+  };
 }
 
 /** Der eigene Dienst einer Zeile, wie der Tausch ihn braucht – `null` ohne bekannten Platz. */
@@ -65,6 +96,18 @@ function eigener(d: DienstAmTermin): EigenerDienst | null {
       }
     : null;
 }
+
+/** Solange keine Termine da sind: ein leerer Plan – das Fenster „Abfrage“ lädt den Zeitraum der Abfrage dann selbst. */
+const KEIN_PLAN: Plan = { spalten: [], gruppen: [] };
+
+/** Die Dienstgruppe im Plan; fehlt sie dort (keine Dienste in diesen Wochen), eine leere – die Zahlen kommen aus dem Nachladen. */
+const gruppeImPlan = (plan: Plan, gruppe: Dienstgruppe): PlanGruppe =>
+  plan.gruppen.find((g) => g.gruppe?.id === gruppe.id) ?? {
+    gruppe,
+    planbar: true,
+    zeilen: [],
+    frei: [],
+  };
 
 /** So viele aus dem Team stehen im Kasten „Als Nächstes“; der Rest als „und N weitere“. */
 const TEAM_ZEIGEN = 5;
@@ -87,23 +130,18 @@ export function Startseite({
   tausch,
   vertretung,
   zeitzone = gemeindeZeitzone(),
+  abfrage,
 }: Props) {
   const planbar = planbareDienstgruppen(start);
   const zeilen = termine?.art === 'fertig' ? termine.zeilen : [];
   const u = startUebersicht(zeilen, { jetzt: new Date(), heute, planbar });
+  const planFuerAbfrage: Plan = termine?.art === 'fertig' ? termine.plan : KEIN_PLAN;
   const abwesenheiten = useAbwesenheiten(start.ichId, heute);
-  const abwesendAm = (z: TerminZeile) =>
-    !!abwesenheiten?.some((a) =>
-      decktTermin(
-        {
-          startDate: a.startDate,
-          endDate: a.endDate,
-          startTime: a.startTime ?? null,
-          endTime: a.endTime ?? null,
-        },
-        { startDate: z.beginn, endDate: z.ende, date: z.tag },
-      ),
-    );
+  const abwesendAm = (z: TerminZeile) => !!abwesenheiten && deckt(abwesenheiten, z);
+  // Laufende Abfragen (R-3): Karten für mich, Zeilen für die Gruppen, die ich plane. Scheitert etwas, bleibt beides leer.
+  const abfragen = useStartAbfragen(start, heute, zeitzone);
+  const [abfrageOffen, setAbfrageOffen] = useState<number | null>(null);
+  const offeneAbfrage = abfragen.planer.find((l) => l.gruppe.id === abfrageOffen) ?? null;
   const kommendeAbwesenheiten = abwesenheiten?.filter((a) => a.endDate >= heute).length;
   // „Alle zusagen“ ab zwei unbeantworteten Anfragen (Entwurf E7-1).
   const unbeantwortet = u.offen.filter((d) => d.mein.ort && !d.mein.zugesagt && !d.mein.antwort);
@@ -135,6 +173,17 @@ export function Startseite({
               </p>
             </section>
           ))}
+
+        {abfragen.karten.map((k) => (
+          <AbfrageKarte
+            key={k.gruppe.id}
+            karte={k}
+            heute={heute}
+            onEintragen={() => {
+              window.location.hash = adresseFuerAbwesenheitenAbfrage(k.gruppe.id);
+            }}
+          />
+        ))}
 
         {(u.offen.length > 0 ||
           !!tausch?.eingang.length ||
@@ -256,9 +305,40 @@ export function Startseite({
                 )}
               </ReiterLink>
             ))}
+            {abfrage &&
+              abfragen.planer.map((l) => {
+                const etikett = abfrageKartenEtikett(l.abfrage, heute);
+                const erinnerung = naechsteErinnerungText(l.inhalt, l.abfrage, heute);
+                return (
+                  <KlickZeile
+                    key={`abfrage-${l.gruppe.id}`}
+                    className={styles.linkZeile}
+                    onClick={() => setAbfrageOffen(l.gruppe.id)}
+                  >
+                    <span className={styles.mitte}>
+                      <b>{abfrageZeilenTitel({ gruppe: l.gruppe.name, abfrage: l.abfrage })}</b>
+                      {erinnerung && <small>{erinnerung}</small>}
+                    </span>
+                    {etikett && <Etikett ton={etikett.ton}>{etikett.text}</Etikett>}
+                  </KlickZeile>
+                );
+              })}
           </section>
         )}
       </div>
+      {abfrage && offeneAbfrage && (
+        <AbfrageFensterStart
+          plan={planFuerAbfrage}
+          gruppe={gruppeImPlan(planFuerAbfrage, offeneAbfrage.gruppe)}
+          dienstgruppe={offeneAbfrage.gruppe}
+          heute={heute}
+          ladeZeitraum={abfrage.ladeZeitraum}
+          ladePersonen={abfrage.ladePersonen}
+          ladeAntworten={abfrage.ladeAntworten}
+          anschluss={abfrage.anschluss}
+          onClose={() => setAbfrageOffen(null)}
+        />
+      )}
       <Toast message={antworten?.meldung ?? tausch?.meldung ?? vertretung?.meldung ?? null} />
     </div>
   );

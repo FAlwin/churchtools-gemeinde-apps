@@ -9,6 +9,7 @@ import {
   menueVerschieben,
 } from '@shared/website/bearbeiten';
 import { SLUG, type Menue, type Seite } from '@shared/website/modell';
+import { bereichSetzen } from '@shared/website/zugang';
 import { Feld, Haken } from './Felder';
 
 /** Ein wählbarer Bereich: `wert` = `null` (die Website) oder die Gruppen-ID einer eingerichteten Untergruppe (W3b-4b). */
@@ -27,7 +28,8 @@ import styles from './Fenster.module.scss';
  *
  * **Bereich (W3b-4b):** Die Leitung der Website wählt hier, wem die Seite gehört – der Website oder einer **eingerichteten**
  * Untergruppe (`bereichWahl`; nicht eingerichtete stehen gar nicht zur Wahl). „Website“ entfernt das Feld. Steht die Seite schon
- * online, verschiebt das nächste Freigeben sie in die Kategorie des neuen Bereichs.
+ * online, wandert die veröffentlichte Fassung nach dem Speichern **sofort** in die Kategorie des neuen Bereichs (W3b-4b-2, E-W32;
+ * `Seitenarbeit` → `onBereichGewechselt`).
  */
 export function SeiteEinstellen({
   seite,
@@ -79,17 +81,15 @@ export function SeiteEinstellen({
   const titelLeer = titel.trim() === '';
 
   const fertig = () => {
-    const neu: Seite = {
+    let neu: Seite = {
       ...seite,
       titel: titel.trim(),
       pfad: seite.startseite ? seite.pfad : pfad,
     };
     if (beschreibung.trim() === '') delete neu.beschreibung;
     else neu.beschreibung = beschreibung;
-    if (bereichWahl) {
-      if (bereich === null) delete neu.bereich;
-      else neu.bereich = bereich;
-    }
+    // Dieselbe Regel wie beim Verschieben der Online-Fassung (`bereichSetzen`): sonst wäre sie bei gleichem Inhalt „geändert“.
+    if (bereichWahl) neu = bereichSetzen(neu, bereich);
     const nachgezogen = menueTitelNachziehen(entwurf, seite.id, seite.titel, neu.titel) ?? entwurf;
     const geaendert = JSON.stringify(nachgezogen) !== JSON.stringify(menue ?? { eintraege: [] });
     onFertig(neu, geaendert ? nachgezogen : null);
@@ -165,7 +165,7 @@ export function SeiteEinstellen({
       {bereichWahl && (
         <Feld
           label="Bereich"
-          hilfe="Wer die Seite sieht und freigibt: die Website oder eine ihrer Untergruppen. Steht die Seite schon online, wechselt sie beim nächsten Freigeben in den neuen Bereich."
+          hilfe="Wer die Seite sieht und freigibt: die Website oder eine ihrer Untergruppen. Steht die Seite schon online, wechselt die veröffentlichte Fassung sofort mit."
         >
           {(id) => (
             <select

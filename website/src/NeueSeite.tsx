@@ -4,6 +4,7 @@ import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import type { Seite } from '@shared/website/modell';
 import { freierPfad, neueLeereSeite, pfadAusTitel } from '@shared/website/seitenListe';
+import { bereichSetzen } from '@shared/website/zugang';
 import { neueId } from './ids';
 import styles from './Fenster.module.scss';
 
@@ -46,7 +47,7 @@ export function NeueSeite({
     setLaeuft(true);
     setFehler(null);
     const leer = neueLeereSeite(titel, seiten, neueId);
-    const seite: Seite = bereich === null ? leer : { ...leer, bereich };
+    const seite: Seite = bereichSetzen(leer, bereich);
     try {
       await speichern(seite);
       onAngelegt(seite);

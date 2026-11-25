@@ -30,11 +30,13 @@ import { mailAnAusWerten, mailSchalterSetzen } from '@shared/website/mailWerte';
 import type { Einstellungen, Menue, Seite } from '@shared/website/modell';
 import {
   alleFreigeben,
+  bereichWechseln,
   gibFrei,
   onlineKategorien,
   onlineSicht,
   seiteEntfernen,
   type AlleErgebnis,
+  type BereichGewechselt,
   type Freigegeben,
   type OnlineKategorie,
   type OnlineSicht,
@@ -204,6 +206,15 @@ export const entferneStatus = (o: FreigabeKategorien, seiteId: string) =>
 
 export const gebeFrei = (o: FreigabeKategorien, ziel: Ziel): Promise<Freigegeben> =>
   gibFrei(freigabeOrt(o), ziel.einheit, ziel.id);
+
+/** Bereich geändert (W3b-4b-2): die veröffentlichte Fassung sofort in die Kategorie des neuen Bereichs (`bereichWechseln`). */
+export const wechsleBereich = (
+  o: FreigabeKategorien,
+  seiteId: string,
+  alterBereich: number | null,
+  neuerBereich: number | null,
+): Promise<BereichGewechselt> =>
+  bereichWechseln(freigabeOrt(o), seiteId, alterBereich, neuerBereich);
 
 export const entferneSeiteUndOnline = (
   o: FreigabeKategorien,

@@ -33,15 +33,19 @@
  *   → nachlesen → **erst dann** aus der alten löschen (`einheitLoeschen` liest selbst nach). Scheitert das Löschen der alten,
  *   ist die Seite in der neuen online – das Ergebnis sagt, wo sie zusätzlich noch steht (`bleibtIn`), statt es zu verschweigen
  *   oder die Freigabe als gescheitert zu melden. Ein `201` ist kein Beleg.
+ * - **Bereich gewechselt** (W3b-4b-2, E-W32 – `bereichWechseln`): Ändert die Leitung der Website den Bereich einer Seite, die
+ *   online steht, wandert die **veröffentlichte Fassung** sofort mit – nur ihr Feld `bereich` ändert sich, nicht der Entwurf
+ *   geht online. Derselbe Ablauf wie beim Freigeben (`inBereichSchreiben`).
  * - **Löschen/Offline nehmen** (`seiteEntfernen`) nimmt die Seite aus **jeder** Veröffentlicht-Kategorie, in der sie steht und
  *   die man schreiben darf – erst dann den Entwurf.
  * - Liste und Zähler: Die Leitung einer Untergruppe sieht und bearbeitet nur Seiten ihres Bereichs, Menü und Einstellungen nur
  *   die Leitung der Website.
  */
-import { werteLesen, type ModulPort } from '../ct/modulDaten';
+import { werteLesen, type ModulPort, type Wert } from '../ct/modulDaten';
 import type { UntergruppenKategorie } from './einrichten';
 import { pruefsumme } from '../ct/teile';
 import {
+  WEBSITE_KENNUNG,
   einstellungenAusText,
   menueAusText,
   seiteAlsText,
@@ -61,7 +65,14 @@ import {
   type WebsiteStand,
 } from './speicher';
 import { statusEntfernen, type SeitenStatus } from './status';
-import { bereichVon, darfFreigeben, leitetWebsite, siehtBereich, type Zugang } from './zugang';
+import {
+  bereichSetzen,
+  bereichVon,
+  darfFreigeben,
+  leitetWebsite,
+  siehtBereich,
+  type Zugang,
+} from './zugang';
 
 // ── 1. Der Vergleich ─────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -532,6 +543,45 @@ async function ausAnderenBereichen(
 }
 
 /**
+ * **Eine Einheit in eine Veröffentlicht-Kategorie schreiben und nachlesen** (derselbe Anschluss wie beim Speichern,
+ * `einheitSpeichern`): Wirft, wenn dort danach nicht vollständig lesbar `stand` steht – **ein `201` ist kein Beleg**.
+ */
+async function onlineSchreiben(
+  o: FreigabeOrt,
+  ziel: number,
+  einheit: Einheit,
+  id: string,
+  text: string,
+  stand: string,
+): Promise<void> {
+  await aufOnline(o, () => einheitSpeichern(ortIn(o, ziel), einheit, id, text));
+  const jetzt = await aufOnline(o, () => werteLesen(o.p, o.modul, ziel));
+  const dort = einheitText(jetzt, einheit, id);
+  if (!dort || dort.stand !== stand)
+    throw o.p.fehler(
+      502,
+      'ChurchTools hat die Freigabe nicht vollständig übernommen – der bisherige Online-Stand gilt weiter.',
+    );
+}
+
+/**
+ * **Eine Seite in die Kategorie ihres Bereichs bringen** – der eine Ablauf für Freigeben (`gibFrei`) und Bereichswechsel
+ * (`bereichWechseln`): schreiben → nachlesen → **erst dann** aus allen anderen Veröffentlicht-Kategorien entfernen. Wirft, wenn
+ * Schreiben oder Nachlesen scheitert (dann ist in den anderen nichts angerührt). Liefert die Bereiche, aus denen sie sich nicht
+ * entfernen ließ (`bleibtIn`) – leer: Sie steht nur noch im Ziel.
+ */
+async function inBereichSchreiben(
+  o: FreigabeOrt,
+  ziel: number,
+  id: string,
+  text: string,
+  stand: string,
+): Promise<(number | null)[]> {
+  await onlineSchreiben(o, ziel, 'seite', id, text, stand);
+  return ausAnderenBereichen(o, id, ziel);
+}
+
+/**
  * **Eine Einheit freigeben:** den gespeicherten Text aus „Entwürfe“ **unverändert** nach „Veröffentlicht“ schreiben (derselbe
  * Anschluss wie beim Speichern, `einheitSpeichern`), **nachlesen, dass dort derselbe Stand steht** – und erst dann den Status
  * entfernen, wenn der Entwurf inzwischen nicht weitergeändert wurde. Wirft bei jedem Fehler; **nichts gilt als online, was
@@ -565,21 +615,13 @@ export async function gibFrei(o: FreigabeOrt, einheit: Einheit, id: string): Pro
     ziel = k;
   }
 
-  await aufOnline(o, () => einheitSpeichern(ortIn(o, ziel), einheit, id, e.text));
+  if (einheit !== 'seite') {
+    await onlineSchreiben(o, ziel, einheit, id, e.text, e.stand);
+    return { stand: e.stand, statusEntfernt: true };
+  }
 
-  // Nachlesen: Steht dort wirklich derselbe Stand, vollständig lesbar? (Ein `201` ist kein Beleg.)
-  const jetzt = await aufOnline(o, () => werteLesen(o.p, o.modul, ziel));
-  const dort = einheitText(jetzt, einheit, id);
-  if (!dort || dort.stand !== e.stand)
-    throw o.p.fehler(
-      502,
-      'ChurchTools hat die Freigabe nicht vollständig übernommen – der bisherige Online-Stand gilt weiter.',
-    );
-
-  if (einheit !== 'seite') return { stand: e.stand, statusEntfernt: true };
-
-  // Verschieben: erst jetzt, da die Seite im neuen Bereich nachgelesen ist, aus den anderen entfernen.
-  const bleibt = await ausAnderenBereichen(o, id, ziel);
+  // Schreiben, nachlesen – und erst dann aus den anderen Bereichen entfernen (Verschieben).
+  const bleibt = await inBereichSchreiben(o, ziel, id, e.text, e.stand);
   const mitBleibt = (r: Freigegeben): Freigegeben =>
     bleibt.length > 0 ? { ...r, bleibtIn: bleibt } : r;
 
@@ -631,6 +673,78 @@ export async function seiteEntfernen(
   }
   await einheitLoeschen(entwurfsOrt(o), 'seite', id);
   return { bleibtIn };
+}
+
+/** Was beim Bereichswechsel online geschah (`bereichWechseln`). */
+export type BereichGewechselt =
+  /** Die Seite steht in keinem anderen Bereich online – es gab nichts zu verschieben. */
+  | { verschoben: false }
+  /** Die Online-Fassung steht jetzt im neuen Bereich; `bleibtIn`: Dort ließ sie sich nicht entfernen, sie steht zusätzlich noch dort. */
+  | { verschoben: true; bleibtIn?: (number | null)[] };
+
+/** Der Text einer Seite mit anderem Bereich – **sonst Zeichen für Zeichen gleich** (kein Umweg über das Schema, das ordnet). */
+function textMitBereich(text: string, bereich: number | null): string | null {
+  if (!text.startsWith(WEBSITE_KENNUNG) || !seiteAusText(text).ok) return null;
+  const roh = JSON.parse(text.slice(WEBSITE_KENNUNG.length)) as Seite;
+  const neu = seiteAlsText(bereichSetzen(roh, bereich));
+  return seiteAusText(neu).ok ? neu : null;
+}
+
+/**
+ * **Der Bereich einer Seite wurde geändert – die veröffentlichte Fassung wandert sofort mit** (W3b-4b-2, E-W32). Aufgerufen,
+ * nachdem der Entwurf mit dem neuen Bereich gespeichert ist. Bis dahin lag die Seite online im alten Bereich weiter; gab danach
+ * die Leitung der Untergruppe frei, stand sie doppelt online (in den alten Bereich darf sie nicht schreiben).
+ *
+ * - Gelesen werden **alle** Veröffentlicht-Kategorien (frisch, nicht der zwischengespeicherte Stand der Oberfläche); eine ohne
+ *   Leserecht wird übersprungen, **jeder andere Lesefehler wirft** – „unbekannt“ ist nie „nicht online“.
+ * - Verschoben wird die **Online-Fassung, nicht der Entwurf** (der kann ungeprüfte Änderungen tragen): ihr Text, nur `bereich`
+ *   neu gesetzt (`bereichSetzen`, dieselbe Regel wie der Entwurf). Quelle ist die Kopie im alten Bereich, sonst die jüngste.
+ * - Dann derselbe Ablauf wie beim Freigeben (`inBereichSchreiben`): neue Kategorie schreiben → nachlesen → erst dann alte löschen.
+ *   Der Status der Seite bleibt unberührt – freigegeben ist damit nichts.
+ *
+ * Wirft, wenn die Fassung nicht vollständig lesbar ist, der neue Bereich keine Kategorie hat oder Schreiben/Nachlesen scheitert –
+ * online bleibt dann alles, wie es war.
+ */
+export async function bereichWechseln(
+  o: FreigabeOrt,
+  id: string,
+  alterBereich: number | null,
+  neuerBereich: number | null,
+): Promise<BereichGewechselt> {
+  const ziel = kategorieDesBereichs(o, neuerBereich);
+  const kopien: { bereich: number | null; kategorie: number; werte: readonly Wert[] }[] = [];
+  for (const k of onlineKategorien(o)) {
+    let werte: readonly Wert[];
+    try {
+      werte = await werteLesen(o.p, o.modul, k.kategorie);
+    } catch (e) {
+      if (istKeinRechtFehler(o.p, e)) continue;
+      throw e;
+    }
+    if (websiteAusWerten(werte).staende.some((s) => s.einheit === 'seite' && s.id === id))
+      kopien.push({ ...k, werte });
+  }
+  const anderswo = kopien.filter((k) => k.kategorie !== ziel);
+  if (anderswo.length === 0) return { verschoben: false };
+  if (ziel === null)
+    throw o.p.fehler(
+      409,
+      'Der neue Bereich ist noch nicht eingerichtet – online wurde nichts verschoben.',
+    );
+
+  const texte = anderswo.map((k) => ({ ...k, e: einheitText(k.werte, 'seite', id) }));
+  const quelle =
+    texte.find((k) => k.bereich === alterBereich) ??
+    [...texte].sort((a, b) => (b.e?.zeit ?? '').localeCompare(a.e?.zeit ?? ''))[0];
+  const neu = quelle.e ? textMitBereich(quelle.e.text, neuerBereich) : null;
+  if (!neu)
+    throw o.p.fehler(
+      502,
+      'Die veröffentlichte Fassung lässt sich gerade nicht vollständig lesen – online wurde nichts verschoben.',
+    );
+
+  const bleibt = await inBereichSchreiben(o, ziel, id, neu, pruefsumme(neu));
+  return bleibt.length > 0 ? { verschoben: true, bleibtIn: bleibt } : { verschoben: true };
 }
 
 /** Der Name der festen Einheiten in der Reihenfolge, in der sie freigegeben werden: erst Seiten, dann das Menü, dann das Aussehen. */

@@ -171,3 +171,27 @@ export function bleibtHinweis(
   const wo = bleibtIn.map((b) => `„${bereichsName(n, b)}“`).join(', ');
   return `„${titel}“ steht zusätzlich noch online im Bereich ${wo} – dort ließ sie sich gerade nicht entfernen. Sie bleibt darum unter „Freigaben“ als „Geändert“; erneut freigeben räumt das auf (aus dem Bereich der Website kann das nur die Leitung der Website).`;
 }
+
+/**
+ * **Bereich gewechselt, Online-Fassung mitgewandert** (W3b-4b-2, `bereichWechseln`): was die Leitung danach liest. Bleibt die Seite
+ * zusätzlich im alten Bereich stehen, sagt es `bleibtHinweis` (dieselben Worte wie beim Freigeben).
+ */
+export function verschobenHinweis(
+  titel: string,
+  bereich: number | null,
+  bleibtIn: readonly (number | null)[] | undefined,
+  n: BereichsNamen,
+): string {
+  return (
+    bleibtHinweis(titel, bleibtIn, n) ??
+    `„${titel}“ steht online jetzt im Bereich „${bereichsName(n, bereich)}“.`
+  );
+}
+
+/**
+ * **Bereich gewechselt, aber online nicht verschoben** – der Entwurf trägt den neuen Bereich (gespeichert ist er), die Website
+ * zeigt die Seite vorerst weiter aus dem alten. Kein Speicherfehler; „Veröffentlichen“ verschiebt sie (der Weg aus W3b-4b).
+ */
+export function nichtVerschobenText(titel: string, alt: number | null, n: BereichsNamen): string {
+  return `Der neue Bereich von „${titel}“ ist gespeichert. Online steht die Seite aber vorerst noch im Bereich „${bereichsName(n, alt)}“ – „Veröffentlichen“ verschiebt sie.`;
+}

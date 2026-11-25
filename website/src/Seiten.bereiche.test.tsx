@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { ApiError } from '@ui/ct/fehler';
 import type { OnlineKategorie } from '@shared/website/freigabe';
 import type { Seite } from '@shared/website/modell';
 import type { WebsiteStand } from '@shared/website/speicher';
@@ -26,6 +27,7 @@ vi.mock('./daten', () => ({
   beendeBearbeiten: vi.fn(),
   setzeStatus: vi.fn(),
   gebeFrei: vi.fn(),
+  wechsleBereich: vi.fn(),
 }));
 vi.mock('./mailVersand', () => ({
   mailAnLeitung: vi.fn(),
@@ -269,5 +271,64 @@ describe('Freigeben je Bereich an der Seite', () => {
     expect(
       await within(screen.getByRole('region', { name: 'Vorschau' })).findByText('Geändert'),
     ).toBeTruthy();
+  });
+});
+
+describe('Bereich ändern → die Online-Fassung wandert sofort mit (W3b-4b-2, E-W32)', () => {
+  const KATEGORIEN = { modul: 7, entwuerfe: 20, veroeffentlicht: 21, untergruppen: UNTER };
+  /** Die Leitung der Website stellt das Impressum (Website, online) auf Jugend. */
+  async function aufJugend() {
+    zeigen(WEBSITE_LEITUNG, { html: true, menue: true });
+    const l = await liste();
+    fireEvent.click(within(l).getByText('Impressum'));
+    await screen.findByText('Impressum', { selector: 'strong' });
+    fireEvent.click(screen.getByRole('button', { name: 'Seite einstellen' }));
+    const f = await screen.findByRole('dialog');
+    fireEvent.change(within(f).getByLabelText('Bereich'), { target: { value: String(JUGEND) } });
+    fireEvent.click(within(f).getByRole('button', { name: 'Fertig' }));
+  }
+
+  it('erst den Entwurf speichern, dann verschieben (alter → neuer Bereich), danach den Online-Stand neu lesen', async () => {
+    d.wechsleBereich.mockResolvedValue({ verschoben: true });
+    await aufJugend();
+    expect(
+      await screen.findByText('„Impressum“ steht online jetzt im Bereich „Website – Jugend“.'),
+    ).toBeTruthy();
+    expect(d.wechsleBereich).toHaveBeenCalledWith(KATEGORIEN, 'i', null, JUGEND);
+    expect(d.speichereSeite.mock.calls.at(-1)?.[1]).toMatchObject({ id: 'i', bereich: JUGEND });
+    expect(d.speichereSeite.mock.invocationCallOrder.at(-1)!).toBeLessThan(
+      d.wechsleBereich.mock.invocationCallOrder[0],
+    );
+    await waitFor(() => expect(d.ladeOnline).toHaveBeenCalledTimes(2));
+  });
+
+  it('verschieben scheitert (503): eigene Meldung – online vorerst noch im alten Bereich; das Speichern gilt als gelungen', async () => {
+    d.wechsleBereich.mockRejectedValue(new ApiError(503, 'x'));
+    await aufJugend();
+    expect(
+      await screen.findByText(
+        /Der neue Bereich von „Impressum“ ist gespeichert\. Online steht die Seite aber vorerst noch im Bereich „Website“ – „Veröffentlichen“ verschiebt sie\./,
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText('Gespeichert')).toBeTruthy();
+    expect(screen.queryByText('Nicht gespeichert')).toBeNull();
+    expect(screen.queryByText(/steht online jetzt/)).toBeNull();
+    await waitFor(() => expect(d.ladeOnline).toHaveBeenCalledTimes(2));
+  });
+
+  it('verschoben, aber im alten Bereich nicht entfernt: dieselbe Meldung wie beim Freigeben („bleibt“)', async () => {
+    d.wechsleBereich.mockResolvedValue({ verschoben: true, bleibtIn: [null] });
+    await aufJugend();
+    expect(
+      await screen.findByText(/„Impressum“ steht zusätzlich noch online im Bereich „Website“/),
+    ).toBeTruthy();
+  });
+
+  it('nicht online (nichts zu verschieben): keine Meldung', async () => {
+    d.wechsleBereich.mockResolvedValue({ verschoben: false });
+    await aufJugend();
+    await waitFor(() => expect(d.wechsleBereich).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(d.ladeOnline).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText(/steht online jetzt/)).toBeNull();
   });
 });

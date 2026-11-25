@@ -23,6 +23,7 @@ import {
 } from '@shared/website/bearbeiten';
 import type { Abschnitt, Baustein, BausteinTyp, Menue, Seite } from '@shared/website/modell';
 import type { WebsiteStand } from '@shared/website/speicher';
+import { bereichVon } from '@shared/website/zugang';
 import { neuerBaustein, type Vorlage } from '@shared/website/vorlagen';
 import { AbschnittEinfuegen } from './AbschnittEinfuegen';
 import { AbschnittGestalten } from './AbschnittGestalten';
@@ -103,6 +104,7 @@ export function Seitenarbeit({
   rechte,
   bereichWahl,
   onGespeichert,
+  onBereichGewechselt,
   onOffen,
   onLoeschen,
   loeschen,
@@ -122,6 +124,12 @@ export function Seitenarbeit({
   bereichWahl?: readonly BereichsWahl[];
   /** Nach jedem gelungenen Speichern: Die Seitenliste übernimmt den Stand (ohne neu zu lesen). */
   onGespeichert: (seite: Seite, menue: Menue | null) => void;
+  /**
+   * **Der Bereich der Seite ist gespeichert worden** (W3b-4b-2, E-W32) – nach dem gelungenen Speichern eines Entwurfs, dessen
+   * Bereich vom zuletzt gespeicherten abweicht (`alt`). Nie beim Übernehmen eines fremden Stands. Die Seitenliste verschiebt
+   * daraufhin die Online-Fassung; ein Fehler dabei ist **kein** Speicherfehler (eigene Meldung).
+   */
+  onBereichGewechselt?: (seite: Seite, alt: number | null) => void;
   /** Ist etwas noch nicht gespeichert? (Dann bleibt man auf dieser Seite.) */
   onOffen: (offen: boolean) => void;
   /** „Seite löschen“ – das Fenster dafür hat die Seitenliste. */
@@ -148,8 +156,10 @@ export function Seitenarbeit({
     verlaufRef.current = v;
     setVerlaufState(v);
   }, []);
-  const aktuell = useRef({ stand, ort, ich, onGespeichert, onOffen });
-  aktuell.current = { stand, ort, ich, onGespeichert, onOffen };
+  const aktuell = useRef({ stand, ort, ich, onGespeichert, onBereichGewechselt, onOffen });
+  aktuell.current = { stand, ort, ich, onGespeichert, onBereichGewechselt, onOffen };
+  /** Der Bereich des zuletzt gespeicherten (oder übernommenen) Stands – ändert er sich beim Speichern, wandert die Online-Fassung mit. */
+  const gespeicherterBereich = useRef(bereichVon(seite));
 
   const andereSeiten = useMemo(
     () => stand.seiten.filter((s) => s.id !== seite.id),
@@ -200,9 +210,18 @@ export function Seitenarbeit({
       setArbeit(s);
       menueRef.current = menue;
       setArbeitMenue(menue);
+      // Ein fremder Stand verschiebt nichts – er ist nur der neue Ausgangspunkt.
+      gespeicherterBereich.current = bereichVon(s);
       aktuell.current.onGespeichert(s, menue);
     },
-    nachSpeichern: (w) => aktuell.current.onGespeichert(w.seite, w.menue),
+    nachSpeichern: (w) => {
+      aktuell.current.onGespeichert(w.seite, w.menue);
+      const alt = gespeicherterBereich.current;
+      const neu = bereichVon(w.seite);
+      if (neu === alt) return;
+      gespeicherterBereich.current = neu;
+      aktuell.current.onBereichGewechselt?.(w.seite, alt);
+    },
     onOffen: (offen) => aktuell.current.onOffen(offen),
   });
   const { schlange, sicherstellen, setHinweis, fremd } = sperre;

@@ -52,6 +52,7 @@ import type { TerminZeile } from '@shared/dienstplan/termine';
 import { leseAuswahl, merkeAuswahl } from './auswahl';
 import { gemeindeZeitzone, heuteImKalender } from '@shared/ct/zeit';
 import { entwurfAnschluss } from './ladeEntwuerfe';
+import type { AbfrageAnschluss } from './AbfrageFenster';
 import { EinstellungenFenster } from './EinstellungenFenster';
 import { MeineAnzeigeAnschluss } from './MeineAnzeigeAnschluss';
 
@@ -105,6 +106,19 @@ export function App() {
     return () => window.removeEventListener('hashchange', folgen);
   }, []);
 
+  // Der Anschluss zu den Abfragen – einmal gebaut für Startseite, Planen und Einstellungen (R-2 bis R-4); gebraucht wird er
+  // nur mit `start`, davor stehen die Platzhalter nirgends in der Oberfläche.
+  const abfrageAnschluss: AbfrageAnschluss = useMemo(
+    () => ({
+      lesen: ladeAbfragen,
+      speichern: speichereAbfragen,
+      ich: {
+        personId: start?.ichId ?? 0,
+        name: start ? [start.vorname, start.nachname].filter(Boolean).join(' ') : '',
+      },
+    }),
+    [start],
+  );
   // Global, als Leitung der Gruppe eines Dienstes – dieselbe Regel wie in der Matrix (`planbar`).
   const darfPlanen = !!start && planbareDienstgruppen(start).length > 0;
   // Eintragen als Entwurf (E4-3) – je Start einmal; die Schubladen gehören zu den planbaren Gruppen.
@@ -322,14 +336,7 @@ export function App() {
                   onTermin={terminZeigen}
                   onLive={liveZeigen}
                   abfrage={{
-                    anschluss: {
-                      lesen: ladeAbfragen,
-                      speichern: speichereAbfragen,
-                      ich: {
-                        personId: start.ichId,
-                        name: [start.vorname, start.nachname].filter(Boolean).join(' '),
-                      },
-                    },
+                    anschluss: abfrageAnschluss,
                     ladeZeitraum: zeitraumLaden,
                     ladePersonen: personenLaden,
                     ladeAntworten: antwortenLaden,
@@ -382,14 +389,7 @@ export function App() {
                   ladeAntworten={antwortenLaden}
                   ladeMarkierungen={antwortenLaden}
                   erinnern={ERINNERN}
-                  abfragen={{
-                    lesen: ladeAbfragen,
-                    speichern: speichereAbfragen,
-                    ich: {
-                      personId: start.ichId,
-                      name: [start.vorname, start.nachname].filter(Boolean).join(' '),
-                    },
-                  }}
+                  abfragen={abfrageAnschluss}
                   onVorlagen={() => {
                     window.location.hash = ADRESSE_VORLAGEN;
                   }}
@@ -411,6 +411,11 @@ export function App() {
                 <EinstellungenFenster
                   darfAendern={darfPlanen}
                   ich={{ personId: start.ichId, name: start.vorname }}
+                  abfragen={{
+                    anschluss: abfrageAnschluss,
+                    gruppen: planbareDienstgruppen(start),
+                    heute: heuteImKalender(),
+                  }}
                   onSchliessen={() => setEinstellungenOffen(false)}
                 />
               )}

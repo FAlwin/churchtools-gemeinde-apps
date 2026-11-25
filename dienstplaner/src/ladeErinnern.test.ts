@@ -7,7 +7,7 @@ vi.mock('@ui/ct/verbindung', async (orig) => ({
   ctBasis: () => 'https://ct.test',
 }));
 
-import { ctMailSenden, erinnernLink } from './ladeErinnern';
+import { abfrageLink, ctMailSenden, erinnernLink } from './ladeErinnern';
 import { adresseFuer } from './reiter';
 
 /**
@@ -43,5 +43,11 @@ describe('erinnernLink', () => {
   it('die volle Adresse: Instanz + Kürzel der Erweiterung + Adresse des Reiters „Wann kann ich?“', () => {
     expect(adresseFuer('abwesenheiten')).toBe('#/abwesenheiten');
     expect(erinnernLink()).toBe('https://ct.test/ccm/dienstplaner/#/abwesenheiten');
+  });
+});
+
+describe('abfrageLink', () => {
+  it('führt auf „Wann kann ich?“ mit der Abfrage der Dienstgruppe', () => {
+    expect(abfrageLink(4)).toBe('https://ct.test/ccm/dienstplaner/#/abwesenheiten?abfrage=4');
   });
 });

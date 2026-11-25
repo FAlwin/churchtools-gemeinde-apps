@@ -7,12 +7,19 @@ import { einstellungenAus, type EinstellungenStand } from '@shared/dienstplan/li
 import { ladeEinstellungen, speichereEinstellungen } from './ladeEinstellungen';
 import { useMeineAnzeigeAendern, type MeineAnzeige } from './meineAnzeige';
 import { BETRIEBSART_WAHL, einstellungenFehlerText } from './einstellungenTexte';
+import { ErinnerungsplanAbschnitt } from './ErinnerungsplanAbschnitt';
+import { useErinnerungsplan, type ErinnerungenAnschluss } from './useErinnerungsplan';
 import styles from './EinstellungenFenster.module.scss';
 
 interface Props {
   /** Darf ändern, wer plant – die App prüft es (ChurchTools prüft zusätzlich die Rechte der Kategorie). */
   darfAendern: boolean;
   ich: { personId: number; name: string };
+  /**
+   * Der Abschnitt „Abfragen – Erinnerungen“ (R-4): die Dienstgruppen, die man planen darf, und der Anschluss zu den Abfragen.
+   * Ohne ihn (oder ohne Planer-Recht) gibt es den Abschnitt nicht.
+   */
+  abfragen?: ErinnerungenAnschluss;
   onSchliessen: () => void;
   /** Nur für Tests. */
   lesen?: typeof ladeEinstellungen;
@@ -32,6 +39,7 @@ interface Props {
 export function EinstellungenFenster({
   darfAendern,
   ich,
+  abfragen,
   onSchliessen,
   lesen = ladeEinstellungen,
   speichern = speichereEinstellungen,
@@ -62,27 +70,36 @@ export function EinstellungenFenster({
   }, [lesen]);
   useEffect(laden, [laden]);
 
+  // Nur Planer mit mindestens einer planbaren Dienstgruppe sehen den Abschnitt.
+  const erinnerungen = useErinnerungsplan(
+    darfAendern && abfragen && abfragen.gruppen.length > 0 ? abfragen : undefined,
+  );
+  const zeigeErinnerungen = darfAendern && !!abfragen && abfragen.gruppen.length > 0;
+
   const { anzeige, setzen: anzeigeSetzen, abgleichFehler } = useMeineAnzeigeAendern();
 
   const gesperrt = !darfAendern || stand === null || stand.fehler !== null;
 
-  const speichernKlick = async () => {
-    if (stand === null) return;
-    setArbeitet(true);
-    setProblem(null);
+  /** Speichert die Betriebsart – `null`: geklappt, sonst der Satz für den Planer. */
+  const betriebsartSpeichern = async (aktuell: EinstellungenStand): Promise<string | null> => {
     try {
-      const r = await speichern({ betriebsart: wahl }, ich, stand.gespeichert?.version ?? null);
+      const r = await speichern({ betriebsart: wahl }, ich, aktuell.gespeichert?.version ?? null);
       if (r.ok) {
-        onSchliessen();
-        return;
+        setStand({
+          betriebsart: wahl,
+          gespeichert: r.daten ?? aktuell.gespeichert,
+          unlesbar: false,
+          fehler: null,
+        });
+        return null;
       }
       if (r.grund === 'konflikt' && r.jetzt !== undefined) {
         const jetzt = r.jetzt;
         const inhalt = jetzt ? einstellungenAus(jetzt.inhalt) : null;
         // Steht schon genau das da, was gewünscht war (etwa ein früherer Versuch war doch angekommen): fertig.
-        if (inhalt?.betriebsart === wahl) {
-          onSchliessen();
-          return;
+        if (jetzt && inhalt?.betriebsart === wahl) {
+          setStand({ betriebsart: wahl, gespeichert: jetzt, unlesbar: false, fehler: null });
+          return null;
         }
         setStand({
           betriebsart: inhalt?.betriebsart ?? STANDARD_BETRIEBSART,
@@ -91,14 +108,52 @@ export function EinstellungenFenster({
           fehler: null,
         });
         setWahl(inhalt?.betriebsart ?? STANDARD_BETRIEBSART);
-        setProblem(
-          `${jetzt?.von.name ?? 'Ein anderer'} hat das inzwischen geändert – nichts überschrieben. Hier steht jetzt der neue Stand.`,
-        );
+        return `${jetzt?.von.name ?? 'Ein anderer'} hat das inzwischen geändert – nichts überschrieben. Hier steht jetzt der neue Stand.`;
+      }
+      return einstellungenFehlerText(r.grund, false);
+    } catch (e) {
+      return fehlerMeldung(e).text;
+    }
+  };
+
+  /**
+   * **Ein „Speichern“ für das ganze Fenster** (R1), aber nur, was sich geändert hat: die Betriebsart und der Erinnerungsplan
+   * der gewählten Dienstgruppe sind zwei getrennte Werte. Scheitert einer, sagt die Meldung welcher; der andere bleibt
+   * gespeichert (sein Stand ist nachgezogen, ein zweiter Klick schreibt ihn nicht noch einmal). Nichts wird wiederholt.
+   */
+  const speichernKlick = async () => {
+    if (stand === null) return;
+    const betriebsartNoetig = wahl !== stand.betriebsart;
+    if (!betriebsartNoetig && !erinnerungen.geaendert) {
+      onSchliessen();
+      return;
+    }
+    setArbeitet(true);
+    setProblem(null);
+    try {
+      const probleme: string[] = [];
+      const gespeichertes: string[] = [];
+      if (betriebsartNoetig) {
+        const m = await betriebsartSpeichern(stand);
+        if (m === null) gespeichertes.push('Live-Ansicht');
+        else probleme.push(`Live-Ansicht: ${m}`);
+      }
+      if (erinnerungen.geaendert) {
+        const name = erinnerungen.gruppe?.name ?? 'Dienstgruppe';
+        const r = await erinnerungen.speichern();
+        if (r.art === 'ok') gespeichertes.push(`Erinnerungen für ${name}`);
+        else if (r.art === 'fehler') probleme.push(`Erinnerungen für ${name}: ${r.text}`);
+      }
+      if (probleme.length === 0) {
+        onSchliessen();
         return;
       }
-      setProblem(einstellungenFehlerText(r.grund, false));
-    } catch (e) {
-      setProblem(fehlerMeldung(e).text);
+      setProblem(
+        [
+          ...probleme,
+          ...(gespeichertes.length ? [`Gespeichert: ${gespeichertes.join(', ')}.`] : []),
+        ].join(' '),
+      );
     } finally {
       setArbeitet(false);
     }
@@ -163,6 +218,7 @@ export function EinstellungenFenster({
           {problem}
         </p>
       )}
+      {zeigeErinnerungen && <ErinnerungsplanAbschnitt z={erinnerungen} gesperrt={arbeitet} />}
       <MeineAnzeigeTeil anzeige={anzeige} setzen={anzeigeSetzen} abgleichFehler={abgleichFehler} />
     </Sheet>
   );

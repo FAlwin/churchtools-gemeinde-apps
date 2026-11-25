@@ -134,9 +134,15 @@ export function TerminAnsicht({
     neu,
     setze: setzeGeladen,
   } = useLaden(
+    // Beide gleichzeitig, aber der Fehler des Termins hat Vorrang: Darf man ihn nicht sehen, scheitert meist auch der
+    // Ablauf – sonst entschiede, wer zuerst antwortet, ob „Diesen Termin zeigt dir ChurchTools nicht“ dasteht.
     () =>
-      Promise.all([ladeTermin(start, terminId, zeitzone), ladeAblauf(terminId)]).then(
-        ([daten, ablauf]) => ({ daten, ablauf }),
+      Promise.allSettled([ladeTermin(start, terminId, zeitzone), ladeAblauf(terminId)]).then(
+        ([daten, ablauf]) => {
+          if (daten.status === 'rejected') throw daten.reason;
+          if (ablauf.status === 'rejected') throw ablauf.reason;
+          return { daten: daten.value, ablauf: ablauf.value };
+        },
       ),
     [start, terminId, zeitzone],
   );

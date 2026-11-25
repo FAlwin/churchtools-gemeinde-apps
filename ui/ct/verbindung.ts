@@ -341,8 +341,12 @@ export async function ctHochladen(
  * Wie `ctAnfrage`, aber ausgepackt: ChurchTools packt fast alles in `{ data: … }` – wie `ctGet` im
  * Server: `data`, sonst den Rumpf. Stand vorher wortgleich in `ctLesen` und `ctModulDaten` (#463).
  */
-export async function ctDaten<T>(pfad: string): Promise<T> {
-  const body = await ctAnfrage<{ data?: T } | null>(pfad);
+export async function ctDaten<T>(
+  pfad: string,
+  /** Meldung bei fehlendem Recht – wie bei `ctAnfrage`; ohne Angabe gilt, was die App eingestellt hat. */
+  o: { verweigert?: string } = {},
+): Promise<T> {
+  const body = await ctAnfrage<{ data?: T } | null>(pfad, { verweigert: o.verweigert });
   return (body?.data ?? body) as T;
 }
 

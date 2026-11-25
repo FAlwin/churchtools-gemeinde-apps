@@ -14,6 +14,8 @@ const GRUPPEN_IDS = [21];
 const TYP = 13;
 const R_TEILNEHMER = 52;
 const R_LEITER = 55;
+const AUTH_SEHEN = 1104;
+const AUTH_BEARBEITEN = 1112;
 const R_CT_LEITER = 16;
 const R_CT_MITARBEITER = 17;
 const GNAME = 'Dienstplaner: Antwort fehlt – Musik';
@@ -44,8 +46,10 @@ interface Mitglied {
 interface Stoerung {
   /** Dieser Aufruf (`METHODE pfad`) wirft. */
   wirft?: { auf: string; fehler: unknown };
-  /** ChurchTools sagt 200 und übernimmt nichts: `'routine'`, `'autoAccept'`, `'leiter'`, `'note'`. */
+  /** ChurchTools sagt 200 und übernimmt nichts: `'routine'`, `'autoAccept'`, `'rechte'`, `'note'`. */
   schluckt?: Set<string>;
+  /** Ein `PUT` auf ein Recht ERSETZT die bisherigen `dataId`s dieses Rechts (statt eine hinzuzufügen) – ungemessen, deshalb geprüft. */
+  ersetzt?: boolean;
 }
 
 function welt(
@@ -55,6 +59,8 @@ function welt(
     routinen?: Routine[];
     mitglieder?: Mitglied[];
     rechtPersonen?: unknown;
+    /** Rechte je Person (`authId` + `dataId`), so wie `GET /permissions/person/{id}` sie liefert. */
+    rechte?: Record<number, { authId: number; dataId: number }[]>;
     inhalt?: AbfragenInhalt;
     stand?: Partial<AbfragenStand>;
     konflikt?: boolean;
@@ -75,6 +81,9 @@ function welt(
       { personId: 3, person: { title: 'Carl Test' }, groupTypeRoleId: R_CT_LEITER },
       { personId: 9, person: { title: 'Dora Dabei' }, groupTypeRoleId: R_CT_MITARBEITER },
     ].map((m) => ({ ...m, groupMemberStatus: 'active' })),
+    rechte: Object.fromEntries(
+      Object.entries(o.rechte ?? {}).map(([k, v]) => [k, v.map((x) => ({ ...x }))]),
+    ) as Record<number, { authId: number; dataId: number }[]>,
     naechste: 100,
     /** Alle Aufrufe, in der Reihenfolge – `GET` ausgenommen. */
     log: [] as string[],
@@ -118,6 +127,20 @@ function welt(
             { key: 'churchservice', permissions: [{ key: 'edit servicegroup', authId: 305 }] },
           ],
         } as T);
+      if (pfad === '/permissions/definitions?scope=global')
+        return Promise.resolve({
+          modules: [
+            {
+              key: 'churchgroup',
+              permissions: [
+                { key: 'view group', authId: AUTH_SEHEN },
+                { key: 'edit group memberships of group', authId: AUTH_BEARBEITEN },
+              ],
+            },
+          ],
+        } as T);
+      if ((m = /^\/permissions\/person\/(\d+)$/.exec(pfad)))
+        return Promise.resolve((w.rechte[Number(m[1])] ?? []) as T);
       if (pfad === '/permissions/global/auths/305/persons?data_id=4')
         return Promise.resolve(w.rechtPersonen as T);
       if ((m = /^\/groups\/(\d+)\/members\/routines$/.exec(pfad)))
@@ -154,6 +177,18 @@ function welt(
       pruefeWurf(methode, pfad);
       const rumpf = json as Record<string, unknown>;
       let m: RegExpExecArray | null;
+      if (methode === 'PUT' && (m = /^\/permissions\/person\/(\d+)$/.exec(pfad))) {
+        const person = Number(m[1]);
+        const zeile = { authId: Number(rumpf.authId), dataId: (rumpf.dataId as number[])[0] };
+        if (!schluckt('rechte')) {
+          const alt = w.rechte[person] ?? [];
+          w.rechte[person] = [
+            ...(w.stoerung.ersetzt ? alt.filter((x) => x.authId !== zeile.authId) : alt),
+            zeile,
+          ];
+        }
+        return Promise.resolve({});
+      }
       if (methode === 'POST' && pfad === '/groups') {
         const g: Gruppe = {
           id: w.naechste++,
@@ -205,12 +240,11 @@ function welt(
     port,
     mitgliedAnlegen: (gruppe, person, angaben) => {
       pruefeWurf('PUT', `/groups/${gruppe}/members/${person}`);
-      if (w.mitglieder.some((x) => x.gruppe === gruppe && x.person === person))
-        return Promise.reject(new ApiError(403, 'schon in der Gruppe'));
-      if (!schluckt('leiter'))
-        w.mitglieder.push({ gruppe, person, rolle: Number(angaben.groupTypeRoleId) });
+      w.mitglieder.push({ gruppe, person, rolle: Number(angaben.groupTypeRoleId) });
       return Promise.resolve();
     },
+    mitgliedEntfernen: () => Promise.resolve(),
+    mitgliedOderNichts: () => Promise.resolve(null),
     namen: (ids) => Promise.resolve(new Map(ids.map((id) => [id, `Planer ${id}`]))),
     abfragen: {
       lesen: vi.fn(() => Promise.resolve(abfragenStand())),
@@ -234,12 +268,18 @@ const schreibend = (log: string[]) => log.filter((z) => !z.startsWith('GET'));
 const zahl = (log: string[], muster: RegExp | string) =>
   log.filter((z) => (typeof muster === 'string' ? z === muster : muster.test(z))).length;
 
-/** Eine fertig eingerichtete Welt: Gruppe 50, Routine 60, Leiter 1, 2, 3 (die Planer), Einrichtung im Dokument. */
+/** Beide Rechte für die Gruppe 50. */
+const BEIDE = (gruppe: number) => [
+  { authId: AUTH_SEHEN, dataId: gruppe },
+  { authId: AUTH_BEARBEITEN, dataId: gruppe },
+];
+
+/** Eine fertig eingerichtete Welt: Gruppe 50, Routine 60, die Planer 1, 2, 3 mit beiden Rechten für 50, Einrichtung im Dokument. */
 function fertigeWelt(extra: Partial<Parameters<typeof welt>[0]> = {}) {
   return welt({
     gruppen: [{ id: 50, name: GNAME, typ: TYP, status: 1, note: 'x', autoAccept: true }],
     routinen: [{ id: 60, gruppe: 50, rolle: R_TEILNEHMER, name: RNAME, isEnabled: true }],
-    mitglieder: [1, 2, 3].map((person) => ({ gruppe: 50, person, rolle: R_LEITER })),
+    rechte: { 1: BEIDE(50), 2: BEIDE(50), 3: BEIDE(50) },
     inhalt: { ...standardInhalt(), einrichtung: { gruppeId: 50, routineId: 60 } },
     ...extra,
   });
@@ -274,15 +314,68 @@ describe('lageLesen – nur lesen, nichts schreiben', () => {
     });
   });
 
-  it('Leiter fehlt → nur der steht im Plan', async () => {
-    const { a } = fertigeWelt({
-      mitglieder: [1, 2].map((person) => ({ gruppe: 50, person, rolle: R_LEITER })),
-    });
+  it('einem Planer fehlt ein Recht → nur er steht im Plan, mit genau dem fehlenden Recht (Name wie in ChurchTools)', async () => {
+    const { w, a } = fertigeWelt({ rechte: { 1: BEIDE(50), 2: BEIDE(50), 3: [BEIDE(50)[0]] } });
     const l = await lageLesen(MUSIK, GRUPPEN_IDS, a);
     if (l.art !== 'bereit') throw new Error('bereit erwartet');
     expect(l.fertig).toBe(false);
-    expect(l.leiterNachtragen.map((p) => p.id)).toEqual([3]);
+    expect(l.rechteNachtragen).toEqual([
+      {
+        person: { id: 3, name: 'Carl Test' },
+        fehlt: [
+          { schluessel: 'bearbeiten', name: 'Gruppenmitgliedschaften einer Gruppe bearbeiten' },
+        ],
+      },
+    ]);
     expect(l.plan).toMatchObject({ gruppeAnlegen: false, routineAnlegen: false });
+    expect(schreibend(w.log)).toEqual([]);
+  });
+
+  it('Rechte für eine ANDERE Hilfsgruppe zählen nicht; -1 (alle Gruppen) zählt', async () => {
+    const { a } = fertigeWelt({
+      rechte: {
+        1: BEIDE(77),
+        2: [
+          { authId: AUTH_SEHEN, dataId: -1 },
+          { authId: AUTH_BEARBEITEN, dataId: -1 },
+        ],
+        3: BEIDE(50),
+      },
+    });
+    const l = await lageLesen(MUSIK, GRUPPEN_IDS, a);
+    if (l.art !== 'bereit') throw new Error('bereit erwartet');
+    expect(l.rechteNachtragen.map((r) => r.person.id)).toEqual([1]);
+  });
+
+  it('die Rechte eines Planers in unbekannter Gestalt → Stopp, nie „hat nichts“ (nichts geschrieben)', async () => {
+    const { w, a } = fertigeWelt();
+    const echt = a.port.holen.bind(a.port);
+    vi.spyOn(a.port, 'holen').mockImplementation((pfad: string) =>
+      pfad === '/permissions/person/2' ? Promise.resolve({ unbekannt: true }) : echt(pfad),
+    );
+    const l = await lageLesen(MUSIK, GRUPPEN_IDS, a);
+    expect(l).toMatchObject({ art: 'gestoppt', nochmal: true });
+    expect((l as { text: string }).text).toContain('nicht in der erwarteten Form');
+    expect(schreibend(w.log)).toEqual([]);
+  });
+
+  it('die Nummern der zwei Rechte kommen aus den Definitionen (globaler Bereich), nie als feste Zahl', async () => {
+    const { a } = fertigeWelt();
+    const l = await lageLesen(MUSIK, GRUPPEN_IDS, a);
+    if (l.art !== 'bereit') throw new Error('bereit erwartet');
+    expect(l.gruppenRechtIds).toEqual({ sehen: AUTH_SEHEN, bearbeiten: AUTH_BEARBEITEN });
+  });
+
+  it('ohne Hilfsgruppe wird nichts über Rechte gelesen (nichts zu lesen) – alle Planer bekommen beide', async () => {
+    const { w, a } = welt();
+    const l = await lageLesen(MUSIK, GRUPPEN_IDS, a);
+    if (l.art !== 'bereit') throw new Error('bereit erwartet');
+    expect(l.rechteNachtragen.map((r) => [r.person.id, r.fehlt.length])).toEqual([
+      [1, 2],
+      [2, 2],
+      [3, 2],
+    ]);
+    expect(w.log).toEqual([]);
   });
 
   it('Gruppentyp „Dienstplaner“ fehlt → klarer Grund, nichts angelegt', async () => {
@@ -395,9 +488,9 @@ describe('einrichten', () => {
     expect(w.routinen).toEqual([
       { id: expect.any(Number), gruppe: g.id, rolle: R_TEILNEHMER, name: RNAME, isEnabled: true },
     ]);
-    expect(w.mitglieder.filter((m) => m.rolle === R_LEITER).map((m) => m.person)).toEqual([
-      1, 2, 3,
-    ]);
+    // Planer wie alle: keine Leiter-Rolle, keine Mitgliedschaft – zwei Rechte je Planer, nur für diese Gruppe.
+    expect(w.mitglieder).toEqual([]);
+    for (const person of [1, 2, 3]) expect(w.rechte[person]).toEqual(BEIDE(g.id));
     expect(w.gespeichert).toHaveLength(1);
     expect(w.gespeichert[0].einrichtung).toEqual({ gruppeId: g.id, routineId: w.routinen[0].id });
     // Der Bericht nennt, was angelegt wurde.
@@ -405,7 +498,77 @@ describe('einrichten', () => {
       `Gruppe „${GNAME}“ angelegt`,
     );
     expect((r as { angelegt: string[] }).angelegt.join(' | ')).toContain('Routine');
-    expect((r as { angelegt: string[] }).angelegt.join(' | ')).toContain('Leiter eingetragen');
+    expect((r as { angelegt: string[] }).angelegt.join(' | ')).toContain(
+      `Rechte für Planer 1: Gruppe inkl. ihrer Gruppenmitglieder sehen, Gruppenmitgliedschaften einer Gruppe bearbeiten (nur für „${GNAME}“)`,
+    );
+  });
+
+  it('die Rechte: PUT je fehlendem Recht mit Gruppe als dataId, type grant und dem Grund = Name der Routine', async () => {
+    const { a } = welt();
+    const schicken = vi.spyOn(a.port, 'schicken');
+    await einrichten(MUSIK, GRUPPEN_IDS, a);
+    const puts = schicken.mock.calls.filter((c) => /^\/permissions\/person\//.test(c[0]));
+    expect(puts).toHaveLength(6);
+    expect(puts[0]).toEqual([
+      '/permissions/person/1',
+      'PUT',
+      { authId: AUTH_SEHEN, dataId: [100], type: 'grant', reason: RNAME },
+    ]);
+    expect(puts[1][2]).toMatchObject({ authId: AUTH_BEARBEITEN, dataId: [100] });
+  });
+
+  it('gelesen wird VOR und NACH dem Schreiben je Planer (Beleg statt Zusage)', async () => {
+    const { w, a } = fertigeWelt({ rechte: { 1: BEIDE(50), 2: BEIDE(50), 3: [] } });
+    const gelesen: string[] = [];
+    const echt = a.port.holen.bind(a.port);
+    vi.spyOn(a.port, 'holen').mockImplementation((pfad: string) => {
+      if (pfad === '/permissions/person/3') gelesen.push(`GET ${w.rechte[3].length}`);
+      return echt(pfad);
+    });
+    expect(await einrichten(MUSIK, GRUPPEN_IDS, a)).toMatchObject({ ok: true });
+    // Lage (0), vor dem Schreiben (0), nach dem Schreiben (2).
+    expect(gelesen).toEqual(['GET 0', 'GET 0', 'GET 2']);
+  });
+
+  it('ein ERSETZENDES PUT, das ein Recht für eine andere Hilfsgruppe kostet, bricht ab und sagt es', async () => {
+    // Planer 3 plant zwei Dienstgruppen: Er hat „sehen“ schon für die Gruppe 77. Ersetzt das PUT, wäre 77 weg.
+    const { w, a } = fertigeWelt({
+      rechte: { 1: BEIDE(50), 2: BEIDE(50), 3: [{ authId: AUTH_SEHEN, dataId: 77 }] },
+    });
+    w.stoerung.ersetzt = true;
+    const r = await einrichten(MUSIK, GRUPPEN_IDS, a);
+    expect(r).toMatchObject({ art: 'gelaufen', ok: false, fehler: { nochmal: false } });
+    expect((r as { fehler: { text: string } }).fehler.text).toContain('ersetzt');
+    expect((r as { fehler: { text: string } }).fehler.text).toContain(
+      'Gruppe inkl. ihrer Gruppenmitglieder sehen',
+    );
+  });
+
+  it('ein hinzufügendes PUT lässt die Rechte anderer Hilfsgruppen stehen – der Lauf gelingt', async () => {
+    const { w, a } = fertigeWelt({
+      rechte: { 1: BEIDE(50), 2: BEIDE(50), 3: [{ authId: AUTH_SEHEN, dataId: 77 }] },
+    });
+    expect(await einrichten(MUSIK, GRUPPEN_IDS, a)).toMatchObject({ ok: true });
+    expect(w.rechte[3]).toEqual(
+      expect.arrayContaining([
+        { authId: AUTH_SEHEN, dataId: 77 },
+        { authId: AUTH_SEHEN, dataId: 50 },
+        { authId: AUTH_BEARBEITEN, dataId: 50 },
+      ]),
+    );
+  });
+
+  it('Leiter aus früheren Probe-Einrichtungen werden nicht angefasst – weder ausgetragen noch umgestellt', async () => {
+    const { w, a } = fertigeWelt({
+      mitglieder: [
+        { gruppe: 50, person: 1, rolle: R_LEITER },
+        { gruppe: 50, person: 8, rolle: R_LEITER },
+        { gruppe: 50, person: 2, rolle: R_TEILNEHMER },
+      ],
+    });
+    expect(await einrichten(MUSIK, GRUPPEN_IDS, a)).toMatchObject({ ok: true });
+    expect(schreibend(w.log)).toEqual([]);
+    expect(w.mitglieder).toHaveLength(3);
   });
 
   it('Reihenfolge: Dokument erst NACH Gruppe und Routine, die Leiter danach; Version wie gelesen', async () => {
@@ -449,13 +612,12 @@ describe('einrichten', () => {
     expect(schreibend(w.log)).toEqual([]);
   });
 
-  it('Leiter fehlt → nur der wird nachgetragen, keine zweite Gruppe, keine zweite Routine', async () => {
-    const { w, a } = fertigeWelt({
-      mitglieder: [1, 2].map((person) => ({ gruppe: 50, person, rolle: R_LEITER })),
-    });
+  it('einem Planer fehlt ein Recht → nur dieses wird nachgetragen, keine zweite Gruppe, keine zweite Routine', async () => {
+    const { w, a } = fertigeWelt({ rechte: { 1: BEIDE(50), 2: BEIDE(50), 3: [BEIDE(50)[0]] } });
     const r = await einrichten(MUSIK, GRUPPEN_IDS, a);
     expect(r).toMatchObject({ ok: true });
-    expect(schreibend(w.log)).toEqual(['PUT /groups/50/members/3']);
+    expect(schreibend(w.log)).toEqual(['PUT /permissions/person/3']);
+    expect(w.rechte[3]).toEqual(BEIDE(50));
     expect(w.gruppen).toHaveLength(1);
     expect(w.routinen).toHaveLength(1);
   });
@@ -494,12 +656,12 @@ describe('einrichten', () => {
       expect(w.gespeichert).toEqual([]);
     });
 
-    it('ein Leiter steht nachgelesen nicht da → Fehler mit seinem Namen, kein Erfolg', async () => {
+    it('ein Recht steht nachgelesen nicht da → Fehler mit dem Namen des Planers, kein Erfolg', async () => {
       const { w, a } = welt();
-      w.stoerung.schluckt = new Set(['leiter']);
+      w.stoerung.schluckt = new Set(['rechte']);
       const r = await einrichten(MUSIK, GRUPPEN_IDS, a);
       expect(r).toMatchObject({ art: 'gelaufen', ok: false });
-      expect((r as { fehler: { text: string } }).fehler.text).toContain('Carl Test');
+      expect((r as { fehler: { text: string } }).fehler.text).toContain('Planer 1');
     });
 
     it('eine Gruppe im Entwurf-Status führt keine Routinen aus → Stopp vor der Routine', async () => {
@@ -535,17 +697,19 @@ describe('einrichten', () => {
       expect(w.gespeichert).toEqual([]);
     });
 
-    it('Netzfehler (kein ApiError) mitten in den Leitern: das Dokument steht, der Rest ist offen, nichts entfernt', async () => {
+    it('Netzfehler (kein ApiError) mitten in den Rechten: das Dokument steht, der Rest ist offen, nichts entfernt', async () => {
       const { w, a } = welt();
       w.stoerung.wirft = {
-        auf: 'PUT /groups/100/members/2',
+        auf: 'PUT /permissions/person/2',
         fehler: new TypeError('Failed to fetch'),
       };
       const r = await einrichten(MUSIK, GRUPPEN_IDS, a);
       expect(r).toMatchObject({ ok: false, fehler: { nochmal: true } });
       expect(w.gespeichert).toHaveLength(1);
-      expect(w.mitglieder.map((m) => m.person)).toEqual([1]);
-      expect(zahl(w.log, /^PUT /)).toBe(2);
+      expect(w.rechte[1]).toEqual(BEIDE(100));
+      expect(w.rechte[2]).toBeUndefined();
+      expect(w.rechte[3]).toBeUndefined();
+      expect(zahl(w.log, /^PUT \/permissions/)).toBe(3);
     });
 
     it('Wiederholen nach dem Abbruch übernimmt die Gruppe und die Routine – nichts doppelt', async () => {
@@ -559,7 +723,7 @@ describe('einrichten', () => {
       expect(w.gruppen).toHaveLength(1);
       expect(w.routinen).toHaveLength(1);
       expect(zahl(w.log, 'POST /groups')).toBe(1);
-      expect(w.mitglieder.map((m) => m.person)).toEqual([1, 2, 3]);
+      for (const person of [1, 2, 3]) expect(w.rechte[person]).toEqual(BEIDE(100));
     });
 
     it('Abbruch NACH dem Anlegen der Routine (vor dem Dokument): die Wiederholung übernimmt auch sie', async () => {
@@ -574,7 +738,7 @@ describe('einrichten', () => {
       expect(w.gespeichert).toHaveLength(1);
     });
 
-    it('Konflikt beim Speichern: nichts überschrieben, die Meldung sagt, dass Gruppe und Routine stehen; keine Leiter', async () => {
+    it('Konflikt beim Speichern: nichts überschrieben, die Meldung sagt, dass Gruppe und Routine stehen; keine Rechte', async () => {
       const { w, a } = welt({ konflikt: true });
       const r = await einrichten(MUSIK, GRUPPEN_IDS, a);
       expect(r).toMatchObject({ ok: false });
@@ -597,24 +761,6 @@ describe('einrichten', () => {
         'gibt es in ChurchTools nicht mehr',
       );
       expect(w.gespeichert[0].einrichtung?.gruppeId).toBe(w.gruppen[0].id);
-    });
-
-    it('ein Planer, der schon Teilnehmer ist, wird nicht umgestellt; ein Leiter, der kein Planer mehr ist, nicht entfernt – beides nur gemeldet', async () => {
-      const { w, a } = fertigeWelt({
-        mitglieder: [
-          { gruppe: 50, person: 1, rolle: R_LEITER },
-          { gruppe: 50, person: 2, rolle: R_TEILNEHMER },
-          { gruppe: 50, person: 3, rolle: R_LEITER },
-          { gruppe: 50, person: 8, rolle: R_LEITER },
-        ],
-      });
-      const r = await einrichten(MUSIK, GRUPPEN_IDS, a);
-      expect(r).toMatchObject({ ok: true });
-      expect(schreibend(w.log)).toEqual([]);
-      const h = (r as { hinweise: string[] }).hinweise.join(' | ');
-      expect(h).toContain('Teilnehmer');
-      expect(h).toContain('kein Planer mehr');
-      expect(w.mitglieder).toHaveLength(4);
     });
   });
 });

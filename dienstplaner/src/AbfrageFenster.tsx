@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { TextKnopf } from '@ui/bedienung/TextKnopf';
 import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Sheet } from '@ui/fenster/Sheet';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { useLaden } from '@ui/ct/useLaden';
 import { tagMonat } from '@shared/ct/datum';
+import { gemeindeZeitzone, tagAusIso } from '@shared/ct/zeit';
 import type { SpeicherErgebnis } from '@shared/ct/versionierterWert';
 import {
   abfragenAus,
@@ -25,13 +27,25 @@ import {
   standAbschnitte,
   zeitleiste,
 } from '@shared/dienstplan/abfrageFenster';
+import { abfrageRoutinenSchritte } from '@shared/dienstplan/abfrageAutomatik';
 import type { Personenliste } from '@shared/dienstplan/personenliste';
 import { gruppenName, type Plan, type PlanGruppe } from '@shared/dienstplan/plan';
+import {
+  abgleichen,
+  eintragen,
+  eintragenText,
+  fehlendeNachtragen,
+  gruppeLeeren,
+  startVorbereiten,
+  type AutomatikAnschluss,
+  type PersonNr,
+} from './abfrageAutomatikLauf';
 import { AbfrageStand } from './AbfrageStand';
 import { AbfrageStart } from './AbfrageStart';
 import { ABFRAGE_UNLESBAR, abfragenFehlerText } from './abfragenTexte';
 import type { AntwortenLader } from './ladeAntworten';
 import type { PersonenLader } from './ladePersonen';
+import { abfrageLink } from './ladeErinnern';
 import type { TermineDaten } from './ladeTermine';
 import { useAbfrageLage } from './useAbfrageLage';
 import styles from './AbfrageFenster.module.scss';
@@ -47,10 +61,26 @@ export interface AbfrageAnschluss {
   ) => Promise<SpeicherErgebnis<AbfragenInhalt>>;
   /** Wer startet und beendet – kommt in `gestartet`. */
   ich: { personId: number; name: string };
+  /**
+   * Die Automatik in ChurchTools (R-5b): Mitglieder der Hilfsgruppe. Fehlt sie, startet und endet jede Abfrage wie vor R-5b –
+   * ohne Erinnerungen von ChurchTools.
+   */
+  automatik?: AutomatikAnschluss;
+  /** Die Adresse von „Verfügbarkeit“ mit der Abfrage **der Dienstgruppe** (Knopf in der Mail). Standard: `abfrageLink`. */
+  link?: (dienstgruppeId: number) => string;
   /** Nur für Tests: die ID einer neuen Abfrage und der Zeitpunkt. */
   neueId?: () => string;
   jetzt?: () => string;
 }
+
+/**
+ * Wer beim Start nicht in die Hilfsgruppe kam – je Abfrage, für „Fehlende nachtragen“. Im Speicher dieser Sitzung (nicht im
+ * Dokument): Nachgetragen wird nur am Starttag, und die Abfrage-ID ist der Schlüssel.
+ */
+const FEHLENDE = new Map<string, PersonNr[]>();
+
+const fehlendeKeyFuer = (dienstgruppeId: number | null, abfrageId: string): string | null =>
+  dienstgruppeId === null ? null : `${dienstgruppeId}:${abfrageId}`;
 
 const zufallsId = (): string =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -106,6 +136,12 @@ export function AbfrageFenster({
   const [problem, setProblem] = useState<string | null>(null);
   const [meldung, setMeldung] = useState<string | null>(null);
   const [beendenFrage, setBeendenFrage] = useState(false);
+  /** Die Hilfsgruppe ist nicht leer (Reste einer früheren Abfrage) – „Gruppe leeren“ wird angeboten. */
+  const [leerenAngebot, setLeerenAngebot] = useState(false);
+  const [abgleich, setAbgleich] = useState<{ drin: number; ausgetragen: number } | null>(null);
+  /** Zählt hoch, wenn `FEHLENDE` sich ändert – sonst zeichnet sich das Fenster nicht neu. */
+  const [, setFehlendeStand] = useState(0);
+  const abgeglichenFuer = useRef<string | null>(null);
 
   const gruppe = gruppen.find((g) => g.gruppe?.id === gewaehlt) ?? null;
   const dienstgruppeId = gruppe?.gruppe?.id ?? null;
@@ -150,7 +186,44 @@ export function AbfrageFenster({
     setGewaehlt(id);
     setProblem(null);
     setMeldung(null);
+    setLeerenAngebot(false);
+    setAbgleich(null);
   };
+
+  // ── Automatik: nur mit Einrichtung, Anschluss und einem bekannten Absender ──
+  const einrichtung = lese?.inhalt.einrichtung ?? null;
+  const auto: AutomatikAnschluss | null =
+    einrichtung && anschluss.automatik && anschluss.ich.personId > 0 ? anschluss.automatik : null;
+  const fehlendeKey = dienstgruppeId !== null && laufend ? `${dienstgruppeId}:${laufend.id}` : null;
+  const fehlende = fehlendeKey ? (FEHLENDE.get(fehlendeKey) ?? []) : [];
+
+  // ── Abgleich beim Öffnen des Stands: nur austragen, nur mit vollständig gelesenem Ergebnis, einmal je Abfrage ──
+  const ergebnis = lage.ergebnis;
+  const bereitFuerAbgleich =
+    auto !== null &&
+    einrichtung !== null &&
+    laufend !== null &&
+    ergebnis?.art === 'ok' &&
+    !lage.laedt &&
+    !lage.planLaedt;
+  const abgleichSchluessel =
+    laufend && dienstgruppeId !== null ? `${dienstgruppeId}:${laufend.id}` : null;
+  useEffect(() => {
+    if (
+      !bereitFuerAbgleich ||
+      abgleichSchluessel === null ||
+      abgeglichenFuer.current === abgleichSchluessel ||
+      auto === null ||
+      einrichtung === null ||
+      ergebnis?.art !== 'ok'
+    )
+      return;
+    abgeglichenFuer.current = abgleichSchluessel;
+    const offen = new Set(ergebnis.personen.map((p) => p.personId));
+    void abgleichen(auto, einrichtung, offen).then((r) => {
+      if (r.art === 'ok') setAbgleich({ drin: r.drin, ausgetragen: r.ausgetragen });
+    });
+  }, [bereitFuerAbgleich, abgleichSchluessel, auto, einrichtung, ergebnis]);
 
   // ── Schreiben: ein Versuch, nie automatisch wiederholt ──
   const schreiben = async (neuerInhalt: AbfragenInhalt): Promise<boolean> => {
@@ -210,8 +283,18 @@ export function AbfrageFenster({
   };
 
   const fehler = formularFehler(formular, heute);
+  /**
+   * Wem beim Start Erinnerungen gelten: alle, die jetzt offen sind (nicht pausiert – `fehlendeInGruppe`, dieselbe Rechnung wie
+   * die Zahlen im Fenster; auch Planer, die im Team sind). `null`: nicht zu sagen (gesperrt, lädt) – mit Automatik **kein Start**,
+   * sonst liefe die Abfrage ohne einen Eingetragenen.
+   */
+  const startPersonen: PersonNr[] | null =
+    lage.ergebnis?.art === 'ok' && !lage.laedt && !lage.planLaedt
+      ? lage.ergebnis.personen.map((p) => ({ id: p.personId, name: p.name }))
+      : null;
   const starten = async () => {
     if (!schreibbar || laufend || fehler || lage.termine.length === 0 || gruppe === null) return;
+    if (auto && startPersonen === null) return;
     const abfrage = neueAbfrage({
       id: (anschluss.neueId ?? zufallsId)(),
       formular,
@@ -220,12 +303,102 @@ export function AbfrageFenster({
       ich: anschluss.ich,
       zeit: (anschluss.jetzt ?? (() => new Date().toISOString()))(),
     });
-    if (await schreiben(mitNeuerAbfrage(lese.inhalt, abfrage, heute)))
-      setMeldung('Die Abfrage läuft.');
+    const neuerInhalt = mitNeuerAbfrage(lese.inhalt, abfrage, heute);
+    // Ohne Automatik: wie bisher.
+    if (!auto || !einrichtung || startPersonen === null) {
+      if (await schreiben(neuerInhalt)) setMeldung('Die Abfrage läuft.');
+      return;
+    }
+    // (a) Gruppe lesen, (b) Schritte ersetzen und nachlesen – ohne etwas im Dokument zu ändern.
+    setArbeitet(true);
+    setProblem(null);
+    setMeldung(null);
+    setLeerenAngebot(false);
+    const schritte = abfrageRoutinenSchritte({
+      plan: geltenderPlan(lese.inhalt),
+      abfrage,
+      heute,
+      dienstgruppe: name,
+      link: (anschluss.link ?? abfrageLink)(gruppe.gruppe?.id ?? 0),
+      senderId: anschluss.ich.personId,
+    });
+    const v = await startVorbereiten(auto, einrichtung, schritte);
+    setArbeitet(false);
+    if (v.art === 'gestoppt') {
+      setProblem(v.text);
+      setLeerenAngebot(v.leeren);
+      return;
+    }
+    if (v.art === 'ohneAutomatik') {
+      // Ehrlich: Die Abfrage startet, aber ChurchTools erinnert nicht.
+      if (await schreiben(neuerInhalt))
+        setMeldung(
+          `Die Abfrage läuft ohne automatische Erinnerungen: ${v.text} Erinnern geht weiter per „Erinnern“.`,
+        );
+      return;
+    }
+    // (c) die Abfrage ins Dokument (Version wie gelesen)
+    if (!(await schreiben(neuerInhalt))) {
+      setProblem((p) =>
+        `${p ?? ''} Die Schritte der Routine stehen schon in ChurchTools; ohne Mitglieder in der Hilfsgruppe wird aber nichts verschickt.`.trim(),
+      );
+      return;
+    }
+    // (d) alle Offenen als Teilnehmer eintragen, nachlesen – nichts wird automatisch wiederholt
+    setArbeitet(true);
+    const r = await eintragen(auto, einrichtung, v.rolle, startPersonen);
+    setArbeitet(false);
+    const schluessel = fehlendeKeyFuer(gruppe.gruppe?.id ?? null, abfrage.id);
+    if (schluessel !== null) {
+      FEHLENDE.set(schluessel, r.fehlen);
+      setFehlendeStand((n) => n + 1);
+    }
+    setMeldung(`Die Abfrage läuft. ${eintragenText(r, startPersonen.length) ?? ''}`.trim());
+  };
+  const gruppeLeerenKlick = async () => {
+    if (!auto || !einrichtung) return;
+    setArbeitet(true);
+    setProblem(null);
+    const r = await gruppeLeeren(auto, einrichtung);
+    setArbeitet(false);
+    if (r.art === 'leer') {
+      setLeerenAngebot(false);
+      setMeldung(
+        `Die Hilfsgruppe ist leer${r.ausgetragen > 0 ? ` (${r.ausgetragen} ausgetragen)` : ''}. Du kannst die Abfrage jetzt starten.`,
+      );
+    } else setProblem(r.text);
+  };
+  const nachtragenKlick = async () => {
+    if (!auto || !einrichtung || fehlendeKey === null || fehlende.length === 0) return;
+    setArbeitet(true);
+    setProblem(null);
+    const r = await fehlendeNachtragen(auto, einrichtung, fehlende);
+    setArbeitet(false);
+    if ('art' in r) {
+      setProblem(r.text);
+      return;
+    }
+    FEHLENDE.set(fehlendeKey, r.fehlen);
+    setFehlendeStand((n) => n + 1);
+    setMeldung(eintragenText(r, fehlende.length) ?? 'Alle sind eingetragen.');
   };
   const beenden = async () => {
     setBeendenFrage(false);
     if (!laufend || !schreibbar) return;
+    // Erst alle aus der Hilfsgruppe austragen (nachgelesen), dann beenden – scheitert das, wird nicht beendet gespeichert.
+    if (auto && einrichtung) {
+      setArbeitet(true);
+      setProblem(null);
+      setMeldung(null);
+      const r = await gruppeLeeren(auto, einrichtung);
+      setArbeitet(false);
+      if (r.art !== 'leer') {
+        setProblem(
+          `Die Abfrage wurde nicht beendet. ${r.text} Bitte noch einmal versuchen – bis dahin laufen die Erinnerungen weiter.`,
+        );
+        return;
+      }
+    }
     if (await schreiben(mitBeendeterAbfrage(lese.inhalt, laufend.id, heute)))
       setMeldung('Die Abfrage wurde beendet.');
   };
@@ -266,6 +439,27 @@ export function AbfrageFenster({
       {problem && (
         <p className={styles.fehler} role="alert">
           {problem}
+        </p>
+      )}
+      {leerenAngebot && !laufend && (
+        <p className={styles.nochmal}>
+          <TextKnopf disabled={arbeitet} onClick={() => void gruppeLeerenKlick()}>
+            Gruppe leeren
+          </TextKnopf>
+        </p>
+      )}
+      {laufend && fehlende.length > 0 && (
+        <p className={styles.nochmal}>
+          {tagAusIso(laufend.gestartet.zeit, gemeindeZeitzone()) === heute ? (
+            <TextKnopf disabled={arbeitet} onClick={() => void nachtragenKlick()}>
+              Fehlende nachtragen
+            </TextKnopf>
+          ) : (
+            <span className={styles.leise}>
+              {fehlende.map((p) => p.name).join(', ')} {fehlende.length === 1 ? 'steht' : 'stehen'}{' '}
+              nicht in der Hilfsgruppe – nachgetragen wird nur am Starttag, danach per „Erinnern“.
+            </span>
+          )}
         </p>
       )}
     </>
@@ -353,6 +547,7 @@ export function AbfrageFenster({
             onNochmal={lage.neuLaden}
             zeilen={zeilen}
             eingerichtet={eingerichtet}
+            automatik={abgleich}
           />
         </Sheet>
         {beendenFrage && (
@@ -413,7 +608,8 @@ export function AbfrageFenster({
             fehler !== null ||
             lage.planLaedt ||
             lage.planFehler !== null ||
-            lage.termine.length === 0
+            lage.termine.length === 0 ||
+            (auto !== null && startPersonen === null)
           }
           onClick={() => void starten()}
         >

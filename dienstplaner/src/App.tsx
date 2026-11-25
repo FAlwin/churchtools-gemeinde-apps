@@ -23,7 +23,7 @@ import { ladePersonen } from './ladePersonen';
 import { ladeAntworten } from './ladeAntworten';
 import { ERINNERN } from './ladeErinnern';
 import { ladeAbfragen, speichereAbfragen } from './ladeAbfragen';
-import { ctEinrichtenAnschluss } from './einrichtenAbfragen';
+import { ctAutomatikAnschluss, ctEinrichtenAnschluss } from './einrichtenAbfragen';
 import { gruppenIdsDerDienste } from '@shared/dienstplan/abfrageAutomatik';
 import { Termine, type TermineZustand } from './Termine';
 import { ladeTermine, ladeZeitraum, MAX_WOCHEN, WOCHEN_JE_SCHRITT } from './ladeTermine';
@@ -114,6 +114,7 @@ export function App() {
     () => ({
       lesen: ladeAbfragen,
       speichern: speichereAbfragen,
+      automatik: ctAutomatikAnschluss(),
       ich: {
         personId: start?.ichId ?? 0,
         name: start ? [start.vorname, start.nachname].filter(Boolean).join(' ') : '',

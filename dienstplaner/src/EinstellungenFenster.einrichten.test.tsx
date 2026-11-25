@@ -43,7 +43,8 @@ const lage = (teil: Partial<Lage> = {}): Lage => ({
   art: 'bereit',
   stand: stand(),
   typId: 13,
-  rollen: { leiter: 55, teilnehmer: 52 },
+  rollen: { teilnehmer: 52 },
+  gruppenRechtIds: { sehen: 1104, bearbeiten: 1112 },
   gruppeName: GNAME,
   routineName: 'Dienstplaner: Erinnerungen Musik',
   gruppeId: null,
@@ -52,16 +53,24 @@ const lage = (teil: Partial<Lage> = {}): Lage => ({
   routineId: null,
   routineAus: false,
   planer: [person(1, 'Alwin Friesen'), person(2, 'Bea Beispiel')],
-  leiterNachtragen: [person(1, 'Alwin Friesen'), person(2, 'Bea Beispiel')],
-  planerAlsTeilnehmer: [],
-  leiterZuviel: [],
+  rechteNachtragen: [person(1, 'Alwin Friesen'), person(2, 'Bea Beispiel')].map((p) => ({
+    person: p,
+    fehlt: [
+      { schluessel: 'sehen' as const, name: 'Gruppe inkl. ihrer Gruppenmitglieder sehen' },
+      {
+        schluessel: 'bearbeiten' as const,
+        name: 'Gruppenmitgliedschaften einer Gruppe bearbeiten',
+      },
+    ],
+  })),
   plan: {
     gruppeAnlegen: true,
     routineAnlegen: true,
     einrichtungSchreiben: true,
-    leiterNachtragen: [1, 2],
-    planerAlsTeilnehmer: [],
-    leiterZuviel: [],
+    rechteNachtragen: [
+      { personId: 1, fehlt: ['sehen', 'bearbeiten'] },
+      { personId: 2, fehlt: ['sehen', 'bearbeiten'] },
+    ],
     nichtsZuTun: false,
   },
   fertig: false,
@@ -113,9 +122,15 @@ afterEach(() => {
 });
 
 describe('Kasten „In ChurchTools“', () => {
-  it('nicht eingerichtet, Admin: Satz zum Warum und „Einrichten …“', async () => {
+  it('nicht eingerichtet, Admin: Satz zum Warum – mit den zwei Rechten der Planer, kein Leiter – und „Einrichten …“', async () => {
     zeige({ darf: true });
     const k = await kasten();
+    expect(
+      within(k).getByText(
+        /„Gruppe inkl. ihrer Gruppenmitglieder sehen“ und „Gruppenmitgliedschaften einer Gruppe bearbeiten“/,
+      ),
+    ).toBeTruthy();
+    expect(k.textContent).not.toMatch(/Leiter der Gruppe|als Leiter/);
     expect(
       within(k).getByText(
         /legt der Dienstplaner in ChurchTools eine Hilfsgruppe mit einer Routine an/,
@@ -144,7 +159,7 @@ describe('Kasten „In ChurchTools“', () => {
     const k = await kasten();
     expect(within(k).getByText('eingerichtet')).toBeTruthy();
     expect(
-      within(k).getByText(`Gruppe „${GNAME}“ mit einer Routine für diesen Plan.`),
+      within(k).getByText(`Gruppe „${GNAME}“ mit einer Routine, die diesen Plan verschickt.`),
     ).toBeTruthy();
     expect(within(k).queryByText(/Meine Gruppen/)).toBeNull();
     fireEvent.click(within(k).getByRole('button', { name: 'Was ist das?' }));
@@ -157,10 +172,14 @@ describe('Kasten „In ChurchTools“', () => {
     zeige({ inhalt: EINGERICHTET });
     await kasten();
     expect(screen.queryByText(/noch nicht eingerichtet/)).toBeNull();
-    expect(screen.getByText(/verschickt aber noch nichts selbst/)).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Erinnerungen verschickt ChurchTools gegen 0:15 Uhr an alle, die dann noch offen sind.',
+      ),
+    ).toBeTruthy();
   });
 
-  it('eingerichtet, Admin: „Planer prüfen …“ öffnet das Fenster (zum Nachtragen von Leitern)', async () => {
+  it('eingerichtet, Admin: „Planer prüfen …“ öffnet das Fenster (zum Nachtragen der Rechte)', async () => {
     vi.mocked(schreiben.lageLesen).mockResolvedValue(lage({ fertig: true }));
     const { gruppenIds } = zeige({ inhalt: EINGERICHTET });
     fireEvent.click(await screen.findByRole('button', { name: 'Planer prüfen …' }));
@@ -199,16 +218,20 @@ describe('Fenster „Erinnerungen für Musik einrichten“', () => {
     return screen.findByRole('dialog', { name: 'Erinnerungen für Musik einrichten' });
   };
 
-  it('sagt VOR dem Klick: Gruppe (Typ, ohne Obergruppe), Routine, die Planer als Leiter mit Namen, was Mitarbeitende sehen', async () => {
+  it('sagt VOR dem Klick: Gruppe (Typ, ohne Obergruppe), Routine, die Planer mit Namen und genau die zwei Rechte (nur für diese Gruppe), was Mitarbeitende sehen', async () => {
     vi.mocked(schreiben.lageLesen).mockResolvedValue(lage());
     zeige();
     const f = await oeffnen();
-    await within(f).findByText(/Gruppe „Dienstplaner: Antwort fehlt – Musik“/);
+    await within(f).findAllByText(/Gruppe „Dienstplaner: Antwort fehlt – Musik“/);
     const text = f.textContent ?? '';
     expect(text).toContain('Gruppentyp „Dienstplaner“, ohne Obergruppe');
     expect(text).toContain('wird angelegt');
     expect(text).toContain('Dienstplaner: Erinnerungen Musik');
-    expect(text).toContain('werden eingetragen: Alwin Friesen, Bea Beispiel');
+    expect(text).toContain('werden gesetzt bei: Alwin Friesen, Bea Beispiel');
+    expect(text).toContain(`nur für die Gruppe „${GNAME}“`);
+    expect(text).toContain('„Gruppe inkl. ihrer Gruppenmitglieder sehen“');
+    expect(text).toContain('„Gruppenmitgliedschaften einer Gruppe bearbeiten“');
+    expect(text).not.toContain('Leiter der Gruppe');
     expect(text).toContain('Meine Gruppen');
     expect(text).toContain('austreten');
     expect(text).toContain('Alles lässt sich in ChurchTools ansehen.');
@@ -221,7 +244,7 @@ describe('Fenster „Erinnerungen für Musik einrichten“', () => {
     vi.mocked(schreiben.lageLesen).mockResolvedValue(lage());
     zeige();
     const f = await oeffnen();
-    await within(f).findByText(/Gruppe „/);
+    await within(f).findAllByText(/Gruppe „/);
     expect(f.textContent).not.toContain('Wann kann ich');
   });
 
@@ -271,19 +294,24 @@ describe('Fenster „Erinnerungen für Musik einrichten“', () => {
     await vi.waitFor(() => expect(schreiben.einrichten).toHaveBeenCalledTimes(2));
   });
 
-  it('schon eingerichtet, Leiter fehlen: der Knopf heißt „Leiter nachtragen“', async () => {
+  it('schon eingerichtet, Rechte fehlen: der Knopf heißt „Rechte nachtragen“', async () => {
     vi.mocked(schreiben.lageLesen).mockResolvedValue(
       lage({
         gruppeId: 5,
         routineId: 6,
-        leiterNachtragen: [person(2, 'Bea Beispiel')],
+        rechteNachtragen: [
+          {
+            person: person(2, 'Bea Beispiel'),
+            fehlt: [
+              { schluessel: 'bearbeiten', name: 'Gruppenmitgliedschaften einer Gruppe bearbeiten' },
+            ],
+          },
+        ],
         plan: {
           gruppeAnlegen: false,
           routineAnlegen: false,
           einrichtungSchreiben: false,
-          leiterNachtragen: [2],
-          planerAlsTeilnehmer: [],
-          leiterZuviel: [],
+          rechteNachtragen: [{ personId: 2, fehlt: ['bearbeiten'] }],
           nichtsZuTun: false,
         },
       }),
@@ -291,8 +319,8 @@ describe('Fenster „Erinnerungen für Musik einrichten“', () => {
     zeige({ inhalt: EINGERICHTET });
     fireEvent.click(await screen.findByRole('button', { name: 'Planer prüfen …' }));
     const f = await screen.findByRole('dialog', { name: 'Erinnerungen für Musik einrichten' });
-    expect(await within(f).findByRole('button', { name: 'Leiter nachtragen' })).toBeTruthy();
-    expect(f.textContent).toContain('noch nicht eingetragen: Bea Beispiel');
+    expect(await within(f).findByRole('button', { name: 'Rechte nachtragen' })).toBeTruthy();
+    expect(f.textContent).toContain('noch nicht gesetzt bei: Bea Beispiel');
   });
 
   it('Gruppentyp fehlt: der Grund steht da, kein „Einrichten“', async () => {

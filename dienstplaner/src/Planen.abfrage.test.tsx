@@ -2,6 +2,7 @@
 import { mehrEintrag, mehrEintragOder } from './mehrMenue.testutil';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { ApiError } from '@ui/ct/fehler';
 import { diensteAus } from '@shared/ct/dienste';
 import { tagKurz } from '@shared/ct/datum';
 import type { SpeicherErgebnis } from '@shared/ct/versionierterWert';
@@ -23,6 +24,8 @@ import { antwortBereinigt, type Antworten } from '@shared/dienstplan/verfuegbark
 import { leereListe, pauseSetzen, type Personenliste } from '@shared/dienstplan/personenliste';
 import { liste } from '@shared/dienstplan/personenliste.testutil';
 import type { AbfrageAnschluss } from './AbfrageFenster';
+import type { AutomatikAnschluss } from './abfrageAutomatikLauf';
+import { EINR, hilfsgruppe, R_LEITER, R_TEILNEHMER } from './abfrageAutomatik.testutil';
 import { ABFRAGE_UNLESBAR } from './abfragenTexte';
 import type { AntwortenLader } from './ladeAntworten';
 import type { PersonenLader } from './ladePersonen';
@@ -175,6 +178,10 @@ interface Aufbau {
   ladeZeitraum?: (von: string, bis: string) => Promise<TermineDaten>;
   abfragen?: boolean;
   personenlisten?: [number, Personenliste][];
+  /** Die Automatik in ChurchTools (R-5b) – ohne sie startet und endet alles wie vor R-5b. */
+  automatik?: AutomatikAnschluss;
+  jetzt?: string;
+  ladePersonen?: PersonenLader;
 }
 function zeige(o: Aufbau = {}) {
   const lesen = o.lesen ?? vi.fn(() => Promise.resolve(stand(null)));
@@ -190,7 +197,9 @@ function zeige(o: Aufbau = {}) {
       mehrMoeglich={false}
       ladeZeitraum={ladeZeitraum}
       heute={HEUTE}
-      ladePersonen={(() => Promise.resolve(personenStand())) satisfies PersonenLader}
+      ladePersonen={
+        o.ladePersonen ?? ((() => Promise.resolve(personenStand())) satisfies PersonenLader)
+      }
       ladeAntworten={(() => Promise.resolve(ANTWORTEN())) satisfies AntwortenLader}
       erinnern={{
         senden: () => Promise.resolve({}),
@@ -204,7 +213,13 @@ function zeige(o: Aufbau = {}) {
               speichern,
               ich: ICH,
               neueId: () => 'neu-1',
-              jetzt: () => ZEIT,
+              jetzt: () => o.jetzt ?? ZEIT,
+              ...(o.automatik
+                ? {
+                    automatik: o.automatik,
+                    link: (id: number) => `https://ct.test/abwesenheiten?abfrage=${id}`,
+                  }
+                : {}),
             }
       }
       {...(o.personenlisten
@@ -429,7 +444,7 @@ describe('Was passiert wann', () => {
     expect(heute).toContain('1 schon fertig');
   });
 
-  it('der Hinweis kommt aus der Einrichtung im Dokument – und behauptet auch eingerichtet nichts, was erst R-5b liefert', async () => {
+  it('der Hinweis kommt aus der Einrichtung im Dokument – eingerichtet sagt, wer erinnert und wann', async () => {
     const a = await oeffnen();
     await waitFor(() => zeitzeilen(a.fenster));
     expect(
@@ -447,7 +462,7 @@ describe('Was passiert wann', () => {
     expect(within(b.fenster).queryByText(/noch nicht eingerichtet/)).toBeNull();
     expect(
       within(b.fenster).getByText(
-        'Die Erinnerungen für Musik sind in ChurchTools eingerichtet. Der Start einer Abfrage verschickt aber noch nichts selbst – bis dahin per „Erinnern“.',
+        'Erinnerungen verschickt ChurchTools gegen 0:15 Uhr an alle, die dann noch offen sind.',
       ),
     ).toBeTruthy();
   });
@@ -654,5 +669,314 @@ describe('Hausregeln des Speichers', () => {
     const inhalt = gespeichert(speichern)[0][1];
     expect(inhalt.abfragen.map((a) => a.id)).toEqual(['alt', 'neu-1']);
     expect(gespeichert(speichern)[0][3]).toBe(5);
+  });
+});
+
+describe('Automatik in ChurchTools (R-5b)', () => {
+  const MIT_EINR: AbfragenInhalt = { ...standardInhalt(), einrichtung: EINR };
+  const laufendMitEinr = (x: Partial<Abfrage> = {}): AbfragenInhalt => ({
+    plan: EIGENER_PLAN,
+    abfragen: [{ ...LAUFEND, ...x }],
+    einrichtung: EINR,
+  });
+  const tn = (person: number) => ({ person, rolle: R_TEILNEHMER });
+  /** Ein Speicher, der seinen Aufruf ins Protokoll der Hilfsgruppe schreibt – so ist die Reihenfolge prüfbar. */
+  const speichernMitLog = (log: string[]): AbfrageAnschluss['speichern'] =>
+    vi.fn((_g, neu, von, erwartet) => {
+      log.push('SPEICHERN');
+      return Promise.resolve({
+        ok: true,
+        daten: { version: (erwartet ?? 0) + 1, zeit: ZEIT, von, inhalt: neu },
+      } satisfies SpeicherErgebnis<AbfragenInhalt>);
+    });
+  /** Wartet, bis die Zahlen da sind (der Start-Knopf ist bei Automatik vorher gesperrt) – und klickt. */
+  async function starte(fenster: HTMLElement) {
+    await waitFor(() =>
+      expect(knopf(fenster, 'Abfrage starten')).toHaveProperty('disabled', false),
+    );
+    fireEvent.click(knopf(fenster, 'Abfrage starten'));
+  }
+
+  it('Reihenfolge: Routine-Schritte (nachgelesen) → Abfrage ins Dokument (Version wie gelesen) → Offene als Teilnehmer eintragen', async () => {
+    const { w, a } = hilfsgruppe();
+    const speichern = speichernMitLog(w.log);
+    const { fenster } = await oeffnen({
+      lesen: nurMusik(MIT_EINR, 7),
+      speichern,
+      automatik: a,
+      jetzt: '2026-10-14T08:00:00Z',
+    });
+    await starte(fenster);
+    await waitFor(() => expect(w.log).toHaveLength(4));
+    // Anna und Carla fehlen (Ben ist fertig).
+    expect(w.log).toEqual([
+      'PATCH /routines/60',
+      'SPEICHERN',
+      'PUT /groups/50/members/5',
+      'PUT /groups/50/members/11',
+    ]);
+    expect(gespeichert(speichern)[0][3]).toBe(7);
+    expect(w.mitglieder.map((m) => [m.person, m.rolle])).toEqual([
+      [5, R_TEILNEHMER],
+      [11, R_TEILNEHMER],
+    ]);
+    expect(await within(fenster).findByText(/2 Personen bekommen Erinnerungen/)).toBeTruthy();
+  });
+
+  it('die Schritte sind die aus erinnerungsTage: heute = Öffnen → Mail ohne Warten; Absender = wer startet; Link mit der Nummer der DIENSTGRUPPE', async () => {
+    const { w, a } = hilfsgruppe();
+    const { fenster } = await oeffnen({
+      lesen: nurMusik(MIT_EINR),
+      automatik: a,
+      jetzt: '2026-10-14T08:00:00Z',
+    });
+    await starte(fenster);
+    await waitFor(() => expect(w.patches).toHaveLength(1));
+    const steps = (
+      w.patches[0] as { steps: { actionKey: string; actionData: Record<string, unknown> }[] }
+    ).steps;
+    expect(steps[0].actionKey).toBe('send-member-email');
+    expect(steps[0].actionData).toMatchObject({
+      senderId: ICH.personId,
+      skipIfEmailAddressMissing: true,
+      addSignOutUrl: false,
+    });
+    expect(String(steps[0].actionData.body)).toContain('abfrage=4');
+    expect(String(steps[0].actionData.body)).not.toContain(`abfrage=${EINR.gruppeId}`);
+    expect(steps[steps.length - 1].actionKey).toBe('remove-member');
+    // Nie ein Warten auf heute oder früher.
+    for (const s of steps)
+      if (s.actionKey === 'special:wait') expect(String(s.actionData.untilDate) > HEUTE).toBe(true);
+  });
+
+  it('Pausierte werden nicht eingetragen (sie sind nicht „offen“)', async () => {
+    const pause = liste(pauseSetzen(leereListe(), CARLA.id, { bis: '2026-12-31' }));
+    const { w, a } = hilfsgruppe();
+    const { fenster } = await oeffnen({
+      lesen: nurMusik(MIT_EINR),
+      automatik: a,
+      personenlisten: [[4, pause]],
+      jetzt: '2026-10-14T08:00:00Z',
+    });
+    await starte(fenster);
+    await waitFor(() => expect(w.mitglieder.length).toBeGreaterThan(0));
+    await waitFor(() =>
+      expect(within(fenster).queryByText(/Eingetragen|bekommen Erinnerungen/)).toBeTruthy(),
+    );
+    expect(w.mitglieder.map((m) => m.person)).toEqual([5]);
+  });
+
+  it('nicht leer → Stopp mit Grund, NICHTS geschrieben (kein PATCH, kein Dokument); „Gruppe leeren“ trägt aus, danach geht der Start', async () => {
+    const { w, a } = hilfsgruppe({ mitglieder: [tn(5)] });
+    const speichern = speichernMitLog(w.log);
+    const { fenster } = await oeffnen({ lesen: nurMusik(MIT_EINR), speichern, automatik: a });
+    await starte(fenster);
+    expect(await within(fenster).findByText(/Reste einer früheren Abfrage/)).toBeTruthy();
+    expect(w.log).toEqual([]);
+    expect(speichern).not.toHaveBeenCalled();
+    fireEvent.click(within(fenster).getByRole('button', { name: 'Gruppe leeren' }));
+    await waitFor(() => expect(w.log).toEqual(['DELETE /groups/50/members/5']));
+    await within(fenster).findByText(/Die Hilfsgruppe ist leer/);
+    fireEvent.click(knopf(fenster, 'Abfrage starten'));
+    await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
+  });
+
+  it('Aussetzer beim Lesen der Gruppe: nicht gestartet, nichts geschrieben (nie „ohne Automatik“)', async () => {
+    const { w, a } = hilfsgruppe();
+    w.stoerung.wirft = { 'GET /groups/50/members': new ApiError(503, 'ct') };
+    const speichern = speichernMitLog(w.log);
+    const { fenster } = await oeffnen({ lesen: nurMusik(MIT_EINR), speichern, automatik: a });
+    await starte(fenster);
+    expect(await within(fenster).findByText(/antwortet gerade nicht/)).toBeTruthy();
+    expect(speichern).not.toHaveBeenCalled();
+    expect(w.log).toEqual([]);
+  });
+
+  it('kein Recht an der Hilfsgruppe (403): die Abfrage startet wie bisher – mit ehrlichem Hinweis, ohne Eintragen', async () => {
+    const { w, a } = hilfsgruppe();
+    w.stoerung.wirft = { 'GET /groups/50/members': new ApiError(403, 'verboten') };
+    const speichern = speichernMitLog(w.log);
+    const { fenster } = await oeffnen({ lesen: nurMusik(MIT_EINR), speichern, automatik: a });
+    await starte(fenster);
+    await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
+    expect(await within(fenster).findByText(/ohne automatische Erinnerungen/)).toBeTruthy();
+    expect(w.log).toEqual(['SPEICHERN']);
+  });
+
+  it('Hilfsgruppe in ChurchTools gelöscht (404): die Abfrage startet trotzdem, der Hinweis sagt „neu einrichten“', async () => {
+    const { w, a } = hilfsgruppe();
+    w.stoerung.wirft = { 'GET /groups/50/members/routines': new ApiError(404, 'weg') };
+    const speichern = speichernMitLog(w.log);
+    const { fenster } = await oeffnen({ lesen: nurMusik(MIT_EINR), speichern, automatik: a });
+    await starte(fenster);
+    await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
+    expect(await within(fenster).findByText(/ohne automatische Erinnerungen/)).toBeTruthy();
+    expect(fenster.textContent).toContain('neu einrichten');
+    expect(w.log).toEqual(['SPEICHERN']);
+  });
+
+  it('Beenden bei gelöschter Hilfsgruppe (404): wird trotzdem beendet gespeichert', async () => {
+    const { w, a } = hilfsgruppe();
+    w.stoerung.wirft = { 'GET /groups/50/members/routines': new ApiError(404, 'weg') };
+    const speichern = speichernMitLog(w.log);
+    const { fenster } = await oeffnen(
+      { lesen: nurMusik(laufendMitEinr()), speichern, automatik: a },
+      /^Abfrage Musik/,
+    );
+    fireEvent.click(knopf(fenster, 'Abfrage beenden'));
+    fireEvent.click(
+      within(await screen.findByRole('alertdialog', { name: 'Abfrage beenden?' })).getByRole(
+        'button',
+        { name: 'Abfrage beenden' },
+      ),
+    );
+    await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
+    expect(gespeichert(speichern)[0][1].abfragen[0].beendet).toBe(HEUTE);
+  });
+
+  it('ohne Einrichtung im Dokument: wie bisher, keine Automatik, kein Aufruf an die Hilfsgruppe', async () => {
+    const { w, a } = hilfsgruppe();
+    const speichern = speichernMitLog(w.log);
+    const { fenster } = await oeffnen({
+      lesen: nurMusik(standardInhalt()),
+      speichern,
+      automatik: a,
+    });
+    await starte(fenster);
+    await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
+    expect(w.log).toEqual(['SPEICHERN']);
+  });
+
+  it('mit Automatik wartet der Start auf die Zahlen: ohne gelesene Antworten bleibt der Knopf gesperrt (sonst bliebe die Gruppe leer)', async () => {
+    const { a } = hilfsgruppe();
+    const { fenster } = await oeffnen({
+      lesen: nurMusik(MIT_EINR),
+      automatik: a,
+      ladePersonen: () => Promise.reject(new Error('nein')),
+    });
+    await within(fenster).findByText(/Wer noch offen ist, lässt sich gerade nicht sagen/);
+    expect(knopf(fenster, 'Abfrage starten')).toHaveProperty('disabled', true);
+  });
+
+  it('Teilfehler beim Eintragen: die Abfrage läuft, die Meldung nennt, wer fehlt; „Fehlende nachtragen“ trägt NUR sie ein – am Starttag', async () => {
+    const { w, a } = hilfsgruppe();
+    w.stoerung.wirft = { 'PUT /groups/50/members/11': new ApiError(503, 'ct') };
+    const { fenster } = await oeffnen({
+      lesen: nurMusik(MIT_EINR),
+      automatik: a,
+      jetzt: '2026-10-14T08:00:00Z',
+    });
+    await starte(fenster);
+    expect(await within(fenster).findByText(/es fehlen: Carla Test/)).toBeTruthy();
+    expect(w.mitglieder.map((m) => m.person)).toEqual([5]);
+    w.stoerung.wirft = undefined;
+    w.log.length = 0;
+    fireEvent.click(await within(fenster).findByRole('button', { name: 'Fehlende nachtragen' }));
+    await waitFor(() => expect(w.log).toEqual(['PUT /groups/50/members/11']));
+    expect(w.mitglieder.map((m) => m.person).sort((x, y) => x - y)).toEqual([5, 11]);
+  });
+
+  it('an einem späteren Tag gibt es „Fehlende nachtragen“ nicht – der Hinweis nennt „Erinnern“', async () => {
+    const { w, a } = hilfsgruppe();
+    w.stoerung.wirft = { 'PUT /groups/50/members/11': new ApiError(503, 'ct') };
+    // Gestartet am 14.10., „heute“ im Fenster ist aber der 14.10. – der Starttag; für den Folgetag öffnen wir neu mit einer
+    // Abfrage, die am 12.10. gestartet wurde (ZEIT) und deren Fehlende noch im Speicher dieser Sitzung stehen.
+    const { fenster } = await oeffnen({ lesen: nurMusik(MIT_EINR), automatik: a, jetzt: ZEIT });
+    await starte(fenster);
+    expect(await within(fenster).findByText(/nachgetragen wird nur am Starttag/)).toBeTruthy();
+    expect(within(fenster).queryByRole('button', { name: 'Fehlende nachtragen' })).toBeNull();
+  });
+
+  it('Beenden: erst alle ausgetragen (nachgelesen), dann „beendet“ gespeichert', async () => {
+    const { w, a } = hilfsgruppe({ mitglieder: [tn(5), tn(11), { person: 1, rolle: R_LEITER }] });
+    const speichern = speichernMitLog(w.log);
+    const { fenster } = await oeffnen(
+      { lesen: nurMusik(laufendMitEinr()), speichern, automatik: a },
+      /^Abfrage Musik/,
+    );
+    fireEvent.click(knopf(fenster, 'Abfrage beenden'));
+    fireEvent.click(
+      within(await screen.findByRole('alertdialog', { name: 'Abfrage beenden?' })).getByRole(
+        'button',
+        { name: 'Abfrage beenden' },
+      ),
+    );
+    await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
+    const log = w.log.filter((z) => z !== 'SPEICHERN' && !z.startsWith('GET'));
+    expect(log).toEqual(['DELETE /groups/50/members/5', 'DELETE /groups/50/members/11']);
+    expect(w.log.indexOf('SPEICHERN')).toBeGreaterThan(
+      w.log.lastIndexOf('DELETE /groups/50/members/11'),
+    );
+    // Der Leiter bleibt.
+    expect(w.mitglieder).toEqual([{ person: 1, rolle: R_LEITER }]);
+    expect(gespeichert(speichern)[0][1].abfragen[0].beendet).toBe(HEUTE);
+  });
+
+  it('Beenden, Austragen schlägt fehl: NICHT als beendet gespeichert, Meldung nennt Name und „Erinnerungen laufen weiter“', async () => {
+    const { w, a } = hilfsgruppe({ mitglieder: [tn(5), tn(11)] });
+    w.stoerung.tragNichtAus = new Set([11]);
+    const speichern = speichernMitLog(w.log);
+    const { fenster } = await oeffnen(
+      { lesen: nurMusik(laufendMitEinr()), speichern, automatik: a },
+      /^Abfrage Musik/,
+    );
+    fireEvent.click(knopf(fenster, 'Abfrage beenden'));
+    fireEvent.click(
+      within(await screen.findByRole('alertdialog', { name: 'Abfrage beenden?' })).getByRole(
+        'button',
+        { name: 'Abfrage beenden' },
+      ),
+    );
+    expect(await within(fenster).findByText(/Die Abfrage wurde nicht beendet/)).toBeTruthy();
+    expect(fenster.textContent).toContain('Person 11');
+    expect(speichern).not.toHaveBeenCalled();
+  });
+
+  it('Abgleich beim Öffnen des Stands: trägt aus, wer nicht mehr offen ist (beantwortet, eingeteilt, pausiert), und sagt es leise – trägt nie ein', async () => {
+    // Offen ist nur Anna (5). Ben (8) hat alles beantwortet, Carla (11) pausiert, Dora (99) fehlt in der Gruppe (Nachzügler).
+    const pause = liste(pauseSetzen(leereListe(), CARLA.id, { bis: '2026-12-31' }));
+    const { w, a } = hilfsgruppe({ mitglieder: [tn(5), tn(8), tn(11)] });
+    const { fenster } = await oeffnen(
+      { lesen: nurMusik(laufendMitEinr()), automatik: a, personenlisten: [[4, pause]] },
+      /^Abfrage Musik/,
+    );
+    expect(
+      await within(fenster).findByText(/2 Personen ausgetragen, die inzwischen geantwortet haben/),
+    ).toBeTruthy();
+    expect(within(fenster).getByText(/1 Person bekommt noch Erinnerungen/)).toBeTruthy();
+    expect(w.mitglieder.map((m) => m.person)).toEqual([5]);
+    expect(w.log.filter((z) => z.startsWith('PUT'))).toEqual([]);
+    // Einmal je Öffnen – kein zweiter Durchgang.
+    await new Promise((r) => setTimeout(r, 30));
+    expect(w.log.filter((z) => z.startsWith('DELETE'))).toHaveLength(2);
+  });
+
+  it('Abgleich: ist das Ergebnis nicht vollständig (Mitglieder nicht lesbar), wird NICHTS ausgetragen', async () => {
+    const { w, a } = hilfsgruppe({ mitglieder: [tn(5), tn(8)] });
+    const { fenster } = await oeffnen(
+      {
+        lesen: nurMusik(laufendMitEinr()),
+        automatik: a,
+        ladePersonen: () => Promise.reject(new Error('nein')),
+      },
+      /^Abfrage Musik/,
+    );
+    await within(fenster).findByText(/lässt sich gerade nicht sagen/);
+    await new Promise((r) => setTimeout(r, 30));
+    expect(w.log).toEqual([]);
+    expect(w.mitglieder).toHaveLength(2);
+  });
+
+  it('Abgleich: Lesefehler an der Hilfsgruppe → nichts ausgetragen, keine Zeile', async () => {
+    const { w, a } = hilfsgruppe({ mitglieder: [tn(5), tn(8)] });
+    w.stoerung.wirft = { 'GET /groups/50/members': new ApiError(503, 'ct') };
+    const { fenster } = await oeffnen(
+      { lesen: nurMusik(laufendMitEinr()), automatik: a },
+      /^Abfrage Musik/,
+    );
+    await within(fenster).findByText(/^Noch offen/);
+    await new Promise((r) => setTimeout(r, 30));
+    expect(w.log).toEqual([]);
+    expect(within(fenster).queryByText(/bekommt? noch Erinnerungen/)).toBeNull();
   });
 });

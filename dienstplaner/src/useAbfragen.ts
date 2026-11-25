@@ -27,6 +27,8 @@ import type { TerminZeile } from '@shared/dienstplan/termine';
 import type { Antworten } from '@shared/dienstplan/verfuegbarkeit';
 import type { CtAbsence } from '@shared/ct/typen';
 import { useLaden } from '@ui/ct/useLaden';
+import { austretenWennFertig } from './abfrageAutomatikLauf';
+import { ctAutomatikAnschluss } from './einrichtenAbfragen';
 import { ladeAbfragen } from './ladeAbfragen';
 import { ladeAbwesenheiten } from './ladeBeiwerk';
 import { ladeZeitraum } from './ladeTermine';
@@ -88,49 +90,114 @@ export interface Karte extends AbfrageLage {
   stand: { offen: number; gesamt: number };
 }
 
+/** Mein Stand in einer laufenden Abfrage – `offen === 0` nur, wenn Antworten, Abwesenheiten und Termine sauber gelesen sind. */
+interface StandInLage extends AbfrageLage {
+  stand: { offen: number; gesamt: number };
+}
+
+/**
+ * **Mein Stand in diesen Abfragen – sicher gelesen oder gar nicht.** „Nichts mehr offen“ darf nie aus einem Fehler oder einer
+ * halben Antwort folgen (dann trüge sich jemand aus der Hilfsgruppe aus, der noch offene Termine hat): Ohne lesbare Antworten
+ * (`lesefehler`, kein bereiter Speicher) gibt es `null`; Termine, Abwesenheiten und Antworten kommen alle oder die Funktion wirft.
+ */
+async function standJeLage(
+  start: Start,
+  heute: string,
+  zeitzone: string,
+  lagen: readonly AbfrageLage[],
+): Promise<StandInLage[] | null> {
+  if (lagen.length === 0) return [];
+  const eigene = eigeneDienstgruppen(start);
+  const v = await ladeVerfuegbarkeit(eigene, start.ichId);
+  // Ohne lesbare Antworten wäre „offen“ geraten.
+  if (v.lesefehler !== null || v.bereit.length === 0) return null;
+  const bis = lagen.map((l) => l.abfrage.bis).reduce((a, b) => (a > b ? a : b));
+  const [abwesenheiten, zeilenJe] = await Promise.all([
+    ladeAbwesenheiten(start.ichId, heute, bis),
+    Promise.all(
+      lagen.map((l) =>
+        ladeZeitraum(start, l.abfrage.von, l.abfrage.bis, zeitzone).then((d) => d.zeilen),
+      ),
+    ),
+  ]);
+  return lagen.map((lage, i) => {
+    const s = meinStand({
+      start,
+      lage,
+      zeilen: zeilenJe[i],
+      antworten: v.antworten,
+      abwesenheiten,
+      heute,
+    });
+    return { ...lage, stand: { offen: s.offen.length, gesamt: s.gesamt } };
+  });
+}
+
+/** Wer sich in der Hilfsgruppe selbst austrägt: nur mit der Einrichtung in der Abfrage. Wirft nie. */
+export type AustrittAufruf = (lage: AbfrageLage, ichId: number) => Promise<unknown>;
+
+const ctAustritt: AustrittAufruf = (lage, ichId) =>
+  lage.inhalt.einrichtung
+    ? austretenWennFertig(ctAutomatikAnschluss(), lage.inhalt.einrichtung, ichId)
+    : Promise.resolve('nichts');
+
+/**
+ * **Austritt beim Antworten** (R-5b): Ist mein Stand in der laufenden Abfrage **sicher** „nichts mehr offen“ (`standJeLage`),
+ * trage ich mich aus der Hilfsgruppe aus – dann bekomme ich keine Erinnerungen mehr (Austragen beendet den Lauf sofort). Fehler
+ * leise (nichts zerstört, kein Wiederhol-Takt): Das nächste Speichern oder Laden versucht es wieder. Wirft nicht.
+ */
+export async function austrittFuerEigene(
+  start: Start,
+  heute: string,
+  zeitzone: string,
+  gruppenLagen?: Map<number, AbfrageLage>,
+  austritt: AustrittAufruf = ctAustritt,
+): Promise<void> {
+  try {
+    const eigene = eigeneDienstgruppen(start);
+    const lagen = [...(gruppenLagen ?? (await laufende(eigene, heute))).values()].filter(
+      (l) => eigene.some((g) => g.id === l.gruppe.id) && l.inhalt.einrichtung !== null,
+    );
+    const staende = await standJeLage(start, heute, zeitzone, lagen);
+    if (staende === null) return;
+    await Promise.all(
+      staende.filter((l) => l.stand.offen === 0).map((l) => austritt(l, start.ichId)),
+    );
+  } catch {
+    // leise – kein Name, keine Nummer im Log
+  }
+}
+
 /**
  * Die Karten für Mitarbeitende: je eigener Dienstgruppe mit einer Abfrage im Zustand **offen** oder **Frist vorbei**, in der
- * noch etwas offen ist. Wirft nicht – bei jedem Fehler gibt es keine Karte.
+ * noch etwas offen ist. Wirft nicht – bei jedem Fehler gibt es keine Karte. Wer in einer eingerichteten Abfrage nichts mehr offen
+ * hat, trägt sich nebenbei aus der Hilfsgruppe aus (`austrittFuerEigene`, im Hintergrund – die Karten warten nicht darauf).
  */
 export async function ladeKarten(
   start: Start,
   heute: string,
   zeitzone: string,
   gruppenLagen?: Map<number, AbfrageLage>,
+  austritt: AustrittAufruf = ctAustritt,
 ): Promise<Karte[]> {
   try {
     const eigene = eigeneDienstgruppen(start);
-    const lagen = [...(gruppenLagen ?? (await laufende(eigene, heute))).values()].filter(
-      (l) =>
-        eigene.some((g) => g.id === l.gruppe.id) &&
-        ['offen', 'fristVorbei'].includes(abfrageZustand(l.abfrage, heute)),
+    const alle = [...(gruppenLagen ?? (await laufende(eigene, heute))).values()].filter((l) =>
+      eigene.some((g) => g.id === l.gruppe.id),
     );
+    const mitKarte = (l: AbfrageLage) =>
+      ['offen', 'fristVorbei'].includes(abfrageZustand(l.abfrage, heute));
+    // Karten wie bisher; dazu die eingerichteten (auch noch nicht geöffneten) – für den Austritt.
+    const lagen = alle.filter((l) => mitKarte(l) || l.inhalt.einrichtung !== null);
     if (lagen.length === 0) return [];
-    const v = await ladeVerfuegbarkeit(eigene, start.ichId);
-    // Ohne lesbare Antworten wäre „offen“ geraten.
-    if (v.lesefehler !== null || v.bereit.length === 0) return [];
-    const bis = lagen.map((l) => l.abfrage.bis).reduce((a, b) => (a > b ? a : b));
-    const [abwesenheiten, zeilenJe] = await Promise.all([
-      ladeAbwesenheiten(start.ichId, heute, bis),
-      Promise.all(
-        lagen.map((l) =>
-          ladeZeitraum(start, l.abfrage.von, l.abfrage.bis, zeitzone).then((d) => d.zeilen),
-        ),
-      ),
-    ]);
-    return lagen.flatMap((lage, i) => {
-      const s = meinStand({
-        start,
-        lage,
-        zeilen: zeilenJe[i],
-        antworten: v.antworten,
-        abwesenheiten,
-        heute,
-      });
-      return s.offen.length > 0
-        ? [{ ...lage, stand: { offen: s.offen.length, gesamt: s.gesamt } }]
-        : [];
-    });
+    const staende = await standJeLage(start, heute, zeitzone, lagen);
+    if (staende === null) return [];
+    void Promise.all(
+      staende
+        .filter((l) => l.inhalt.einrichtung !== null && l.stand.offen === 0)
+        .map((l) => austritt(l, start.ichId)),
+    ).catch(() => undefined);
+    return staende.filter((l) => mitKarte(l) && l.stand.offen > 0);
   } catch (e) {
     console.warn('[startseite] Abfragen nicht geladen – keine Karte:', e);
     return [];

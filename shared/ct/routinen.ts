@@ -12,7 +12,14 @@ export type RoutinenSchritt =
       id?: number;
       actionKey: 'send-member-email';
       isEnabled: boolean;
-      actionData: { subject: string; body: string; addSignOutUrl: false; senderId: number };
+      actionData: {
+        subject: string;
+        body: string;
+        addSignOutUrl: false;
+        senderId: number;
+        /** Wer keine Adresse hat, wird übersprungen, sein Lauf geht weiter (gemessen R1, 25.11.2026). Nur der Dienstplaner setzt es. */
+        skipIfEmailAddressMissing?: boolean;
+      };
     }
   | { id?: number; actionKey: 'special:wait'; isEnabled: true; actionData: { untilDate: string } }
   | {

@@ -13,7 +13,7 @@ import {
 import {
   EINRICHTEN_ANSEHEN,
   EINRICHTEN_GRUPPE,
-  EINRICHTEN_LEITER,
+  EINRICHTEN_RECHTE,
   EINRICHTEN_ROUTINE,
   EINRICHTEN_WARUM,
 } from './abfragenTexte';
@@ -23,8 +23,8 @@ const namen = (l: readonly { name: string }[]) => l.map((x) => x.name).join(', '
 
 /**
  * **Fenster „Erinnerungen für <Gruppe> einrichten“** (R-5a, Entwurf `runden-entwurf.html` Schritt 2). Es liest zuerst (nichts wird
- * geschrieben) und sagt **vor dem Klick**, was angelegt wird und warum: die Gruppe, die Routine, die Planer als Leiter, was
- * Mitarbeitende davon sehen. Erst „Einrichten“ schreibt – danach steht hier, was angelegt bzw. ergänzt und nachgelesen wurde.
+ * geschrieben) und sagt **vor dem Klick**, was angelegt wird und warum: die Gruppe, die Routine, welche Planer welche zwei Rechte
+ * (nur für diese Gruppe) bekommen, was Mitarbeitende davon sehen. Erst „Einrichten“ schreibt – danach steht hier, was angelegt bzw. ergänzt und nachgelesen wurde.
  * Scheitert etwas, steht da, was schon angelegt ist; nichts wird automatisch wiederholt („Nochmal versuchen“ ist ein Klick).
  */
 export function EinrichtenFenster({
@@ -67,7 +67,7 @@ export function EinrichtenFenster({
   };
 
   const fertig = lauf?.art === 'gelaufen' && lauf.ok;
-  const nurLeiter =
+  const nurRechte =
     lage !== null &&
     lage.gruppeId !== null &&
     !lage.plan.gruppeAnlegen &&
@@ -83,8 +83,8 @@ export function EinrichtenFenster({
         ? 'Wird eingerichtet …'
         : lauf
           ? 'Nochmal versuchen'
-          : nurLeiter && !lage.plan.einrichtungSchreiben
-            ? 'Leiter nachtragen'
+          : nurRechte && !lage.plan.einrichtungSchreiben
+            ? 'Rechte nachtragen'
             : 'Einrichten'}
     </FensterKnopf>
   ) : gestoppt?.nochmal ? (
@@ -136,15 +136,15 @@ function Vorher({ lage }: { lage: Lage }) {
     return (
       <>
         <p className={styles.text}>
-          Alles ist eingerichtet: die Gruppe „{lage.gruppeName}“, ihre Routine und alle Planer als
-          Leiter.
+          Alles ist eingerichtet: die Gruppe „{lage.gruppeName}“, ihre Routine und die zwei Rechte
+          aller Planer – nur für diese Gruppe.
         </p>
         <Hinweise lage={lage} />
         <p className={styles.hinweis}>{EINRICHTEN_ANSEHEN}</p>
       </>
     );
-  const nurLeiter = lage.gruppeId !== null && !lage.plan.gruppeAnlegen && !lage.plan.routineAnlegen;
-  const leiter = lage.plan.gruppeAnlegen ? lage.planer : lage.leiterNachtragen;
+  const nurRechte = lage.gruppeId !== null && !lage.plan.gruppeAnlegen && !lage.plan.routineAnlegen;
+  const bekommen = lage.rechteNachtragen.map((r) => r.person);
   return (
     <>
       <p className={styles.text}>{EINRICHTEN_WARUM}</p>
@@ -168,18 +168,18 @@ function Vorher({ lage }: { lage: Lage }) {
           <span className={styles.leise}>{EINRICHTEN_ROUTINE}</span>
         </li>
         <li>
-          <b>Die Planer von {lage.gruppeName} als Leiter der Gruppe</b> –{' '}
-          {leiter.length > 0 ? (
+          <b>Zwei Rechte für die Planer – nur für die Gruppe „{lage.gruppeName}“</b> –{' '}
+          {bekommen.length > 0 ? (
             <>
-              {nurLeiter ? 'noch nicht eingetragen: ' : 'werden eingetragen: '}
-              {namen(leiter)}.
+              {nurRechte ? 'noch nicht gesetzt bei: ' : 'werden gesetzt bei: '}
+              {namen(bekommen)}.
             </>
           ) : lage.planer.length > 0 ? (
-            'alle schon eingetragen.'
+            'alle schon gesetzt.'
           ) : (
             'es wurden keine Planer gefunden.'
           )}
-          <span className={styles.leise}>{EINRICHTEN_LEITER}</span>
+          <span className={styles.leise}>{EINRICHTEN_RECHTE}</span>
         </li>
       </ol>
       <Hinweise lage={lage} />
@@ -194,21 +194,6 @@ function Hinweise({ lage }: { lage: Lage }) {
       {lage.verschwunden && (
         <p className={styles.hinweis} role="status">
           Die bisherige Gruppe gibt es in ChurchTools nicht mehr – es wird eine neue angelegt.
-        </p>
-      )}
-      {lage.planerAlsTeilnehmer.length > 0 && (
-        <p className={styles.hinweis} role="status">
-          {namen(lage.planerAlsTeilnehmer)}{' '}
-          {lage.planerAlsTeilnehmer.length === 1 ? 'steht' : 'stehen'} als Teilnehmer in der Gruppe
-          und {lage.planerAlsTeilnehmer.length === 1 ? 'wird' : 'werden'} nicht zum Leiter
-          umgestellt – das beendete ihre Erinnerungen.
-        </p>
-      )}
-      {lage.leiterZuviel.length > 0 && (
-        <p className={styles.hinweis} role="status">
-          {namen(lage.leiterZuviel)} {lage.leiterZuviel.length === 1 ? 'ist' : 'sind'} Leiter der
-          Gruppe, aber kein Planer mehr – {lage.leiterZuviel.length === 1 ? 'bleibt' : 'bleiben'}{' '}
-          stehen.
         </p>
       )}
     </>

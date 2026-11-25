@@ -1,0 +1,91 @@
+// Reiter „Events“ im Fenster „In Kalender eintragen“ (W15-3) – Felder kommen aus `TerminFormular.module.scss`; hier nur
+// der Satz oben und die Tabelle „Event-Datum | Eventvorlage“.
+
+.events {
+  min-width: 0;
+}
+
+.leise {
+  margin: 0 0 12px;
+  color: var(--text2);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.tabelle {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+
+  th {
+    padding: 6px 8px 6px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  td {
+    padding: 8px 8px 8px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: middle;
+  }
+
+  td:last-child {
+    width: 60%;
+  }
+
+  // Am Handy wird jede Zeile zur Karte: Beschriftung links, Feld rechts – nichts läuft seitlich über.
+  @media (max-width: 559px) {
+    thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    tbody tr {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 8px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td,
+    td:last-child {
+      display: grid;
+      grid-template-columns: 96px minmax(0, 1fr);
+      gap: 8px;
+      align-items: center;
+      width: auto;
+      padding: 0;
+      border: 0;
+
+      &::before {
+        content: attr(data-label);
+        color: var(--text2);
+        font-size: 13px;
+        font-weight: 700;
+      }
+    }
+  }
+}
+
+.datum {
+  font-variant-numeric: tabular-nums;
+
+  span {
+    display: block;
+  }
+}
+
+.uhr {
+  color: var(--text2);
+  font-size: 13px;
+}

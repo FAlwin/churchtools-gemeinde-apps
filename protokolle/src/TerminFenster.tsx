@@ -19,14 +19,17 @@ import {
 } from '@shared/protokolle/termine';
 import type { TerminStand } from '@shared/protokolle/terminStand';
 import { buchungsHinweis } from '@shared/protokolle/terminRessourcen';
+import { eventHinweis, hinweiseZusammen } from '@shared/protokolle/terminEvents';
 import { vorlageAnwenden, type TerminVorlage } from '@shared/protokolle/terminVorlagen';
 import { kalenderTermineAmTag } from './terminAnlegen';
 import { terminLegen } from './terminEintragen';
 import { terminVermerken } from './terminStandSchreiben';
 import { ladeSchreibKalender } from './kalenderListe';
 import { ladeRessourcen } from './buchungenLesen';
+import { ladeEventVorlagen } from './eventsLesen';
 import { ladeTags, ladeVorlagen, vorlageSpeichern } from './terminVorlagenLesen';
 import { TerminFormular } from './TerminFormular';
+import { TerminEvents } from './TerminEvents';
 import { TerminRessourcen } from './TerminRessourcen';
 import { TerminVorlagenWahl } from './TerminVorlagenWahl';
 import type { MitarbeitOrt } from './mitarbeitWerte';
@@ -42,13 +45,14 @@ const KEINE: readonly number[] = [];
  * (`TerminFormular`) – Kalender (nur die, in die man Termine anlegen darf; vorausgewählt der Kalender der Gruppe), Titel
  * ohne Uhrzeit, Beginn und Ende, Wiederholung, Beschreibung, Ort, Tags … Steht am Tag im gewählten Kalender schon ein
  * ähnlicher Termin, ist **„Nur verknüpfen – nichts Neues anlegen“** vorgewählt. Es geht keine Einladung raus. Der Reiter
- * **„Ressourcen“** (W15-2, `TerminRessourcen`) erscheint nur, wenn die Person Ressourcen buchen darf; die übrigen Reiter von
- * ChurchTools (Besprechungsanfragen, Anmeldung, Events) kommen mit W15-3…5. Die Leiste zeigt sich erst bei mehr als einem Reiter.
+ * **„Events“** (W15-3, `TerminEvents`) erscheint nur, wenn die Person im gewählten Kalender Events anlegen darf, **„Ressourcen“**
+ * (W15-2, `TerminRessourcen`) nur, wenn sie Ressourcen buchen darf – in der Reihenfolge von ChurchTools; die übrigen Reiter
+ * (Besprechungsanfragen, Anmeldung) kommen mit W15-4/5. Die Leiste zeigt sich erst bei mehr als einem Reiter.
  *
  * Nach dem Anlegen kommt der Vermerk „im Kalender“. Scheitert nur der Vermerk, steht der Termin trotzdem – dann bleibt
  * das Fenster mit „Nochmal vermerken“ offen (wiederholt nur den Vermerk, legt nichts doppelt an). Fehlt nach dem Anlegen eine
- * gewünschte Buchung (oder ließ sie sich nicht nachlesen), bleibt der Termin und der Vermerk entsteht – das Fenster sagt
- * dann, was in ChurchTools nachzubuchen ist, und geht erst mit „Fertig“ zu.
+ * gewünschte Buchung oder ein gewünschtes Event (oder ließ es sich nicht nachlesen), bleibt der Termin und der Vermerk entsteht –
+ * das Fenster sagt dann in EINER Meldung, was in ChurchTools nachzuholen ist, und geht erst mit „Fertig“ zu.
  */
 export function TerminFenster({
   zeile,
@@ -59,6 +63,7 @@ export function TerminFenster({
   tagsVerwalten = false,
   ressourcenBuchen = KEINE,
   ressourcenVerwalten = KEINE,
+  eventsAnlegen = KEINE,
   ich,
   zeitzone,
   onFertig,
@@ -77,6 +82,8 @@ export function TerminFenster({
   ressourcenBuchen?: readonly number[];
   /** Ressourcen, bei denen man den Status einer Buchung setzen darf (`administer bookings`). */
   ressourcenVerwalten?: readonly number[];
+  /** Kalender, in denen man Events anlegen darf (`edit events`) – nur dort gibt es den Reiter „Events“. */
+  eventsAnlegen?: readonly number[];
   /** Wo der Vermerk gespeichert wird („Mitarbeit“ der Gruppe). */
   ort: MitarbeitOrt;
   ich: number;
@@ -113,10 +120,15 @@ export function TerminFenster({
   const ressourcenName = (id: number) =>
     ressourcenListe.find((r) => r.id === id)?.name ?? `Ressource ${id}`;
 
-  // Reiter wie im ChurchTools-Dialog (Reihenfolge von dort): Kalender, Ressourcen – die übrigen kommen mit W15-3…5.
-  type ReiterId = 'kalender' | 'ressourcen';
+  // Events (W15-3): nur, wenn man im GEWÄHLTEN Kalender Events anlegen darf – wechselt der Kalender, kommt der Reiter oder geht.
+  const darfEvents = kalenderId !== null && eventsAnlegen.includes(kalenderId);
+  const eventVorlagen = useLaden(() => (darfEvents ? ladeEventVorlagen() : null), [darfEvents]);
+
+  // Reiter wie im ChurchTools-Dialog (Reihenfolge von dort): Kalender, Events, Ressourcen – die übrigen kommen mit W15-4/5.
+  type ReiterId = 'kalender' | 'events' | 'ressourcen';
   const reiter: Reiter<ReiterId>[] = [
     { id: 'kalender', label: 'Kalender', icon: 'calendar' },
+    ...(darfEvents ? [{ id: 'events' as const, label: 'Events', icon: 'people' as const }] : []),
     ...(darfRessourcen
       ? [{ id: 'ressourcen' as const, label: 'Ressourcen', icon: 'grid' as const }]
       : []),
@@ -153,11 +165,11 @@ export function TerminFenster({
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<Fehlermeldung | null>(null);
   // Der Termin steht in ChurchTools, der Vermerk fehlt noch.
-  const [offen, setOffen] = useState<{ id: number; zeit: string; buchung: string | null } | null>(
+  const [offen, setOffen] = useState<{ id: number; zeit: string; hinweis: string | null } | null>(
     null,
   );
   // Angelegt und vermerkt, aber eine Buchung fehlt oder ist unklar: das Fenster bleibt mit dieser Meldung stehen.
-  const [fertig, setFertig] = useState<{ stand: TerminStand; buchung: string } | null>(null);
+  const [fertig, setFertig] = useState<{ stand: TerminStand; hinweis: string } | null>(null);
 
   const problem = eintragFehler(eintrag);
   const prueft = kalenderId !== null && tagTermine.stand.art === 'laedt';
@@ -194,7 +206,7 @@ export function TerminFenster({
     setVorlageLaeuft(false);
   };
 
-  const vermerken = async (r: { id: number; zeit: string; buchung: string | null }) => {
+  const vermerken = async (r: { id: number; zeit: string; hinweis: string | null }) => {
     if (kalenderId === null) return;
     try {
       const stand = await terminVermerken(
@@ -204,10 +216,10 @@ export function TerminFenster({
         ich,
         new Date().toISOString(),
       );
-      if (r.buchung) {
+      if (r.hinweis) {
         setOffen(null);
         setLaeuft(false);
-        setFertig({ stand, buchung: r.buchung });
+        setFertig({ stand, hinweis: r.hinweis });
       } else onFertig(stand);
     } catch (x) {
       setOffen(r);
@@ -223,7 +235,8 @@ export function TerminFenster({
     let r: Awaited<ReturnType<typeof terminLegen>>;
     try {
       r = await terminLegen({
-        eintrag: { ...eintrag, kalender: kalenderId },
+        // Events nur, wo die Person sie anlegen darf (der Reiter ist sonst weg) und nur beim Neu-Anlegen.
+        eintrag: { ...eintrag, kalender: kalenderId, events: darfEvents ? eintrag.events : {} },
         zeitzone,
         verknuepfen,
         neueTagsErlaubt: tagsVerwalten,
@@ -241,7 +254,10 @@ export function TerminFenster({
     await vermerken({
       id: r.id,
       zeit,
-      buchung: r.buchungen ? buchungsHinweis(r.buchungen, ressourcenName) : null,
+      hinweis: hinweiseZusammen([
+        r.buchungen ? buchungsHinweis(r.buchungen, ressourcenName) : null,
+        r.events ? eventHinweis(r.events) : null,
+      ]),
     });
   };
 
@@ -316,7 +332,7 @@ export function TerminFenster({
             Der Termin steht im Kalender „{kalenderName}“ und ist hier vermerkt.
           </p>
           <p className={felder.fehler} role="alert">
-            {fertig.buchung}
+            {fertig.hinweis}
           </p>
         </>
       ) : offen ? (
@@ -325,9 +341,9 @@ export function TerminFenster({
             Der Termin steht im Kalender „{kalenderName}“. Es fehlt nur noch der Vermerk hier im
             Reiter. Bitte nicht noch einmal eintragen – „Nochmal vermerken“ reicht.
           </p>
-          {offen.buchung && (
+          {offen.hinweis && (
             <p className={felder.fehler} role="alert">
-              {offen.buchung}
+              {offen.hinweis}
             </p>
           )}
         </>
@@ -359,6 +375,23 @@ export function TerminFenster({
                 Trotzdem neu anlegen
               </label>
             </div>
+          )}
+          {aktiverReiter === 'events' && verknuepfen && (
+            <p className={felder.hinweis} role="status">
+              Du verknüpfst einen vorhandenen Termin – dabei werden keine Events angelegt. Events
+              gibt es nur beim Neu-Anlegen („Trotzdem neu anlegen“).
+            </p>
+          )}
+          {aktiverReiter === 'events' && (
+            <TerminEvents
+              e={eintrag}
+              onAendern={setE}
+              vorlagen={eventVorlagen.stand.art === 'fertig' ? eventVorlagen.stand.daten : []}
+              laedt={eventVorlagen.stand.art === 'laedt'}
+              fehler={eventVorlagen.stand.art === 'fehler' ? eventVorlagen.stand.fehler : null}
+              onNeu={eventVorlagen.neu}
+              deaktiviert={beschaeftigt || !!verknuepfen}
+            />
           )}
           {aktiverReiter === 'ressourcen' && verknuepfen && (
             <p className={felder.hinweis} role="status">

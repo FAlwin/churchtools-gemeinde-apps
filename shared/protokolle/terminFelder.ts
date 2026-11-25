@@ -38,6 +38,8 @@ export interface TerminZusatz {
   adresse?: TerminAdresse;
   /** Ressourcen-Buchungen (W15-2) – leer lässt `bookings` weg. */
   buchungen?: readonly Buchung[];
+  /** Events (W15-3): je Einzeltermin mit gewählter Vorlage – `startDate` ist der exakte UTC-Beginn des Einzeltermins. */
+  events?: readonly { startDate: string; eventTemplateId: number }[];
 }
 
 /** Die Adresse aus den Feldern des Fensters – ohne Leerzeichen am Rand, `null` ohne jede Angabe. */

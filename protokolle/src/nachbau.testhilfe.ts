@@ -34,6 +34,12 @@
  * erst `GET /bookings?resource_ids[]=…&from&to` zeigt sie (`booking.base.appointment.id`). `buchungenSchlucken` nennt Ressourcen, bei
  * denen ChurchTools „201“ sagt und nichts bucht; `buchungenLesenFehler` lässt `GET /bookings` mit 500 scheitern.
  *
+ * Events und Eventvorlagen (W15-3, gemessen 23.11.2026): `GET /eventtemplates` liefert `eventVorlagen` (`id`, `templateName`);
+ * `POST …/appointments` mit `events: [{startDate, eventTemplateId?}]` legt je Eintrag ein Event an – **die Antwort enthält
+ * sie nicht**, erst `GET /events?from&to` zeigt sie (`appointmentId`, `startDate`). `eventsSchlucken` nennt `startDate`s, bei
+ * denen ChurchTools „201“ sagt und nichts anlegt; `eventsLesenFehler` lässt `GET /events` mit 500 scheitern; `eventsAnfrage`
+ * ist der Suchtext der letzten Anfrage.
+ *
  * Beiträge (S6-2, gemessen 11.11.2026): `GET /post/groups` nennt die Gruppen aus `beitragsGruppen` (`type: postPossible`);
  * `POST /posts` legt an und liefert die ID, `GET /posts/{id}` liest nach (404, wenn es ihn nicht gibt).
  * `beitragFehler` antwortet dem `POST` mit einem Fehler – `angelegt` heißt: trotzdem angelegt; `beitragLesenFehler`
@@ -129,6 +135,16 @@ export interface Nachbau {
   buchungenLesenFehler: boolean;
   /** Der Suchtext der letzten Anfrage an `GET /bookings`. */
   buchungenAnfrage: string | null;
+  /** Eventvorlagen wie `GET /eventtemplates` (W15-3). */
+  eventVorlagen: Record<string, unknown>[];
+  /** Angelegte Events (je Termin und Beginn). */
+  events: { id: number; appointmentId: number; startDate: string; eventTemplateId: unknown }[];
+  /** Für diese Beginne (`startDate`) legt ChurchTools trotz „201“ kein Event an. */
+  eventsSchlucken: Set<string>;
+  /** `GET /events` scheitert (500). */
+  eventsLesenFehler: boolean;
+  /** Der Suchtext der letzten Anfrage an `GET /events`. */
+  eventsAnfrage: string | null;
   /** Diese Personen nimmt ChurchTools beim Anlegen nicht als eingeladen an. */
   anfrageVerschluckt: Set<number>;
   treffenFehler: AnlegeFehler | null;
@@ -218,6 +234,11 @@ export function nachbauStarten(): Nachbau {
     buchungenSchlucken: new Set(),
     buchungenLesenFehler: false,
     buchungenAnfrage: null,
+    eventVorlagen: [],
+    events: [],
+    eventsSchlucken: new Set(),
+    eventsLesenFehler: false,
+    eventsAnfrage: null,
     vorlagen: [],
     vorlagenFehler: null,
     vorlagenSchlucken: false,
@@ -399,6 +420,20 @@ export function nachbauStarten(): Nachbau {
           }),
       });
     }
+    if (pfad === '/eventtemplates') return json(200, { data: s.eventVorlagen });
+    if (pfad === '/events') {
+      s.eventsAnfrage = decodeURIComponent(adresse.search);
+      if (s.eventsLesenFehler) return json(500, { message: 'weg' });
+      return json(200, {
+        data: s.events.map((x) => ({
+          id: x.id,
+          name: 'Event',
+          appointmentId: x.appointmentId,
+          startDate: x.startDate,
+          isCanceled: false,
+        })),
+      });
+    }
     const neuT = /^\/calendars\/(\d+)\/appointments$/.exec(pfad);
     if (neuT && m === 'POST') {
       s.terminRumpf = body;
@@ -412,6 +447,17 @@ export function nachbauStarten(): Nachbau {
               appointmentId: id,
               statusId: b.statusId,
               quantity: b.quantity,
+            });
+      if (!f || f.angelegt)
+        for (const x of (body.events as
+          | { startDate: string; eventTemplateId?: unknown }[]
+          | undefined) ?? [])
+          if (!s.eventsSchlucken.has(x.startDate))
+            s.events.push({
+              id: s.naechste++,
+              appointmentId: id,
+              startDate: x.startDate,
+              eventTemplateId: x.eventTemplateId,
             });
       if (!f || f.angelegt)
         s.termine.push({

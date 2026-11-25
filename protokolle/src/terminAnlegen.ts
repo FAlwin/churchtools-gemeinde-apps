@@ -114,6 +114,15 @@ export function terminRumpf(q: TerminAnlegenFrage): Record<string, unknown> {
     // Ressourcen (W15-2): ChurchTools legt die Buchungen mit dem Termin an – die Antwort zeigt sie NICHT; erst
     // `buchungenLesen` belegt, dass sie da sind.
     ...(q.buchungen?.length ? { bookings: q.buchungen.map(buchungRumpf) } : {}),
+    // Events (W15-3): nur Zeilen mit gewählter Vorlage. `eventTemplateId` 0 („Standard“) ist gültig und geht mit.
+    ...(q.events?.length
+      ? {
+          events: q.events.map((x) => ({
+            startDate: x.startDate,
+            eventTemplateId: x.eventTemplateId,
+          })),
+        }
+      : {}),
     ...(q.informieren !== undefined ? { informOwner: q.informieren } : {}),
     ...(q.eingeladen ? { meetingrequests: q.eingeladen.map((inviteeId) => ({ inviteeId })) } : {}),
   };

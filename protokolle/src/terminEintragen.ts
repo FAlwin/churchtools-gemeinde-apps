@@ -14,6 +14,10 @@
  * nicht. Nach dem Anlegen wird je Ressource nachgelesen (`buchungenNachlesen`); das Ergebnis steht in `buchungen` und
  * bricht **nichts** ab: Der Termin steht, der Vermerk entsteht trotzdem, das Fenster sagt, was nachzubuchen ist.
  *
+ * **Events** (W15-3): Genauso wenig sagt ein `201`, dass die Events entstanden sind – nach dem Anlegen liest `eventsNachlesen`
+ * `GET /events` und sucht je Zeile ein Event mit diesem Termin und Beginn. Das Ergebnis steht in `events`, bricht nichts ab
+ * und hat dieselbe Form wie `buchungen`.
+ *
  * Zeitgrenzen und Netzfehler markieren nie etwas als „im Kalender“ oder „nicht eintragen“.
  */
 import {
@@ -24,9 +28,11 @@ import {
 } from '@shared/protokolle/termine';
 import { minute } from '@shared/protokolle/sitzungen';
 import { eintragZusatz } from '@shared/protokolle/terminFelder';
+import { eventsFuer } from '@shared/protokolle/terminEvents';
 import { plusTage } from '@shared/ct/datum';
 import { Unklar } from '@ui/ct/fehler';
 import { buchungenNachlesen } from './buchungenLesen';
+import { eventsNachlesen } from './eventsLesen';
 import { kalenderTermineAmTag, terminAnlegen, UNKLAR_OHNE_EINLADUNG } from './terminAnlegen';
 import { terminLaden } from './termin';
 
@@ -57,11 +63,14 @@ export async function terminLegen(q: {
   id: number;
   /** Nur nach dem Anlegen mit Buchungen: was das Nachlesen ergab (`fehlend` = nicht gebucht, `unklar` = nicht lesbar). */
   buchungen?: { fehlend: number[]; unklar: boolean };
+  /** Nur nach dem Anlegen mit Events: `fehlend` = die Tage ohne Event, `unklar` = nicht lesbar. */
+  events?: { fehlend: string[]; unklar: boolean };
 }> {
   if (q.verknuepfen) return { art: 'verknuepft', id: q.verknuepfen.id };
   const e = q.eintrag;
   const titel = e.titel.trim();
   const z = eintragZeitraum(e, q.zeitzone);
+  const events = eventsFuer(e, q.zeitzone);
   const id = await terminAnlegen({
     kalender: e.kalender,
     titel,
@@ -70,6 +79,7 @@ export async function terminLegen(q: {
     zeitzone: q.zeitzone,
     ganztaegig: e.ganztaegig,
     ...eintragZusatz(e, q.neueTagsErlaubt === true),
+    events,
     unklar: UNKLAR_OHNE_EINLADUNG,
   });
   try {
@@ -83,13 +93,22 @@ export async function terminLegen(q: {
   } catch {
     throw new Unklar(NICHT_NACHGELESEN);
   }
-  if (!e.buchungen.length) return { art: 'angelegt', id };
   // Eine Buchung mit Vorlauf/Nachlauf kann über Mitternacht reichen – ein Tag Luft auf beiden Seiten.
-  const buchungen = await buchungenNachlesen({
-    termin: id,
-    ressourcen: e.buchungen.map((b) => b.ressource),
-    von: plusTage(e.tag, -1),
-    bis: plusTage(e.endTag || e.tag, 1),
-  });
-  return { art: 'angelegt', id, buchungen };
+  const buchungen = e.buchungen.length
+    ? await buchungenNachlesen({
+        termin: id,
+        ressourcen: e.buchungen.map((b) => b.ressource),
+        von: plusTage(e.tag, -1),
+        bis: plusTage(e.endTag || e.tag, 1),
+      })
+    : undefined;
+  const eventsErgebnis = events.length
+    ? await eventsNachlesen({ termin: id, gewuenscht: events })
+    : undefined;
+  return {
+    art: 'angelegt',
+    id,
+    ...(buchungen ? { buchungen } : {}),
+    ...(eventsErgebnis ? { events: eventsErgebnis } : {}),
+  };
 }

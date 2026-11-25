@@ -319,7 +319,22 @@ describe('austretenWennFertig – Austritt beim Antworten', () => {
     expect(w.log).toEqual([]);
   });
 
-  it('Rollen nicht lesbar (ungemessen für Mitarbeitende): der Austritt geschieht trotzdem', async () => {
+  it('wie ChurchTools für Mitarbeitende: nicht Mitglied → 403 heißt „nicht drin“, nichts geschrieben (gemessen 25.11.2026)', async () => {
+    const { w, a } = hilfsgruppe({ mitglieder: [tn(8)] });
+    w.stoerung.nichtMitglied403 = true;
+    expect(await austretenWennFertig(a, EINR, 5)).toBe('nichts');
+    expect(w.log).toEqual([]);
+  });
+
+  it('wie ChurchTools für Mitarbeitende: nach dem Austritt liest man 403 – das ist „ausgetragen“, kein Fehler', async () => {
+    const { w, a } = hilfsgruppe({ mitglieder: [tn(5), tn(8)] });
+    w.stoerung.nichtMitglied403 = true;
+    expect(await austretenWennFertig(a, EINR, 5)).toBe('ausgetragen');
+    expect(w.log).toEqual(['DELETE /groups/50/members/5']);
+    expect(w.mitglieder.map((m) => m.person)).toEqual([8]);
+  });
+
+  it('Rollen nicht lesbar (für Mitarbeitende gemessen: lesbar – die Prüfung darf den Austritt trotzdem nie verhindern)', async () => {
     const { w, a } = hilfsgruppe({ mitglieder: [tn(5)] });
     w.stoerung.wirft = { 'GET /group/roles': new ApiError(403, 'verboten') };
     expect(await austretenWennFertig(a, EINR, 5)).toBe('ausgetragen');

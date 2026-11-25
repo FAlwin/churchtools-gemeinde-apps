@@ -373,11 +373,21 @@ export async function austretenWennFertig(
   e: Einrichtung,
   ichId: number,
 ): Promise<AustrittErgebnis> {
+  // Gemessen (Test-Instanz, 25.11.2026): Wer NICHT (mehr) Mitglied der Hilfsgruppe ist, sieht sie nicht – das Lesen der eigenen
+  // Mitgliedschaft antwortet dann mit **403**, nicht 404. Für die eigene Mitgliedschaft heißt 403 hier also „nicht drin“.
+  const eigene = async (): Promise<RohMitglied | null> => {
+    try {
+      return (await a.mitgliedOderNichts(e.gruppeId, ichId)) as RohMitglied | null;
+    } catch (err) {
+      if (ist403(err)) return null;
+      throw err;
+    }
+  };
   try {
-    const m = (await a.mitgliedOderNichts(e.gruppeId, ichId)) as RohMitglied | null;
+    const m = await eigene();
     if (m === null || m.groupMemberStatus !== 'active' || m.memberEndDate) return 'nichts';
     // Leiter früherer Probe-Einrichtungen trägt niemand aus (die Routine hängt am Teilnehmer).
-    // Ungemessen, ob Mitarbeitende die Rollen lesen dürfen – die Prüfung darf den Austritt nie verhindern.
+    // Mitarbeitende dürfen die Rollen lesen (gemessen 25.11.2026) – die Prüfung darf den Austritt trotzdem nie verhindern.
     const rolleId = ctId(m.groupTypeRoleId);
     try {
       const rollen = rollenAus(await listeHolen(a.port, '/group/roles', 'Die Rollen'));
@@ -386,7 +396,7 @@ export async function austretenWennFertig(
       // weiter: Leiter gibt es nur aus Probe-Einrichtungen der Test-Instanz
     }
     await a.mitgliedEntfernen(e.gruppeId, ichId);
-    return (await a.mitgliedOderNichts(e.gruppeId, ichId)) === null ? 'ausgetragen' : 'fehler';
+    return (await eigene()) === null ? 'ausgetragen' : 'fehler';
   } catch {
     return 'fehler';
   }

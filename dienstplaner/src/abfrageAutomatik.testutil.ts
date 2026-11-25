@@ -29,6 +29,11 @@ export interface Stoerung {
   tragNichtEin?: Set<number>;
   /** `DELETE …/members/{p}` meldet Erfolg, trägt aber nicht aus. Personen-IDs. */
   tragNichtAus?: Set<number>;
+  /**
+   * Wie ChurchTools für Mitarbeitende (gemessen 25.11.2026): Wer nicht Mitglied ist, sieht die Hilfsgruppe nicht – das Lesen
+   * der eigenen Mitgliedschaft antwortet mit 403 statt 404.
+   */
+  nichtMitglied403?: boolean;
 }
 
 export function hilfsgruppe(
@@ -127,6 +132,7 @@ export function hilfsgruppe(
     mitgliedOderNichts: vi.fn((_gruppe: number, person: number) => {
       pruefe('GET', `/groups/${_gruppe}/members/${person}`);
       const m = w.mitglieder.find((x) => x.person === person);
+      if (!m && w.stoerung.nichtMitglied403) return Promise.reject(new ApiError(403, 'verboten'));
       return Promise.resolve(m ? roh(m) : null);
     }),
   };

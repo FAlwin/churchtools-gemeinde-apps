@@ -22,6 +22,7 @@ import { ladeTerminVorlagen } from './ladeBeiwerk';
 import { ladePersonen } from './ladePersonen';
 import { ladeAntworten } from './ladeAntworten';
 import { ERINNERN } from './ladeErinnern';
+import { ladeAbfragen, speichereAbfragen } from './ladeAbfragen';
 import { Termine, type TermineZustand } from './Termine';
 import { ladeTermine, ladeZeitraum, MAX_WOCHEN, WOCHEN_JE_SCHRITT } from './ladeTermine';
 import {
@@ -365,6 +366,14 @@ export function App() {
                   ladeAntworten={antwortenLaden}
                   ladeMarkierungen={antwortenLaden}
                   erinnern={ERINNERN}
+                  abfragen={{
+                    lesen: ladeAbfragen,
+                    speichern: speichereAbfragen,
+                    ich: {
+                      personId: start.ichId,
+                      name: [start.vorname, start.nachname].filter(Boolean).join(' '),
+                    },
+                  }}
                   onVorlagen={() => {
                     window.location.hash = ADRESSE_VORLAGEN;
                   }}

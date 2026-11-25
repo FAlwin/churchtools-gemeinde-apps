@@ -500,6 +500,31 @@ describe('Dienste, die niemand vorgesehen hat (20.11.2026: Plan mit `immerZeigen
   });
 });
 
+describe('Mitglieder im Ergebnis (R-2: „Fertig“ im Stand einer Abfrage)', () => {
+  it('alle Mitglieder der Gruppe an diesen Terminen, nach Name – auch wer nichts mehr offen hat', () => {
+    // Daniel hat den einzigen offenen Termin (13.12. = Termin 2) beantwortet: er fehlt nirgends mehr.
+    const e = musikFehlend({
+      antworten: antworten([[DANIEL.id, { '2': antwort('ja', '2026-12-13') }]]),
+    });
+    if (e.art !== 'ok') throw new Error('gesperrt');
+    expect(e.mitglieder.map((m) => m.name)).toEqual([
+      'Anna Gans',
+      'Clara Neu',
+      'Daniel Fink',
+      'Eva Hell',
+    ]);
+    expect(e.personen.map((p) => p.name)).not.toContain('Daniel Fink');
+    // Dieselben Leute, die `personen` und `pausiert` nennen, sind Mitglieder – nichts kommt von woanders her.
+    const ids = new Set(e.mitglieder.map((m) => m.personId));
+    for (const p of e.personen) expect(ids.has(p.personId)).toBe(true);
+  });
+
+  it('ohne Termine nichts zu rechnen: leer', () => {
+    const e = musikFehlend({ spalten: [] });
+    expect(e.art === 'ok' && e.mitglieder).toEqual([]);
+  });
+});
+
 describe('Pause: wer pausiert, wird nicht erinnert (PL-3)', () => {
   /** Die Liste einer Dienstgruppe mit Pausen – gebaut mit `pauseSetzen`, gelesen mit `personenlisteAus` (Erzeuger). */
   const mitPausen = (...p: [number, string?][]): Personenliste =>

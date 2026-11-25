@@ -55,6 +55,11 @@ export type GruppenErgebnis =
       personen: Fehlende[];
       /** Wer ohne Pause eine Mail bekäme (PL-3): `personId`s, denen **alle** offenen Termine wegen Pause entfallen. */
       pausiert: number[];
+      /**
+       * Alle Mitglieder der Dienstgruppe an diesen Terminen (nach Name) – dieselbe Menge, über die die Rechnung geht. „Fertig“
+       * ist, wer weder in `personen` noch in `pausiert` steht (Stand einer Abfrage, R-2). Ohne Termine (nichts zu rechnen) leer.
+       */
+      mitglieder: { personId: number; name: string }[];
     };
 
 /** Ein Empfänger über alle gewählten Gruppen: einmal, mit den vereinigten offenen Terminen und den Gruppen, in denen er fehlt. */
@@ -217,7 +222,7 @@ export function fehlendeInGruppe(o: {
   const spalten = erinnerSpalten(o.plan, o.spalten, o.heute);
   const grund = gruppeGrund({ ...o, spalten });
   if (grund !== null) return { art: 'gesperrt', ...grund };
-  if (spalten.length === 0) return { art: 'ok', personen: [], pausiert: [] };
+  if (spalten.length === 0) return { art: 'ok', personen: [], pausiert: [], mitglieder: [] };
   // Die Liste dieser Dienstgruppe – eine Pause gilt nur für sie.
   const liste = o.gruppe.gruppe ? o.personenlisten?.get(o.gruppe.gruppe.id) : undefined;
 
@@ -273,7 +278,10 @@ export function fehlendeInGruppe(o: {
     else if (nurPause.length > 0) pausiert.push(personId);
   }
   personen.sort((a, b) => a.name.localeCompare(b.name, 'de') || a.personId - b.personId);
-  return { art: 'ok', personen, pausiert };
+  const alle = [...mitglieder]
+    .map((personId) => ({ personId, name: namen.get(personId) ?? `Person ${personId}` }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'de') || a.personId - b.personId);
+  return { art: 'ok', personen, pausiert, mitglieder: alle };
 }
 
 /**

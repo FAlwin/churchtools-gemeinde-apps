@@ -111,3 +111,20 @@
   font-size: 13px;
   line-height: 1.45;
 }
+
+// Der Kasten „In ChurchTools“ (R-5a): ein stiller Kasten unter dem Plan, kein zweites Formular.
+.kasten {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--hair);
+  border-radius: var(--r-card);
+}
+
+.kastenKopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 14px;
+}

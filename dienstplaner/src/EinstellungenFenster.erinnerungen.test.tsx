@@ -181,7 +181,7 @@ describe('Liste', () => {
 
   it('ein eigener Plan wird gezeigt', async () => {
     const plan: Erinnerungsplan = { punkte: [{ art: 'frist' }], mail: null };
-    zeige({ lesen: () => Promise.resolve(stand({ plan, abfragen: [] }, 3)) });
+    zeige({ lesen: () => Promise.resolve(stand({ plan, abfragen: [], einrichtung: null }, 3)) });
     await geladen();
     expect(zeilen()).toHaveLength(1);
   });
@@ -229,7 +229,10 @@ describe('Liste', () => {
 
   it('ohne Erinnerungen steht ein Hinweis; „hinzufügen“ bleibt möglich', async () => {
     zeige({
-      lesen: () => Promise.resolve(stand({ plan: { punkte: [], mail: null }, abfragen: [] }, 2)),
+      lesen: () =>
+        Promise.resolve(
+          stand({ plan: { punkte: [], mail: null }, abfragen: [], einrichtung: null }, 2),
+        ),
     });
     await screen.findByText(/Keine Erinnerung – die Abfrage erscheint nur auf der Startseite/);
     expect(
@@ -280,7 +283,7 @@ describe('Mail und Vorschau', () => {
     expect(screen.getByText(/Wer alles beantwortet hat oder pausiert, bekommt keine/)).toBeTruthy();
     expect(
       screen.getByText(
-        /Automatisch verschickt wird erst, wenn die Erinnerungen in ChurchTools eingerichtet sind/,
+        'Automatische Erinnerungen sind für Musik noch nicht eingerichtet – bis dahin per „Erinnern“.',
       ),
     ).toBeTruthy();
   });
@@ -298,7 +301,8 @@ describe('Mail und Vorschau', () => {
 
   it('Vorschau: läuft eine Abfrage der Gruppe, zählen deren echte Tage', async () => {
     zeige({
-      lesen: () => Promise.resolve(stand({ plan: null, abfragen: [abfrage] }, 2)),
+      lesen: () =>
+        Promise.resolve(stand({ plan: null, abfragen: [abfrage], einrichtung: null }, 2)),
     });
     await geladen();
     expect(screen.getByLabelText('Vorschau').textContent).toContain(
@@ -308,8 +312,24 @@ describe('Mail und Vorschau', () => {
 });
 
 describe('Speichern – nur, was sich geändert hat', () => {
+  it('die Einrichtung in ChurchTools geht beim Speichern des Plans nicht verloren', async () => {
+    const inhalt: AbfragenInhalt = {
+      plan: null,
+      abfragen: [],
+      einrichtung: { gruppeId: 5, routineId: 6 },
+    };
+    const { speichern, onSchliessen } = zeige({ lesen: () => Promise.resolve(stand(inhalt, 3)) });
+    await geladen();
+    entfernen(1);
+    fireEvent.click(speichernKnopf());
+    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    expect(speichern.mock.calls[0][1]).toMatchObject({
+      einrichtung: { gruppeId: 5, routineId: 6 },
+    });
+  });
+
   it('nur der Plan: genau ein Aufruf für den Plan mit der gelesenen Version, die Abfragen unverändert, keiner für die Betriebsart', async () => {
-    const inhalt: AbfragenInhalt = { plan: null, abfragen: [abfrage] };
+    const inhalt: AbfragenInhalt = { plan: null, abfragen: [abfrage], einrichtung: null };
     const { speichern, betriebsart, onSchliessen } = zeige({
       lesen: () => Promise.resolve(stand(inhalt, 7)),
     });
@@ -330,6 +350,7 @@ describe('Speichern – nur, was sich geändert hat', () => {
           mail: null,
         },
         abfragen: [abfrage],
+        einrichtung: null,
       },
       ICH,
       7,
@@ -383,7 +404,7 @@ describe('Speichern – nur, was sich geändert hat', () => {
       mail: null,
     };
     const { speichern, onSchliessen } = zeige({
-      lesen: () => Promise.resolve(stand({ plan: eigener, abfragen: [] }, 4)),
+      lesen: () => Promise.resolve(stand({ plan: eigener, abfragen: [], einrichtung: null }, 4)),
     });
     await geladen();
     hinzufuegenTippen(/Nach der Frist, wiederholt/);
@@ -462,6 +483,7 @@ describe('Fehlerzweige – jeder einzeln', () => {
     const fremd: AbfragenInhalt = {
       plan: { punkte: [{ art: 'frist' }], mail: null },
       abfragen: [],
+      einrichtung: null,
     };
     const { onSchliessen } = zeige({
       speichern: () => Promise.resolve({ ok: false, grund: 'konflikt', jetzt: version(fremd, 5) }),
@@ -481,6 +503,7 @@ describe('Fehlerzweige – jeder einzeln', () => {
         mail: null,
       },
       abfragen: [],
+      einrichtung: null,
     };
     const { onSchliessen } = zeige({
       speichern: () =>

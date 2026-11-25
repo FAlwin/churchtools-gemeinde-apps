@@ -24,6 +24,32 @@ export function abfragenFehlerText(grund: SpeicherGrund, lesen: boolean): string
   }
 }
 
-/** Der leise Hinweis, solange es die Automatik (R-5) noch nicht gibt – ehrlich statt versprochen. */
-export const automatikHinweis = (gruppe: string) =>
-  `Automatische Erinnerungen sind für ${gruppe} noch nicht eingerichtet – bis dahin per „Erinnern“.`;
+/**
+ * Der leise Hinweis zu den automatischen Erinnerungen – **die eine Stelle dafür** (Start-Dialog, Stand, Einstellungen). Ehrlich
+ * statt versprochen: Auch eingerichtet (R-5a) verschickt der Start einer Abfrage noch nichts selbst – das kommt mit R-5b; dann
+ * entfällt die zweite Fassung.
+ */
+export const automatikHinweis = (gruppe: string, eingerichtet: boolean) =>
+  eingerichtet
+    ? `Die Erinnerungen für ${gruppe} sind in ChurchTools eingerichtet. Der Start einer Abfrage verschickt aber noch nichts selbst – bis dahin per „Erinnern“.`
+    : `Automatische Erinnerungen sind für ${gruppe} noch nicht eingerichtet – bis dahin per „Erinnern“.`;
+
+/** Was die Einrichtung in ChurchTools anlegt und warum – für „Was ist das?“ (Kasten) und das Einrichten-Fenster. */
+export const EINRICHTEN_WARUM =
+  'Damit Erinnerungen auch dann rausgehen, wenn niemand den Dienstplaner öffnet, legt der Dienstplaner in ChurchTools eine Hilfsgruppe mit einer Routine an.';
+
+/** Die Hilfsgruppe in einem Satz: was drinsteht und was Mitarbeitende davon sehen. */
+export const EINRICHTEN_GRUPPE =
+  'Darin steht nur, wem in einer laufenden Abfrage noch Antworten fehlen. Der Dienstplaner trägt Personen ein und wieder aus. Mitarbeitende sehen die Gruppe in ChurchTools unter „Meine Gruppen“ und können dort austreten – dann bekommen sie keine Erinnerungen mehr.';
+
+/** Die Routine in einem Satz. */
+export const EINRICHTEN_ROUTINE =
+  'ChurchTools führt sie selbst aus, auch wenn niemand den Dienstplaner öffnet. Wer aus der Gruppe ausgetragen wird, bekommt ab sofort nichts mehr.';
+
+/** Warum die Planer Leiter werden. */
+export const EINRICHTEN_LEITER =
+  'Nur Leiter dürfen in ChurchTools die Mitglieder und die Routine der Gruppe ändern.';
+
+/** Der Schlusssatz: alles ist ansehbar, und was passiert, wenn man es entfernt. */
+export const EINRICHTEN_ANSEHEN =
+  'Alles lässt sich in ChurchTools ansehen. Entfernt man die Gruppe dort, gibt es keine automatischen Erinnerungen mehr – Abfragen und „Erinnern“ per Hand gehen trotzdem.';

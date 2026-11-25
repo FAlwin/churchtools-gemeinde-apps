@@ -4,7 +4,9 @@ import { AuswahlFenster } from '@ui/bedienung/OptionWaehlen';
 import { LeisesPlus } from '@ui/bedienung/LeisesPlus';
 import { TextKnopf } from '@ui/bedienung/TextKnopf';
 import { ZeilenKnopf } from '@ui/bedienung/ZeilenKnopf';
+import { Etikett } from '@ui/bedienung/Etikett';
 import { Icon } from '@ui/icons/icons';
+import { hilfsgruppenName } from '@shared/dienstplan/abfrageAutomatik';
 import { tagKurz } from '@shared/ct/datum';
 import { GRENZEN, type Erinnerungspunkt } from '@shared/dienstplan/abfragen';
 import {
@@ -25,6 +27,13 @@ import {
   wirksamerPlan,
   type Punktart,
 } from '@shared/dienstplan/abfragePlan';
+import { EinrichtenFenster } from './EinrichtenFenster';
+import {
+  automatikHinweis,
+  EINRICHTEN_GRUPPE,
+  EINRICHTEN_ROUTINE,
+  EINRICHTEN_WARUM,
+} from './abfragenTexte';
 import type { ErinnerungsplanZustand } from './useErinnerungsplan';
 import styles from './ErinnerungsplanAbschnitt.module.scss';
 
@@ -288,9 +297,11 @@ export function ErinnerungsplanAbschnitt({
           <p className={styles.leise}>
             Mails kommen gegen 0:15 Uhr am jeweiligen Tag. Wer alles beantwortet hat oder pausiert,
             bekommt keine.
-            {!z.automatik &&
-              ' Automatisch verschickt wird erst, wenn die Erinnerungen in ChurchTools eingerichtet sind.'}
           </p>
+          <p className={styles.leise}>
+            {automatikHinweis(z.gruppe?.name ?? 'diese Dienstgruppe', z.eingerichtet)}
+          </p>
+          <InChurchTools z={z} />
           {v && (
             <p className={styles.vorschau} aria-label="Vorschau">
               {v.kopf} →{' '}
@@ -315,6 +326,15 @@ export function ErinnerungsplanAbschnitt({
           }))}
         />
       )}
+      {z.einrichtenOffen && z.gruppe && z.einrichten && (
+        <EinrichtenFenster
+          gruppe={z.gruppe}
+          gruppenIds={z.einrichten.gruppenIds(z.gruppe.id)}
+          anschluss={z.einrichten.anschluss}
+          onGelaufen={z.neuLesen}
+          onClose={z.einrichtenSchliessen}
+        />
+      )}
       {z.wechselFrage !== null && (
         <ConfirmDialog
           title="Änderungen verwerfen?"
@@ -325,5 +345,59 @@ export function ErinnerungsplanAbschnitt({
         />
       )}
     </section>
+  );
+}
+
+/**
+ * **Der Kasten „In ChurchTools“** (R-5a, Entwurf Schritt 1): ob die Erinnerungen dieser Dienstgruppe dort eingerichtet sind.
+ * Eingerichtet → grünes Etikett und ein Satz; nicht eingerichtet → warum es das braucht, und für Admins „Einrichten …“.
+ * „Einrichten …“ ist gesperrt, solange der Plan ungespeicherte Änderungen hat: Beides schreibt dasselbe Dokument, das nächste
+ * „Speichern“ endete sonst im Konflikt.
+ */
+function InChurchTools({ z }: { z: ErinnerungsplanZustand }) {
+  const [erklaerung, setErklaerung] = useState(false);
+  const name = z.gruppe?.name ?? '';
+  const darf = z.einrichten?.darf === true;
+  return (
+    <div className={styles.kasten} role="group" aria-label="In ChurchTools">
+      <div className={styles.kastenKopf}>
+        <b>In ChurchTools</b>
+        {z.eingerichtet && (
+          <Etikett ton="gruen">
+            <Icon name="check" size={12} /> eingerichtet
+          </Etikett>
+        )}
+      </div>
+      {z.eingerichtet ? (
+        <p className={styles.leise}>
+          Gruppe „{hilfsgruppenName(name)}“ mit einer Routine für diesen Plan.
+        </p>
+      ) : (
+        <p className={styles.leise}>{EINRICHTEN_WARUM}</p>
+      )}
+      <div className={styles.stille}>
+        {z.eingerichtet && (
+          <TextKnopf onClick={() => setErklaerung((o) => !o)}>
+            {erklaerung ? 'Erklärung verbergen' : 'Was ist das?'}
+          </TextKnopf>
+        )}
+        {darf && (
+          <TextKnopf disabled={z.geaendert} onClick={z.einrichtenOeffnen}>
+            {z.eingerichtet ? 'Planer prüfen …' : 'Einrichten …'}
+          </TextKnopf>
+        )}
+      </div>
+      {darf && z.geaendert && (
+        <p className={styles.leise}>Erst den Plan speichern, dann einrichten.</p>
+      )}
+      {!z.eingerichtet && !darf && (
+        <p className={styles.leise}>Bitte einen Admin, die Erinnerungen einzurichten.</p>
+      )}
+      {erklaerung && (
+        <p className={styles.leise}>
+          {EINRICHTEN_GRUPPE} {EINRICHTEN_ROUTINE}
+        </p>
+      )}
+    </div>
   );
 }

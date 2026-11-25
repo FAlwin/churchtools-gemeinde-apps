@@ -23,6 +23,8 @@ import { ladePersonen } from './ladePersonen';
 import { ladeAntworten } from './ladeAntworten';
 import { ERINNERN } from './ladeErinnern';
 import { ladeAbfragen, speichereAbfragen } from './ladeAbfragen';
+import { ctEinrichtenAnschluss } from './einrichtenAbfragen';
+import { gruppenIdsDerDienste } from '@shared/dienstplan/abfrageAutomatik';
 import { Termine, type TermineZustand } from './Termine';
 import { ladeTermine, ladeZeitraum, MAX_WOCHEN, WOCHEN_JE_SCHRITT } from './ladeTermine';
 import {
@@ -119,6 +121,8 @@ export function App() {
     }),
     [start],
   );
+  // Der Anschluss zum Einrichten der Erinnerungen in ChurchTools (R-5a) – derselbe Speicher der Abfragen.
+  const ctEinrichten = useMemo(() => ctEinrichtenAnschluss(abfrageAnschluss), [abfrageAnschluss]);
   // Global, als Leitung der Gruppe eines Dienstes – dieselbe Regel wie in der Matrix (`planbar`).
   const darfPlanen = !!start && planbareDienstgruppen(start).length > 0;
   // Eintragen als Entwurf (E4-3) – je Start einmal; die Schubladen gehören zu den planbaren Gruppen.
@@ -415,6 +419,11 @@ export function App() {
                     anschluss: abfrageAnschluss,
                     gruppen: planbareDienstgruppen(start),
                     heute: heuteImKalender(),
+                    einrichten: {
+                      darf: start.verwalten === true,
+                      anschluss: ctEinrichten,
+                      gruppenIds: (id) => gruppenIdsDerDienste(start.dienste.values(), id),
+                    },
                   }}
                   onSchliessen={() => setEinstellungenOffen(false)}
                 />

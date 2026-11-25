@@ -1,0 +1,3 @@
+### Neu (Dienstplaner)
+
+- **Erinnerungen in ChurchTools einrichten:** Im Fenster „Einstellungen“ zeigt der Kasten „In ChurchTools“, ob die Erinnerungen einer Dienstgruppe dort eingerichtet sind. Admins („Berechtigungen verwalten“) richten sie mit „Einrichten …“ ein: Das Fenster sagt vorher, was angelegt wird – eine Hilfsgruppe „Dienstplaner: Antwort fehlt – <Dienstgruppe>“ im Gruppentyp „Dienstplaner“ mit einer Routine, und alle Planer der Dienstgruppe werden Leiter der Gruppe – und zeigt danach, was in ChurchTools nachgelesen dasteht. Wiederholbar: es wird nur ergänzt, was fehlt; nichts wird gelöscht. Der Start einer Abfrage verschickt noch nichts selbst (folgt).

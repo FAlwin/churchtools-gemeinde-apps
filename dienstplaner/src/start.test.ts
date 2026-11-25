@@ -83,6 +83,8 @@ describe('ladeStart (Dienstplaner)', () => {
     expect(await ladeStart()).toEqual({
       // Ohne Lied-Rechte in der Antwort (LW2b): keine Liedauswahl, nur die Lied-Ansicht.
       lieder: { sehen: false, rechte: { statistik: false, ccli: false, liederAendern: false } },
+      // Ohne „Berechtigungen verwalten“ (R-5a): keine Einrichtung der Erinnerungen.
+      verwalten: false,
       ichId: 1,
       vorname: 'Alwin',
       nachname: 'Friesen',
@@ -115,6 +117,24 @@ describe('ladeStart (Dienstplaner)', () => {
         abwesenheitenAller: false,
       },
     });
+  });
+
+  it('„Berechtigungen verwalten“ (churchcore: administer persons) macht die Person zum Admin – nur das Recht, sonst nichts', async () => {
+    const admin = (wert: unknown) =>
+      ct({
+        ...GUT,
+        '/permissions/global': () =>
+          json(200, {
+            data: {
+              churchcore: { 'administer persons': wert },
+              churchservice: { 'edit servicegroup': [3] },
+            },
+          }),
+      });
+    admin(true);
+    expect((await ladeStart()).verwalten).toBe(true);
+    admin(false);
+    expect((await ladeStart()).verwalten).toBe(false);
   });
 
   it('Dienste ohne Liste → Fehler 502 (ohne Dienste keine Namen und keine freien Plätze)', async () => {

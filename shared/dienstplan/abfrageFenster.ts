@@ -102,7 +102,7 @@ export function neueAbfrage(o: {
 }
 
 /**
- * Der Inhalt mit der neuen Abfrage: der **eigene Plan bleibt unverändert**, die vorhandenen Abfragen bleiben, solange sie in
+ * Der Inhalt mit der neuen Abfrage: der **eigene Plan und die Einrichtung bleiben unverändert**, die vorhandenen Abfragen bleiben, solange sie in
  * die Liste passen (`GRENZEN.abfragen`) – reicht der Platz nicht, gehen die ältesten **beendeten** zuerst (das Aufräumen, das
  * `abfragen.ts` der Oberfläche überlässt). Laufende werden nie entfernt.
  */
@@ -120,17 +120,18 @@ export function mitNeuerAbfrage(
     }
     return true;
   });
-  return { plan: inhalt.plan, abfragen: [...behalten, neu] };
+  // Gespreizt statt Feld für Feld: Plan und Einrichtung (und was später dazukommt) bleiben, wie sie sind.
+  return { ...inhalt, abfragen: [...behalten, neu] };
 }
 
-/** Der Inhalt, in dem die Abfrage `id` beendet ist (am Tag `heute`); alles andere – auch der Plan – bleibt. */
+/** Der Inhalt, in dem die Abfrage `id` beendet ist (am Tag `heute`); alles andere – auch der Plan und die Einrichtung – bleibt. */
 export function mitBeendeterAbfrage(
   inhalt: AbfragenInhalt,
   id: string,
   heute: string,
 ): AbfragenInhalt {
   return {
-    plan: inhalt.plan,
+    ...inhalt,
     abfragen: inhalt.abfragen.map((a) => (a.id === id ? { ...a, beendet: heute } : a)),
   };
 }

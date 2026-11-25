@@ -27,7 +27,7 @@ export function AbfrageStand({
   nochmal,
   onNochmal,
   zeilen,
-  automatik,
+  eingerichtet,
 }: {
   abfrage: Abfrage;
   heute: string;
@@ -40,7 +40,8 @@ export function AbfrageStand({
   nochmal: boolean;
   onNochmal: () => void;
   zeilen: Zeitzeile[];
-  automatik: boolean;
+  /** Die Erinnerungen sind in ChurchTools eingerichtet (`inhalt.einrichtung`). */
+  eingerichtet: boolean;
 }) {
   const etikett = abfrageEtikett(abfrage, heute);
   const am = tagMonat(tagAusIso(abfrage.gestartet.zeit, gemeindeZeitzone()));
@@ -110,7 +111,7 @@ export function AbfrageStand({
       )}
 
       <AbfrageZeitleiste zeilen={zeilen} />
-      {!automatik && <p className={styles.leise}>{automatikHinweis(gruppeName)}</p>}
+      <p className={styles.leise}>{automatikHinweis(gruppeName, eingerichtet)}</p>
     </>
   );
 }

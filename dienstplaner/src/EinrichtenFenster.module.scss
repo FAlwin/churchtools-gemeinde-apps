@@ -1,0 +1,44 @@
+// Fenster „Erinnerungen für … einrichten“ (R-5a, Entwurf runden-entwurf.html Schritt 2) – nur Tokens aus ui/design.
+.text {
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.schritte {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 10px 18px;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.leise {
+  display: block;
+  margin-top: 2px;
+  color: var(--text2);
+  font-size: 13px;
+}
+
+.hinweis {
+  margin: 0 0 8px;
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.fehler {
+  margin: 0 0 8px;
+  color: var(--red);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.liste {
+  margin: 4px 0 0 18px;
+  padding: 0;
+  font-size: 14px;
+}

@@ -26,6 +26,7 @@ import {
 } from '@shared/ct/ablaufRecht';
 import { darfTerminAendern } from '@shared/ct/terminInfos';
 import { rechteAus, STANDARD_ADMIN_RECHT } from '@shared/ct/rechte';
+import { darfVerwalten } from '@shared/ct/rollenRechte';
 import { liedRechteAus, type LiedRechte } from '@ui/lied/liedZugriff';
 
 /** Das Kürzel des Dienstplaners in ChurchTools – aus der Bau-Adresse (`/ccm/dienstplaner/`). */
@@ -49,6 +50,12 @@ export interface Start {
    * ihren `Start` selbst bauen).
    */
   lieder?: StartLieder;
+  /**
+   * Darf die Person in ChurchTools Rechte vergeben („Berechtigungen verwalten“, `churchcore: administer persons`)? Nur dann
+   * richtet sie die Erinnerungen ein (R-5a: Planer-Liste und Gruppenrechte brauchen es). Dieselbe Regel wie in den Rechten der
+   * Erweiterungen (`darfVerwalten`); fehlt es (Tests), gilt „nein“.
+   */
+  verwalten?: boolean;
 }
 
 export interface StartLieder {
@@ -81,6 +88,7 @@ export async function ladeStart(): Promise<Start> {
     dienste: diensteAus(diensteRoh as Parameters<typeof diensteAus>[0]),
     rechte: dienstRechteAus(rechteRoh, (status, meldung) => new ApiError(status, meldung)),
     lieder: startLiederAus(rechteRoh),
+    verwalten: darfVerwalten(rechteRoh),
   };
 }
 

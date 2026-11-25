@@ -198,7 +198,7 @@ describe('„geändert?“ und was gespeichert wird', () => {
       { ...e, betreff: 'B', text: 'T' },
       { ...e, punkte: mitNeuemPunkt(e.punkte, 'vorFrist') },
     ]) {
-      const inhalt = { plan: planFuerSpeicher(neu), abfragen: [] };
+      const inhalt = { plan: planFuerSpeicher(neu), abfragen: [], einrichtung: null };
       expect(abfragenAus(inhalt)).not.toBeNull();
     }
   });

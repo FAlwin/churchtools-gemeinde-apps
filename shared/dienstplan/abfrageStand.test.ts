@@ -183,7 +183,7 @@ describe('Texte', () => {
     expect(abfrageKartenEtikett(ABFRAGE, '2027-02-01')).toBeNull();
   });
   it('nächste Erinnerung = der erste Tag aus erinnerungsTage; keiner mehr → null', () => {
-    const inhalt = { plan: null, abfragen: [ABFRAGE] };
+    const inhalt = { plan: null, abfragen: [ABFRAGE], einrichtung: null };
     const erster = erinnerungsTage(STANDARD_PLAN, ABFRAGE, HEUTE)[0];
     expect(naechsteErinnerungText(inhalt, ABFRAGE, HEUTE)).toBe(
       `nächste Erinnerung ${tagKurz(erster)}`,

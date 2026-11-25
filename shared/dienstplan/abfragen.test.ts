@@ -158,7 +158,11 @@ describe('abfrageZustand – alle vier Übergänge', () => {
 });
 
 describe('laufendeAbfrage', () => {
-  const inhalt = (...abfragen: Abfrage[]): AbfragenInhalt => ({ plan: null, abfragen });
+  const inhalt = (...abfragen: Abfrage[]): AbfragenInhalt => ({
+    plan: null,
+    abfragen,
+    einrichtung: null,
+  });
   it('keine Abfrage → null', () => {
     expect(laufendeAbfrage(inhalt(), '2026-12-25')).toBeNull();
   });
@@ -184,7 +188,7 @@ describe('laufendeAbfrage', () => {
 
 describe('abfragenAus – streng, nie halb', () => {
   const gut = (): unknown =>
-    JSON.parse(JSON.stringify({ plan: STANDARD_PLAN, abfragen: [ABFRAGE] }));
+    JSON.parse(JSON.stringify({ plan: STANDARD_PLAN, abfragen: [ABFRAGE], einrichtung: null }));
   const kaputt = (
     aendere: (i: {
       plan: { punkte: unknown[]; mail: unknown };
@@ -197,11 +201,54 @@ describe('abfragenAus – streng, nie halb', () => {
   };
 
   it('gültig: Standard-Plan, Plan null, ohne Abfragen – gelesen wie geschrieben (gegen die Erzeuger)', () => {
-    expect(abfragenAus(gut())).toEqual({ plan: STANDARD_PLAN, abfragen: [ABFRAGE] });
-    expect(abfragenAus({ plan: null, abfragen: [] })).toEqual({ plan: null, abfragen: [] });
+    expect(abfragenAus(gut())).toEqual({
+      plan: STANDARD_PLAN,
+      abfragen: [ABFRAGE],
+      einrichtung: null,
+    });
+    expect(abfragenAus({ plan: null, abfragen: [], einrichtung: null })).toEqual({
+      plan: null,
+      abfragen: [],
+      einrichtung: null,
+    });
     expect(
-      abfragenAus({ plan: { punkte: [], mail: { betreff: 'B', text: 'T' } }, abfragen: [] }),
+      abfragenAus({
+        plan: { punkte: [], mail: { betreff: 'B', text: 'T' } },
+        abfragen: [],
+        einrichtung: null,
+      }),
     ).toMatchObject({ plan: { mail: { betreff: 'B', text: 'T' } } });
+  });
+
+  describe('einrichtung (R-5a) – das einzige Feld, das beim Lesen fehlen darf', () => {
+    it('fehlt es (Altbestand aus R-1 bis R-4), gilt „nicht eingerichtet“ – nicht „unlesbar“', () => {
+      // Kein `einrichtung` im Rohwert – so sahen die Dokumente vor R-5a aus.
+      const roh: Record<string, unknown> = { plan: null, abfragen: [] };
+      expect('einrichtung' in roh).toBe(false);
+      expect(abfragenAus(roh)).toEqual({ plan: null, abfragen: [], einrichtung: null });
+    });
+
+    it('gelesen wie geschrieben', () => {
+      const e = { gruppeId: 12, routineId: 34 };
+      expect(abfragenAus({ plan: null, abfragen: [], einrichtung: e })?.einrichtung).toEqual(e);
+    });
+
+    it.each([
+      ['unbekanntes Feld oben', { plan: null, abfragen: [], fremd: 1 }],
+      [
+        'unbekanntes Feld in der Einrichtung',
+        { plan: null, abfragen: [], einrichtung: { gruppeId: 1, routineId: 2, x: 1 } },
+      ],
+      ['Routine fehlt', { plan: null, abfragen: [], einrichtung: { gruppeId: 1 } }],
+      ['Nummer 0', { plan: null, abfragen: [], einrichtung: { gruppeId: 0, routineId: 2 } }],
+      [
+        'Nummer als Text',
+        { plan: null, abfragen: [], einrichtung: { gruppeId: '1', routineId: 2 } },
+      ],
+      ['keine Einrichtung, sondern eine Zahl', { plan: null, abfragen: [], einrichtung: 5 }],
+    ])('weiter streng: %s → unlesbar', (_n, roh) => {
+      expect(abfragenAus(roh)).toBeNull();
+    });
   });
 
   it.each([
@@ -211,8 +258,8 @@ describe('abfragenAus – streng, nie halb', () => {
     [],
     {},
     { plan: null },
-    { abfragen: [] },
-    { plan: 1, abfragen: [] },
+    { abfragen: [], einrichtung: null },
+    { plan: 1, abfragen: [], einrichtung: null },
   ])('%j ist ungültig', (roh) => {
     expect(abfragenAus(roh)).toBeNull();
   });
@@ -316,10 +363,10 @@ describe('abfragenAus – streng, nie halb', () => {
 
   it('eine kaputte unter zwei Abfragen macht den ganzen Wert unlesbar (nie halb)', () => {
     const zweite = { ...ABFRAGE, id: 'a2', frist: 'kaputt' };
-    expect(abfragenAus({ plan: null, abfragen: [ABFRAGE, zweite] })).toBeNull();
+    expect(abfragenAus({ plan: null, abfragen: [ABFRAGE, zweite], einrichtung: null })).toBeNull();
   });
 
   it('doppelte IDs sind ungültig', () => {
-    expect(abfragenAus({ plan: null, abfragen: [ABFRAGE, ABFRAGE] })).toBeNull();
+    expect(abfragenAus({ plan: null, abfragen: [ABFRAGE, ABFRAGE], einrichtung: null })).toBeNull();
   });
 });

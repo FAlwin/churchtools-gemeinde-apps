@@ -647,3 +647,45 @@ drückt, hat den Dienst**, ohne dass ein Planer etwas tut. Übernimmt niemand, s
 - **Historie:** Dienstplaner E5c-6 (21.11.2026), Entwurf `e5c-6-vertretung.html` v1; Messung `messung-e5c.md` § E5c-6
 
 </details>
+
+### TF-VERF-20 · Erinnerungen in ChurchTools einrichten: Hilfsgruppe, Routine, Planer als Leiter
+
+**Das brauchst du:** Die **Test-Instanz** mit dem Gruppentyp **„Dienstplaner“** (Rollen Teilnehmer und Leiter, Anleitung
+`docs/betrieb/DIENSTPLANER.md`, Schritt 12), den Dienstplaner mit dem aktuellen Paket, ein Konto mit **„Berechtigungen verwalten“**
+(Admin) und ein Planer-Konto ohne dieses Recht. Eine Dienstgruppe, deren Planer du kennst (Recht „Dienste einzelner
+Dienstkategorien bearbeiten“ und/oder Leitung der Team-Gruppe). Nach dem Test die Hilfsgruppe in ChurchTools wieder löschen.
+
+**Das muss passieren:** Der Admin richtet die Erinnerungen einer Dienstgruppe ein – nachdem das Fenster vorher gesagt hat, was
+angelegt wird. Danach stehen in ChurchTools Gruppe, Routine und die Planer als Leiter, und der Dienstplaner zeigt „eingerichtet“.
+
+1. Als **Planer ohne Admin-Recht**: **Einstellungen → Abfragen – Erinnerungen**. Im Kasten **„In ChurchTools“** steht, warum es das
+   braucht, und „Bitte einen Admin, die Erinnerungen einzurichten.“ – **kein** Knopf „Einrichten …“.
+2. Als **Admin**: derselbe Kasten mit dem Knopf **„Einrichten …“**. Hat der Plan ungespeicherte Änderungen, ist er gesperrt
+   („Erst den Plan speichern, dann einrichten.“).
+3. **„Einrichten …“** öffnet „Erinnerungen für <Dienstgruppe> einrichten“. **Vor** dem Klick steht dort: die Gruppe „Dienstplaner:
+   Antwort fehlt – <Dienstgruppe>“ (Gruppentyp „Dienstplaner“, ohne Obergruppe), die Routine „Dienstplaner: Erinnerungen
+   <Dienstgruppe>“, **die Namen der Planer, die als Leiter eingetragen werden**, dazu „Mitarbeitende sehen die Gruppe unter ‚Meine
+   Gruppen‘ und können austreten“ und „Alles lässt sich in ChurchTools ansehen.“ In ChurchTools ist noch **nichts** angelegt.
+4. **Einrichten** klicken. Das Fenster zeigt, was angelegt wurde (Gruppe, Beschreibung, „automatisch annehmen“, Routine,
+   Einrichtung gespeichert, Leiter). In ChurchTools nachsehen: die Gruppe hat den Typ „Dienstplaner“, Status aktiv, keine
+   Obergruppe, „Anfragen automatisch annehmen“ ist an, eine Beschreibung steht da; an der Gruppe hängt **eine** Routine (an der Rolle
+   Teilnehmer, eingeschaltet, noch ohne Schritte); **alle Planer** sind **Leiter**, sonst niemand.
+5. Zurück im Kasten: grünes Etikett **„eingerichtet“**, „Gruppe „…“ mit einer Routine für diesen Plan.“ und das leise **„Was ist das?“**
+   (klappt die Erklärung auf). Die Hinweise „noch nicht eingerichtet“ sind auch im Fenster „Abfrage“ weg; es steht dort leise, dass der Start
+   einer Abfrage noch nichts selbst verschickt.
+6. **Wiederholen:** „Planer prüfen …“ → das Fenster sagt „Alles ist eingerichtet“. Einen neuen Planer anlegen (Recht für die
+   Dienstgruppe) → „Planer prüfen …“ → Knopf **„Leiter nachtragen“** → nur er wird Leiter, es entsteht keine zweite Gruppe und keine zweite Routine.
+7. **Nichts wird weggenommen:** Einen Leiter von Hand in der Hilfsgruppe stehen lassen, dem das Planer-Recht fehlt → er bleibt, das Fenster
+   nennt ihn nur.
+8. **Fehlender Gruppentyp:** In einer Instanz ohne Typ „Dienstplaner“ sagt das Fenster „Gruppentyp ‚Dienstplaner‘ fehlt – siehe
+   Anleitung“, es wird nichts angelegt.
+9. **Verschwundene Gruppe:** Die Hilfsgruppe in ChurchTools löschen → „Planer prüfen …“ meldet, dass es sie nicht mehr gibt, und legt eine neue an.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/dienstplan/abfrageAutomatik.ts`, `dienstplaner/src/einrichtenAbfragen.ts`, `dienstplaner/src/EinrichtenFenster.tsx`, `dienstplaner/src/ErinnerungsplanAbschnitt.tsx`, `dienstplaner/src/useErinnerungsplan.ts`, `dienstplaner/src/abfragenTexte.ts`, `shared/dienstplan/abfragen.ts`
+- **Automatisiert:** weitgehend – `shared/dienstplan/abfrageAutomatik.test.ts` (Planer-Liste aus beiden Quellen, Soll gegen Ist), `dienstplaner/src/einrichtenAbfragen.test.ts` (Reihenfolge, Nachlesen, Fehlerzweige einzeln, Wiederholen ohne Doppel), `dienstplaner/src/EinstellungenFenster.einrichten.test.tsx` (Kasten für Admin und Nicht-Admin, Fenster nennt die Planer); **nur von Hand:** dass ChurchTools die Gruppe wirklich so anlegt (Typ, „automatisch annehmen“, Beschreibung, Routine, Leiter) und die Rechte der Rollen
+- **Historie:** Dienstplaner R-5a (25.11.2026), Bauplan „Abfragen mit Frist + Erinnerungsplan“; Messung `messung-runden.md`
+
+</details>

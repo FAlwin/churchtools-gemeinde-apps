@@ -175,7 +175,6 @@ interface Aufbau {
   ladeZeitraum?: (von: string, bis: string) => Promise<TermineDaten>;
   abfragen?: boolean;
   personenlisten?: [number, Personenliste][];
-  automatik?: boolean;
 }
 function zeige(o: Aufbau = {}) {
   const lesen = o.lesen ?? vi.fn(() => Promise.resolve(stand(null)));
@@ -206,7 +205,6 @@ function zeige(o: Aufbau = {}) {
               ich: ICH,
               neueId: () => 'neu-1',
               jetzt: () => ZEIT,
-              ...(o.automatik ? { automatik: () => true } : {}),
             }
       }
       {...(o.personenlisten
@@ -284,7 +282,7 @@ describe('Formular und Starten', () => {
   });
 
   it('„Abfrage starten“ schreibt die Abfrage: Termine aus termineFuerAbfrage, Tage, ich, Version wie gelesen', async () => {
-    const gelesen = stand({ plan: EIGENER_PLAN, abfragen: [] }, 3);
+    const gelesen = stand({ plan: EIGENER_PLAN, abfragen: [], einrichtung: null }, 3);
     const { fenster, speichern } = await oeffnen({ lesen: () => Promise.resolve(gelesen) });
     await waitFor(() =>
       expect(knopf(fenster, 'Abfrage starten')).toHaveProperty('disabled', false),
@@ -381,7 +379,7 @@ describe('Was passiert wann', () => {
   });
 
   it('die Tage kommen aus erinnerungsTage mit dem EIGENEN Plan der Dienstgruppe', async () => {
-    const inhalt: AbfragenInhalt = { plan: EIGENER_PLAN, abfragen: [] };
+    const inhalt: AbfragenInhalt = { plan: EIGENER_PLAN, abfragen: [], einrichtung: null };
     const { fenster } = await oeffnen({ lesen: nurMusik(inhalt) });
     setze(fenster, 'Zeitraum von', '2026-10-30');
     setze(fenster, /^Frist/, '2026-10-25');
@@ -431,7 +429,7 @@ describe('Was passiert wann', () => {
     expect(heute).toContain('1 schon fertig');
   });
 
-  it('ohne Automatik sagt das Fenster es ehrlich – mit Automatik fehlt der Hinweis', async () => {
+  it('der Hinweis kommt aus der Einrichtung im Dokument – und behauptet auch eingerichtet nichts, was erst R-5b liefert', async () => {
     const a = await oeffnen();
     await waitFor(() => zeitzeilen(a.fenster));
     expect(
@@ -440,9 +438,18 @@ describe('Was passiert wann', () => {
       ),
     ).toBeTruthy();
     cleanup();
-    const b = await oeffnen({ automatik: true });
+    const eingerichtet: AbfragenInhalt = {
+      ...standardInhalt(),
+      einrichtung: { gruppeId: 7, routineId: 8 },
+    };
+    const b = await oeffnen({ lesen: nurMusik(eingerichtet) });
     await waitFor(() => zeitzeilen(b.fenster));
     expect(within(b.fenster).queryByText(/noch nicht eingerichtet/)).toBeNull();
+    expect(
+      within(b.fenster).getByText(
+        'Die Erinnerungen für Musik sind in ChurchTools eingerichtet. Der Start einer Abfrage verschickt aber noch nichts selbst – bis dahin per „Erinnern“.',
+      ),
+    ).toBeTruthy();
   });
 });
 
@@ -450,6 +457,7 @@ describe('Der Stand einer laufenden Abfrage', () => {
   const laufend = (x: Partial<Abfrage> = {}): AbfragenInhalt => ({
     plan: EIGENER_PLAN,
     abfragen: [{ ...LAUFEND, ...x }],
+    einrichtung: null,
   });
 
   it('zeigt Etikett, „gestartet am … von …“ und die drei Abschnitte', async () => {
@@ -584,7 +592,7 @@ describe('Hausregeln des Speichers', () => {
       version: 4,
       zeit: ZEIT,
       von: { personId: 2, name: 'Jonas Test' },
-      inhalt: { plan: null, abfragen: [LAUFEND] },
+      inhalt: { plan: null, abfragen: [LAUFEND], einrichtung: null },
     };
     const speichern = vi.fn(() =>
       Promise.resolve({
@@ -636,7 +644,7 @@ describe('Hausregeln des Speichers', () => {
       frist: '2026-09-05',
       oeffnen: '2026-09-01',
     };
-    const gelesen = stand({ plan: EIGENER_PLAN, abfragen: [beendet] }, 5);
+    const gelesen = stand({ plan: EIGENER_PLAN, abfragen: [beendet], einrichtung: null }, 5);
     const { fenster, speichern } = await oeffnen({ lesen: () => Promise.resolve(gelesen) });
     await waitFor(() =>
       expect(knopf(fenster, 'Abfrage starten')).toHaveProperty('disabled', false),

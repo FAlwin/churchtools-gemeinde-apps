@@ -40,8 +40,12 @@ export const abfragenArt = (dienstgruppeId: number): Dokumentart => ({
 export const ABFRAGEN_VERWEIGERT =
   'Die Abfragen dürfen nur Planer ändern – und wer in ChurchTools die Kategorie „Einstellungen“ des Dienstplaners bearbeiten darf.';
 
-/** Der Inhalt, wenn nichts Lesbares dasteht: kein eigener Plan (= Standard), keine Abfrage. */
-export const standardInhalt = (): AbfragenInhalt => ({ plan: null, abfragen: [] });
+/** Der Inhalt, wenn nichts Lesbares dasteht: kein eigener Plan (= Standard), keine Abfrage, nicht eingerichtet. */
+export const standardInhalt = (): AbfragenInhalt => ({
+  plan: null,
+  abfragen: [],
+  einrichtung: null,
+});
 
 /** Was beim Lesen herauskommt. `inhalt` gilt **immer** (Standard, wenn nichts Lesbares dasteht). */
 export interface AbfragenStand {

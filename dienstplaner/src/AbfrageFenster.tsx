@@ -47,11 +47,6 @@ export interface AbfrageAnschluss {
   ) => Promise<SpeicherErgebnis<AbfragenInhalt>>;
   /** Wer startet und beendet – kommt in `gestartet`. */
   ich: { personId: number; name: string };
-  /**
-   * Gibt es die automatische Erinnerung (R-5) für die Dienstgruppe? Solange nicht, sagt das Fenster es ehrlich und verweist
-   * auf „Erinnern“. R-5 ersetzt den Schalter durch die Prüfung der eingerichteten Routine.
-   */
-  automatik?: (dienstgruppeId: number) => boolean;
   /** Nur für Tests: die ID einer neuen Abfrage und der Zeitpunkt. */
   neueId?: () => string;
   jetzt?: () => string;
@@ -235,7 +230,8 @@ export function AbfrageFenster({
       setMeldung('Die Abfrage wurde beendet.');
   };
 
-  const automatik = dienstgruppeId !== null && (anschluss.automatik?.(dienstgruppeId) ?? false);
+  // Eingerichtet heißt: Die Einrichtung steht im Dokument (R-5a) – kein Schalter von außen mehr.
+  const eingerichtet = lese?.inhalt.einrichtung != null;
 
   // ── Anzeige ──
   const gruppenWahl = (
@@ -356,7 +352,7 @@ export function AbfrageFenster({
             }
             onNochmal={lage.neuLaden}
             zeilen={zeilen}
-            automatik={automatik}
+            eingerichtet={eingerichtet}
           />
         </Sheet>
         {beendenFrage && (
@@ -437,7 +433,7 @@ export function AbfrageFenster({
         onNochmal={lage.neuLaden}
         keineTermine={keineTermine}
         zeilen={zeilen}
-        automatik={automatik}
+        eingerichtet={eingerichtet}
       />
     </Sheet>
   );

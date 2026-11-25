@@ -1,0 +1,64 @@
+@use '@ui/design/mixins' as m;
+
+// Die Karte der laufenden Abfrage auf der Startseite (R-3) – gleiche Karte wie die anderen auf Start.
+.karte {
+  @include m.card-list;
+}
+
+.kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--hair);
+
+  h2 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+}
+
+.rumpf {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.text {
+  color: var(--text2);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+// Schmal: Anteil der schon beantworteten Termine; nach der Frist in Rot wie das Etikett.
+.balken {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface3);
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    background: var(--blue);
+  }
+
+  &.rot span {
+    background: var(--red);
+  }
+}
+
+// Der Knopf steht rechts, am Handy über die volle Breite.
+.knoepfe {
+  display: flex;
+  justify-content: flex-end;
+
+  @media (max-width: 759px) {
+    & > * {
+      flex: 1;
+    }
+  }
+}

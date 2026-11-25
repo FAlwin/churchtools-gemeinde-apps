@@ -30,6 +30,7 @@ import {
   adresseFuer,
   adresseFuerTermin,
   adresseFuerVorlage,
+  abwesenheitenAbfrageAusAdresse,
   ALLE_REITER,
   planenGruppeAusAdresse,
   reiterAusAdresse,
@@ -116,6 +117,8 @@ export function App() {
   const terminId = terminAusAdresse(hash);
   // Planen mit einer Gruppe von der Startseite (Wunsch 7) – nur für diesen Besuch.
   const fokusGruppe = planenGruppeAusAdresse(hash);
+  // „Wann kann ich?“ mit einer Abfrage (R-3): `#/abwesenheiten?abfrage=<Dienstgruppe>`.
+  const abfrageGruppe = abwesenheitenAbfrageAusAdresse(hash);
   // Die Seite „Ablaufvorlagen“ (E10-V3a): eine Unterseite von „Planen“, nur für den, der „Planen“ sieht. Ohne das Recht
   // gilt die Adresse als unbekannt und führt zum Start.
   const vorlagenAdresse = darfPlanen && terminId === null ? vorlagenAusAdresse(hash) : null;
@@ -318,6 +321,19 @@ export function App() {
                   onNochmal={() => termineLaden(start, wochen)}
                   onTermin={terminZeigen}
                   onLive={liveZeigen}
+                  abfrage={{
+                    anschluss: {
+                      lesen: ladeAbfragen,
+                      speichern: speichereAbfragen,
+                      ich: {
+                        personId: start.ichId,
+                        name: [start.vorname, start.nachname].filter(Boolean).join(' '),
+                      },
+                    },
+                    ladeZeitraum: zeitraumLaden,
+                    ladePersonen: personenLaden,
+                    ladeAntworten: antwortenLaden,
+                  }}
                   onMeineTermine={() => {
                     merkeAuswahl({ ...leseAuswahl(), nurMeine: true });
                     wechseln('termine');
@@ -387,6 +403,8 @@ export function App() {
                   heute={heuteImKalender()}
                   dienstgruppen={eigeneGruppen}
                   eigeneDienste={meineDienste}
+                  start={start}
+                  abfrageGruppe={abfrageGruppe}
                 />
               )}
               {start && einstellungenOffen && (

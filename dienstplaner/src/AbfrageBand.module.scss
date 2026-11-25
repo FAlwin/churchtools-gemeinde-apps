@@ -1,0 +1,20 @@
+// Das Band über „Wann kann ich?“ (R-3): schmal, sanft blau, Text bricht am Handy um.
+.band {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 7px 10px;
+  border-radius: var(--r-ctrl);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.text {
+  min-width: 0;
+}
+
+.rechts {
+  margin-left: auto;
+}

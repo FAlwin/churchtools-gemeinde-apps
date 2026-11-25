@@ -955,6 +955,8 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **`protokolle-v1.7.1` (25.11.2026):** Reiter „Termine“ (und Start, To-Dos, Suche) fragt jede Adresse nur einmal je Ladevorgang
+  (`einmalLesen()` in `protokolle/src/lesen.ts` auf `merkeVersprechen`; live vorher 95 Abrufe, 52 doppelt, #1158).
 - **`protokolle-v1.7.0` (25.11.2026):** W15 komplett – das Fenster „In Kalender eintragen“ hat jetzt alle Reiter des
   ChurchTools-Dialogs „Termin erstellen“: dazu **Events** (Zeile je Einzeltermin, `terminReihe.ts` rechnet die Reihe wie CT inkl.
   Überlauf beim 31./29.02., #1136), **Besprechungsanfragen** (nur Gruppenkalender, Mail-Schutz, `mailsAnAndere` als eine Regel, #1150)

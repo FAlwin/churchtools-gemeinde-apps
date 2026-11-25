@@ -1,6 +1,6 @@
 ### Behoben (Protokolle)
 
-- **Protokoll löschen räumt auch die Vermerke im Reiter „Termine“ ab (W6).** Bisher blieben die Stände der Termin-Bausteine
+- **Protokoll löschen vermerkt auch die Stände im Reiter „Termine“ als gelöscht (W6).** Bisher blieben die Stände der Termin-Bausteine
   (`termin-stand` in „Mitarbeit“: „im Kalender“, „nicht eintragen“) eines gelöschten Protokolls unsichtbar liegen. Jetzt
   werden sie – immer, ohne eigenes Häkchen – **als gelöscht vermerkt**, nie hart gelöscht (in „Mitarbeit“ darf niemand Werte
   löschen, S0), und nachgelesen. Der Schritt läuft nach der zweiten Sperrprüfung direkt vor dem Protokoll; scheitert er, steht

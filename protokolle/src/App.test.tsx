@@ -352,6 +352,14 @@ describe('Hinweis auf fällige To-Dos: Zähler am Reiter und Band', () => {
     expect(L.ladeAufgaben).not.toHaveBeenCalled();
   });
 
+  it('zuerst auf „Termine“ (Direktlink): die To-Dos kommen aus der Übersicht des Reiters – kein zweiter Abruf', async () => {
+    window.location.hash = '#/termine';
+    render(<App />);
+    await screen.findByRole('button', { name: 'To-Dos, 2 fällig' });
+    expect(L.ladeUebersicht).toHaveBeenCalledTimes(1);
+    expect(L.ladeAufgaben).not.toHaveBeenCalled();
+  });
+
   it('zuerst auf „Sitzungen“ (Direktlink): einmal leicht je Gruppe, dann steht der Zähler da', async () => {
     window.location.hash = '#/sitzungen';
     render(<App />);

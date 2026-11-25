@@ -10,15 +10,20 @@ import { ctDaten } from '@ui/ct/verbindung';
 
 export type TerminRef = { kalender: number; id: number };
 
+/**
+ * Ein lesender Abruf (`GET`, `data` ausgepackt) – sonst `ctDaten`. `ladeUebersicht` reicht hier `einmalLesen()` aus
+ * `lesen.ts` durch, damit ein Ladevorgang jede Adresse nur einmal fragt.
+ */
+export type Leser = <T>(pfad: string) => Promise<T>;
+
 export const terminPfad = (t: TerminRef) => `/calendars/${t.kalender}/appointments/${t.id}`;
 
 /** Der Termin samt den berechneten Terminen einer Serie (`calculatedDates`, Beginn je Termin). */
 export async function terminDaten(
   termin: TerminRef,
+  lies: Leser = ctDaten,
 ): Promise<{ roh: TerminRoh; termine: string[] }> {
-  const d = await ctDaten<{ appointment?: TerminRoh; calculatedDates?: unknown }>(
-    terminPfad(termin),
-  );
+  const d = await lies<{ appointment?: TerminRoh; calculatedDates?: unknown }>(terminPfad(termin));
   if (!d?.appointment) throw new NichtUebernommen('den Termin');
   const c = d.calculatedDates;
   const termine =
@@ -31,8 +36,8 @@ export async function terminDaten(
 }
 
 /** Der Termin, wie ChurchTools ihn hat (`data.appointment`). */
-export async function terminLaden(termin: TerminRef): Promise<TerminRoh> {
-  return (await terminDaten(termin)).roh;
+export async function terminLaden(termin: TerminRef, lies: Leser = ctDaten): Promise<TerminRoh> {
+  return (await terminDaten(termin, lies)).roh;
 }
 
 /** Eine Besprechungsanfrage, wie ChurchTools sie liefert (gemessen S3-3: `person.domainIdentifier`, `state`). */
@@ -46,8 +51,9 @@ interface AnfrageRoh {
 /** **Die Besprechungsanfragen eines Termins** – bei einer Serie gelten sie für alle ihre Termine. */
 export async function anfragenLesen(
   termin: TerminRef,
+  lies: Leser = ctDaten,
 ): Promise<{ id?: number; person: number; antwort: Antwort }[]> {
-  const liste = (await ctDaten<AnfrageRoh[]>(`${terminPfad(termin)}/meetingrequests`)) ?? [];
+  const liste = (await lies<AnfrageRoh[]>(`${terminPfad(termin)}/meetingrequests`)) ?? [];
   return (Array.isArray(liste) ? liste : []).map((a) => ({
     ...(a.id !== undefined ? { id: a.id } : {}),
     person: Number(a.person?.domainIdentifier ?? a.inviteeId),

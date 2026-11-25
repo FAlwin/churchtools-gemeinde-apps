@@ -5,10 +5,11 @@
  * **Woher die Zahlen kommen (Ladeaufwand):**
  * - Der **Vorlauf** (Einstellung der Verwaltung) wird einmal beim Start gelesen: zwei Abrufe (Kategorien, Werte der
  *   Kategorie „Vorlagen“). Er blockiert nie – bei jedem Fehler gilt der Standard.
- * - Die **To-Dos** liefern die Seiten selbst: Startseite und Reiter „To-Dos“ lesen sie ohnehin (`ladeUebersicht`) und
+ * - Die **To-Dos** liefern die Seiten selbst: Startseite und die Reiter „To-Dos“ und „Termine“ lesen sie ohnehin
+ *   (`ladeUebersicht`) und
  *   melden sie über `melden` – das kostet **nichts zusätzlich**, und der Zähler stimmt nach jedem Neuladen und jeder Änderung
  *   dort (Abhaken, Ziehen, Speichern im Fenster).
- * - Nur wer **nicht** auf Start oder To-Dos öffnet (Direktlink, Sitzungen, Verwaltung), bekommt einmal beim Start einen
+ * - Nur wer **nicht** auf Start, To-Dos oder Termine öffnet (Direktlink, Sitzungen, Verwaltung), bekommt einmal beim Start einen
  *   leichten Abruf: je Gruppe die „Mitarbeit“-Werte (`ladeAufgaben`, höchstens zwei Gruppen gleichzeitig). Scheitert er,
  *   gibt es eben keinen Zähler – nichts bricht.
  * Ändert jemand im Reiter „Sitzungen“ ein To-Do, zeigt der Zähler es erst beim nächsten Besuch von Start oder To-Dos.
@@ -45,7 +46,7 @@ export function useFaellige(q: {
   modul: number | null;
   person: number | null;
   gruppen: readonly ProtokollGruppe[];
-  /** Zeigt die Seite beim Start schon To-Dos (Start/To-Dos)? Dann braucht es keinen eigenen Abruf. */
+  /** Liest die Seite beim Start schon die To-Dos (Start/To-Dos/Termine)? Dann braucht es keinen eigenen Abruf. */
   seiteLiefert: boolean;
 }): FaelligeHinweise {
   const { modul, person, gruppen, seiteLiefert } = q;

@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { useLaden } from '@ui/ct/useLaden';
@@ -22,6 +22,7 @@ import { standNachId, type TerminStand } from '@shared/protokolle/terminStand';
 import { ladeUebersicht } from './lesen';
 import { TerminFenster } from './TerminFenster';
 import { terminMarkieren } from './terminStandSchreiben';
+import type { AufgabenStand } from './useFaellige';
 import styles from './Termine.module.scss';
 
 /** Was die Liste zu einem Termin-Baustein wissen muss. */
@@ -55,6 +56,7 @@ export function Termine({
   eventsAnlegen = KEINE_RESSOURCEN,
   gruppentypenAnlegen = KEINE_RESSOURCEN,
   onZeigen,
+  onAufgaben,
 }: {
   modul: number;
   ich: { person: number; name: string };
@@ -73,6 +75,11 @@ export function Termine({
   gruppentypenAnlegen?: readonly number[];
   /** „Im Protokoll zeigen“: die Sitzung öffnen und zum Tagesordnungspunkt springen. */
   onZeigen: (gruppe: number, sitzung: string, punkt: string | null) => void;
+  /**
+   * Die To-Dos, die mit der Übersicht ohnehin kamen – für den Hinweis auf fällige To-Dos (`useFaellige`), wie bei Start
+   * und To-Dos. So liest die App sie beim Öffnen direkt auf „Termine“ nicht ein zweites Mal.
+   */
+  onAufgaben?: (stand: readonly AufgabenStand[]) => void;
 }) {
   const handy = useMedienAbfrage(HANDY_BREITE);
   const zeitzone = gemeindeZeitzone();
@@ -88,6 +95,10 @@ export function Termine({
   const [fehler, setFehler] = useState<string | null>(null);
 
   const uebersicht = geladen.stand.art === 'fertig' ? geladen.stand.daten : null;
+  useEffect(() => {
+    if (uebersicht)
+      onAufgaben?.(uebersicht.map((u) => ({ gruppe: u.gruppe.id, aufgaben: u.aufgaben })));
+  }, [uebersicht, onAufgaben]);
   const reihen = useMemo<Reihe[]>(() => {
     if (!uebersicht) return [];
     const stand = standNachId(uebersicht.flatMap((u) => u.termine ?? []));

@@ -289,7 +289,7 @@ describe('terminRumpf aus dem Fenster (W15-1)', () => {
     });
   });
 
-  it('keine `meetingrequests` – das ist W15-4 (Besprechungsanfragen)', () => {
+  it('keine `meetingrequests`, solange kein `eingeladen` mitgegeben wird (Besprechungsanfragen kommen aus dem Reiter, W15-4)', () => {
     expect(rumpf(eintrag())).not.toHaveProperty('meetingrequests');
   });
 });

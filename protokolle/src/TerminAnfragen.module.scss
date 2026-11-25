@@ -1,0 +1,92 @@
+// Reiter „Besprechungsanfragen“ im Fenster „In Kalender eintragen“ (W15-4) – Felder kommen aus `TerminFormular.module.scss`;
+// hier nur der Schalter, die Sätze und die Tabelle „Name | Status“.
+
+.anfragen {
+  min-width: 0;
+}
+
+.schalter {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  color: var(--text);
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+
+  // Der Haken selbst ist unsichtbar (Schalter = reine Anzeige), die Tastatur bedient ihn trotzdem.
+  &:has(input:focus-visible) {
+    outline: 2px solid var(--blue);
+    outline-offset: 3px;
+  }
+}
+
+.versteckt {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+
+.leise {
+  margin: 0 0 12px;
+  color: var(--text2);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.suche {
+  margin-bottom: 12px;
+}
+
+.tabelle {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+
+  th {
+    padding: 6px 8px 6px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  td {
+    padding: 8px 8px 8px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: middle;
+  }
+}
+
+.haken {
+  width: 34px;
+}
+
+.name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+
+  label {
+    display: block;
+    cursor: pointer;
+  }
+
+  small {
+    display: block;
+    color: var(--text2);
+    font-size: 12.5px;
+  }
+}
+
+.status {
+  color: var(--text2);
+  font-size: 13px;
+  white-space: nowrap;
+}

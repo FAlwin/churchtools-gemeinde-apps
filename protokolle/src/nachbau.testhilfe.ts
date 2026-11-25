@@ -106,6 +106,14 @@ export interface Nachbau {
     felder?: Record<string, unknown>;
     repeatId?: number;
   }[];
+  /** Kalender wie `GET /calendars` (W15-4: `type` – nur `group` hat den Reiter „Besprechungsanfragen“). */
+  kalender: { id: number; name: string; type: string }[];
+  /** Einträge wie `GET /calendars/{id}/meetingrequest/candidates` (W15-4, gemessen 25.11.2026). */
+  kandidaten: Record<string, unknown>[];
+  /** `GET …/meetingrequest/candidates` scheitert (500). */
+  kandidatenFehler: boolean;
+  /** `GET …/appointments/{id}/meetingrequests` scheitert (500). */
+  anfragenLesenFehler: boolean;
   /** Mails, die ChurchTools verschickt hätte (K2b). */
   mails: { person: number; art: 'neu' | 'geaendert' | 'geloescht' | 'serie-geloescht' }[];
   teilenFehler: AnlegeFehler | null;
@@ -222,6 +230,10 @@ export function nachbauStarten(): Nachbau {
     schluckeWert: null,
     fehlerBei: null,
     termine: [],
+    kalender: [{ id: 4, name: 'Gemeindeleitung', type: 'group' }],
+    kandidaten: [],
+    kandidatenFehler: false,
+    anfragenLesenFehler: false,
     mails: [],
     teilenFehler: null,
     terminAendernFehler: null,
@@ -330,7 +342,9 @@ export function nachbauStarten(): Nachbau {
         ],
         meta: { pagination: { lastPage: 1 } },
       });
-    if (pfad === '/calendars') return json(200, { data: [{ id: 4, name: 'Gemeindeleitung' }] });
+    if (pfad === '/calendars') return json(200, { data: s.kalender });
+    if (/^\/calendars\/\d+\/meetingrequest\/candidates$/.test(pfad))
+      return s.kandidatenFehler ? json(500, { message: 'weg' }) : json(200, { data: s.kandidaten });
     if (pfad === '/calendars/appointments') {
       const kal = adresse.searchParams.getAll('calendar_ids[]').map(Number);
       s.terminAnfrage = `${adresse.searchParams.get('from')}..${adresse.searchParams.get('to')}`;
@@ -459,6 +473,11 @@ export function nachbauStarten(): Nachbau {
               startDate: x.startDate,
               eventTemplateId: x.eventTemplateId,
             });
+      // ChurchTools mailt beim Anlegen jeder eingeladenen Person außer mir sofort „Neue Besprechungsanfrage“ (K2b).
+      if (!f || f.angelegt)
+        for (const a of (body.meetingrequests as { inviteeId: number }[] | undefined) ?? [])
+          if (a.inviteeId !== 1 && !s.anfrageVerschluckt.has(a.inviteeId))
+            s.mails.push({ person: a.inviteeId, art: 'neu' });
       if (!f || f.angelegt)
         s.termine.push({
           kalender: Number(neuT[1]),
@@ -618,6 +637,7 @@ export function nachbauStarten(): Nachbau {
       return json(201, { data: {} });
     }
     if (anfr) {
+      if (s.anfragenLesenFehler) return json(500, { message: 'weg' });
       const t = s.termine.find((x) => x.id === Number(anfr[2]));
       return json(200, {
         data: (t?.anfragen ?? []).map((x, i) => ({

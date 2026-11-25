@@ -5,6 +5,7 @@ import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { TextKnopf } from '@ui/bedienung/TextKnopf';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
+import { Unklar } from '@ui/ct/fehler';
 import { useLaden } from '@ui/ct/useLaden';
 import { datumText } from '@shared/ct/datum';
 import { punktBeschriftung } from '@shared/protokolle/dokument';
@@ -21,13 +22,18 @@ import type { TerminStand } from '@shared/protokolle/terminStand';
 import { buchungsHinweis } from '@shared/protokolle/terminRessourcen';
 import { eventHinweis, hinweiseZusammen } from '@shared/protokolle/terminEvents';
 import { vorlageAnwenden, type TerminVorlage } from '@shared/protokolle/terminVorlagen';
+import { anfrageHinweis, angefragte } from '@shared/protokolle/besprechungsanfrage';
+import { mailsAnAndere } from '@shared/protokolle/einladungsmail';
 import { kalenderTermineAmTag } from './terminAnlegen';
 import { terminLegen } from './terminEintragen';
 import { terminVermerken } from './terminStandSchreiben';
 import { ladeSchreibKalender } from './kalenderListe';
 import { ladeRessourcen } from './buchungenLesen';
 import { ladeEventVorlagen } from './eventsLesen';
+import { ladeKandidaten } from './besprechungsanfragen';
 import { ladeTags, ladeVorlagen, vorlageSpeichern } from './terminVorlagenLesen';
+import { EinladungHinweis } from './EinladungHinweis';
+import { TerminAnfragen } from './TerminAnfragen';
 import { TerminFormular } from './TerminFormular';
 import { TerminEvents } from './TerminEvents';
 import { TerminRessourcen } from './TerminRessourcen';
@@ -35,6 +41,7 @@ import { TerminVorlagenWahl } from './TerminVorlagenWahl';
 import type { MitarbeitOrt } from './mitarbeitWerte';
 import felder from './Fensterfelder.module.scss';
 import styles from './TerminFenster.module.scss';
+import formular from './TerminFormular.module.scss';
 
 /** Dieselbe leere Liste bei jedem Aufruf – ein neues `[]` je Render ließe `useLaden` endlos neu laden. */
 const KEINE: readonly number[] = [];
@@ -46,8 +53,15 @@ const KEINE: readonly number[] = [];
  * ohne Uhrzeit, Beginn und Ende, Wiederholung, Beschreibung, Ort, Tags … Steht am Tag im gewählten Kalender schon ein
  * ähnlicher Termin, ist **„Nur verknüpfen – nichts Neues anlegen“** vorgewählt. Es geht keine Einladung raus. Der Reiter
  * **„Events“** (W15-3, `TerminEvents`) erscheint nur, wenn die Person im gewählten Kalender Events anlegen darf, **„Ressourcen“**
- * (W15-2, `TerminRessourcen`) nur, wenn sie Ressourcen buchen darf – in der Reihenfolge von ChurchTools; die übrigen Reiter
- * (Besprechungsanfragen, Anmeldung) kommen mit W15-4/5. Die Leiste zeigt sich erst bei mehr als einem Reiter.
+ * (W15-2, `TerminRessourcen`) nur, wenn sie Ressourcen buchen darf, **„Besprechungsanfragen“** (W15-4, `TerminAnfragen`) nur bei
+ * einem Gruppenkalender – in der Reihenfolge von ChurchTools; der Reiter Anmeldung kommt mit W15-5. Die Leiste zeigt sich
+ * erst bei mehr als einem Reiter.
+ *
+ * **Besprechungsanfragen verschicken sofort Mails** (jede andere Person bekommt „Neue Besprechungsanfrage“): Sie gehen nur
+ * mit, wenn der Reiter da ist, der Schalter an ist und nicht „Nur verknüpfen“ gilt; wechselt der Kalender, ist die Auswahl
+ * **geleert** (nicht nur ausgeblendet). Der Fuß sagt vor dem Speichern, an wie viele Personen es geht. Nach einer **unklaren
+ * Antwort** beim Anlegen ist „Speichern“ gesperrt, bis die Prüfung „steht schon da?“ neu gelaufen ist und den Termin
+ * gefunden hat (dann „Verknüpfen“) – nie ein zweites `POST`, sonst gingen die Mails doppelt raus.
  *
  * Nach dem Anlegen kommt der Vermerk „im Kalender“. Scheitert nur der Vermerk, steht der Termin trotzdem – dann bleibt
  * das Fenster mit „Nochmal vermerken“ offen (wiederholt nur den Vermerk, legt nichts doppelt an). Fehlt nach dem Anlegen eine
@@ -124,10 +138,35 @@ export function TerminFenster({
   const darfEvents = kalenderId !== null && eventsAnlegen.includes(kalenderId);
   const eventVorlagen = useLaden(() => (darfEvents ? ladeEventVorlagen() : null), [darfEvents]);
 
-  // Reiter wie im ChurchTools-Dialog (Reihenfolge von dort): Kalender, Events, Ressourcen – die übrigen kommen mit W15-4/5.
-  type ReiterId = 'kalender' | 'events' | 'ressourcen';
+  // Besprechungsanfragen (W15-4): nur bei Gruppenkalendern. `anfrage` = der Schalter ist an (mit den Gewählten, ohne mich) –
+  // und gehört zu EINEM Kalender: Ein Wechsel leert die Auswahl (`onKalender`), die Prüfung `anfrage.kalender === kalenderId`
+  // ist der zweite Riegel.
+  const istGruppe = liste.find((k) => k.id === kalenderId)?.gruppe === true;
+  const kandidaten = useLaden(
+    () => (istGruppe && kalenderId !== null ? ladeKandidaten(kalenderId) : null),
+    [istGruppe, kalenderId],
+  );
+  const kandidatenListe = useMemo(
+    () => (kandidaten.stand.art === 'fertig' ? kandidaten.stand.daten : []),
+    [kandidaten.stand],
+  );
+  const [anfrage, setAnfrage] = useState<{
+    kalender: number;
+    gewaehlt: ReadonlySet<number>;
+  } | null>(null);
+  const anfrageAn = istGruppe && anfrage !== null && anfrage.kalender === kalenderId;
+  const eingeladen = useMemo(
+    () => (anfrageAn ? angefragte(kandidatenListe, anfrage.gewaehlt, ich) : []),
+    [anfrageAn, anfrage, kandidatenListe, ich],
+  );
+
+  // Reiter wie im ChurchTools-Dialog (Reihenfolge von dort): Kalender, Besprechungsanfragen, Events, Ressourcen – Anmeldung kommt mit W15-5.
+  type ReiterId = 'kalender' | 'anfragen' | 'events' | 'ressourcen';
   const reiter: Reiter<ReiterId>[] = [
     { id: 'kalender', label: 'Kalender', icon: 'calendar' },
+    ...(istGruppe
+      ? [{ id: 'anfragen' as const, label: 'Besprechungsanfragen', icon: 'brief' as const }]
+      : []),
     ...(darfEvents ? [{ id: 'events' as const, label: 'Events', icon: 'people' as const }] : []),
     ...(darfRessourcen
       ? [{ id: 'ressourcen' as const, label: 'Ressourcen', icon: 'grid' as const }]
@@ -163,6 +202,8 @@ export function TerminFenster({
   const verknuepfen = treffer && !trotzdem ? treffer : null;
 
   const [laeuft, setLaeuft] = useState(false);
+  // Nach einer unklaren Antwort beim Anlegen: Speichern ist gesperrt, bis die Prüfung „steht schon da?“ den Termin gefunden hat.
+  const [unklarGesperrt, setUnklarGesperrt] = useState(false);
   const [fehler, setFehler] = useState<Fehlermeldung | null>(null);
   // Der Termin steht in ChurchTools, der Vermerk fehlt noch.
   const [offen, setOffen] = useState<{ id: number; zeit: string; hinweis: string | null } | null>(
@@ -173,7 +214,19 @@ export function TerminFenster({
 
   const problem = eintragFehler(eintrag);
   const prueft = kalenderId !== null && tagTermine.stand.art === 'laedt';
-  const bereit = !problem && !prueft && tagTermine.stand.art === 'fertig' && !laeuft;
+  // Mit Besprechungsanfrage erst, wenn die Personen geladen sind – sonst gingen die Einladungen still verloren.
+  const anfrageBereit = !anfrageAn || kandidaten.stand.art === 'fertig';
+  const bereit =
+    !problem &&
+    !prueft &&
+    tagTermine.stand.art === 'fertig' &&
+    !laeuft &&
+    anfrageBereit &&
+    (!unklarGesperrt || !!verknuepfen);
+  // „Nur verknüpfen“ legt nichts an – dann geht auch keine Einladung raus.
+  const mails = verknuepfen ? 0 : mailsAnAndere(eingeladen, ich);
+  const personName = (id: number) =>
+    kandidatenListe.find((k) => k.id === id)?.name ?? `Person ${id}`;
   const darfVorlage = kalenderId !== null && vorlagenSchreiben.includes(kalenderId);
 
   const waehleVorlage = (v: TerminVorlage | null) => {
@@ -240,10 +293,17 @@ export function TerminFenster({
         zeitzone,
         verknuepfen,
         neueTagsErlaubt: tagsVerwalten,
+        // Nur mit Schalter an, im Gruppenkalender und nicht beim Verknüpfen (`eingeladen` ist sonst leer).
+        eingeladen: verknuepfen ? [] : eingeladen,
       });
     } catch (x) {
       setFehler(fehlerMeldung(x));
       setLaeuft(false);
+      if (x instanceof Unklar) {
+        // Vielleicht steht der Termin doch da: die Prüfung neu laufen lassen und bis dahin nicht noch einmal anlegen.
+        setUnklarGesperrt(true);
+        tagTermine.neu();
+      }
       return;
     }
     const zeit = verknuepfen
@@ -257,6 +317,7 @@ export function TerminFenster({
       hinweis: hinweiseZusammen([
         r.buchungen ? buchungsHinweis(r.buchungen, ressourcenName) : null,
         r.events ? eventHinweis(r.events) : null,
+        r.anfragen ? anfrageHinweis(r.anfragen, personName) : null,
       ]),
     });
   };
@@ -319,9 +380,27 @@ export function TerminFenster({
         )
       }
     >
-      {reiter.length > 1 && (
-        <ReiterLeiste reiter={reiter} aktiv={aktiverReiter} onWechsel={setAktiverReiter} oben />
-      )}
+      {reiter.length > 1 &&
+        // Am Handy passen vier bis fünf Reiter nicht in die Breite – der Rest war nur durch Wischen ohne Hinweis zu finden
+        // (Durchklicken 25.11.2026). Alwin: dort eine Auswahl wie bei den Termin-Vorlagen; am PC die Reiter wie ChurchTools.
+        (handy ? (
+          <label className={formular.vorlagenAuswahl}>
+            <span>Bereich</span>
+            <select
+              className={formular.eingabe}
+              value={aktiverReiter}
+              onChange={(ev) => setAktiverReiter(ev.target.value as ReiterId)}
+            >
+              {reiter.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <ReiterLeiste reiter={reiter} aktiv={aktiverReiter} onWechsel={setAktiverReiter} oben />
+        ))}
       <p className={styles.quelle}>
         Aus {zeile.sitzung.titel}
         {zeile.punkt ? ` · ${punktBeschriftung(zeile.punkt)}` : ''}: „{zeile.text}“
@@ -376,6 +455,27 @@ export function TerminFenster({
               </label>
             </div>
           )}
+          {aktiverReiter === 'anfragen' && verknuepfen && (
+            <p className={felder.hinweis} role="status">
+              Du verknüpfst einen vorhandenen Termin – dabei geht keine Besprechungsanfrage raus.
+              Anfragen gibt es nur beim Neu-Anlegen („Trotzdem neu anlegen“).
+            </p>
+          )}
+          {aktiverReiter === 'anfragen' && kalenderId !== null && (
+            <TerminAnfragen
+              kalenderName={kalenderName}
+              kandidaten={kandidatenListe}
+              laedt={kandidaten.stand.art === 'laedt'}
+              fehler={kandidaten.stand.art === 'fehler' ? kandidaten.stand.fehler : null}
+              onNeu={kandidaten.neu}
+              an={anfrageAn}
+              onAn={(an) => setAnfrage(an ? { kalender: kalenderId, gewaehlt: new Set() } : null)}
+              gewaehlt={anfrage?.gewaehlt ?? new Set()}
+              onGewaehlt={(gewaehlt) => setAnfrage({ kalender: kalenderId, gewaehlt })}
+              ich={ich}
+              deaktiviert={beschaeftigt || !!verknuepfen}
+            />
+          )}
           {aktiverReiter === 'events' && verknuepfen && (
             <p className={felder.hinweis} role="status">
               Du verknüpfst einen vorhandenen Termin – dabei werden keine Events angelegt. Events
@@ -425,10 +525,14 @@ export function TerminFenster({
                 onAendern={setE}
                 onKalender={(id) => {
                   setTrotzdem(false);
+                  setUnklarGesperrt(false);
+                  // Besprechungsanfragen gehören zum Kalender: leeren, nicht nur ausblenden.
+                  setAnfrage(null);
                   setE({ ...eintrag, kalender: id });
                 }}
                 onTag={(tag) => {
                   setTrotzdem(false);
+                  setUnklarGesperrt(false);
                   setE(beginnTagWechseln(eintrag, tag));
                 }}
               />
@@ -443,12 +547,19 @@ export function TerminFenster({
             />
             <span>Ersteller über Änderungen informieren</span>
           </label>
-          <p className={styles.gebucht}>
-            Es werden keine Einladungen verschickt.
-            {e.informieren
-              ? ' Du bekommst als Ersteller eine Mail von ChurchTools, wenn jemand den Termin ändert.'
-              : ''}
-          </p>
+          <EinladungHinweis mails={mails} />
+          {(mails === 0 || e.informieren) && (
+            <p className={styles.gebucht}>
+              {[
+                mails === 0 ? 'Es werden keine Einladungen verschickt.' : null,
+                e.informieren
+                  ? 'Du bekommst als Ersteller eine Mail von ChurchTools, wenn jemand den Termin ändert.'
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            </p>
+          )}
           {vorlageMeldung && (
             <p className={styles.gespeichert} role="status">
               {vorlageMeldung}

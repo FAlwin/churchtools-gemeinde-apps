@@ -1243,12 +1243,34 @@ function antwort(
         };
   const rollen = /^\/api\/groups\/(\d+)\/roles$/.exec(pfad);
   if (rollen) return { status: 200, data: ROLLEN[Number(rollen[1])] ?? [] };
+  // W15-4: Gruppenkalender haben den Reiter „Besprechungsanfragen“, der Gemeindekalender (`church`) nicht.
   if (pfad === '/api/calendars')
     return {
       status: 200,
       data: [
-        { id: 4, name: 'Gemeindeleitung' },
-        { id: 2, name: 'Gottesdienst' },
+        { id: 4, name: 'Gemeindeleitung', type: 'group' },
+        { id: 2, name: 'Gottesdienst', type: 'church' },
+      ],
+    };
+  // Kandidaten wie gemessen: Alwin einmal ohne Gruppe und einmal als Gruppenmitglied (doppelt – die App entdoppelt).
+  if (pfad === '/api/calendars/4/meetingrequest/candidates')
+    return {
+      status: 200,
+      data: [
+        {
+          type: 'person',
+          person: { title: 'Alwin Friesen', domainType: 'person', domainIdentifier: '1' },
+        },
+        ...[
+          [1, 'Alwin Friesen'],
+          [19, 'Spike Musiker'],
+          [20, 'Anna Beispiel'],
+          [21, 'Ben Muster'],
+        ].map(([id, title]) => ({
+          type: 'groupMember',
+          groupName: 'Leitungsteam',
+          person: { title, domainType: 'person', domainIdentifier: String(id) },
+        })),
       ],
     };
   if (pfad === '/api/permissions/definitions')

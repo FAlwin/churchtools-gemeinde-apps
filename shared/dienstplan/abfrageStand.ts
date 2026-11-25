@@ -112,7 +112,7 @@ export function meinStandInAbfrage<T extends StandTermin>(o: {
 // ── Texte ───────────────────────────────────────────────────────────────────
 
 /** „Februar“ · „Februar und März“ · „Februar, März und April“ – die Monate von `von` bis `bis`. */
-function monateText(von: string, bis: string): string {
+export function monateText(von: string, bis: string): string {
   const n = Math.max(0, monateBis(von, bis));
   const namen = Array.from({ length: n + 1 }, (_, i) =>
     monatName(`${monatPlus(von.slice(0, 7), i)}-01`),

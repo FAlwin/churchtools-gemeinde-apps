@@ -1,0 +1,113 @@
+// Abschnitt „Abfragen – Erinnerungen“ in den Einstellungen (R-4, Entwurf runden-entwurf.html Schritt 1) – nur Tokens aus ui/design.
+@use '@ui/design/mixins' as m;
+
+.abschnitt {
+  margin-top: 20px;
+}
+
+.kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  h3 {
+    margin: 0;
+    font-size: 16px;
+  }
+}
+
+.wahl {
+  @include m.eingabefeld;
+  padding: 4px 8px;
+  font-size: 14px;
+}
+
+.leise {
+  margin: 6px 0 0;
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.fehler {
+  margin: 8px 0 0;
+  color: var(--red);
+  font-size: 14px;
+}
+
+.liste {
+  display: flex;
+  flex-direction: column;
+  margin: 10px 0 8px;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 0;
+    border-top: 1px solid var(--hair);
+    color: var(--text);
+    font-size: 14px;
+
+    &:first-child {
+      border-top: 0;
+    }
+  }
+}
+
+.zeile {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+
+.zahl {
+  @include m.eingabefeld;
+  padding: 3px 6px;
+  font-size: 14px;
+}
+
+.feldName {
+  display: block;
+  margin: 14px 0 4px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.feld {
+  @include m.eingabefeld;
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+.text {
+  min-height: 160px;
+  font-family: inherit;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.stille {
+  margin-top: 6px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.vorschau {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: var(--r-card);
+  background: var(--bg);
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.45;
+}

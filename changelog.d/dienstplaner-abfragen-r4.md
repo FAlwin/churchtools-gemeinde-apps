@@ -1,0 +1,3 @@
+### Neu (Dienstplaner)
+
+- **Erinnerungsplan je Dienstgruppe in den Einstellungen:** Im Fenster „Einstellungen“ gibt es für Planer den Abschnitt „Abfragen – Erinnerungen“. Je Dienstgruppe, die man planen darf, stellt man frei ein, wann erinnert wird (beim Öffnen, so viele Tage vor der Frist, am Tag der Frist, nach der Frist alle n Tage höchstens m-mal), dazu Betreff und Text der Mail mit den Platzhaltern `{zeitraum}`, `{frist}`, `{gruppe}` und `{vorname}`. Eine kleine Vorschau zeigt, an welchen Tagen die Erinnerungen kämen. Das eine „Speichern“ schreibt nur, was sich geändert hat. Verschickt wird automatisch erst, wenn die Erinnerungen in ChurchTools eingerichtet sind (folgt).

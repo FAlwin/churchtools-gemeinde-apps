@@ -192,6 +192,8 @@ describe('EinstellungenFenster', () => {
     it('Speichern wirft (Modul/Kategorie nicht erreichbar): Meldung, nichts geschlossen', async () => {
       const { onSchliessen } = zeige({ speichern: () => Promise.reject(new Error('Netz')) });
       await geladen();
+      // Gespeichert wird nur, was sich geändert hat (R-4) – also erst etwas ändern.
+      fireEvent.click(radio(/Von Anfang an klicken/));
       fireEvent.click(speichernKnopf());
       await screen.findByRole('alert');
       expect(onSchliessen).not.toHaveBeenCalled();

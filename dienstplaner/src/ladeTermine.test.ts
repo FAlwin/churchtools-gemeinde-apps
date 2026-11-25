@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@ui/ct/fehler';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
 import { terminStand } from '@shared/dienstplan/plan';
-import { ladeTermin, ladeTermine, ladeZeitraum } from './ladeTermine';
+import { ladeTermin, ladeTermine, ladeZeitraum, TERMIN_VERWEIGERT } from './ladeTermine';
 import type { Start } from './start';
 import { startFuer } from './start.testutil';
 
@@ -163,5 +163,16 @@ describe('ladeTermin (Termin-Ansicht, E6-1b)', () => {
     expect(
       ((await ladeTermin(START, 7, 'Europe/Berlin').catch((x: unknown) => x)) as ApiError).status,
     ).toBe(404);
+  });
+
+  it('Termin ohne Recht → sagt, dass ChurchTools den Termin nicht zeigt (nicht die Regel fürs Planen)', async () => {
+    const verbot = {
+      message: 'Keine ausreichende Berechtigung.',
+      messageKey: 'error.forbidden.view',
+    };
+    ct(() => json(403, verbot));
+    const e = (await ladeTermin(START, 7, 'Europe/Berlin').catch((x: unknown) => x)) as ApiError;
+    expect(e.status).toBe(403);
+    expect(e.message).toBe(TERMIN_VERWEIGERT);
   });
 });

@@ -39,6 +39,7 @@ import { ladeAblauf } from './ladeBeiwerk';
 import type { EinstellungenStand } from '@shared/dienstplan/liveEinstellungen';
 import { ladeLive, schreibeLive } from './ladeLive';
 import { ladeVerlauf, schreibeVerlauf } from './ladeVerlauf';
+import { useMeineAnzeige } from './meineAnzeige';
 import { useBetriebsart } from './useBetriebsart';
 import { useLive } from './useLive';
 import { useVerlauf } from './useVerlauf';
@@ -169,6 +170,7 @@ export function LiveAnsicht({
   useWakeLock(true);
   const live = useLive(terminId, agendaId, lesen);
   const betriebsart = useBetriebsart(betriebsartLesen);
+  const anzeige = useMeineAnzeige();
 
   const liste = useMemo(() => liveListe(items, terminId), [items, terminId]);
   const [beschaeftigt, setBeschaeftigt] = useState(false);
@@ -355,9 +357,12 @@ export function LiveAnsicht({
     };
   };
 
-  /** Die Infos der Zeile in den Dienstgruppen, die gezeigt werden (`infoGruppen`) – mit Text, in Reihenfolge der Gruppen. */
+  /**
+   * Die Infos der Zeile in den Dienstgruppen, die gezeigt werden (`infoGruppen`) – mit Text, in Reihenfolge der Gruppen.
+   * „Meine Anzeige“ (L4-5): Wer die Infos ausgeschaltet hat, sieht keine.
+   */
   const infosVon = (z: AblaufZeile | null) =>
-    infoGruppen.flatMap((g) => {
+    (anzeige.infosMeinerGruppen ? infoGruppen : []).flatMap((g) => {
       const text = z?.infos?.find((i) => i.gruppeId === g.id)?.text;
       return text ? [{ gruppe: g.name, text }] : [];
     });
@@ -688,7 +693,7 @@ export function LiveAnsicht({
                   hinweis={`Zum vorigen Punkt: ${zurueckTitel}`}
                 />
                 <div className={styles.mitte}>
-                  {lage.art === 'laeuft' && (
+                  {lage.art === 'laeuft' && anzeige.minutenKnoepfe && (
                     <>
                       <KopfKnopf
                         onClick={() => void schalten('minus')}

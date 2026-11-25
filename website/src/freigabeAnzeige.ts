@@ -143,3 +143,55 @@ export function mailHinweis(e: MailErgebnis, zweck: MailZweck): string | null {
     return `Die Mail an ${t.wem} ging nicht raus: ${e.grund.trim()} ${t.trotzdem}`;
   return null;
 }
+
+// ── Bereiche (W3b-4b) ────────────────────────────────────────────────────────────────────────────────────────────────────
+
+/** Die Namen der Bereiche: die Gruppe „Website“ und jede eingerichtete Untergruppe (aus dem Start, `Untergruppe`). */
+export interface BereichsNamen {
+  website: string;
+  untergruppen: readonly { gruppe: number; name: string }[];
+}
+
+/** Wie ein Bereich heißt – `null` ist die Website; eine unbekannte Untergruppe heißt „Gruppe 347“. */
+export function bereichsName(n: BereichsNamen, bereich: number | null): string {
+  if (bereich === null) return n.website;
+  return n.untergruppen.find((u) => u.gruppe === bereich)?.name ?? `Gruppe ${bereich}`;
+}
+
+/**
+ * **Verschoben, aber nicht ganz** (`Freigegeben.bleibtIn`): Die Seite ist in ihrem Bereich online, steht aber zusätzlich noch im
+ * alten. Kein Fehler der Freigabe – aber nicht verschweigen. `null`, wenn sie nur in ihrem Bereich steht.
+ */
+export function bleibtHinweis(
+  titel: string,
+  bleibtIn: readonly (number | null)[] | undefined,
+  n: BereichsNamen,
+): string | null {
+  if (!bleibtIn || bleibtIn.length === 0) return null;
+  const wo = bleibtIn.map((b) => `„${bereichsName(n, b)}“`).join(', ');
+  return `„${titel}“ steht zusätzlich noch online im Bereich ${wo} – dort ließ sie sich gerade nicht entfernen. Sie bleibt darum unter „Freigaben“ als „Geändert“; erneut freigeben räumt das auf (aus dem Bereich der Website kann das nur die Leitung der Website).`;
+}
+
+/**
+ * **Bereich gewechselt, Online-Fassung mitgewandert** (W3b-4b-2, `bereichWechseln`): was die Leitung danach liest. Bleibt die Seite
+ * zusätzlich im alten Bereich stehen, sagt es `bleibtHinweis` (dieselben Worte wie beim Freigeben).
+ */
+export function verschobenHinweis(
+  titel: string,
+  bereich: number | null,
+  bleibtIn: readonly (number | null)[] | undefined,
+  n: BereichsNamen,
+): string {
+  return (
+    bleibtHinweis(titel, bleibtIn, n) ??
+    `„${titel}“ steht online jetzt im Bereich „${bereichsName(n, bereich)}“.`
+  );
+}
+
+/**
+ * **Bereich gewechselt, aber online nicht verschoben** – der Entwurf trägt den neuen Bereich (gespeichert ist er), die Website
+ * zeigt die Seite vorerst weiter aus dem alten. Kein Speicherfehler; „Veröffentlichen“ verschiebt sie (der Weg aus W3b-4b).
+ */
+export function nichtVerschobenText(titel: string, alt: number | null, n: BereichsNamen): string {
+  return `Der neue Bereich von „${titel}“ ist gespeichert. Online steht die Seite aber vorerst noch im Bereich „${bereichsName(n, alt)}“ – „Veröffentlichen“ verschiebt sie.`;
+}

@@ -278,10 +278,12 @@ export function Rueckblick({
           </div>
         ))}
       </div>
-      <p className={styles.unterschrift}>
-        „Ø bisher“ zählt gleichnamige Punkte aller Termine mit Rückblick; alle Lieder zählen
-        zusammen als „Lied“.
-      </p>
+      {anzeige.spalteSchnitt && (
+        <p className={styles.unterschrift}>
+          „Ø bisher“ zählt gleichnamige Punkte aller Termine mit Rückblick; alle Lieder zählen
+          zusammen als „Lied“.
+        </p>
+      )}
     </section>
   );
 }

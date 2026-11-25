@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { seiteAlsText } from './modell';
+import { WEBSITE_KENNUNG, seiteAlsText, type Seite } from './modell';
 import {
   alleFreigeben,
+  bereichWechseln,
   freigabeListe,
   freigabeZaehler,
   gibFrei,
@@ -11,7 +12,11 @@ import {
   seiteEntfernen,
   seitenLage,
   seitenStand,
+  nurWebsite,
+  onlineSicht,
+  type OnlineSicht,
 } from './freigabe';
+import { WEBSITE_LEITUNG, WEBSITE_REDAKTEUR, bereichSetzen } from './zugang';
 import {
   EINSTELLUNGEN_ID,
   MENUE_ID,
@@ -23,7 +28,14 @@ import {
   type WebsiteStand,
 } from './speicher';
 import { statusSetzen } from './status';
-import { ENTWUERFE, ONLINE, fakeFreigabeSpeicher, fehlerMit } from './freigabe.testutil';
+import {
+  ENTWUERFE,
+  JUGEND,
+  JUGEND_ONLINE,
+  ONLINE,
+  fakeFreigabeSpeicher,
+  fehlerMit,
+} from './freigabe.testutil';
 import { baustein, einstellungen, menue, seiteMit } from './website.testdaten';
 
 const JETZT = new Date('2026-11-20T10:00:00Z');
@@ -426,7 +438,7 @@ describe('Liste und Zähler je Rolle', () => {
 
   it('Leitung: eingereichte zuerst (älteste oben), Löschen angefragt, Zurückgegebenes, Menü, Aussehen, online-ohne-Entwurf', async () => {
     const { e, o } = await szenario();
-    const l = freigabeListe(e, o, 'leitung', 1);
+    const l = freigabeListe(e, nurWebsite(e, o), WEBSITE_LEITUNG, 1);
     expect(l.map((x) => `${x.art}:${x.id}`)).toEqual([
       'eingereicht:d',
       'eingereicht:a',
@@ -436,7 +448,7 @@ describe('Liste und Zähler je Rolle', () => {
       `einstellungen:${EINSTELLUNGEN_ID}`,
       'nurOnline:weg',
     ]);
-    expect(freigabeZaehler(l, 'leitung')).toBe(3);
+    expect(freigabeZaehler(l, WEBSITE_LEITUNG)).toBe(3);
   });
 
   it('Leitung sieht auch eigene Änderungen ohne Status: geändert und neu', async () => {
@@ -451,30 +463,37 @@ describe('Liste und Zähler je Rolle', () => {
       }),
       SPAETER,
     );
-    const l = freigabeListe(lesen(ENTWUERFE), lesen(ONLINE), 'admin', 1);
+    const l = freigabeListe(
+      lesen(ENTWUERFE),
+      nurWebsite(lesen(ENTWUERFE), lesen(ONLINE)),
+      WEBSITE_LEITUNG,
+      1,
+    );
     expect(l.map((x) => `${x.art}:${x.id}`)).toEqual(['geaendert:a', 'neu:b']);
-    expect(freigabeZaehler(l, 'admin')).toBe(0);
+    expect(freigabeZaehler(l, WEBSITE_LEITUNG)).toBe(0);
   });
 
   it('Redakteur: nur die eigenen eingereichten, zurückgegebenen und angefragten Seiten – kein Menü, keine Einstellungen, kein Fremdes', async () => {
     const { e, o } = await szenario();
-    const l = freigabeListe(e, o, 'redakteur', 5);
+    const l = freigabeListe(e, nurWebsite(e, o), WEBSITE_REDAKTEUR, 5);
     expect(l.map((x) => `${x.art}:${x.id}`)).toEqual([
       'eingereicht:a',
       'loeschenAngefragt:c',
       'zurueck:b',
     ]);
     expect(l.some((x) => x.einheit !== 'seite')).toBe(false);
-    expect(freigabeZaehler(l, 'redakteur')).toBe(1);
+    expect(freigabeZaehler(l, WEBSITE_REDAKTEUR)).toBe(1);
     // Eine andere Redakteurin sieht davon nichts und hat keinen Zähler.
-    const fremd = freigabeListe(e, o, 'redakteur', 77);
+    const fremd = freigabeListe(e, nurWebsite(e, o), WEBSITE_REDAKTEUR, 77);
     expect(fremd).toEqual([]);
-    expect(freigabeZaehler(fremd, 'redakteur')).toBe(0);
+    expect(freigabeZaehler(fremd, WEBSITE_REDAKTEUR)).toBe(0);
   });
 
   it('das Menü warnt, wenn es auf Seiten verweist, die noch nicht online sind', async () => {
     const { e, o } = await szenario();
-    const m = freigabeListe(e, o, 'leitung', 1).find((x) => x.einheit === 'menue')!;
+    const m = freigabeListe(e, nurWebsite(e, o), WEBSITE_LEITUNG, 1).find(
+      (x) => x.einheit === 'menue',
+    )!;
     expect(m.warnung).toMatch(/noch nicht online sind: B/);
     expect(menueOhneOnlineSeiten(e.menue, e.seiten, o.staende)).toEqual(['B']);
     expect(menueOhneOnlineSeiten(e.menue, e.seiten, e.staende)).toEqual([]);
@@ -495,7 +514,12 @@ describe('Liste und Zähler je Rolle', () => {
         zeit: JETZT.toISOString(),
       }),
     );
-    const l = freigabeListe(lesen(ENTWUERFE), lesen(ONLINE), 'leitung', 1);
+    const l = freigabeListe(
+      lesen(ENTWUERFE),
+      nurWebsite(lesen(ENTWUERFE), lesen(ONLINE)),
+      WEBSITE_LEITUNG,
+      1,
+    );
     expect(l.some((x) => x.id === 'geloescht')).toBe(false);
   });
 });
@@ -519,3 +543,552 @@ describe('Einreichen nur, wenn es etwas einzureichen gibt', () => {
     expect(kannEinreichen(null, null)).toBe(true);
   });
 });
+
+// ── Bereiche (W3b-4b) ──────────────────────────────────────────────────────────────────────────────────────────────────
+// Website-Kategorie ONLINE (2), Jugend = Gruppe 347 mit Kategorie 117 – verschiedene Zahlen, damit Verwechslungen auffallen.
+
+const jugendSeite = (id = 'j', titel = 'Jugendabend') => ({
+  ...seiteMit([baustein('text', { id: `t${id}`, markdown: titel })], { id, pfad: id, titel }),
+  bereich: JUGEND,
+});
+
+/** Die Sicht über beide Kategorien, wie die Oberfläche sie aus `ladeOnline` baut. */
+function sichtAus(s: ReturnType<typeof fakeFreigabeSpeicher>): {
+  e: WebsiteStand;
+  sicht: OnlineSicht;
+} {
+  const e = websiteAusWerten(s.werte[ENTWUERFE]);
+  return {
+    e,
+    sicht: onlineSicht(e, [
+      { bereich: null, kategorie: ONLINE, stand: websiteAusWerten(s.werte[ONLINE]) },
+      {
+        bereich: JUGEND,
+        kategorie: JUGEND_ONLINE,
+        stand: websiteAusWerten(s.werte[JUGEND_ONLINE]),
+      },
+    ]),
+  };
+}
+const liegtIn = (s: ReturnType<typeof fakeFreigabeSpeicher>, kategorie: number, id: string) =>
+  einheitText(s.werte[kategorie], 'seite', id) !== null;
+
+describe('Freigeben je Bereich (W3b-4b)', () => {
+  it('eine Seite der Untergruppe geht in DEREN Kategorie – die der Website bleibt unberührt', async () => {
+    const s = fakeFreigabeSpeicher();
+    await seiteSpeichern(s.entwurfsOrt, jugendSeite(), JETZT);
+    s.neuesLog();
+    const r = await gibFrei(s.bereichsOrt, 'seite', 'j');
+    expect(r.bleibtIn).toBeUndefined();
+    expect(liegtIn(s, JUGEND_ONLINE, 'j')).toBe(true);
+    expect(liegtIn(s, ONLINE, 'j')).toBe(false);
+    expect(s.schreibzugriffe(ONLINE)).toEqual([]);
+    expect(s.schreibzugriffe(JUGEND_ONLINE).length).toBeGreaterThan(0);
+  });
+
+  it('eine Seite ohne Bereich geht in die Kategorie der Website – auch wenn es Untergruppen gibt', async () => {
+    const s = fakeFreigabeSpeicher();
+    await seiteSpeichern(s.entwurfsOrt, seiteA(), JETZT);
+    await gibFrei(s.bereichsOrt, 'seite', 'a');
+    expect(liegtIn(s, ONLINE, 'a')).toBe(true);
+    expect(liegtIn(s, JUGEND_ONLINE, 'a')).toBe(false);
+  });
+
+  it('Bereich nicht eingerichtet (keine Kategorie): klare Meldung, NICHTS geschrieben, Status bleibt', async () => {
+    const s = fakeFreigabeSpeicher();
+    await seiteSpeichern(s.entwurfsOrt, { ...jugendSeite(), bereich: 348 }, JETZT);
+    await statusSetzen(s.entwurfsOrt, 'j', { zustand: 'eingereicht' }, RITA, JETZT);
+    s.neuesLog();
+    await expect(gibFrei(s.bereichsOrt, 'seite', 'j')).rejects.toMatchObject({
+      status: 409,
+      message: expect.stringMatching(
+        /Jugendabend“ gehört zu einer Untergruppe, die noch nicht eingerichtet ist/,
+      ),
+    });
+    expect(s.schreibzugriffe()).toEqual([]);
+    // Ohne die Kategorie der Untergruppe im Ort (Person sieht sie nicht) dasselbe.
+    await seiteSpeichern(s.entwurfsOrt, jugendSeite(), JETZT);
+    s.neuesLog();
+    await expect(gibFrei(s.freigabeOrt, 'seite', 'j')).rejects.toMatchObject({ status: 409 });
+    expect(s.schreibzugriffe()).toEqual([]);
+  });
+
+  it('Verschieben: erst in die neue Kategorie schreiben, nachlesen – ERST DANN aus der alten löschen', async () => {
+    const s = fakeFreigabeSpeicher();
+    // Freigegeben, als die Seite noch der Website gehörte …
+    await seiteSpeichern(s.entwurfsOrt, { ...jugendSeite(), bereich: undefined }, JETZT);
+    await gibFrei(s.bereichsOrt, 'seite', 'j');
+    expect(liegtIn(s, ONLINE, 'j')).toBe(true);
+    // … dann hat die Leitung der Website den Bereich auf Jugend gestellt.
+    await seiteSpeichern(s.entwurfsOrt, jugendSeite(), SPAETER);
+    s.neuesLog();
+    const r = await gibFrei(s.bereichsOrt, 'seite', 'j');
+    expect(r).toMatchObject({ statusEntfernt: true });
+    expect(r.bleibtIn).toBeUndefined();
+    expect(liegtIn(s, JUGEND_ONLINE, 'j')).toBe(true);
+    expect(liegtIn(s, ONLINE, 'j')).toBe(false);
+    // Reihenfolge: letzter Schreibzugriff in 117 und das Nachlesen dort liegen VOR dem ersten Löschen in der alten Kategorie.
+    const i = (pred: (z: (typeof s.log)[number]) => boolean) => s.log.findIndex(pred);
+    const ersteLoeschungAlt = i((z) => z.kategorie === ONLINE && z.art === 'DELETE');
+    const letztesSchreibenNeu = s.log.reduce(
+      (n, z, k) => (z.kategorie === JUGEND_ONLINE && z.art !== 'LESEN' ? k : n),
+      -1,
+    );
+    const nachlesenNeu = s.log.findIndex(
+      (z, k) => k > letztesSchreibenNeu && z.kategorie === JUGEND_ONLINE && z.art === 'LESEN',
+    );
+    expect(ersteLoeschungAlt).toBeGreaterThan(-1);
+    expect(letztesSchreibenNeu).toBeLessThan(ersteLoeschungAlt);
+    expect(nachlesenNeu).toBeGreaterThan(letztesSchreibenNeu);
+    expect(nachlesenNeu).toBeLessThan(ersteLoeschungAlt);
+  });
+
+  it('scheitert das Schreiben in die neue Kategorie, wird in der alten nichts gelöscht', async () => {
+    const s = fakeFreigabeSpeicher();
+    await seiteSpeichern(s.entwurfsOrt, { ...jugendSeite(), bereich: undefined }, JETZT);
+    await gibFrei(s.bereichsOrt, 'seite', 'j');
+    await seiteSpeichern(s.entwurfsOrt, jugendSeite(), SPAETER);
+    s.neuesLog();
+    s.steuerung.ausfall = (z) =>
+      z.kategorie === JUGEND_ONLINE && z.art !== 'LESEN' ? fehlerMit(503) : undefined;
+    await expect(gibFrei(s.bereichsOrt, 'seite', 'j')).rejects.toBeTruthy();
+    expect(s.schreibzugriffe(ONLINE)).toEqual([]);
+    expect(liegtIn(s, ONLINE, 'j')).toBe(true);
+  });
+
+  it('alte Kategorie lässt sich nicht löschen (kein Recht): Seite ist in der neuen online, Ergebnis sagt „bleibt in Website“ – kein Fehler', async () => {
+    const s = fakeFreigabeSpeicher();
+    await seiteSpeichern(s.entwurfsOrt, { ...jugendSeite(), bereich: undefined }, JETZT);
+    await gibFrei(s.bereichsOrt, 'seite', 'j');
+    await seiteSpeichern(s.entwurfsOrt, jugendSeite(), SPAETER);
+    await statusSetzen(s.entwurfsOrt, 'j', { zustand: 'eingereicht' }, RITA, SPAETER);
+    s.steuerung.ausfall = (z) =>
+      z.kategorie === ONLINE && z.art === 'DELETE' ? fehlerMit(403) : undefined;
+    const r = await gibFrei(s.bereichsOrt, 'seite', 'j');
+    expect(r.bleibtIn).toEqual([null]);
+    expect(r.statusEntfernt).toBe(true);
+    expect(liegtIn(s, JUGEND_ONLINE, 'j')).toBe(true);
+    expect(liegtIn(s, ONLINE, 'j')).toBe(true);
+    // Die Liste zeigt das: Die Seite steht weiter als „geändert“ (muss verschoben werden).
+    const { e, sicht } = sichtAus(s);
+    const eintrag = freigabeListe(e, sicht, WEBSITE_LEITUNG, 1).find((x) => x.id === 'j');
+    expect(eintrag).toMatchObject({ art: 'geaendert', verschieben: true, bereich: JUGEND });
+  });
+
+  it('alte Kategorie ohne Leserecht: übersprungen, kein Fehler, nichts gemeldet', async () => {
+    const s = fakeFreigabeSpeicher();
+    await seiteSpeichern(s.entwurfsOrt, jugendSeite(), JETZT);
+    s.steuerung.ausfall = (z) => (z.kategorie === ONLINE ? fehlerMit(401) : undefined);
+    const r = await gibFrei(s.bereichsOrt, 'seite', 'j');
+    expect(r.bleibtIn).toBeUndefined();
+    expect(liegtIn(s, JUGEND_ONLINE, 'j')).toBe(true);
+  });
+
+  it('„Alles freigeben“: jede Seite in die Kategorie ihres Bereichs, „bleibt“ wird gesammelt', async () => {
+    const s = fakeFreigabeSpeicher();
+    await seiteSpeichern(s.entwurfsOrt, seiteA(), JETZT);
+    await seiteSpeichern(s.entwurfsOrt, { ...jugendSeite(), bereich: undefined }, JETZT);
+    await gibFrei(s.bereichsOrt, 'seite', 'j');
+    await seiteSpeichern(s.entwurfsOrt, jugendSeite(), SPAETER);
+    s.steuerung.ausfall = (z) =>
+      z.kategorie === ONLINE && z.art === 'DELETE' ? fehlerMit(403) : undefined;
+    const r = await alleFreigeben(s.bereichsOrt, [
+      { einheit: 'seite', id: 'a' },
+      { einheit: 'seite', id: 'j' },
+    ]);
+    expect(r.fehler).toBeNull();
+    expect(liegtIn(s, ONLINE, 'a')).toBe(true);
+    expect(liegtIn(s, JUGEND_ONLINE, 'j')).toBe(true);
+    expect(r.bleibt).toEqual([{ ziel: { einheit: 'seite', id: 'j' }, bleibtIn: [null] }]);
+  });
+});
+
+describe('Löschen und offline nehmen über alle Bereiche (W3b-4b)', () => {
+  async function inBeiden() {
+    const s = fakeFreigabeSpeicher();
+    await seiteSpeichern(s.entwurfsOrt, { ...jugendSeite(), bereich: undefined }, JETZT);
+    await gibFrei(s.bereichsOrt, 'seite', 'j');
+    // Liegt jetzt in der Website-Kategorie; zusätzlich (z. B. nach einem halben Verschieben) in Jugend.
+    await seiteSpeichern(s.jugendOrt, jugendSeite(), JETZT);
+    await seiteSpeichern(s.entwurfsOrt, jugendSeite(), SPAETER);
+    s.neuesLog();
+    return s;
+  }
+
+  it('aus JEDER Veröffentlicht-Kategorie, in der die Seite steht – dann erst den Entwurf', async () => {
+    const s = await inBeiden();
+    const r = await seiteEntfernen(s.bereichsOrt, 'j', JUGEND);
+    expect(r.bleibtIn).toEqual([]);
+    expect(liegtIn(s, ONLINE, 'j')).toBe(false);
+    expect(liegtIn(s, JUGEND_ONLINE, 'j')).toBe(false);
+    expect(liegtIn(s, ENTWUERFE, 'j')).toBe(false);
+    const letztesOnline = s.log.reduce(
+      (n, z, k) => (z.kategorie !== ENTWUERFE && z.art === 'DELETE' ? k : n),
+      -1,
+    );
+    const erstesEntwurf = s.log.findIndex((z) => z.kategorie === ENTWUERFE && z.art === 'DELETE');
+    expect(letztesOnline).toBeLessThan(erstesEntwurf);
+  });
+
+  it('fremde Kategorie ohne Schreibrecht: die Seite bleibt dort (gemeldet), der Rest geschieht', async () => {
+    const s = await inBeiden();
+    s.steuerung.ausfall = (z) =>
+      z.kategorie === ONLINE && z.art === 'DELETE' ? fehlerMit(403) : undefined;
+    const r = await seiteEntfernen(s.bereichsOrt, 'j', JUGEND);
+    expect(r.bleibtIn).toEqual([null]);
+    expect(liegtIn(s, ONLINE, 'j')).toBe(true);
+    expect(liegtIn(s, JUGEND_ONLINE, 'j')).toBe(false);
+    expect(liegtIn(s, ENTWUERFE, 'j')).toBe(false);
+  });
+
+  it('EIGENE Kategorie ohne Schreibrecht: Fehler „kein Recht“, der Entwurf bleibt', async () => {
+    const s = await inBeiden();
+    s.steuerung.ausfall = (z) =>
+      z.kategorie === JUGEND_ONLINE && z.art === 'DELETE' ? fehlerMit(403) : undefined;
+    await expect(seiteEntfernen(s.bereichsOrt, 'j', JUGEND)).rejects.toMatchObject({
+      status: 403,
+      message: expect.stringMatching(/fehlt dir das Recht/),
+    });
+    expect(liegtIn(s, ENTWUERFE, 'j')).toBe(true);
+  });
+
+  it('ein vorübergehender Fehler wirft – der Entwurf bleibt (vorübergehend ist nicht ungültig)', async () => {
+    const s = await inBeiden();
+    s.steuerung.ausfall = (z) =>
+      z.kategorie === ONLINE && z.art === 'DELETE' ? fehlerMit(503) : undefined;
+    await expect(seiteEntfernen(s.bereichsOrt, 'j', JUGEND)).rejects.toBeTruthy();
+    expect(liegtIn(s, ENTWUERFE, 'j')).toBe(true);
+  });
+});
+
+describe('Online-Vergleich und Liste je Bereich (W3b-4b)', () => {
+  /** Website-Seite A (eingereicht von Person 9), Jugend-Seite J (eingereicht von Rita), Jugend-Seite K online in Jugend. */
+  async function bereiche() {
+    const s = fakeFreigabeSpeicher();
+    await seiteSpeichern(s.entwurfsOrt, seiteA(), JETZT);
+    await seiteSpeichern(s.entwurfsOrt, jugendSeite('j', 'Jugendabend'), JETZT);
+    await seiteSpeichern(s.entwurfsOrt, jugendSeite('k', 'Jugend-Team'), JETZT);
+    await gibFrei(s.bereichsOrt, 'seite', 'k');
+    await menueSpeichern(s.entwurfsOrt, menue([]), JETZT);
+    await statusSetzen(
+      s.entwurfsOrt,
+      'a',
+      { zustand: 'eingereicht' },
+      { ...RITA, person: 9 },
+      JETZT,
+    );
+    await statusSetzen(s.entwurfsOrt, 'j', { zustand: 'eingereicht' }, RITA, JETZT);
+    return s;
+  }
+
+  it('der Online-Stand einer Seite kommt aus der Kategorie IHRES Bereichs; liegt sie (auch) woanders, ist sie „geändert“', async () => {
+    const s = await bereiche();
+    let { e, sicht } = sichtAus(s);
+    expect(sicht.falsch.size).toBe(0);
+    expect(
+      onlineVergleich(e.staende, sicht.stand.staende, sicht.falsch).find((v) => v.id === 'k')?.lage,
+    ).toBe('gleich');
+    // K liegt zusätzlich in der Website-Kategorie (gleicher Text!) – trotzdem „geändert“: Sie muss dort weg.
+    await seiteSpeichern(s.onlineOrt, jugendSeite('k', 'Jugend-Team'), JETZT);
+    ({ e, sicht } = sichtAus(s));
+    expect(sicht.falsch.has('k')).toBe(true);
+    expect(sicht.liegtIn.get('k')).toEqual([null, JUGEND]);
+    const k = e.seiten.find((x) => x.id === 'k')!;
+    expect(seitenLage(k, sicht.stand.staende, sicht.falsch)).toBe('geaendert');
+    expect(seitenLage(k, sicht.stand.staende)).toBe('gleich');
+  });
+
+  it('Leitung der Untergruppe: nur Seiten ihres Bereichs, kein Menü, keine Einstellungen; Zähler zählt nur ihren Bereich', async () => {
+    const s = await bereiche();
+    const { e, sicht } = sichtAus(s);
+    const jugendLeitung = { sieht: [JUGEND], leitet: [JUGEND] };
+    const l = freigabeListe(e, sicht, jugendLeitung, 1);
+    expect(l.map((x) => `${x.art}:${x.id}`)).toEqual(['eingereicht:j']);
+    expect(l.every((x) => x.einheit === 'seite' && x.bereich === JUGEND)).toBe(true);
+    expect(freigabeZaehler(l, jugendLeitung)).toBe(1);
+    // Die Website-Leitung sieht beides, dazu das Menü.
+    const alle = freigabeListe(e, sicht, WEBSITE_LEITUNG, 1);
+    expect(alle.map((x) => `${x.art}:${x.id}`)).toEqual([
+      'eingereicht:a',
+      'eingereicht:j',
+      `menue:${MENUE_ID}`,
+    ]);
+    expect(freigabeZaehler(alle, WEBSITE_LEITUNG)).toBe(2);
+  });
+
+  it('Leitung der Untergruppe, die auch Mitglied der Website ist: Website-Seiten nur wie ein Redakteur (eigene), nicht freigebbar', async () => {
+    const s = await bereiche();
+    const { e, sicht } = sichtAus(s);
+    const z = { sieht: 'alle' as const, leitet: [JUGEND] };
+    // Person 9 hat A eingereicht: Sie sieht A (ihr eigener Status), aber A zählt nicht als „wartet auf mich“.
+    const l = freigabeListe(e, sicht, z, 9);
+    expect(l.map((x) => `${x.art}:${x.id}`)).toEqual(['eingereicht:a', 'eingereicht:j']);
+    expect(freigabeZaehler(l, z)).toBe(1);
+  });
+
+  it('Redakteur der Untergruppe: nur eigene Einträge seines Bereichs', async () => {
+    const s = await bereiche();
+    const { e, sicht } = sichtAus(s);
+    const l = freigabeListe(e, sicht, { sieht: [JUGEND], leitet: [] }, RITA.person);
+    expect(l.map((x) => `${x.art}:${x.id}`)).toEqual(['eingereicht:j']);
+    expect(freigabeZaehler(l, { sieht: [JUGEND], leitet: [] })).toBe(0);
+    // Der Website-Redakteur Person 9 sieht seine Website-Seite, nicht die Jugend-Seite von Rita.
+    expect(freigabeListe(e, sicht, WEBSITE_REDAKTEUR, 9).map((x) => x.id)).toEqual(['a']);
+  });
+
+  it('wer nur Jugend sieht, bekommt auch seine EIGENEN Einträge an Website-Seiten nicht (E-W31: nur Seiten seines Bereichs)', async () => {
+    const s = await bereiche();
+    const { e, sicht } = sichtAus(s);
+    // Person 9 hat A (Website) eingereicht – ist heute aber nur noch in Jugend.
+    expect(freigabeListe(e, sicht, { sieht: [JUGEND], leitet: [] }, 9)).toEqual([]);
+    expect(
+      freigabeListe(e, sicht, { sieht: [JUGEND], leitet: [JUGEND] }, 9).map((x) => x.id),
+    ).toEqual(['j']);
+  });
+
+  it('„nur noch online“ im Bereich Jugend: sieht und nimmt die Leitung von Jugend offline, nicht ein Redakteur', async () => {
+    const s = await bereiche();
+    await seiteSpeichern(s.jugendOrt, jugendSeite('weg', 'Weg'), JETZT);
+    const { e, sicht } = sichtAus(s);
+    const l = freigabeListe(e, sicht, { sieht: [JUGEND], leitet: [JUGEND] }, 1);
+    expect(l.find((x) => x.id === 'weg')).toMatchObject({ art: 'nurOnline', bereich: JUGEND });
+    expect(
+      freigabeListe(e, sicht, { sieht: [JUGEND], leitet: [] }, 1).some((x) => x.id === 'weg'),
+    ).toBe(false);
+  });
+
+  it('`nurWebsite` ist dasselbe wie die Sicht mit nur der Kategorie der Website (Gegenstück zu bis W3b-4a)', async () => {
+    const s = await bereiche();
+    const e = websiteAusWerten(s.werte[ENTWUERFE]);
+    const o = websiteAusWerten(s.werte[ONLINE]);
+    expect(nurWebsite(e, o).stand.staende).toEqual(
+      onlineSicht(e, [{ bereich: null, kategorie: ONLINE, stand: o }]).stand.staende,
+    );
+  });
+});
+
+// ── Bereichswechsel (W3b-4b-2, E-W32) ─────────────────────────────────────────────────────────────────────────────────────
+// Die Leitung der Website ändert in „Seite einstellen“ den Bereich einer Seite, die online steht: Die veröffentlichte Fassung
+// wandert SOFORT mit – nur ihr `bereich` ändert sich, nicht der Entwurf geht online. Website = Kategorie 2, Jugend = Gruppe 347
+// mit Kategorie 117.
+
+/** Der Text der Seite in einer Kategorie – `null`, wenn sie dort nicht (vollständig) liegt. */
+const textIn = (s: ReturnType<typeof fakeFreigabeSpeicher>, kategorie: number, id: string) =>
+  einheitText(s.werte[kategorie], 'seite', id)?.text ?? null;
+
+/**
+ * Die Ausgangslage aus der Abnahme: „Jugendabend“ ist online bei der Website (freigegeben, als sie ihr noch gehörte); danach hat
+ * die Leitung im Entwurf weitergearbeitet (`Nicht geprüft`) und jetzt den Bereich auf Jugend gestellt – der Entwurf ist
+ * gespeichert (wie in „Seite einstellen“ mit `bereichSetzen`).
+ */
+async function onlineBeiDerWebsite(entwurfGeaendert = true) {
+  const s = fakeFreigabeSpeicher();
+  const online = { ...jugendSeite(), bereich: undefined };
+  await seiteSpeichern(s.entwurfsOrt, online, JETZT);
+  await gibFrei(s.bereichsOrt, 'seite', 'j');
+  const vorher = textIn(s, ONLINE, 'j')!;
+  const entwurf = bereichSetzen(
+    entwurfGeaendert
+      ? seiteMit([baustein('text', { id: 'tj', markdown: 'Nicht geprüft' })], {
+          id: 'j',
+          pfad: 'j',
+          titel: 'Jugendabend',
+        })
+      : online,
+    JUGEND,
+  );
+  await seiteSpeichern(s.entwurfsOrt, entwurf, SPAETER);
+  s.neuesLog();
+  return { s, vorher, entwurf };
+}
+
+describe('Bereichswechsel: die Online-Fassung wandert sofort mit (W3b-4b-2)', () => {
+  it('online bei der Website → nach Jugend verschoben: die ONLINE-Fassung mit neuem Bereich, nicht der Entwurf', async () => {
+    const { s, vorher } = await onlineBeiDerWebsite();
+    const r = await bereichWechseln(s.bereichsOrt, 'j', null, JUGEND);
+    expect(r).toEqual({ verschoben: true });
+    expect(liegtIn(s, ONLINE, 'j')).toBe(false);
+    const jetzt = textIn(s, JUGEND_ONLINE, 'j')!;
+    // Zeichen für Zeichen die bisherige Online-Fassung – nur mit Bereich (dieselbe Regel wie der Entwurf).
+    const alt = JSON.parse(vorher.slice(WEBSITE_KENNUNG.length)) as Seite;
+    expect(jetzt).toBe(seiteAlsText(bereichSetzen(alt, JUGEND)));
+    expect(jetzt).not.toContain('Nicht geprüft');
+    expect(jetzt).toContain(`"bereich":${JUGEND}`);
+    // Freigegeben ist damit nichts: Der Entwurf bleibt „geändert“.
+    const { e, sicht } = sichtAus(s);
+    expect(seitenLage(e.seiten.find((x) => x.id === 'j')!, sicht.stand.staende, sicht.falsch)).toBe(
+      'geaendert',
+    );
+  });
+
+  it('Reihenfolge: in 117 schreiben → nachlesen → ERST DANN in 2 löschen', async () => {
+    const { s } = await onlineBeiDerWebsite();
+    await bereichWechseln(s.bereichsOrt, 'j', null, JUGEND);
+    const ersteLoeschungAlt = s.log.findIndex((z) => z.kategorie === ONLINE && z.art === 'DELETE');
+    const letztesSchreibenNeu = s.log.reduce(
+      (n, z, k) => (z.kategorie === JUGEND_ONLINE && z.art !== 'LESEN' ? k : n),
+      -1,
+    );
+    const nachlesenNeu = s.log.findIndex(
+      (z, k) => k > letztesSchreibenNeu && z.kategorie === JUGEND_ONLINE && z.art === 'LESEN',
+    );
+    expect(letztesSchreibenNeu).toBeGreaterThan(-1);
+    expect(nachlesenNeu).toBeGreaterThan(letztesSchreibenNeu);
+    expect(ersteLoeschungAlt).toBeGreaterThan(nachlesenNeu);
+  });
+
+  it('Entwurf bis auf den Bereich gleich der Online-Fassung: danach „Online“ (gleicher Stand, über die echten Erzeuger)', async () => {
+    const { s, entwurf } = await onlineBeiDerWebsite(false);
+    const { e: e0, sicht: s0 } = sichtAus(s);
+    expect(seitenLage(entwurf, s0.stand.staende, s0.falsch)).toBe('geaendert');
+    await bereichWechseln(s.bereichsOrt, 'j', null, JUGEND);
+    const { e, sicht } = sichtAus(s);
+    expect(e0.seiten.find((x) => x.id === 'j')).toEqual(entwurf);
+    expect(seitenLage(entwurf, sicht.stand.staende, sicht.falsch)).toBe('gleich');
+    expect(sicht.stand.staende.find((x) => x.id === 'j')?.stand).toBe(seitenStand(entwurf));
+    expect(freigabeListe(e, sicht, WEBSITE_LEITUNG, 1).some((x) => x.id === 'j')).toBe(false);
+  });
+
+  it('zurück auf „Website“: das Feld `bereich` fällt weg, die Seite steht in 2 – in 117 nicht mehr', async () => {
+    const s = fakeFreigabeSpeicher();
+    await seiteSpeichern(s.entwurfsOrt, jugendSeite(), JETZT);
+    await gibFrei(s.bereichsOrt, 'seite', 'j');
+    const vorher = textIn(s, JUGEND_ONLINE, 'j')!;
+    await seiteSpeichern(s.entwurfsOrt, bereichSetzen(jugendSeite(), null), SPAETER);
+    const r = await bereichWechseln(s.bereichsOrt, 'j', JUGEND, null);
+    expect(r).toEqual({ verschoben: true });
+    expect(liegtIn(s, JUGEND_ONLINE, 'j')).toBe(false);
+    const jetzt = textIn(s, ONLINE, 'j')!;
+    expect(jetzt).not.toContain('bereich');
+    expect(jetzt).toBe(vorher.replace(`,"bereich":${JUGEND}`, ''));
+  });
+
+  it('steht `bereich` im gespeicherten Text nicht am Ende, bleibt der Rest trotzdem Zeichen für Zeichen (kein Umweg über das Schema)', async () => {
+    const s = fakeFreigabeSpeicher();
+    // Ungewohnte Reihenfolge der Felder – so, wie ein älterer Stand sie geschrieben haben könnte.
+    const { id, titel, pfad, abschnitte } = jugendSeite();
+    const roh = { titel, bereich: JUGEND, id, abschnitte, pfad };
+    const text = WEBSITE_KENNUNG + JSON.stringify(roh);
+    await einheitSpeichernIn(s, JUGEND_ONLINE, text);
+    await seiteSpeichern(s.entwurfsOrt, bereichSetzen(jugendSeite(), null), SPAETER);
+    await bereichWechseln(s.bereichsOrt, 'j', JUGEND, null);
+    expect(textIn(s, ONLINE, 'j')).toBe(
+      WEBSITE_KENNUNG + JSON.stringify({ titel, id, abschnitte, pfad }),
+    );
+  });
+
+  it('nicht online: kein einziger Schreibzugriff in einer Veröffentlicht-Kategorie', async () => {
+    const s = fakeFreigabeSpeicher();
+    await seiteSpeichern(s.entwurfsOrt, jugendSeite(), JETZT);
+    s.neuesLog();
+    expect(await bereichWechseln(s.bereichsOrt, 'j', null, JUGEND)).toEqual({ verschoben: false });
+    expect(s.schreibzugriffe()).toEqual([]);
+  });
+
+  it('der Status der Seite bleibt unberührt – verschoben ist nicht freigegeben', async () => {
+    const { s } = await onlineBeiDerWebsite();
+    await statusSetzen(s.entwurfsOrt, 'j', { zustand: 'eingereicht' }, RITA, SPAETER);
+    await bereichWechseln(s.bereichsOrt, 'j', null, JUGEND);
+    expect(websiteAusWerten(s.werte[ENTWUERFE]).status.j?.zustand).toBe('eingereicht');
+  });
+});
+
+describe('Bereichswechsel: Fehlerzweige einzeln', () => {
+  it('Schreiben in 117 scheitert (503): wirft, in 2 ist nichts angerührt – online gilt der alte Bereich', async () => {
+    const { s, vorher } = await onlineBeiDerWebsite();
+    s.steuerung.ausfall = (z) =>
+      z.kategorie === JUGEND_ONLINE && z.art !== 'LESEN' ? fehlerMit(503) : undefined;
+    await expect(bereichWechseln(s.bereichsOrt, 'j', null, JUGEND)).rejects.toMatchObject({
+      status: 503,
+    });
+    expect(s.schreibzugriffe(ONLINE)).toEqual([]);
+    expect(textIn(s, ONLINE, 'j')).toBe(vorher);
+  });
+
+  it('Schreiben in 117 ohne Ergebnis (201, nichts angelegt): wirft 502, die alte bleibt unberührt', async () => {
+    const { s, vorher } = await onlineBeiDerWebsite();
+    const echt = s.port.schreibe;
+    s.port.schreibe = (pfad, a) =>
+      pfad.includes(`/${JUGEND_ONLINE}/`) ? Promise.resolve() : echt(pfad, a);
+    await expect(bereichWechseln(s.bereichsOrt, 'j', null, JUGEND)).rejects.toMatchObject({
+      status: 502,
+    });
+    expect(s.schreibzugriffe(ONLINE)).toEqual([]);
+    expect(textIn(s, ONLINE, 'j')).toBe(vorher);
+  });
+
+  it('steht beim Nachlesen in 117 ein anderer Stand (jemand schrieb dazwischen): wirft 502, in 2 wird NICHTS gelöscht', async () => {
+    const { s, vorher } = await onlineBeiDerWebsite();
+    // Lesezugriffe auf 117: 1 = Suche nach der Seite, 2–4 = `einheitSpeichern` (vorher, nach Teilen, nach Kopf), 5 = Nachlesen.
+    let lesen = 0;
+    let gestoert = false;
+    s.steuerung.ausfall = (z) => {
+      if (z.kategorie === JUGEND_ONLINE && z.art === 'LESEN' && ++lesen === 5) {
+        gestoert = true;
+        const kopf = s.werte[JUGEND_ONLINE].find((w) => w.value.includes('"website-kopf"'))!;
+        kopf.value = kopf.value.replace(/"stand":"[0-9a-f]+"/, '"stand":"fremd000"');
+      }
+      return undefined;
+    };
+    await expect(bereichWechseln(s.bereichsOrt, 'j', null, JUGEND)).rejects.toMatchObject({
+      status: 502,
+    });
+    expect(gestoert).toBe(true);
+    expect(s.schreibzugriffe(ONLINE)).toEqual([]);
+    expect(textIn(s, ONLINE, 'j')).toBe(vorher);
+  });
+
+  it('Lesen einer Veröffentlicht-Kategorie scheitert vorübergehend: wirft, nichts geschrieben („unbekannt“ ist nicht „nicht online“)', async () => {
+    const { s } = await onlineBeiDerWebsite();
+    s.steuerung.ausfall = (z) =>
+      z.kategorie === ONLINE && z.art === 'LESEN' ? fehlerMit(503) : undefined;
+    await expect(bereichWechseln(s.bereichsOrt, 'j', null, JUGEND)).rejects.toMatchObject({
+      status: 503,
+    });
+    expect(s.schreibzugriffe()).toEqual([]);
+  });
+
+  it('Online-Fassung nicht vollständig lesbar (ein Teil fehlt): klare Meldung, nichts geschrieben', async () => {
+    const { s } = await onlineBeiDerWebsite();
+    const teil = s.werte[ONLINE].findIndex((w) => w.value.includes('website-teil'));
+    s.werte[ONLINE].splice(teil, 1);
+    await expect(bereichWechseln(s.bereichsOrt, 'j', null, JUGEND)).rejects.toMatchObject({
+      status: 502,
+      message: expect.stringMatching(/nicht vollständig lesen – online wurde nichts verschoben/),
+    });
+    expect(s.schreibzugriffe()).toEqual([]);
+  });
+
+  it('der neue Bereich hat keine Kategorie (nicht eingerichtet): 409, nichts geschrieben', async () => {
+    const { s } = await onlineBeiDerWebsite();
+    await expect(bereichWechseln(s.bereichsOrt, 'j', null, 348)).rejects.toMatchObject({
+      status: 409,
+    });
+    expect(s.schreibzugriffe()).toEqual([]);
+  });
+
+  it('Löschen in 2 scheitert (kein Recht): kein Fehler – die Seite steht in beiden, das Ergebnis sagt „bleibt in Website“', async () => {
+    const { s } = await onlineBeiDerWebsite();
+    s.steuerung.ausfall = (z) =>
+      z.kategorie === ONLINE && z.art === 'DELETE' ? fehlerMit(403) : undefined;
+    const r = await bereichWechseln(s.bereichsOrt, 'j', null, JUGEND);
+    expect(r).toEqual({ verschoben: true, bleibtIn: [null] });
+    expect(liegtIn(s, ONLINE, 'j')).toBe(true);
+    expect(liegtIn(s, JUGEND_ONLINE, 'j')).toBe(true);
+    // Die Freigaben-Liste zeigt es weiter: „muss verschoben werden“.
+    const { e, sicht } = sichtAus(s);
+    expect(freigabeListe(e, sicht, WEBSITE_LEITUNG, 1).find((x) => x.id === 'j')).toMatchObject({
+      verschieben: true,
+    });
+  });
+});
+
+/** Einen Text unverändert in eine Kategorie legen – mit dem echten Speicher-Anschluss. */
+async function einheitSpeichernIn(
+  s: ReturnType<typeof fakeFreigabeSpeicher>,
+  kategorie: number,
+  text: string,
+) {
+  const { einheitSpeichern } = await import('./speicher');
+  await einheitSpeichern({ p: s.port, modul: 7, kategorie }, 'seite', 'j', text, JETZT);
+}

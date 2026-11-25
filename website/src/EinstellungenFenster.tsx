@@ -44,16 +44,19 @@ const KEIN_LINK = '';
 export function EinstellungenFenster({
   onSchliessen,
   werDarfWas,
+  zuWerDarfWas = false,
   mail,
 }: {
   onSchliessen: () => void;
+  /** Geöffnet über „Wer darf was“ im Start-Hinweis: Das Fenster springt zu diesem Abschnitt (W3b-4b, Abnahme W3b-4a). */
+  zuWerDarfWas?: boolean;
   /** Wo der Schalter „Mails im Freigabe-Weg“ liegt (W3b-3) – ohne: kein Schalter. Er wirkt sofort, unabhängig vom „Speichern“. */
   mail?: EntwurfsOrt;
   /**
    * „Wer darf was“ (W3b-1): nur setzen, wenn die Person in ChurchTools Rechte setzen darf (`darfVerwalten`) – sonst fehlt der
    * Bereich ganz. Die Rechte gehören nicht zu den Einstellungen im Speicher und haben darum ihren eigenen Knopf.
    */
-  werDarfWas?: { gruppe: number; kategorien: Kategorien };
+  werDarfWas?: { gruppe: number; kategorien: Kategorien; name?: string };
 }) {
   const q = useEinstellungen();
   if (q.art !== 'bereit')
@@ -78,18 +81,28 @@ export function EinstellungenFenster({
         )}
       </Sheet>
     );
-  return <Bereit q={q} onSchliessen={onSchliessen} werDarfWas={werDarfWas} mail={mail} />;
+  return (
+    <Bereit
+      q={q}
+      onSchliessen={onSchliessen}
+      werDarfWas={werDarfWas}
+      zuWerDarfWas={zuWerDarfWas}
+      mail={mail}
+    />
+  );
 }
 
 function Bereit({
   q,
   onSchliessen,
   werDarfWas,
+  zuWerDarfWas,
   mail,
 }: {
   q: EinstellungenBereit;
   onSchliessen: () => void;
-  werDarfWas?: { gruppe: number; kategorien: Kategorien };
+  zuWerDarfWas: boolean;
+  werDarfWas?: { gruppe: number; kategorien: Kategorien; name?: string };
   mail?: EntwurfsOrt;
 }) {
   const { arbeit, stand, sperre, ich } = q;
@@ -310,7 +323,14 @@ function Bereit({
 
       {mail && <MailSchalter ort={mail} />}
 
-      {werDarfWas && <WerDarfWas gruppe={werDarfWas.gruppe} kategorien={werDarfWas.kategorien} />}
+      {werDarfWas && (
+        <WerDarfWas
+          gruppe={werDarfWas.gruppe}
+          kategorien={werDarfWas.kategorien}
+          name={werDarfWas.name}
+          springen={zuWerDarfWas}
+        />
+      )}
     </Sheet>
   );
 }

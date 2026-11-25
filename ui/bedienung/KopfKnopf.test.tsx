@@ -157,6 +157,32 @@ describe('KopfKnopf – stille Stufe (R2, B1)', () => {
     );
     expect(scss).toMatch(block);
   });
+
+  it('`wortAmHandy`: nur mit dem Merkmal trägt der Knopf die Klasse – ohne bleibt alles wie bisher (am Handy nur das Symbol)', () => {
+    render(
+      <>
+        <KopfKnopf onClick={vi.fn()} label="Mit" symbol={<b>M</b>} wortAmHandy />
+        <KopfKnopf onClick={vi.fn()} label="Ohne" symbol={<b>O</b>} />
+      </>,
+    );
+    expect(screen.getByRole('button', { name: 'Mit' }).className).toMatch(/wortAmHandy/);
+    const ohne = screen.getByRole('button', { name: 'Ohne' });
+    expect(ohne.className).not.toMatch(/wortAmHandy/);
+    // Beide tragen das Wort im Knopf; am Handy blendet nur CSS es aus – und `wortAmHandy` blendet es wieder ein.
+    expect(ohne.textContent).toBe('OOhne');
+  });
+
+  it('`wortAmHandy`: die Ausnahme steht in der Handy-Regel – das Wort wird wieder eingeblendet, sonst nichts', () => {
+    const scss = readFileSync(
+      resolve(process.cwd(), '../ui/bedienung/KopfKnopf.module.scss'),
+      'utf8',
+    );
+    const grenze = /\(max-width:\s*(\d+)px\)/.exec(HANDY_BREITE)?.[1];
+    const ausnahme = new RegExp(
+      `@media \\(max-width: ${grenze}px\\) \\{[^@]*\\.knopf\\.wortAmHandy \\{\\s*width: auto;[^}]*\\.text \\{\\s*display: inline;`,
+    );
+    expect(scss).toMatch(ausnahme);
+  });
 });
 
 describe('KopfZurueck', () => {

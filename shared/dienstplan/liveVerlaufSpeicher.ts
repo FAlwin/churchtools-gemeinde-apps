@@ -49,7 +49,7 @@ export const VERLAUF_KATEGORIE: KategorieAngabe = {
   kuerzel: 'dienstplaner-live-verlauf',
   name: 'Live-Verlauf',
   beschreibung:
-    'Angelegt vom Dienstplaner – lesen: alle, die den Ablauf sehen; ändern: wer die Live-Agenda steuert. Ein Wert je Termin mit den Wechseln der Live-Ansicht (für Plus/Minus, Prognose und Rückblick).',
+    'Angelegt vom Dienstplaner – lesen: alle, die den Ablauf sehen; ändern: wer die Live-Agenda steuert, und die Planer. Ein Wert je Termin mit den Wechseln der Live-Ansicht (für Plus/Minus, Prognose und Rückblick).',
 };
 
 export const VERLAUF_VERWEIGERT =

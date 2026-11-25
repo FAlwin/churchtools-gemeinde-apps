@@ -9,7 +9,14 @@ import {
   menueVerschieben,
 } from '@shared/website/bearbeiten';
 import { SLUG, type Menue, type Seite } from '@shared/website/modell';
+import { bereichSetzen } from '@shared/website/zugang';
 import { Feld, Haken } from './Felder';
+
+/** Ein wählbarer Bereich: `wert` = `null` (die Website) oder die Gruppen-ID einer eingerichteten Untergruppe (W3b-4b). */
+export interface BereichsWahl {
+  wert: number | null;
+  name: string;
+}
 import { pfadEingabe } from './regeln';
 import styles from './Fenster.module.scss';
 
@@ -18,6 +25,11 @@ import styles from './Fenster.module.scss';
  * die **Reihenfolge im Menü** (hoch/runter; Unterpunkte kommen später). Hier wird **nichts sofort geändert** – erst „Fertig“
  * gibt Seite und Menü an den Editor, der sie prüft und speichert (Meldungen stehen im Fenster). „Seite löschen“ geht den
  * Weg aus W3a-1 (Bestätigung, Menüpunkt zuerst).
+ *
+ * **Bereich (W3b-4b):** Die Leitung der Website wählt hier, wem die Seite gehört – der Website oder einer **eingerichteten**
+ * Untergruppe (`bereichWahl`; nicht eingerichtete stehen gar nicht zur Wahl). „Website“ entfernt das Feld. Steht die Seite schon
+ * online, wandert die veröffentlichte Fassung nach dem Speichern **sofort** in die Kategorie des neuen Bereichs (W3b-4b-2, E-W32;
+ * `Seitenarbeit` → `onBereichGewechselt`).
  */
 export function SeiteEinstellen({
   seite,
@@ -25,6 +37,7 @@ export function SeiteEinstellen({
   andereSeiten,
   meldungen,
   menueAendern,
+  bereichWahl,
   onFertig,
   onLoeschen,
   loeschen = 'loeschen',
@@ -39,6 +52,8 @@ export function SeiteEinstellen({
    * nicht. Der Menütitel zieht dem Seitentitel trotzdem nach (sonst stünde dort der alte Name).
    */
   menueAendern: boolean;
+  /** Die wählbaren Bereiche – nur für die Leitung der Website (E-W22); fehlt: kein Feld „Bereich“. */
+  bereichWahl?: readonly BereichsWahl[];
   /** `menue` ist `null`, wenn sich am Menü nichts ändert. */
   onFertig: (seite: Seite, menue: Menue | null) => void;
   onLoeschen: () => void;
@@ -52,6 +67,7 @@ export function SeiteEinstellen({
   const [titel, setTitel] = useState(seite.titel);
   const [pfad, setPfad] = useState(seite.pfad);
   const [beschreibung, setBeschreibung] = useState(seite.beschreibung ?? '');
+  const [bereich, setBereich] = useState<number | null>(seite.bereich ?? null);
   const [entwurf, setEntwurf] = useState<Menue>(menue ?? { eintraege: [] });
   const imMenue = imMenueZeigen(entwurf, seite.id);
 
@@ -65,13 +81,15 @@ export function SeiteEinstellen({
   const titelLeer = titel.trim() === '';
 
   const fertig = () => {
-    const neu: Seite = {
+    let neu: Seite = {
       ...seite,
       titel: titel.trim(),
       pfad: seite.startseite ? seite.pfad : pfad,
     };
     if (beschreibung.trim() === '') delete neu.beschreibung;
     else neu.beschreibung = beschreibung;
+    // Dieselbe Regel wie beim Verschieben der Online-Fassung (`bereichSetzen`): sonst wäre sie bei gleichem Inhalt „geändert“.
+    if (bereichWahl) neu = bereichSetzen(neu, bereich);
     const nachgezogen = menueTitelNachziehen(entwurf, seite.id, seite.titel, neu.titel) ?? entwurf;
     const geaendert = JSON.stringify(nachgezogen) !== JSON.stringify(menue ?? { eintraege: [] });
     onFertig(neu, geaendert ? nachgezogen : null);
@@ -144,6 +162,31 @@ export function SeiteEinstellen({
           />
         )}
       </Feld>
+      {bereichWahl && (
+        <Feld
+          label="Bereich"
+          hilfe="Wer die Seite sieht und freigibt: die Website oder eine ihrer Untergruppen. Steht die Seite schon online, wechselt die veröffentlichte Fassung sofort mit."
+        >
+          {(id) => (
+            <select
+              id={id}
+              className={styles.eingabe}
+              value={bereich === null ? '' : String(bereich)}
+              onChange={(e) => setBereich(e.target.value === '' ? null : Number(e.target.value))}
+            >
+              {bereichWahl.map((b) => (
+                <option key={b.wert ?? 'website'} value={b.wert === null ? '' : String(b.wert)}>
+                  {b.name}
+                </option>
+              ))}
+              {/* Ein Bereich, der nicht (mehr) eingerichtet ist, bleibt sichtbar, bis jemand einen anderen wählt. */}
+              {bereich !== null && !bereichWahl.some((b) => b.wert === bereich) && (
+                <option value={String(bereich)}>Gruppe {bereich} (nicht eingerichtet)</option>
+              )}
+            </select>
+          )}
+        </Feld>
+      )}
       {menueAendern && (
         <Haken
           an={imMenue}

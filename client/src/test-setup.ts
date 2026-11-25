@@ -1,4 +1,13 @@
-import { afterEach } from 'vitest';
+import { afterEach, vi } from 'vitest';
+
+/**
+ * Der Dienstplaner lädt den Tausch beim Öffnen übers Netz (`useTausch` → `tauschPort`). In Tests soll nie etwas ins Netz: Der
+ * Abruf scheiterte, und das `console.warn` kam teils erst nach dem Schließen der Testumgebung (EnvironmentTeardownError,
+ * CI auf main rot). Für alle Tests offline; ein eigenes `vi.mock` in der Testdatei ersetzt das (`MeineTeilen.test.tsx`).
+ */
+vi.mock('../../dienstplaner/src/tauschPort', async () => ({
+  tauschPort: (await import('../../dienstplaner/src/tauschOffline.testutil')).tauschPortOffline,
+}));
 
 /**
  * Nach jedem Test die gerenderten Komponenten und Hooks abbauen (#314).

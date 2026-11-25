@@ -48,6 +48,10 @@ vi.mock('./ladeEinstellungen', () => ({
   ),
   speichereEinstellungen: vi.fn(),
 }));
+// „Meine Anzeige“ (L4-5): ChurchTools ist hier nicht erreichbar – die Wahl bleibt im Gerät (das prüft `MeineAnzeigeAnschluss.test`).
+vi.mock('@ui/ct/ablagePort', async () => ({
+  ablagePort: (await import('./ablageOffline.testutil')).ablagePortOffline,
+}));
 const laden = vi.mocked(ladeStart);
 const termineLaden = vi.mocked(ladeTermine);
 
@@ -200,6 +204,36 @@ describe('Reiter des Dienstplaners (E3-1)', () => {
     expect(screen.queryByRole('button', { name: 'Speichern' })).toBeNull();
     for (const r of screen.getAllByRole('radio'))
       expect((r as HTMLInputElement).disabled).toBe(true);
+  });
+
+  it('„Meine Anzeige“ (L4-5): auch wer nicht planen darf, ändert sie – gemerkt je Person im Gerät; ChurchTools ohne Antwort verliert nichts', async () => {
+    breite(false);
+    localStorage.clear();
+    laden.mockResolvedValue(start([]));
+    render(<App />);
+    const bereiche = await screen.findByRole('navigation', { name: 'Bereiche' });
+    fireEvent.click(within(bereiche).getByRole('button', { name: 'Einstellungen' }));
+    const haken = await screen.findByRole<HTMLInputElement>('checkbox', {
+      name: /Rückblick im Termin zeigen/,
+    });
+    expect(haken.checked).toBe(true);
+    fireEvent.click(haken);
+    expect(haken.checked).toBe(false);
+    // Ein Spiegel je Person (hier die Person 1), nur mit der gewählten Einstellung.
+    const gemerkt = JSON.parse(localStorage.getItem('dienstplaner.anzeige.1') ?? 'null') as {
+      v: number;
+      felder: Record<string, { w: boolean }>;
+    };
+    expect(gemerkt.v).toBe(1);
+    expect(Object.keys(gemerkt.felder)).toEqual(['rueckblick']);
+    expect(gemerkt.felder.rueckblick.w).toBe(false);
+    // Der Abgleich scheitert (offline) – leiser Hinweis, die Auswahl bleibt stehen.
+    expect(await screen.findByText(/Noch nicht in ChurchTools gespeichert/)).toBeTruthy();
+    expect(haken.checked).toBe(false);
+    // Die zwei Spalten gehören zum Rückblick.
+    expect(screen.getByRole<HTMLInputElement>('checkbox', { name: /Spalte „±“/ }).disabled).toBe(
+      true,
+    );
   });
 
   it('beim Laden und im Fehlerfall noch keine Reiter', async () => {

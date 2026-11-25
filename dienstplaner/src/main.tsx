@@ -8,8 +8,9 @@ import './main.scss';
  */
 void erweiterungStarten({
   App,
-  // Ohne Recht sagt die Verbindung das allgemein; hier passt es genauer.
+  // Ersatztext für jedes fehlende Recht ohne eigenen Text – trifft also auch Mitarbeitende, nicht nur Planer. Das Einteilen
+  // (`dienstPort`) und das Öffnen eines Termins (`ladeTermin`) sagen es genauer.
   keinRecht:
-    'ChurchTools erlaubt dir das nicht. Dienste planen darf, wer die Dienstgruppe bearbeiten darf oder die Gruppe des Dienstes leitet.',
+    'ChurchTools erlaubt dir das nicht. Frag die Leitung deiner Dienstgruppe oder die Verantwortlichen deiner Gemeinde nach dem passenden Recht.',
   demo: import.meta.env.DEV ? () => import('./demo') : undefined,
 });

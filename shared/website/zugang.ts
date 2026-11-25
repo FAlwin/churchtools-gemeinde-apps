@@ -1,26 +1,57 @@
 /**
- * **Wer darf die Website bearbeiten – und was?** (Bauplan Website W3a-1 §3.3, W3b-1 E-W19/E-W21/E-W22)
+ * **Wer darf die Website bearbeiten – und was?** (Bauplan Website W3a-1 §3.3, W3b-1 E-W19/E-W21/E-W22, W3b-4b E-W31)
  *
  * - **Admin** = Recht „Gruppen verwalten“ (`administer groups` in `GET /permissions/global` → `churchdb`) – dieselbe Regel
- *   wie im Anmelde-Tool (`verwaltetGruppen`).
+ *   wie im Anmelde-Tool (`verwaltetGruppen`). Der Admin darf alles, was die Leitung der Website darf.
  * - **Leitung** und **Redakteur** ergeben sich aus den **eigenen Rechten** der Person am Modul (`GET /permissions/global` →
- *   Block `website`, z. B. `create custom data: [104, 107]`) – nicht mehr daraus, ob sie die Gruppe leitet. Der Grund: Wer die
- *   Gruppe leitet, aber keine Rechte hat, bekam den Editor gezeigt, und Speichern scheiterte. Jetzt gilt: Wer in
- *   „Entwürfe“ **und** in „Veröffentlicht“ schreiben darf → `leitung`; nur in „Entwürfe“ → `redakteur`; sonst keiner.
- *   „Schreiben“ heißt wie überall (`modulRechteAus`): anlegen, ändern **und** löschen – Speichern legt Teile an, ändert den
- *   Kopf und löscht alte Teile; mit einem davon allein scheiterte es mittendrin. Fremde Kategorien zählen nicht.
- *   Wer nur in „Veröffentlicht“ schreiben darf (kein Recht an „Entwürfe“), hat keinen Zugang – der Editor arbeitet in „Entwürfe“.
- * - Die Stufen vergibt der Admin beim Einrichten und später unter Einstellungen → „Wer darf was“ (`./rechte`).
+ *   Block `website`, z. B. `create custom data: [104, 107]`) – nicht daraus, ob sie die Gruppe leitet. „Schreiben“ heißt wie
+ *   überall (`modulRechteAus`): anlegen, ändern **und** löschen. Fremde Kategorien zählen nicht. Wer nicht in „Entwürfe“
+ *   schreibt, hat keinen Zugang – der Editor arbeitet in „Entwürfe“.
+ *
+ * **Bereiche (W3b-4b):** Jede Seite gehört der Gruppe „Website“ oder einer ihrer Untergruppen (`Seite.bereich`, `bereichVon`).
+ * Der Zugang sagt darum zweierlei – **welche Seiten man sieht** (`sieht`) und **wo man freigibt** (`leitet`), je als „alle“
+ * oder als Liste von Untergruppen:
+ *
+ * | Wer                                                              | `sieht`                    | `leitet`       |
+ * |------------------------------------------------------------------|----------------------------|----------------|
+ * | Admin; schreibt in Entwürfe **und** „Veröffentlicht“ der Website  | alle                       | alle           |
+ * | schreibt in Entwürfe und in die Kategorie von Untergruppen        | ihre + Mitgliedschaften    | diese          |
+ * | schreibt nur in Entwürfe, Mitglied der Gruppe „Website“           | alle                       | –              |
+ * | schreibt nur in Entwürfe, Mitglied eingerichteter Untergruppen    | diese                      | –              |
+ * | schreibt nur in Entwürfe, in keiner dieser Gruppen                | **keine** (Hinweis)        | –              |
+ *
+ * Bei den Mitgliedschaften (`GET /persons/{ich}/groups`, Messung W3b-4-0 c) **geht die Website vor**: Wer Mitglied der Gruppe
+ * „Website“ ist, sieht alle Seiten, auch wenn er zusätzlich in einer Untergruppe ist. Ein Fehler beim Lesen der
+ * Mitgliedschaften wird **nicht** zu „kein Bereich“: `ladeIch` wirft dann, und der Start zeigt „Erneut versuchen“.
  *
  * **Das ist die Regel der Oberfläche, nicht der Schutz der Daten.** Den Schutz bilden die Rechte an den Kategorien in
- * ChurchTools; die Oberfläche zeigt nur, was die Person auch tun darf.
+ * ChurchTools (alle Entwürfe liegen in EINER Kategorie, E-W19); die Oberfläche zeigt nur, was die Person auch tun darf. Jede
+ * Regel steht hier genau einmal – die Oberfläche fragt nur diese Funktionen.
  */
 import { verwaltetGruppen } from '../anmeldung/rechte';
 import { meineGruppen, type RohMitgliedschaft } from '../ct/gruppen';
 import { modulRechteAus } from '../ct/modulRechte';
+import type { UntergruppenKategorie } from './einrichten';
+import type { Seite } from './modell';
 import { MODUL_KUERZEL } from './rechte';
 
-export type Zugang = 'admin' | 'leitung' | 'redakteur';
+/** Für welche Seiten etwas gilt: `'alle'` = die ganze Website, sonst nur die Seiten dieser Untergruppen (Gruppen-IDs). */
+export type Bereiche = 'alle' | readonly number[];
+
+/**
+ * **Der Zugang einer Person** – `null` (an den Aufrufern): keiner. `sieht`: welche Seiten in Seitenliste, „Im Menü“ und
+ * „Freigaben“ stehen; `leitet`: wo die Person freigibt. `leitet: 'alle'` ist die **Leitung der Website** (oder der Admin) – nur
+ * sie ändert Aussehen, Einstellungen, Menü, eigenes HTML, Startseite und den Bereich einer Seite.
+ */
+export interface Zugang {
+  sieht: Bereiche;
+  leitet: Bereiche;
+}
+
+/** Admin oder Leitung der Website: alles. */
+export const WEBSITE_LEITUNG: Zugang = { sieht: 'alle', leitet: 'alle' };
+/** Redakteur der Website (Mitglied der Gruppe „Website“): alle Seiten, nichts freigeben. */
+export const WEBSITE_REDAKTEUR: Zugang = { sieht: 'alle', leitet: [] };
 
 /** Ist die Person Admin? Aus `GET /permissions/global` (ausgepackt). */
 export function istAdmin(global: unknown): boolean {
@@ -49,52 +80,129 @@ export function leitetGruppe(
   ).some((g) => g.id === gruppe && g.leitung);
 }
 
+/** Die IDs der eigenen Gruppen (aktive Mitgliedschaften) – ausgewertet mit `meineGruppen`, nicht nachgebaut. */
+export function meineGruppenIds(
+  mitgliedschaften: readonly RohMitgliedschaft[],
+  rollen: readonly { id?: unknown; isLeader?: unknown }[],
+): number[] {
+  return meineGruppen([...mitgliedschaften], [...rollen]).map((g) => g.id);
+}
+
+export interface ZugangsAngaben {
+  admin: boolean;
+  /** `schreibtIn(...)`. */
+  schreibt: readonly number[];
+  /** Die Website, wie sie eingerichtet ist (`einrichtungAus`) – `null`: nicht eingerichtet oder nicht sichtbar. */
+  website: { gruppe: number; entwuerfe: number | null; veroeffentlicht: number | null } | null;
+  /** Die **eingerichteten** Untergruppen, die die Person sieht (ihre Veröffentlicht-Kategorie steht in ihrer Liste). */
+  untergruppen: readonly UntergruppenKategorie[];
+  /** Die IDs der eigenen Gruppen (`meineGruppenIds`). */
+  meineGruppen: readonly number[];
+}
+
 /**
- * Der Zugang der Person zur Website – `null`: keiner. `schreibt` = `schreibtIn(...)`. Vor der Einrichtung gibt es keine
- * Kategorien (`null`), also nur den Admin. Der Admin hat Vorrang.
+ * **Der Zugang der Person zur Website** – `null`: keiner. Die Regeln stehen in der Tabelle oben; der Admin hat Vorrang. Vor der
+ * Einrichtung gibt es keine Kategorien, also nur den Admin.
  */
-export function zugangFuer(
-  admin: boolean,
-  schreibt: readonly number[],
-  kategorien: { entwuerfe: number | null; veroeffentlicht: number | null } | null,
-): Zugang | null {
-  if (admin) return 'admin';
-  if (!kategorien || kategorien.entwuerfe === null || !schreibt.includes(kategorien.entwuerfe))
-    return null;
-  return kategorien.veroeffentlicht !== null && schreibt.includes(kategorien.veroeffentlicht)
-    ? 'leitung'
-    : 'redakteur';
+export function zugangFuer(a: ZugangsAngaben): Zugang | null {
+  if (a.admin) return WEBSITE_LEITUNG;
+  const w = a.website;
+  if (!w || w.entwuerfe === null || !a.schreibt.includes(w.entwuerfe)) return null;
+  if (w.veroeffentlicht !== null && a.schreibt.includes(w.veroeffentlicht)) return WEBSITE_LEITUNG;
+  const leitet = a.untergruppen
+    .filter((u) => a.schreibt.includes(u.kategorie))
+    .map((u) => u.gruppe);
+  // Die Website geht vor: Mitglied der Gruppe „Website“ sieht alle Seiten.
+  if (a.meineGruppen.includes(w.gruppe)) return { sieht: 'alle', leitet };
+  const mitglied = a.untergruppen
+    .filter((u) => a.meineGruppen.includes(u.gruppe))
+    .map((u) => u.gruppe);
+  return { sieht: [...new Set([...leitet, ...mitglied])], leitet };
+}
+
+/** Ist die Person Leitung der Website (oder Admin)? Nur sie ändert, was für die ganze Website gilt. */
+export function leitetWebsite(zugang: Zugang | null): boolean {
+  return zugang?.leitet === 'alle';
+}
+
+/** Gibt die Person irgendwo frei (Website oder mindestens eine Untergruppe)? Bestimmt, wie „Freigaben“ und der Zähler lesen. */
+export function leitetEtwas(zugang: Zugang | null): boolean {
+  return zugang !== null && (zugang.leitet === 'alle' || zugang.leitet.length > 0);
+}
+
+/**
+ * **Redakteur ohne erkennbaren Bereich:** schreibt in Entwürfe, ist aber weder Mitglied der Gruppe „Website“ noch einer
+ * eingerichteten Untergruppe – sieht **keine** Seiten und bekommt einen Hinweis (statt alles zu sehen).
+ */
+export function ohneBereich(zugang: Zugang | null): boolean {
+  return zugang !== null && zugang.sieht !== 'alle' && zugang.sieht.length === 0;
+}
+
+/** Der Bereich einer Seite: `null` = die Gruppe „Website“, sonst die Untergruppe (W3b-4b). */
+export function bereichVon(seite: Pick<Seite, 'bereich'>): number | null {
+  return seite.bereich ?? null;
+}
+
+/**
+ * **Den Bereich setzen** (W3b-4b-2) – `null` (Website) entfernt das Feld, sonst steht es **am Ende**, wie im Schema. Der
+ * gespeicherte Text und damit die Prüfsumme (`stand`) hängen an der Reihenfolge der Felder: Entwurf („Seite einstellen“, „Neue
+ * Seite“) und verschobene Online-Fassung (`bereichWechseln`) nutzen darum dieselbe Regel – sonst wären sie bei gleichem Inhalt
+ * „geändert“.
+ */
+export function bereichSetzen<T extends { bereich?: number }>(seite: T, bereich: number | null): T {
+  const { bereich: _alt, ...rest } = seite;
+  return (bereich === null ? rest : { ...rest, bereich }) as T;
+}
+
+function enthaelt(b: Bereiche, bereich: number | null): boolean {
+  return b === 'alle' || (bereich !== null && b.includes(bereich));
+}
+
+/** Sieht die Person Seiten dieses Bereichs? (E-W31: Untergruppen sehen nur ihre Seiten.) */
+export function siehtBereich(zugang: Zugang | null, bereich: number | null): boolean {
+  return zugang !== null && enthaelt(zugang.sieht, bereich);
+}
+
+/** Die Seiten, die in Seitenliste, „Im Menü“ und „Freigaben“ stehen – die Vorschau rendert trotzdem mit allen. */
+export function sichtbareSeiten<T extends Pick<Seite, 'bereich'>>(
+  seiten: readonly T[],
+  zugang: Zugang | null,
+): T[] {
+  return seiten.filter((s) => siehtBereich(zugang, bereichVon(s)));
+}
+
+/**
+ * **Die Bereiche, in denen eine neue Seite liegen kann** – `[null]`: sie gehört der Website (wer alle Seiten sieht; änderbar in
+ * „Seite einstellen“). Wer nur über Untergruppen dabei ist, bekommt deren Bereich; bei mehreren wählt er im Fenster „Neue Seite“.
+ */
+export function bereicheFuerNeueSeite(zugang: Zugang | null): (number | null)[] {
+  if (!zugang || zugang.sieht === 'alle') return [null];
+  return [...zugang.sieht];
 }
 
 /**
  * Darf die Person den Baustein „Eigenes HTML“ einfügen und ändern? **Eigenes HTML wird unverändert auf die Website
- * übernommen** (E-W12) – darum nur Leitung und Admin, nie ein Redakteur.
- *
- * **Auch das ist die Regel der Oberfläche, nicht der Schutz der Daten.**
+ * übernommen** (E-W12) – darum nur die Leitung der Website und der Admin, nie ein Redakteur oder die Leitung einer Untergruppe.
  */
 export function darfEigenesHtml(zugang: Zugang | null): boolean {
-  return zugang === 'admin' || zugang === 'leitung';
+  return leitetWebsite(zugang);
 }
 
 /**
- * Darf die Person **Aussehen** (Farben, Schriften, eigenes CSS), das Fenster **Einstellungen** und das **Menü** ändern?
- * (E-W22) – nur Leitung und Admin. Das eigene CSS wird unverändert übernommen, die Einstellungen gelten für die ganze Website.
+ * Darf die Person **Aussehen** (Farben, Schriften, eigenes CSS), das Fenster **Einstellungen**, das **Menü**, die
+ * **Startseite** und den **Bereich** einer Seite ändern? (E-W22) – nur die Leitung der Website und der Admin: Das gilt für die
+ * ganze Website (das eigene CSS wird unverändert übernommen).
  */
 export function darfAussehenUndMenue(zugang: Zugang | null): boolean {
-  return zugang === 'admin' || zugang === 'leitung';
+  return leitetWebsite(zugang);
 }
 
 /**
- * Darf die Person **freigeben** (Seiten, Menü, Einstellungen nach „Veröffentlicht“), **direkt veröffentlichen**, „Löschen
- * angefragt“ bestätigen und Seiten **löschen**? (W3b-2, E-W23) – nur Leitung und Admin; ein Redakteur reicht ein und fragt das
- * Löschen an. Das spiegelt die Rechte an den Kategorien (nur die Leitung schreibt in „Veröffentlicht“); **geschützt sind die
- * Daten allein durch diese Rechte**, nicht durch die Oberfläche. W3b-4 ergänzt hier den Bereich (Untergruppe).
- *
- * **Zwischenstand W3b-4a (bis W3b-4b):** Rollen einer eingerichteten Untergruppe schreiben in „Entwürfe“, aber nicht in
- * „Veröffentlicht“ der Website – `zugangFuer` macht sie deshalb zu **„redakteur“ für die ganze Website** (sie sehen alle
- * Seiten, reichen ein, geben nicht frei). Auch die Leitung einer Untergruppe ist hier Redakteur, obwohl sie in ihre eigene
- * Kategorie schreiben darf. Erst W3b-4b bringt den Bereich je Seite, gefilterte Listen und Freigeben je Bereich.
+ * Darf die Person eine Seite dieses Bereichs **freigeben**, **direkt veröffentlichen**, zurückgeben, „Löschen angefragt“
+ * bestätigen und **löschen**? (W3b-2, E-W23, W3b-4b) – die Leitung der Website und der Admin für alle Seiten, die Leitung einer
+ * Untergruppe nur für Seiten **ihres** Bereichs. Ein Redakteur reicht ein und fragt das Löschen an. Menü und Einstellungen gibt
+ * nur die Leitung der Website frei (`bereich` ist dort `null`).
  */
-export function darfFreigeben(zugang: Zugang | null): boolean {
-  return zugang === 'admin' || zugang === 'leitung';
+export function darfFreigeben(zugang: Zugang | null, bereich: number | null): boolean {
+  return zugang !== null && enthaelt(zugang.leitet, bereich);
 }

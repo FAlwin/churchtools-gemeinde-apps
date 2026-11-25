@@ -37,6 +37,7 @@ import { verlaufCacheLeeren, verlaufImCacheErsetzen } from './ladeVerlauf';
 import { TauschAmDienst } from './TauschTeile';
 import type { VertretungZugriff } from './useVertretung';
 import type { Tausch } from './useTausch';
+import { adresseFuerTermin, liveAusAdresse } from './reiter';
 import styles from './TerminAnsicht.module.scss';
 
 /**
@@ -99,6 +100,7 @@ export function TerminAnsicht({
   ladeAntworten,
   heute,
   handy,
+  liveStart = false,
 }: {
   start: Start;
   terminId: number;
@@ -120,6 +122,8 @@ export function TerminAnsicht({
   entwuerfe?: EntwurfAnschluss;
   /** Die Antworten aus „Wann kann ich?“ für „Wer kann?“ und den Zauberstab (E5c-4) – ohne bleiben beide wie früher. */
   ladeAntworten?: AntwortenLader;
+  /** Die Live-Ansicht gleich öffnen (Adresse `#/termin/ID/live`, Knopf „Live“ auf der Startseite) – nur beim ersten Zeigen. */
+  liveStart?: boolean;
   /** Heute (`YYYY-MM-DD`, Ortszeit der Gemeinde) – für den Zauberstab. */
   heute: string;
   /** Schmaler Bildschirm: die Leiste kürzer („Ansehen & senden“). */
@@ -130,9 +134,15 @@ export function TerminAnsicht({
     neu,
     setze: setzeGeladen,
   } = useLaden(
+    // Beide gleichzeitig, aber der Fehler des Termins hat Vorrang: Darf man ihn nicht sehen, scheitert meist auch der
+    // Ablauf – sonst entschiede, wer zuerst antwortet, ob „Diesen Termin zeigt dir ChurchTools nicht“ dasteht.
     () =>
-      Promise.all([ladeTermin(start, terminId, zeitzone), ladeAblauf(terminId)]).then(
-        ([daten, ablauf]) => ({ daten, ablauf }),
+      Promise.allSettled([ladeTermin(start, terminId, zeitzone), ladeAblauf(terminId)]).then(
+        ([daten, ablauf]) => {
+          if (daten.status === 'rejected') throw daten.reason;
+          if (ablauf.status === 'rejected') throw ablauf.reason;
+          return { daten: daten.value, ablauf: ablauf.value };
+        },
       ),
     [start, terminId, zeitzone],
   );
@@ -286,7 +296,11 @@ export function TerminAnsicht({
           : undefined
       }
       // Nach „Live“ ist der Verlauf neu: frisch lesen, damit der Rückblick des Termins gleich da ist.
+      liveStart={liveStart}
       onLiveGeschlossen={() => {
+        // Wer über `#/termin/ID/live` kam: Die Adresse zeigt jetzt wieder nur den Termin (Neuladen öffnet Live nicht noch einmal).
+        if (liveAusAdresse(window.location.hash))
+          window.history.replaceState(null, '', adresseFuerTermin(terminId));
         verlaufCacheLeeren();
         verlaeufe.neuLesen();
       }}

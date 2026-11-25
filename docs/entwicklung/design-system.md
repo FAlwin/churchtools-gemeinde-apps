@@ -92,6 +92,7 @@ ChurchTools). Ausnahme: der ChordPro-**Editor** nutzt bewusst Monospace (`'JetBr
     schließen sich im Typ aus; `offen`/`aktiv` behalten ihre hellblaue Fläche. **Am Handy** (Grenze `HANDY_BREITE`)
     bekommt der stille Knopf von selbst Rand und Fläche zurück (R12 – „kein Knopf ohne Rahmen“); dafür gibt es keine
     eigene Angabe. Seit B3 nutzen sie die Werkzeugzeilen (`MehrMenue`, `FilterKnopf still`).
+  - **Am Handy zeigt `KopfKnopf` nur das Symbol** (R12). **Ausnahme `wortAmHandy`:** für kurze Karten-Aktionen, bei denen ein Symbol allein nicht reicht – das Wort bleibt stehen, der Knopf wird so breit wie nötig, am Rechner sieht er aus wie ohne das Merkmal. Beispiel: „Ablauf & Dienste“ und „Live“ in „Als Nächstes“ auf der Startseite des Dienstplaners. Nicht für Werkzeugzeilen.
   - **Seitenkopf der Erweiterungen** (`ErweiterungsSeite`, B8b; R8/E24): EINE Stelle für alle Apps – oben klein der App-Name (ohne
     Gemeindenamen, der steht in der ChurchTools-Leiste), darunter die unterstrichenen Reiter (am Handy unten), **„Hallo …“ nur auf der
     Startseite** (= der erste Reiter ist aktiv; `gruss={false}` sperrt es zusätzlich, z. B. in der Suche), volle Breite (Wächter

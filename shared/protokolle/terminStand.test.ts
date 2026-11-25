@@ -3,6 +3,7 @@ import {
   istTerminStand,
   neuerTerminStand,
   standNachId,
+  terminStandGeloescht,
   terminStandId,
   wennNochOffen,
 } from './terminStand';
@@ -57,5 +58,25 @@ describe('Stand eines Termin-Bausteins', () => {
   it('standNachId: nach Schlüssel', () => {
     const a = neuerTerminStand(ZIEL, 'offen', null, 1, AM);
     expect(standNachId([a]).get(a.id)).toBe(a);
+  });
+});
+
+describe('terminStandGeloescht – das Protokoll wurde gelöscht (W6)', () => {
+  it('derselbe Stand mit Vermerk „gelöscht“ (wer, wann) – und weiterhin ein gültiger Stand', () => {
+    const alt = neuerTerminStand(ZIEL, 'imKalender', KAL, 1, AM);
+    const weg = terminStandGeloescht(alt, 7, '2026-11-25T10:00:00Z');
+    expect(weg).toEqual({ ...alt, geloescht: { von: 7, am: '2026-11-25T10:00:00Z' } });
+    expect(istTerminStand(JSON.parse(JSON.stringify(weg)))).toBe(true);
+  });
+
+  it('ein schon vermerkter bleibt, wie er ist (zweiter Versuch schreibt nichts doppelt)', () => {
+    const weg = terminStandGeloescht(neuerTerminStand(ZIEL, 'offen', null, 1, AM), 7, AM);
+    expect(terminStandGeloescht(weg, 9, '2027-01-01T00:00:00Z')).toBe(weg);
+  });
+
+  it('ein kaputter Vermerk macht den Wert ungültig', () => {
+    const ok = neuerTerminStand(ZIEL, 'offen', null, 1, AM);
+    for (const geloescht of [null, true, { von: '7', am: AM }, { von: 7 }])
+      expect(istTerminStand({ ...ok, geloescht })).toBe(false);
   });
 });

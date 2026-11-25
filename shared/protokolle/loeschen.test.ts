@@ -98,6 +98,14 @@ describe('Meldungen, wenn es nicht glatt durchläuft', () => {
     expect(t).toContain('nichts doppelt');
   });
 
+  it('die Vermerke im Reiter „Termine“ haben eigene Wörter', () => {
+    const t = unterbrochenText({ erledigt: ['termine'], offen: ['protokoll'], grund: 'Fehler.' });
+    expect(t).toContain('Schon erledigt: Vermerke im Reiter „Termine“ als gelöscht markiert.');
+    expect(
+      unterbrochenText({ erledigt: [], offen: ['termine', 'protokoll'], grund: 'Fehler.' }),
+    ).toContain('Noch offen: die Vermerke im Reiter „Termine“, das Protokoll.');
+  });
+
   it('unterbrochen ohne Erledigtes: sagt, dass noch nichts gelöscht wurde', () => {
     const t = unterbrochenText({ erledigt: [], offen: ['protokoll'], grund: 'Fehler.' });
     expect(t).toContain('Bisher wurde nichts gelöscht.');

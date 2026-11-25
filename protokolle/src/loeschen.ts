@@ -11,14 +11,17 @@
  *    sonst jeden Wert löschen), nachgelesen. Schon vermerkte fallen bei jedem Versuch heraus (`aufgabenAusProtokoll`).
  * 3. **Termin** (Mail „Termin gelöscht“!) und **Gruppentreffen**, falls gewählt – über dieselben Bausteine wie „Sitzung
  *    absagen“ (`terminAbsagen`, `treffenLoeschen`), je nachgelesen. „Schon weg“ (404) ist erledigt.
- * 4. **Das Protokoll selbst:** erst alle **Teile**, **zuletzt der Kopf**, dann nachlesen. Begründung: Der Kopf ist der
+ * 4. **Die Vermerke im Reiter „Termine“** (W14, `termin-stand` in „Mitarbeit“) – immer, wenn es „Mitarbeit“ gibt, nicht
+ *    nur bei „Mitlöschen“: als gelöscht vermerkt (`termineAlsGeloescht`), nie hart (wie die To-Dos, S0), nachgelesen.
+ *    Erst nach der zweiten Sperrprüfung – bleibt das Protokoll wegen einer Sperre stehen, bleiben auch seine Vermerke.
+ * 5. **Das Protokoll selbst:** erst alle **Teile**, **zuletzt der Kopf**, dann nachlesen. Begründung: Der Kopf ist der
  *    Wegweiser – ohne ihn fände ein zweiter Versuch die Sitzung nicht mehr, übrig gebliebene Teile mit dem Text blieben für
  *    immer als unsichtbarer Müll liegen (und der „gelöschte“ Text bliebe in ChurchTools). Bricht es nach den Teilen ab,
  *    steht der Kopf noch da – ohne lesbaren Text: Die Ansicht sagt dann „nicht vollständig lesbar“ (kein halbes Protokoll
  *    sieht „gültig“ aus: `dokumentAusTeilen` nimmt nie einen unvollständigen Stand), und „Löschen“ führt es zu Ende. Das
  *    ist dieselbe Denkweise wie beim Speichern (`schreiben.ts`: der Kopf zeigt immer auf einen vollständigen Stand) –
  *    nur rückwärts: Dort wird der Kopf nach den neuen Teilen umgestellt, hier nach den Teilen entfernt.
- *    Die Sperre wird davor noch einmal geprüft – Schritte 2 und 3 können dauern.
+ *    Die Sperre wird vor Schritt 4 noch einmal geprüft – Schritte 2 und 3 können dauern.
  *
  * **Ein Erfolgssignal ist kein Beleg:** Nach jedem Schritt wird nachgelesen; fehlt der Beleg, wird geworfen. Scheitert ein
  * Schritt, bleibt das Fenster offen (`LoeschUnterbrochen`: was schon erledigt ist, was nicht); ein zweiter Versuch macht
@@ -47,6 +50,7 @@ import { aufgabenWerte, type MitarbeitOrt } from './aufgabenSchreiben';
 import { terminAbsagen, treffenLoeschen } from './bearbeiten';
 import type { ProtokollOrt } from './schreiben';
 import type { TerminRef } from './termin';
+import { termineAlsGeloescht } from './terminStandSchreiben';
 import { toDoLoeschen } from './todoSchreiben';
 
 const VERWEIGERT = 'Du darfst in dieser Gruppe keine Protokolle löschen.';
@@ -56,7 +60,7 @@ export interface LoeschPlan {
   ort: ProtokollOrt;
   ich: Schreiber;
   gruppe: number;
-  /** Kategorie „Mitarbeit“ – ohne sie gibt es keine To-Dos zu vermerken. */
+  /** Kategorie „Mitarbeit“ – ohne sie gibt es keine To-Dos und keine Termin-Vermerke. */
   mitarbeit: MitarbeitOrt | null;
   /** „Mitlöschen“ der To-Dos aus diesem Protokoll. */
   todos: boolean;
@@ -112,7 +116,7 @@ async function treffenNachlesen(gruppe: number, id: number): Promise<void> {
   throw new NichtUebernommen('das Löschen des Gruppentreffens');
 }
 
-/** Schritt 4: alle Teile, dann der Kopf, dann nachlesen. */
+/** Schritt 5: alle Teile, dann der Kopf, dann nachlesen. */
 async function protokollWeg(ort: ProtokollOrt): Promise<void> {
   const f = await frisch(ort);
   for (const t of f.teile)
@@ -133,6 +137,7 @@ export async function protokollLoeschen(q: LoeschPlan): Promise<LoeschErgebnis> 
     ...(q.todos && q.mitarbeit ? (['todos'] as const) : []),
     ...(q.termin ? (['termin'] as const) : []),
     ...(q.treffen !== null ? (['treffen'] as const) : []),
+    ...(q.mitarbeit ? (['termine'] as const) : []),
     'protokoll',
   ];
   const schritt = async (s: LoeschSchritt, tun: () => Promise<void>) => {
@@ -171,7 +176,7 @@ export async function protokollLoeschen(q: LoeschPlan): Promise<LoeschErgebnis> 
     });
   }
 
-  // 4. Das Protokoll – zuletzt; die Sperre noch einmal, falls inzwischen jemand angefangen hat.
+  // Die Sperre noch einmal, falls inzwischen jemand angefangen hat.
   let spaeter: Sperre | null;
   try {
     spaeter = fremdeSperre(await frisch(q.ort), q.ich, jetzt());
@@ -179,6 +184,14 @@ export async function protokollLoeschen(q: LoeschPlan): Promise<LoeschErgebnis> 
     throw new LoeschUnterbrochen([...erledigt], [...offen], e);
   }
   if (spaeter) return { art: 'gesperrt', sperre: spaeter, erledigt };
+
+  // 4. Die Vermerke im Reiter „Termine“ – als gelöscht vermerkt, nie hart.
+  if (mitarbeit)
+    await schritt('termine', () =>
+      termineAlsGeloescht(mitarbeit, q.ort.sitzung, q.ich.person, jetzt().toISOString()),
+    );
+
+  // 5. Das Protokoll – zuletzt.
   await schritt('protokoll', () => protokollWeg(q.ort));
   return { art: 'ok' };
 }

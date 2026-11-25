@@ -812,6 +812,30 @@ describe('Schreibt mit (W16)', () => {
     expect(within(k).getByRole('button', { name: 'Ablehnen' })).toBeTruthy();
   });
 
+  /**
+   * Handtest TF-PROT-33 (25.11.2026): Die Rolle sieht die Gruppe nicht → Mitgliedschaft und damit `rolle` fehlen. v1.6.0
+   * zeigte dann die Leitungsknöpfe. Jetzt entscheidet `treffenPflegen` (aus ChurchTools, `ladeStart`).
+   */
+  it('Rolle unbekannt, „Schreibt mit“ eingestellt: ohne „Gruppentreffen pflegen“ keine Leitungsknöpfe', async () => {
+    const UNBEKANNT = (treffenPflegen: boolean | null): ProtokollGruppe[] => [
+      { ...GRUPPEN[0], rolle: undefined, treffenPflegen },
+      GRUPPEN[1],
+    ];
+    let r = zeige(UNBEKANNT(null));
+    await screen.findByText('Klausur');
+    expect(await neuAngebot()).not.toContain('Neue Sitzung');
+    r.unmount();
+    r = zeige(UNBEKANNT(false));
+    fireEvent.click(await screen.findByText(/freigegeben am 15\.10\.2026/));
+    await screen.findByRole('button', { name: /Teilen/ });
+    expect(screen.queryByRole('button', { name: /Freigabe zurücknehmen/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Protokoll löschen/ })).toBeNull();
+    r.unmount();
+    zeige(UNBEKANNT(true));
+    await screen.findByText('Klausur');
+    expect(await neuAngebot()).toContain('Neue Sitzung');
+  });
+
   it('Einstellung ohne Stufen (von vor W16): wer schreibt, bleibt Leitung', async () => {
     m.ladeSitzungen.mockResolvedValue({ ...DATEN, stufen: null });
     zeige(MITSCHREIBEN);

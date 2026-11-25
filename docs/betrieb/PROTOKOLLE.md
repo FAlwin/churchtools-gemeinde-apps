@@ -67,6 +67,12 @@ geschützt, nicht nur in der Oberfläche (gemessen 16.10.2026):
   Gruppe. Der Vorschlag beim Einrichten bleibt: Leiter-Rollen „Leitung“, alle anderen „Lesen + eigene To-Dos“ – jede
   Gemeinde stellt „Schreibt mit“ je Gruppe selbst ein. Einstellungen von vor W16 kennen die Stufe nicht; dort gilt
   weiter: wer schreibt, ist Leitung.
+  **Wenn die Rolle die Gruppe nicht sehen darf** (manche Gruppentypen verbergen die Gruppe vor ihren Teilnehmern): Dann
+  kennt die Erweiterung die eigene Rolle nicht. Seit v1.6.1 entscheidet in diesem Fall, ob ChurchTools „Gruppentreffen
+  pflegen“ meldet (oder man Admin ist) – das hat nach dem Einrichten nur die Leitung. In v1.6.0 bekam „Schreibt mit“ dann
+  die Leitungsknöpfe (Handtest TF-PROT-33, 25.11.2026). Beobachtet im selben Test: Ohne Sicht auf die Gruppe ließ
+  ChurchTools „Schreibt mit“ trotz „Gruppentreffen durchführen“ die Gruppentreffen nicht lesen – die Anwesenheit zeigt
+  dann den Stand aus dem Protokoll; eintragen ließ sie sich so nicht (Ursache nicht geklärt).
 - Wird eine Rolle herabgestuft, entzieht das Einrichten die Rechte auf die eigenen Kategorien **sofort wirksam**.
   Kalender-Rechte und „versteckte Gruppe sehen“ entzieht es nur, wenn die Einstellungen sie **selbst gesetzt** haben
   (sie merkt sich das in der Einstellung der Gruppe); was ein Admin vorher von Hand gesetzt hatte, bleibt.
@@ -661,7 +667,11 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit schon (gem
   `wer`. Ohne Transkript rechnet das Fenster mit leerer Zuordnung und ohne Funde.
 - **Wer darf was (W16):** `shared/protokolle/zugang.ts` – `darfSchreibenIn` (eigene Rechte: anlegen, ändern, löschen in
   „Protokolle“) und `istLeitungIn` (zusätzlich: die eigene Rolle `ProtokollGruppe.rolle` steht in der Einstellung
-  `GruppenSitzungen.stufen` nicht auf „schreibtMit“; unbekannt → wie vor W16). Die EINE Stelle für `Sitzungen.tsx`,
+  `GruppenSitzungen.stufen` nicht auf „schreibtMit“; keine Stufen oder keine Rolle auf „schreibtMit“ → wie vor W16; Rolle
+  unbekannt bei eingestelltem „schreibtMit“ → `ProtokollGruppe.treffenPflegen`, seit v1.6.1). `treffenPflegen` setzt
+  `ladeStart` aus `/permissions/internal/groups` (`churchdb['+admin meetings']` = 10124, gelesen über
+  `shared/ct/gruppenRechteListe.ts`, dieselbe Auswertung wie der Dienstplaner) oder Admin; nicht lesbar → `null` = keine
+  Leitungsknöpfe, der Start lädt trotzdem. Die EINE Stelle für `Sitzungen.tsx`,
   `ProtokollSchreiben.tsx` (Eigenschaft `leitung`), `ToDos.tsx`, `Startseite.tsx`, `Suche.tsx`; `schreibbar.includes(…)`
   steht sonst nirgends mehr. Die Einstellung speichert je Rolle `typ` (= `groupTypeRoleId`, `rollenMitTyp` beim Einrichten).
 - **Mitlesen (W16):** `protokolle/src/useMitlesen.ts` (`MITLESEN_MS` = 10 s, Pause bei `document.hidden`, nie zwei

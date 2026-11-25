@@ -13,6 +13,7 @@
  *   sichtbar“ gesagt statt leerer Zellen.
  */
 import { ctId } from '../ct/ctId';
+import { gruppenMitRecht } from '../ct/gruppenRechteListe';
 import type { Dienst } from '../ct/dienste';
 import type { Person } from '../organigramm/mitglieder';
 
@@ -90,14 +91,7 @@ export function abwesenheitenAus(roh: readonly unknown[] | null | undefined): Gr
  * der Block `churchservice`). Alles, was nicht ausdrücklich `true` ist, zählt als „kein Recht“.
  */
 export function gruppenMitAbwesenheitsRecht(roh: unknown): Set<number> {
-  const ja = new Set<number>();
-  if (!roh || typeof roh !== 'object') return ja;
-  for (const [schluessel, rechte] of Object.entries(roh as Record<string, unknown>)) {
-    const id = ctId(schluessel);
-    const dienst = (rechte as { churchservice?: Record<string, unknown> } | null)?.churchservice;
-    if (id !== null && dienst?.['+view absence'] === true) ja.add(id);
-  }
-  return ja;
+  return gruppenMitRecht(roh, 'churchservice', '+view absence');
 }
 
 /** Alle CT-Gruppen der Dienste, jede einmal – in der Reihenfolge, in der sie zuerst vorkommen. */

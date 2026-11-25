@@ -28,6 +28,12 @@ export interface ProtokollGruppe {
    * Stufe aus der Einstellung (W16, `./zugang`). Fehlt, wenn man nicht (sichtbar) Mitglied ist.
    */
   rolle?: number | null;
+  /**
+   * Meldet ChurchTools für diese Gruppe „Gruppentreffen pflegen“ (`+admin meetings` = 10124 in
+   * `/permissions/internal/groups`) – oder ist man Admin? Das bekommt beim Einrichten nur die Leitung, „Schreibt mit“ nicht
+   * (`sollRechte`). Gebraucht nur, wenn die eigene Rolle unbekannt ist (`./zugang`). `null`: nicht lesbar.
+   */
+  treffenPflegen?: boolean | null;
 }
 
 /** Trenner im Namen einer Kategorie: „Protokolle · Leitungsteam“. */

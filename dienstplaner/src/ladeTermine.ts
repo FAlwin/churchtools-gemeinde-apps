@@ -78,11 +78,20 @@ async function ladeVonBis(
 export type TerminDaten = TermineDaten;
 
 /**
+ * Wer einen Termin öffnet, den ChurchTools ihm nicht zeigt (z. B. über einen geteilten Link), bekommt das gesagt – nicht
+ * die Regel fürs Planen. Das Einteilen hat seinen eigenen Text (`dienstPort`).
+ */
+export const TERMIN_VERWEIGERT =
+  'Diesen Termin zeigt dir ChurchTools nicht. Wenn du ihn sehen musst, frag die Leitung deiner Dienstgruppe.';
+
+/**
  * **Ein Termin** für die Termin-Ansicht (E6-1b) – mit denselben Regeln wie Liste und Matrix (`datenAus`), damit die
  * Dienste dort genauso stehen. Wirft wie `ctDaten` (404 = den Termin gibt es nicht mehr).
  */
 export async function ladeTermin(start: Start, id: number, zeitzone: string): Promise<TerminDaten> {
-  const termin = await ctDaten<unknown>(`/events/${id}?include=eventServices`);
+  const termin = await ctDaten<unknown>(`/events/${id}?include=eventServices`, {
+    verweigert: TERMIN_VERWEIGERT,
+  });
   if (
     !termin ||
     typeof termin !== 'object' ||

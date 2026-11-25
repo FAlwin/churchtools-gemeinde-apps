@@ -8,6 +8,7 @@ import { leisesFeldKlasse } from './leisesFeld.testutil';
 import { mehrEintrag, mehrEintragOder, oeffneMehr } from './mehrMenue.testutil';
 import { fensterKnoepfe } from '@ui/fenster/fenster.testutil';
 import { TerminAnsicht } from './TerminAnsicht';
+import { TERMIN_VERWEIGERT } from './ladeTermine';
 import { einteilungSchluessel } from '@shared/dienstplan/tausch';
 import { tauschAttrappe } from './tausch.testutil';
 import type { Tausch } from './useTausch';
@@ -304,6 +305,24 @@ describe('TerminAnsicht (E6-1b)', () => {
     expect(await screen.findByRole('heading', { name: 'Gottesdienst' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Termine/ }));
     expect(onZurueck).toHaveBeenCalled();
+  });
+
+  it('Termin ohne Recht → „Diesen Termin zeigt dir ChurchTools nicht“, auch wenn der Ablauf zuerst scheitert', async () => {
+    // Der Ablauf antwortet sofort mit „verboten“, der Termin erst danach – trotzdem zählt der Fehler des Termins.
+    const verbot = {
+      message: 'Keine ausreichende Berechtigung.',
+      messageKey: 'error.forbidden.view',
+    };
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/agenda')) return Promise.resolve(json(403, verbot));
+      if (url.includes('/events/'))
+        return new Promise((fertig) => setTimeout(() => fertig(json(403, verbot)), 20));
+      return Promise.resolve(json(200, { data: [] }));
+    });
+    zeige();
+    expect(await screen.findByText(TERMIN_VERWEIGERT)).toBeTruthy();
+    expect(screen.queryByText(/Dienste planen darf/)).toBeNull();
   });
 
   it('‹ › blättern zum vorigen/nächsten Termin; am Rand gesperrt', async () => {

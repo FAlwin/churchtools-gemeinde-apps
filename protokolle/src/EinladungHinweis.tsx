@@ -1,5 +1,19 @@
+import type { ReactNode } from 'react';
 import { Icon } from '@ui/icons/icons';
 import styles from './SitzungFestlegen.module.scss';
+
+/**
+ * **Ein Satz vor dem Speichern, wenn ChurchTools beim Anlegen sofort etwas tut, das sich nicht mehr zurücknehmen lässt**
+ * (Mails, W15-5 auch Gruppen) – ruhiges Warnzeichen und Satz. Eine Stelle für das Aussehen.
+ */
+export function SofortHinweis({ children }: { children: ReactNode }) {
+  return (
+    <p className={styles.mail} role="note">
+      <Icon name="warnung" size={18} />
+      <span>{children}</span>
+    </p>
+  );
+}
 
 /**
  * **„Die Einladung geht sofort per Mail an N Personen.“** – der Satz vor dem Speichern, wenn ChurchTools Einladungen
@@ -9,11 +23,8 @@ import styles from './SitzungFestlegen.module.scss';
 export function EinladungHinweis({ mails }: { mails: number }) {
   if (mails <= 0) return null;
   return (
-    <p className={styles.mail} role="note">
-      <Icon name="warnung" size={18} />
-      <span>
-        Die Einladung geht <b>sofort</b> per Mail an {mails} {mails === 1 ? 'Person' : 'Personen'}.
-      </span>
-    </p>
+    <SofortHinweis>
+      Die Einladung geht <b>sofort</b> per Mail an {mails} {mails === 1 ? 'Person' : 'Personen'}.
+    </SofortHinweis>
   );
 }

@@ -6,6 +6,7 @@
  */
 import type { Eintrag } from './termine';
 import type { Buchung } from './terminRessourcen';
+import { signupRumpf } from './terminAnmeldung';
 import { istAutomatisch, WIEDERHOLUNG } from './terminWiederholung';
 
 /** Die Adresse eines Termins, wie ChurchTools sie annimmt (`address`) – nur die gefüllten Felder. */
@@ -40,6 +41,8 @@ export interface TerminZusatz {
   buchungen?: readonly Buchung[];
   /** Events (W15-3): je Einzeltermin mit gewählter Vorlage – `startDate` ist der exakte UTC-Beginn des Einzeltermins. */
   events?: readonly { startDate: string; eventTemplateId: number }[];
+  /** Anmeldung (W15-5): der Rumpf `signup` – fehlt, wenn der Schalter aus ist oder kein Gruppentyp gewählt. */
+  signup?: Record<string, number>;
 }
 
 /** Die Adresse aus den Feldern des Fensters – ohne Leerzeichen am Rand, `null` ohne jede Angabe. */
@@ -76,6 +79,8 @@ export function eintragZusatz(e: Eintrag, neueTagsErlaubt: boolean): TerminZusat
   const adresse = eintragAdresse(e);
   if (adresse) z.adresse = adresse;
   if (e.buchungen.length) z.buchungen = e.buchungen;
+  const signup = signupRumpf(e.anmeldung);
+  if (signup) z.signup = signup;
   if (e.art !== WIEDERHOLUNG.keine) {
     z.wiederholung = { art: e.art };
     if (istAutomatisch(e.art)) {

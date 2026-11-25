@@ -40,12 +40,20 @@
  * denen ChurchTools „201“ sagt und nichts anlegt; `eventsLesenFehler` lässt `GET /events` mit 500 scheitern; `eventsAnfrage`
  * ist der Suchtext der letzten Anfrage.
  *
+ * Anmeldung (W15-5, gemessen 25.11.2026): `GET /group/grouptypes` liefert `gruppenTypen`; `POST …/appointments` mit
+ * `signup {signupGroupTypeId, signupDaysForwardNo, …}` speichert es am Termin (`GET` zeigt es) und legt **sofort** je
+ * Einzeltermin zwischen heute und heute + Tage im Voraus eine Gruppe „<Titel> – TT.MM.JJJJ, HH:MM“ (Ortszeit der Gemeinde: `gemeindeZeitzone()` – der Test setzt sie mit `merkeGemeindeZeitzone`) an –
+ * sie steht in `gruppen`, `GET /groups?group_type_ids[]=…` liest sie, der Termin löschen nimmt sie mit. `signupSchlucken`:
+ * ChurchTools sagt „201“ und speichert `signup` nicht; `gruppenSchlucken`: legt keine Gruppen an; `gruppenLesenFehler`: das
+ * Lesen der Gruppen eines Typs scheitert (500). Wöchentliche Serien (`repeatId` 7, `repeatUntil`) kennt der Nachbau.
+ *
  * Beiträge (S6-2, gemessen 11.11.2026): `GET /post/groups` nennt die Gruppen aus `beitragsGruppen` (`type: postPossible`);
  * `POST /posts` legt an und liefert die ID, `GET /posts/{id}` liest nach (404, wenn es ihn nicht gibt).
  * `beitragFehler` antwortet dem `POST` mit einem Fehler – `angelegt` heißt: trotzdem angelegt; `beitragLesenFehler`
  * lässt das Nachlesen mit diesem Status scheitern, `beitragSchlucken` sagt 201 mit ID und legt nichts an.
  */
 import { vi } from 'vitest';
+import { gemeindeZeitzone, heuteImKalender, ortszeitAus } from '@shared/ct/zeit';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
 
 export const MODUL = 24;
@@ -153,6 +161,18 @@ export interface Nachbau {
   eventsLesenFehler: boolean;
   /** Der Suchtext der letzten Anfrage an `GET /events`. */
   eventsAnfrage: string | null;
+  /** Gruppentypen wie `GET /group/grouptypes` (W15-5). */
+  gruppenTypen: { id: number; name: string; nameTranslated?: string }[];
+  /** `GET /group/grouptypes` scheitert (500). */
+  gruppenTypenFehler: boolean;
+  /** Gruppen – auch die, die ChurchTools für Anmeldungen anlegt (`terminId`) – wie `GET /groups?group_type_ids[]=…`. */
+  gruppen: { id: number; name: string; groupTypeId: number; terminId?: number }[];
+  /** `GET /groups?group_type_ids[]=…` scheitert (500). */
+  gruppenLesenFehler: boolean;
+  /** ChurchTools sagt „201“ und legt für `signup` keine Gruppen an. */
+  gruppenSchlucken: boolean;
+  /** ChurchTools sagt „201“ und speichert `signup` nicht am Termin. */
+  signupSchlucken: boolean;
   /** Diese Personen nimmt ChurchTools beim Anlegen nicht als eingeladen an. */
   anfrageVerschluckt: Set<number>;
   treffenFehler: AnlegeFehler | null;
@@ -256,6 +276,12 @@ export function nachbauStarten(): Nachbau {
     vorlagenSchlucken: false,
     vorlagenLesenFehler: false,
     tags: [],
+    gruppenTypen: [],
+    gruppenTypenFehler: false,
+    gruppen: [],
+    gruppenLesenFehler: false,
+    gruppenSchlucken: false,
+    signupSchlucken: false,
     anfrageVerschluckt: new Set(),
     treffenFehler: null,
     treffen: new Map(),
@@ -334,6 +360,18 @@ export function nachbauStarten(): Nachbau {
     if (pfad === '/permissions/global')
       return json(200, { data: { churchcore: { 'administer persons': s.admin } } });
     if (pfad === '/permissions/definitions') return json(200, { data: s.definitionen });
+    if (pfad === '/group/grouptypes')
+      return s.gruppenTypenFehler
+        ? json(500, { message: 'weg' })
+        : json(200, { data: s.gruppenTypen });
+    if (pfad === '/groups' && adresse.searchParams.has('group_type_ids[]')) {
+      if (s.gruppenLesenFehler) return json(500, { message: 'weg' });
+      const typen = adresse.searchParams.getAll('group_type_ids[]').map(Number);
+      return json(200, {
+        data: s.gruppen.filter((g) => typen.includes(g.groupTypeId)),
+        meta: { pagination: { lastPage: 1 } },
+      });
+    }
     if (pfad === '/groups')
       return json(200, {
         data: [
@@ -478,7 +516,8 @@ export function nachbauStarten(): Nachbau {
         for (const a of (body.meetingrequests as { inviteeId: number }[] | undefined) ?? [])
           if (a.inviteeId !== 1 && !s.anfrageVerschluckt.has(a.inviteeId))
             s.mails.push({ person: a.inviteeId, art: 'neu' });
-      if (!f || f.angelegt)
+      const signup = body.signup as Record<string, number> | undefined;
+      if (!f || f.angelegt) {
         s.termine.push({
           kalender: Number(neuT[1]),
           id,
@@ -491,7 +530,42 @@ export function nachbauStarten(): Nachbau {
               person: a.inviteeId,
               state: a.inviteeId === 1 ? 'accepted' : 'pending',
             })),
+          // Wöchentliche Serien (W15-5) und die gespeicherte Anmeldung – GET zeigt sie so wie ChurchTools.
+          ...(body.repeatId === 7
+            ? { repeatId: 7, felder: { repeatUntil: body.repeatUntil ?? null } }
+            : {}),
         });
+        const termin = s.termine[s.termine.length - 1];
+        if (signup && !s.signupSchlucken)
+          termin.felder = {
+            ...termin.felder,
+            signup: {
+              signupGroupTypeId: signup.signupGroupTypeId ?? null,
+              signupDaysForwardNo: signup.signupDaysForwardNo ?? null,
+              signupTemplateGroupId: signup.signupTemplateGroupId ?? null,
+              signupDaysArchiveGroupNo: signup.signupDaysArchiveGroupNo ?? null,
+              singupDaysForwardNo: signup.signupDaysForwardNo ?? null,
+            },
+          };
+        // ChurchTools legt SOFORT je Einzeltermin zwischen heute und heute + Tage im Voraus eine Gruppe an (gemessen).
+        if (signup && !s.gruppenSchlucken) {
+          const heute = heuteImKalender();
+          const bis = new Date(Date.parse(heute) + (signup.signupDaysForwardNo ?? 0) * 86_400_000)
+            .toISOString()
+            .slice(0, 10);
+          for (const v of vorkommen(termin)) {
+            const ort = ortszeitAus(v.beginn, gemeindeZeitzone()); // JJJJ-MM-TTTHH:MM
+            const tag = ort.slice(0, 10);
+            if (tag < heute || tag > bis) continue;
+            s.gruppen.push({
+              id: s.naechste++,
+              name: `${String(body.title)} – ${tag.split('-').reverse().join('.')}, ${ort.slice(11, 16)}`,
+              groupTypeId: Number(signup.signupGroupTypeId),
+              terminId: id,
+            });
+          }
+        }
+      }
       return f ? fehlerAntwort(f) : json(201, { data: { id } });
     }
     const einT = /^\/calendars\/(\d+)\/appointments\/(\d+)$/.exec(pfad);
@@ -581,6 +655,8 @@ export function nachbauStarten(): Nachbau {
         liste.filter((a) => a.person !== 1);
       if (m === 'DELETE') {
         s.termine.splice(s.termine.indexOf(t), 1);
+        // Gemessen 25.11.2026: Termin löschen löscht die Anmelde-Gruppen mit.
+        s.gruppen = s.gruppen.filter((g) => g.terminId !== t.id);
         for (const a of andere(t.anfragen))
           s.mails.push({ person: a.person, art: t.repeatId ? 'serie-geloescht' : 'geloescht' });
         return f ? fehlerAntwort(f) : json(204, null);

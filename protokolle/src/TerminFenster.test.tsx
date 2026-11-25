@@ -50,6 +50,10 @@ const vorlage = (id: number, kalender: number, titel: string, extra = {}) => ({
   imAuftrag: null,
   buchungen: [],
   eventVorlage: null,
+  anmeldungTyp: null,
+  anmeldungTage: null,
+  anmeldungBeenden: null,
+  anmeldungVorlage: null,
   ...extra,
 });
 const ZEILE: TerminZeile = {

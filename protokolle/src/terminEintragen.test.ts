@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { eintragVorbelegung } from '@shared/protokolle/termine';
+import { eintragVorbelegung, type Eintrag } from '@shared/protokolle/termine';
 import { artWechseln, WIEDERHOLUNG } from '@shared/protokolle/terminWiederholung';
+import { _vergissGemeindeZeitzone, merkeGemeindeZeitzone } from '@shared/ct/zeit';
 import { Unklar } from '@ui/ct/fehler';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { nachbauEnde, nachbauStarten, type Nachbau } from './nachbau.testhilfe';
@@ -438,5 +439,158 @@ describe('terminLegen mit Besprechungsanfragen (W15-4)', () => {
     expect(e).toBeInstanceOf(Unklar);
     expect(fehlerMeldung(e).text).toMatch(/Einladung doppelt/);
     expect(posts()).toHaveLength(1);
+  });
+});
+
+/** Anmeldung (W15-5): ChurchTools legt mit dem Termin SOFORT Gruppen an – Rumpf, Nachlesen, nichts wird gelöscht. */
+describe('terminLegen mit Anmeldung (W15-5)', () => {
+  const gruppen = () => ct.aufrufe.filter((a) => a.startsWith('GET /groups'));
+  /** Wie der TEST-Termin 496: wöchentlich ab 26.11.2026 19:00 Ortszeit bis 24.12., Typ 5, 14 Tage, 7 Tage bis Beenden. */
+  const SERIE = {
+    ...eintragVorbelegung({ text: 'TEST, 19 Uhr', datum: '2026-11-26' }, 4),
+    kalender: 4,
+    art: WIEDERHOLUNG.woechentlich,
+    frequenz: 1,
+    wiederBis: '2026-12-24',
+  };
+  const MIT = (
+    anmeldung: Eintrag['anmeldung'] = { typ: 5, tage: 14, vorlage: null, beenden: 7 },
+  ) => ({
+    ...SERIE,
+    anmeldung,
+  });
+
+  beforeEach(() => {
+    // Nur die Uhr festlegen – echte Timer bleiben, sonst hängt der Nachbau.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-25T12:00:00Z'));
+    // Die Gruppennamen stehen in der Ortszeit der Gemeinde.
+    merkeGemeindeZeitzone({ timezone: ZONE });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    _vergissGemeindeZeitzone();
+  });
+
+  it('der Rumpf trägt `signup` wie gemessen; ChurchTools legt je Einzeltermin bis „heute + 14“ eine Gruppe an – das Nachlesen findet sie', async () => {
+    const r = await terminLegen({ eintrag: MIT(), zeitzone: ZONE });
+    expect(ct.terminRumpf?.signup).toEqual({
+      signupGroupTypeId: 5,
+      signupDaysForwardNo: 14,
+      signupDaysArchiveGroupNo: 7,
+    });
+    expect(ct.gruppen.map((g) => g.name)).toEqual([
+      'TEST – 26.11.2026, 19:00',
+      'TEST – 03.12.2026, 19:00',
+    ]);
+    expect(r.anmeldung).toEqual({ signupFehlt: false, fehlend: [], unklar: false });
+  });
+
+  it('Kopiervorlage und leere Auswahlen: nur die gewählten Felder gehen mit', async () => {
+    await terminLegen({
+      eintrag: MIT({ typ: 5, tage: 7, vorlage: 352, beenden: null }),
+      zeitzone: ZONE,
+    });
+    expect(ct.terminRumpf?.signup).toEqual({
+      signupGroupTypeId: 5,
+      signupDaysForwardNo: 7,
+      signupTemplateGroupId: 352,
+    });
+  });
+
+  it('Schalter aus: kein `signup`, kein Lesen der Gruppen, nichts im Ergebnis', async () => {
+    const r = await terminLegen({ eintrag: MIT(null), zeitzone: ZONE });
+    expect(ct.terminRumpf).not.toHaveProperty('signup');
+    expect(gruppen()).toEqual([]);
+    expect(r).not.toHaveProperty('anmeldung');
+    expect(ct.gruppen).toEqual([]);
+  });
+
+  it('ohne gewählten Gruppentyp geht nichts mit und nichts wird nachgelesen', async () => {
+    const r = await terminLegen({
+      eintrag: MIT({ typ: null, tage: 14, vorlage: null, beenden: null }),
+      zeitzone: ZONE,
+    });
+    expect(ct.terminRumpf).not.toHaveProperty('signup');
+    expect(r).not.toHaveProperty('anmeldung');
+  });
+
+  it('liegt kein Einzeltermin im Fenster: `signup` geht mit, aber es gibt keine Gruppe zu suchen – kein Lesen', async () => {
+    const r = await terminLegen({
+      eintrag: { ...MIT(), tag: '2027-03-04', wiederBis: '2027-03-25' },
+      zeitzone: ZONE,
+    });
+    expect(ct.terminRumpf?.signup).toBeTruthy();
+    expect(ct.gruppen).toEqual([]);
+    expect(gruppen()).toEqual([]);
+    expect(r.anmeldung).toEqual({ signupFehlt: false, fehlend: [], unklar: false });
+  });
+
+  it('ChurchTools sagt 201 und legt eine Gruppe nicht an: genau diese fehlt – der Termin bleibt, nichts wird gelöscht', async () => {
+    ct.gruppenSchlucken = true;
+    const r = await terminLegen({ eintrag: MIT(), zeitzone: ZONE });
+    expect(r.anmeldung).toEqual({
+      signupFehlt: false,
+      fehlend: ['TEST – 26.11.2026, 19:00', 'TEST – 03.12.2026, 19:00'],
+      unklar: false,
+    });
+    expect(ct.termine).toHaveLength(1);
+    expect(ct.aufrufe.some((a) => a.startsWith('DELETE'))).toBe(false);
+  });
+
+  it('nur eine der beiden fehlt: nur sie steht im Ergebnis', async () => {
+    ct.gruppen.push({ id: 900, name: 'TEST – 26.11.2026, 19:00', groupTypeId: 5 });
+    ct.gruppenSchlucken = true;
+    const r = await terminLegen({ eintrag: MIT(), zeitzone: ZONE });
+    expect(r.anmeldung?.fehlend).toEqual(['TEST – 03.12.2026, 19:00']);
+  });
+
+  it('eine gleichnamige Gruppe eines ANDEREN Typs zählt nicht', async () => {
+    ct.gruppen.push({ id: 900, name: 'TEST – 26.11.2026, 19:00', groupTypeId: 1 });
+    ct.gruppenSchlucken = true;
+    const r = await terminLegen({ eintrag: MIT(), zeitzone: ZONE });
+    expect(r.anmeldung?.fehlend).toHaveLength(2);
+  });
+
+  it('ChurchTools speichert `signup` nicht: „fehlt“ – ohne die Gruppen zu lesen', async () => {
+    ct.signupSchlucken = true;
+    const r = await terminLegen({ eintrag: MIT(), zeitzone: ZONE });
+    expect(r.anmeldung).toEqual({ signupFehlt: true, fehlend: [], unklar: false });
+    expect(gruppen()).toEqual([]);
+    expect(ct.termine).toHaveLength(1);
+  });
+
+  it('Gruppen nicht lesbar (500): `unklar`, NICHT „fehlt“ – der Termin bleibt', async () => {
+    ct.gruppenLesenFehler = true;
+    const r = await terminLegen({ eintrag: MIT(), zeitzone: ZONE });
+    expect(r.anmeldung).toEqual({ signupFehlt: false, fehlend: [], unklar: true });
+    expect(ct.termine).toHaveLength(1);
+  });
+
+  it('„Nur verknüpfen“: nichts wird angelegt, keine Gruppe, nichts gelesen', async () => {
+    const r = await terminLegen({
+      eintrag: MIT(),
+      zeitzone: ZONE,
+      verknuepfen: { id: 161, titel: 'TEST', beginn: '2026-11-26T18:00:00Z' },
+    });
+    expect(r).toEqual({ art: 'verknuepft', id: 161 });
+    expect(posts()).toEqual([]);
+    expect(ct.gruppen).toEqual([]);
+    expect(gruppen()).toEqual([]);
+  });
+
+  it('unklare Antwort, aber angelegt: ein POST, die Gruppen genau einmal – das Nachlesen findet sie', async () => {
+    ct.terminFehler = { status: 504, angelegt: true };
+    const r = await terminLegen({ eintrag: MIT(), zeitzone: ZONE });
+    expect(posts()).toHaveLength(1);
+    expect(ct.gruppen).toHaveLength(2);
+    expect(r.anmeldung).toEqual({ signupFehlt: false, fehlend: [], unklar: false });
+  });
+
+  it('der Termin löschen nimmt die Gruppen mit (gemessen 25.11.2026) – der Nachbau verhält sich so', async () => {
+    const r = await terminLegen({ eintrag: MIT(), zeitzone: ZONE });
+    expect(ct.gruppen).toHaveLength(2);
+    await fetch(`https://ct.test/api/calendars/4/appointments/${r.id}`, { method: 'DELETE' });
+    expect(ct.gruppen).toEqual([]);
   });
 });

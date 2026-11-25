@@ -427,6 +427,10 @@ describe('„Nur verknüpfen“ und Vorlagen', () => {
     imAuftrag: null,
     buchungen: [],
     eventVorlage: null,
+    anmeldungTyp: null,
+    anmeldungTage: null,
+    anmeldungBeenden: null,
+    anmeldungVorlage: null,
     ...extra,
   });
 

@@ -53,6 +53,7 @@ export function Termine({
   ressourcenBuchen = KEINE_RESSOURCEN,
   ressourcenVerwalten = KEINE_RESSOURCEN,
   eventsAnlegen = KEINE_RESSOURCEN,
+  gruppentypenAnlegen = KEINE_RESSOURCEN,
   onZeigen,
 }: {
   modul: number;
@@ -68,6 +69,8 @@ export function Termine({
   ressourcenVerwalten?: readonly number[];
   /** Kalender, in denen man Events anlegen darf (W15-3) – Reiter „Events“ im Fenster. */
   eventsAnlegen?: readonly number[];
+  /** Gruppentypen, in denen man Gruppen anlegen darf (W15-5) – Reiter „Anmeldung“ im Fenster. */
+  gruppentypenAnlegen?: readonly number[];
   /** „Im Protokoll zeigen“: die Sitzung öffnen und zum Tagesordnungspunkt springen. */
   onZeigen: (gruppe: number, sitzung: string, punkt: string | null) => void;
 }) {
@@ -294,6 +297,7 @@ export function Termine({
           ressourcenBuchen={ressourcenBuchen}
           ressourcenVerwalten={ressourcenVerwalten}
           eventsAnlegen={eventsAnlegen}
+          gruppentypenAnlegen={gruppentypenAnlegen}
           ort={{ modul, kategorie: mitMitarbeit.gruppe.mitarbeit }}
           ich={ich.person}
           zeitzone={zeitzone}

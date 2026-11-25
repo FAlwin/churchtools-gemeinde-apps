@@ -57,6 +57,10 @@ describe('vorlagenAus', () => {
       imAuftrag: 19,
       buchungen: [],
       eventVorlage: null,
+      anmeldungTyp: null,
+      anmeldungTage: null,
+      anmeldungBeenden: null,
+      anmeldungVorlage: null,
     });
   });
 
@@ -352,5 +356,87 @@ describe('Vorlagen mit Buchungen', () => {
     };
     const [v] = vorlagenAus([{ ...vorlageRumpf(quelle), id: 42 }]);
     expect(vorlageAnwenden(eintrag(), v, darf).buchungen).toEqual(quelle.buchungen);
+  });
+});
+
+/** Anmeldung in der Vorlage (W15-5): `grouptypeId`, `daysForwardNo`, `daysArchiveGroupNo`, `templateGroupId`. */
+describe('Vorlage und Anmeldung', () => {
+  const ERLAUBT = {
+    buchbar: new Set<number>(),
+    verwaltbar: new Set<number>(),
+    gruppentypen: new Set([1, 5]),
+  };
+  const MIT = { grouptypeId: 5, daysForwardNo: 30, daysArchiveGroupNo: 7, templateGroupId: 352 };
+
+  it('liest die vier Felder – Zahlen und Zahlentexte; 0 und Unsinn zählen als „keine“', () => {
+    expect(eine(MIT)).toMatchObject({
+      anmeldungTyp: 5,
+      anmeldungTage: 30,
+      anmeldungBeenden: 7,
+      anmeldungVorlage: 352,
+    });
+    expect(eine({ grouptypeId: '5', daysForwardNo: '14' })).toMatchObject({
+      anmeldungTyp: 5,
+      anmeldungTage: 14,
+    });
+    expect(
+      eine({ grouptypeId: 0, daysForwardNo: null, daysArchiveGroupNo: 'x', templateGroupId: 1.5 }),
+    ).toMatchObject({
+      anmeldungTyp: null,
+      anmeldungTage: null,
+      anmeldungBeenden: null,
+      anmeldungVorlage: null,
+    });
+  });
+
+  it('Anwenden mit erlaubtem Gruppentyp schaltet die Anmeldung an', () => {
+    expect(vorlageAnwenden(eintrag(), eine(MIT), ERLAUBT).anmeldung).toEqual({
+      typ: 5,
+      tage: 30,
+      vorlage: 352,
+      beenden: 7,
+    });
+  });
+
+  it('ohne genannte Tage gilt die Vorgabe 14; leere Auswahlen bleiben leer', () => {
+    expect(vorlageAnwenden(eintrag(), eine({ grouptypeId: 1 }), ERLAUBT).anmeldung).toEqual({
+      typ: 1,
+      tage: 14,
+      vorlage: null,
+      beenden: null,
+    });
+  });
+
+  it('ein nicht erlaubter Gruppentyp, kein Typ oder keine Rechte-Angabe: Schalter bleibt aus', () => {
+    expect(
+      vorlageAnwenden(eintrag(), eine({ ...MIT, grouptypeId: 9 }), ERLAUBT).anmeldung,
+    ).toBeNull();
+    expect(vorlageAnwenden(eintrag(), eine(), ERLAUBT).anmeldung).toBeNull();
+    expect(vorlageAnwenden(eintrag(), eine(MIT)).anmeldung).toBeNull();
+  });
+
+  it('eine Vorlage ohne Anmeldung schaltet eine angeschaltete wieder aus (die Vorlage bestimmt alles)', () => {
+    const an = { ...eintrag(), anmeldung: { typ: 1, tage: 7, vorlage: null, beenden: null } };
+    expect(vorlageAnwenden(an, eine(), ERLAUBT).anmeldung).toBeNull();
+  });
+
+  it('Speichern schreibt die Felder nur mit Schalter an; leere Auswahlen fehlen', () => {
+    const aus = vorlageRumpf(eintrag());
+    for (const k of ['grouptypeId', 'daysForwardNo', 'daysArchiveGroupNo', 'templateGroupId'])
+      expect(aus).not.toHaveProperty(k);
+    const an = vorlageRumpf({
+      ...eintrag(),
+      anmeldung: { typ: 5, tage: 14, vorlage: null, beenden: null },
+    });
+    expect(an).toMatchObject({ grouptypeId: 5, daysForwardNo: 14 });
+    expect(an).not.toHaveProperty('daysArchiveGroupNo');
+    expect(an).not.toHaveProperty('templateGroupId');
+  });
+
+  it('Rundreise: speichern (Erzeuger) → lesen → anwenden ergibt dieselbe Anmeldung', () => {
+    const anmeldung = { typ: 5, tage: 90, vorlage: 352, beenden: 14 };
+    const rumpf = vorlageRumpf({ ...eintrag(), anmeldung });
+    const v = vorlagenAus([{ id: 9, ...rumpf }])[0];
+    expect(vorlageAnwenden(eintrag(), v, ERLAUBT).anmeldung).toEqual(anmeldung);
   });
 });

@@ -26,7 +26,7 @@ import { neuerTerminStand } from '@shared/protokolle/terminStand';
 import { praefix } from '@shared/protokolle/tabellenZeile';
 import { neuerToDoVorschlag, vorschlagAblehnen } from '@shared/protokolle/todoVorschlag';
 import { plusTage } from '@shared/ct/datum';
-import { heuteImKalender } from '@shared/ct/zeit';
+import { gemeindeZeitzone, heuteImKalender, ortszeitAus } from '@shared/ct/zeit';
 import { ablehnen, NAECHSTE, neuerVorschlag } from '@shared/protokolle/vorschlaege';
 import type { Block } from '@shared/protokolle/dokument';
 import { schnappschussWert } from '@shared/protokolle/anwesenheit';
@@ -716,6 +716,8 @@ interface Speicher {
     startDate: string;
     endDate: string;
     anfragen: { person: { domainIdentifier: string }; state: string }[];
+    /** Anmeldung (W15-5) – wie ChurchTools am Termin zeigt; fehlt = `null`. */
+    signup?: Record<string, number | null> | null;
   }[];
   treffen: { id: number; startDate: string; isCanceled: boolean }[];
   /** Anwesenheit je Gruppentreffen (S5-3) – Person → `present` / `absent`; fehlt = `unsure`. */
@@ -732,6 +734,48 @@ interface Speicher {
   buchungen: { resourceId: number; appointmentId: number }[];
   /** Events (W15-3) – von `POST …/appointments` angelegt, von `GET /events` gelesen. */
   events: { id: number; appointmentId: number; startDate: string; eventTemplateId: number }[];
+  /** Gruppen, die ChurchTools für Anmeldungen anlegt (W15-5) – von `POST …/appointments` angelegt, von `GET /groups` gelesen. */
+  gruppen: { id: number; name: string; groupTypeId: number; terminId: number }[];
+}
+
+/**
+ * Drei Gruppentypen für den Reiter „Anmeldung“ (W15-5): „Dienst“ darf die Leitung nicht anlegen (Recht
+ * `create groups of grouptype` nennt nur 1 und 5) – so zeigt die Demo, dass die Auswahl nur erlaubte Typen führt.
+ */
+const DEMO_GRUPPENTYPEN = [
+  { id: 1, name: 'Kleingruppe', nameTranslated: 'Kleingruppe' },
+  { id: 2, name: 'Dienst', nameTranslated: 'Dienst' },
+  { id: 5, name: 'Anmeldung', nameTranslated: 'Anmeldung' },
+];
+/** Gruppen je Gruppentyp – die Auswahl „Gruppe als Kopiervorlage“ (1 bis 3 je Typ). */
+const DEMO_VORLAGEGRUPPEN = [
+  { id: 301, name: 'Hauskreis Nord', groupTypeId: 1 },
+  { id: 302, name: 'Jugendkreis', groupTypeId: 1 },
+  { id: 303, name: 'Küchenteam', groupTypeId: 2 },
+  { id: 304, name: 'Anmeldung Freizeit (Vorlage)', groupTypeId: 5 },
+  { id: 305, name: 'Anmeldung Fest (Vorlage)', groupTypeId: 5 },
+  { id: 306, name: 'Anmeldung Kurs (Vorlage)', groupTypeId: 5 },
+];
+
+/**
+ * Die Einzeltermine einer täglichen oder wöchentlichen Serie aus dem Rumpf des `POST` (Beginn UTC, `repeatUntil`) – mehr
+ * kennt die Demo nicht; sonst nur der Beginn. Für die Gruppen, die ChurchTools beim Anmelden sofort anlegt.
+ */
+function demoVorkommen(rumpf: Record<string, unknown>): string[] {
+  const beginn = String(rumpf.startDate);
+  const schritt = rumpf.repeatId === 1 ? 1 : rumpf.repeatId === 7 ? 7 : 0;
+  const bis = typeof rumpf.repeatUntil === 'string' ? rumpf.repeatUntil : '';
+  const f =
+    typeof rumpf.repeatFrequency === 'number' && rumpf.repeatFrequency > 0
+      ? rumpf.repeatFrequency
+      : 1;
+  const liste = [beginn];
+  for (let n = 1; schritt && bis && n < 200; n++) {
+    const b = new Date(Date.parse(beginn) + n * f * schritt * 86_400_000).toISOString();
+    if (b.slice(0, 10) > bis) break;
+    liste.push(b.replace('.000Z', 'Z'));
+  }
+  return liste;
 }
 
 /**
@@ -890,6 +934,7 @@ function speicherAnlegen(fall: string): Speicher {
     vorlagen: [...DEMO_VORLAGEN],
     buchungen: [],
     events: [],
+    gruppen: [],
   };
 }
 
@@ -963,6 +1008,8 @@ function antwort(
         // W15-3: Events anlegen nur im Kalender 4 („Gemeindeleitung“), nicht im Kalender 2 – so zeigt die Demo, dass der Reiter
         // „Events“ je gewähltem Kalender kommt und geht. Ein Mitglied darf keine.
         churchservice: { 'edit events': fall === 'mitglied' ? [] : [4] },
+        // W15-5: Gruppen anlegen nur in zwei der drei Gruppentypen (Dienst nicht) – ein Mitglied in keinem, dann fehlt der Reiter.
+        churchdb: { 'create groups of grouptype': fall === 'mitglied' ? [] : [1, 5] },
         // Die Leitung schreibt Protokolle (S4-1); als Mitglied nur „Mitarbeit“.
         protokolle: {
           'view custom data': [60, 61, 70, 80, 81, 5],
@@ -1020,6 +1067,16 @@ function antwort(
               ...(fall === 'mitschreiben' ? [mitglied(11, 'Leitungsteam', 8)] : []),
             ],
     };
+  // Anmeldung (W15-5): Gruppentypen, Gruppen eines Typs (Kopiervorlage und die, die ChurchTools beim Anlegen erzeugt).
+  if (pfad === '/api/group/grouptypes') return { status: 200, data: DEMO_GRUPPENTYPEN };
+  if (pfad === '/api/groups' && abfrage.has('group_type_ids[]')) {
+    const typen = abfrage.getAll('group_type_ids[]').map(Number);
+    return {
+      status: 200,
+      data: [...DEMO_VORLAGEGRUPPEN, ...s.gruppen].filter((g) => typen.includes(g.groupTypeId)),
+      meta: { pagination: { lastPage: 1 } },
+    };
+  }
   if (pfad === '/api/groups')
     return {
       status: 200,
@@ -1132,6 +1189,30 @@ function antwort(
     // Wie ChurchTools: Die Antwort enthält die Buchungen nicht – sie stehen erst in `GET /bookings`.
     for (const b of (rumpf.bookings as { resourceId: number }[] | undefined) ?? [])
       s.buchungen.push({ resourceId: Number(b.resourceId), appointmentId: id });
+    // Anmeldung (W15-5): `signup` steht am Termin, und ChurchTools legt SOFORT je Einzeltermin zwischen heute und „heute +
+    // Tage im Voraus“ eine Gruppe „<Titel> – TT.MM.JJJJ, HH:MM“ an (gemessen 25.11.2026).
+    const signup = rumpf.signup as Record<string, number> | undefined;
+    if (signup) {
+      s.termine[s.termine.length - 1].signup = {
+        signupGroupTypeId: signup.signupGroupTypeId ?? null,
+        signupDaysForwardNo: signup.signupDaysForwardNo ?? null,
+        signupTemplateGroupId: signup.signupTemplateGroupId ?? null,
+        signupDaysArchiveGroupNo: signup.signupDaysArchiveGroupNo ?? null,
+      };
+      const heute = heuteImKalender();
+      const bis = plusTage(heute, signup.signupDaysForwardNo ?? 0);
+      for (const b of demoVorkommen(rumpf)) {
+        const ort = ortszeitAus(b, gemeindeZeitzone());
+        const tag = ort.slice(0, 10);
+        if (tag >= heute && tag <= bis)
+          s.gruppen.push({
+            id: s.naechste++,
+            name: `${String(rumpf.title)} – ${tag.split('-').reverse().join('.')}, ${ort.slice(11, 16)}`,
+            groupTypeId: Number(signup.signupGroupTypeId),
+            terminId: id,
+          });
+      }
+    }
     // Events (W15-3): wie ChurchTools nur mit der Antwort „201“ – gelesen wird `GET /events`.
     for (const x of (rumpf.events as
       | { startDate: string; eventTemplateId: number }[]
@@ -1149,6 +1230,8 @@ function antwort(
   // Termin löschen (W6): in der Demo nur die hier festgelegten – die festen Beispieltermine kennt der Einzelabruf nicht.
   if (neuerTermin && methode === 'DELETE') {
     s.termine.splice(s.termine.indexOf(neuerTermin), 1);
+    // Wie ChurchTools (gemessen 25.11.2026): Die Gruppen der Anmeldung gehen mit dem Termin.
+    s.gruppen = s.gruppen.filter((g) => g.terminId !== neuerTermin.id);
     return { status: 204 };
   }
   if (neuerTermin) return { status: 200, data: { appointment: neuerTermin } };

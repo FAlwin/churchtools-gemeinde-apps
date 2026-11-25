@@ -11,6 +11,12 @@ import {
   type ProtokollKopf,
   type Schreiber,
 } from '@shared/protokolle/speicher';
+import {
+  istTerminStand,
+  neuerTerminStand,
+  terminStandGeloescht,
+  type TerminStand,
+} from '@shared/protokolle/terminStand';
 import { NichtUebernommen } from '@ui/ct/fehler';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { LoeschUnterbrochen, protokollLoeschen, type LoeschPlan } from './loeschen';
@@ -179,6 +185,104 @@ describe('protokollLoeschen – To-Dos', () => {
   });
 });
 
+/** Termin-Stände (W14) in „Mitarbeit“ – wie `terminStandSchreiben` sie ablegt. */
+const standAblegen = (sitzung: string, block: string, stand: TerminStand['stand'] = 'offen') => {
+  const s = neuerTerminStand(
+    { gruppe: 194, sitzung, block },
+    stand,
+    stand === 'imKalender'
+      ? { kalender: 4, id: 160, name: 'Gemeindekalender', zeit: '18:00' }
+      : null,
+    7,
+    '2026-11-20T10:00:00Z',
+  );
+  werteVon(ct, MIT).push({ id: ct.naechste++, value: JSON.stringify(s) });
+  return s;
+};
+const staende = (sitzung: string): TerminStand[] =>
+  werteVon(ct, MIT)
+    .map((w) => JSON.parse(w.value) as unknown)
+    .filter(istTerminStand)
+    .filter((s) => s.sitzung === sitzung);
+
+describe('protokollLoeschen – Vermerke im Reiter „Termine“', () => {
+  it('jeder Stand der Sitzung wird als gelöscht vermerkt (auch ein doppelter), nie hart; andere Sitzungen bleiben', async () => {
+    protokollAblegen('s1');
+    standAblegen('s1', 'b1', 'imKalender');
+    standAblegen('s1', 'b2', 'nichtEintragen');
+    standAblegen('s1', 'b2', 'offen'); // doppelt aus einem abgebrochenen Anlegen
+    const fremd = standAblegen('s9', 'b1', 'imKalender');
+    todosAblegen(aufgabe('a', 's1'));
+    const anzahl = werteVon(ct, MIT).length;
+
+    // Ohne „Mitlöschen“ der To-Dos – die Vermerke gehen trotzdem mit.
+    expect(await protokollLoeschen(plan({ todos: false }))).toEqual({ art: 'ok' });
+
+    expect(werteVon(ct, MIT)).toHaveLength(anzahl); // vermerkt, nicht hart gelöscht
+    expect(ct.aufrufe.filter((a) => a.startsWith('DELETE') && a.includes(`/${MIT}/`))).toEqual([]);
+    const weg = staende('s1');
+    expect(weg).toHaveLength(3);
+    for (const s of weg) expect(s.geloescht).toEqual({ von: 1, am: JETZT.toISOString() });
+    // Der Stand selbst bleibt, wie er war.
+    expect(weg.map((s) => s.stand)).toEqual(['imKalender', 'nichtEintragen', 'offen']);
+    expect(staende('s9')).toEqual([fremd]);
+    expect(todo('a').geloescht).toBe(false);
+    expect(von('s1')).toEqual([]);
+  });
+
+  it('ein schon vermerkter bleibt unberührt (zweiter Versuch)', async () => {
+    protokollAblegen('s1');
+    const schon = terminStandGeloescht(standAblegen('s1', 'b1'), 19, '2026-11-24T10:00:00Z');
+    werteVon(ct, MIT).at(-1)!.value = JSON.stringify(schon);
+    await protokollLoeschen(plan());
+    expect(staende('s1')).toEqual([schon]);
+  });
+
+  it('ohne Mitarbeit-Kategorie: kein Schritt, das Protokoll geht trotzdem', async () => {
+    protokollAblegen('s1');
+    expect(await protokollLoeschen(plan({ mitarbeit: null }))).toEqual({ art: 'ok' });
+    expect(von('s1')).toEqual([]);
+  });
+
+  it('scheitert das Vermerken (502), steht das Protokoll noch – die Meldung sagt es, der zweite Versuch vollendet', async () => {
+    protokollAblegen('s1');
+    standAblegen('s1', 'b1');
+    ct.fehlerBei = { methode: 'PUT', status: 502 };
+    const fehler = await protokollLoeschen(plan()).catch((e: unknown) => e);
+    expect(fehler).toBeInstanceOf(LoeschUnterbrochen);
+    expect(fehlerMeldung(fehler).text).toContain(
+      'Noch offen: die Vermerke im Reiter „Termine“, das Protokoll.',
+    );
+    expect(kopfVon('s1')).toBeDefined();
+    expect(von('s1').length).toBeGreaterThan(1);
+    expect(staende('s1')[0].geloescht).toBeUndefined();
+
+    ct.fehlerBei = null;
+    expect(await protokollLoeschen(plan())).toEqual({ art: 'ok' });
+    expect(staende('s1')[0].geloescht).toEqual({ von: 1, am: JETZT.toISOString() });
+    expect(von('s1')).toEqual([]);
+  });
+
+  it('Nachlesen: sagt ChurchTools „geändert“ und der Vermerk fehlt, ist das ein Fehler – das Protokoll bleibt', async () => {
+    protokollAblegen('s1');
+    standAblegen('s1', 'b1');
+    ct.schlucken.add('PUT WERT');
+    const fehler = await protokollLoeschen(plan()).catch((e: unknown) => e);
+    expect(fehler).toBeInstanceOf(LoeschUnterbrochen);
+    expect((fehler as LoeschUnterbrochen).cause).toBeInstanceOf(NichtUebernommen);
+    expect(kopfVon('s1')).toBeDefined();
+  });
+
+  it('jemand anderes schreibt: die Vermerke bleiben, wie sie sind', async () => {
+    protokollAblegen('s1', 'entwurf', {
+      sperre: { von: 19, name: 'Peter', seit: JETZT.toISOString(), fenster: 'fremd' },
+    });
+    const s = standAblegen('s1', 'b1', 'imKalender');
+    expect(await protokollLoeschen(plan())).toMatchObject({ art: 'gesperrt' });
+    expect(staende('s1')).toEqual([s]);
+  });
+});
+
 describe('protokollLoeschen – Termin und Gruppentreffen', () => {
   it('Termin: gelöscht (Mail „Termin gelöscht“ an die Eingeladenen), Treffen bleibt', async () => {
     protokollAblegen('s1');
@@ -324,6 +428,7 @@ describe('protokollLoeschen – Schreibsperre', () => {
   it('fängt jemand an, während Termin und To-Dos laufen: vor dem Protokoll noch einmal geprüft – Protokoll bleibt', async () => {
     const kopfId = protokollAblegen('s1');
     todosAblegen(aufgabe('a', 's1'));
+    const stand = standAblegen('s1', 'b1', 'imKalender');
     // Nach dem Löschen des Termins setzt jemand anderes die Sperre.
     const echt = (
       globalThis.fetch as unknown as MockInstance<typeof fetch>
@@ -340,6 +445,8 @@ describe('protokollLoeschen – Schreibsperre', () => {
     const r = await protokollLoeschen(plan({ todos: true, termin: MIT_TERMIN }));
     expect(r).toMatchObject({ art: 'gesperrt', erledigt: ['todos', 'termin'] });
     expect(von('s1').length).toBeGreaterThan(0);
+    // Die Vermerke im Reiter „Termine“ erst nach dieser Prüfung – das Protokoll bleibt, also auch sie.
+    expect(staende('s1')).toEqual([stand]);
   });
 });
 
@@ -355,7 +462,9 @@ describe('protokollLoeschen – Fehler mittendrin', () => {
     expect(fehler).toBeInstanceOf(LoeschUnterbrochen);
     const text = fehlerMeldung(fehler).text;
     expect(text).toContain('Schon erledigt: To-Dos als gelöscht vermerkt.');
-    expect(text).toContain('Noch offen: der Termin, das Gruppentreffen, das Protokoll.');
+    expect(text).toContain(
+      'Noch offen: der Termin, das Gruppentreffen, die Vermerke im Reiter „Termine“, das Protokoll.',
+    );
     expect(text).toContain('die Absage nicht übernommen');
     expect(von('s1').length).toBeGreaterThan(0);
     expect(termin()).toBeDefined();

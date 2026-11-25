@@ -65,12 +65,13 @@ export function todosUeberschrift(n: number): string {
 }
 
 /** Die einzelnen Schritte – ihre Namen stehen in der Meldung, wenn mittendrin etwas scheitert. */
-export type LoeschSchritt = 'todos' | 'termin' | 'treffen' | 'protokoll';
+export type LoeschSchritt = 'todos' | 'termin' | 'treffen' | 'termine' | 'protokoll';
 
 const SCHRITT_WORT: Record<LoeschSchritt, string> = {
   todos: 'die To-Dos',
   termin: 'der Termin',
   treffen: 'das Gruppentreffen',
+  termine: 'die Vermerke im Reiter „Termine“',
   protokoll: 'das Protokoll',
 };
 
@@ -78,6 +79,7 @@ const ERLEDIGT_WORT: Record<LoeschSchritt, string> = {
   todos: 'To-Dos als gelöscht vermerkt',
   termin: 'Termin gelöscht',
   treffen: 'Gruppentreffen gelöscht',
+  termine: 'Vermerke im Reiter „Termine“ als gelöscht markiert',
   protokoll: 'Protokoll gelöscht',
 };
 

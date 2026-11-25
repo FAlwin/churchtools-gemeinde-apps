@@ -295,7 +295,9 @@ und Status und sagt: **Das lässt sich nicht rückgängig machen.** Darin:
 
 **Reihenfolge:** erst prüfen, ob jemand anderes (oder ein anderes eigenes Fenster) schreibt – dann wird **nichts**
 gelöscht –, dann die To-Dos, dann Termin und Gruppentreffen (jeweils nachgelesen: ein „gelöscht“ von ChurchTools ist kein
-Beleg), **zuletzt das Protokoll**: erst alle Textteile, dann der Kopf der Sitzung. Bricht es dazwischen ab, steht der Kopf
+Beleg), dann die **Vermerke im Reiter „Termine“** dieser Sitzung (immer, ohne eigenes Häkchen: **als gelöscht vermerkt**,
+nie hart gelöscht – in „Mitarbeit“ darf niemand Werte löschen; erst nach einer zweiten Sperrprüfung), **zuletzt das
+Protokoll**: erst alle Textteile, dann der Kopf der Sitzung. Bricht es dazwischen ab, steht der Kopf
 noch da (ohne lesbaren Text: „nicht vollständig lesbar“), das Fenster bleibt offen und sagt, was schon erledigt ist und
 was nicht; **„Nochmal versuchen“** macht nichts doppelt (ein vermerktes To-Do, ein schon gelöschter Termin oder ein
 schon gelöschtes Treffen zählt als erledigt). Danach geht es zurück zur Liste mit dem Hinweis „Protokoll gelöscht“; bleiben
@@ -570,7 +572,7 @@ des kürzeren Titels im längeren stehen) bietet **„Nur verknüpfen – nichts
 **Sicher bei Aussetzern:** angelegt wird mit `terminAnlegen` (derselbe Kern wie beim Festlegen einer Sitzung; unklare Antwort → im Kalender nachsehen), danach **nachgelesen**; erst dann gilt der Termin als
 eingetragen. **Wo der Stand steht:** je Baustein ein Wert `termin-stand` in **„Mitarbeit · <Gruppe>“** (Schlüssel `termin-<Sitzung>-<Block-ID>`, Stand `offen`/`nichtEintragen`/`imKalender` mit
 Kalender, Termin-Nummer, Name und Zeit) – nicht im Protokoll (freigegebene bleiben unangetastet, keine Schreibsperre nötig); wie To-Dos und Vorschläge schreiben dort alle mit Schreibrecht in
-„Mitarbeit“, nie wird hart gelöscht, und „Nicht eintragen“ überschreibt einen Eintrag im Kalender nie. Wer in keinem Kalender anlegen darf, sieht weder „Eintragen“ noch „Nicht eintragen“, dafür einen Satz.
+„Mitarbeit“, nie wird hart gelöscht (wird das Protokoll gelöscht, bekommen seine Stände den Vermerk `geloescht`, W6), und „Nicht eintragen“ überschreibt einen Eintrag im Kalender nie. Wer in keinem Kalender anlegen darf, sieht weder „Eintragen“ noch „Nicht eintragen“, dafür einen Satz.
 
 **Das Fenster wie der ChurchTools-Kalender (W15-1, 23.11.2026):** Seit W15-1 baut „In Kalender eintragen“ den **Reiter „Kalender“ des ChurchTools-Dialogs „Termin erstellen“** nach (Messung
 `protokolle-planung/docs/messung-w15-0-2026-11-23.md`); die weiteren Reiter (Besprechungsanfragen, Anmeldung, Events) folgen in W15-3…5, **Ressourcen** gibt es seit W15-2 (unten); die Reiterleiste zeigt sich erst, wenn es mehr als

@@ -6,14 +6,18 @@
  * **Vorübergehend ist nicht ungültig:** Scheitert das Schreiben (Netz, 5xx), ändert sich nichts – der Baustein bleibt
  * „noch nicht im Kalender“, nie fälschlich „im Kalender“ oder „nicht eintragen“. Der Aufrufer meldet den Fehler.
  */
+import { wertAendern } from '@shared/ct/modulDaten';
 import {
   istTerminStand,
   neuerTerminStand,
+  terminStandGeloescht,
   wennNochOffen,
   type TerminStand,
   type TerminZiel,
 } from '@shared/protokolle/terminStand';
-import { wertNachgelesen, type MitarbeitOrt } from './mitarbeitWerte';
+import { NichtUebernommen } from '@ui/ct/fehler';
+import { modulPort } from '@ui/ct/modulPort';
+import { mitarbeitRoh, wertNachgelesen, type MitarbeitOrt } from './mitarbeitWerte';
 
 const TEXTE = {
   verweigert: 'Du darfst in dieser Gruppe nichts speichern.',
@@ -56,4 +60,36 @@ export function terminMarkieren(
     () => neu,
     TEXTE,
   );
+}
+
+/**
+ * **Die Stände einer gelöschten Sitzung als gelöscht vermerken** (W6, Schritt „termine“ in `protokollLoeschen`) – nie
+ * hart: In „Mitarbeit“ darf niemand Werte löschen (S0). Erfasst **jeden** Wert mit dieser Sitzung, auch einen doppelten
+ * aus einem abgebrochenen Anlegen (den `derArt` sonst verdeckt), gefunden am Feld `sitzung` – nicht an den Bausteinen
+ * im Dokument, die beim zweiten Versuch schon weg sein können. Danach **nachlesen**: Steht noch einer unvermerkt da,
+ * wird geworfen. Schon vermerkte bleiben unberührt.
+ */
+export async function termineAlsGeloescht(
+  ort: MitarbeitOrt,
+  sitzung: string,
+  ich: number,
+  am: string,
+): Promise<void> {
+  const offen = (roh: readonly { wert: number; x: unknown }[]) =>
+    roh.flatMap((r) =>
+      istTerminStand(r.x) && r.x.sitzung === sitzung && !r.x.geloescht
+        ? [{ wert: r.wert, x: r.x }]
+        : [],
+    );
+  for (const r of offen(await mitarbeitRoh(ort)))
+    await wertAendern(
+      modulPort,
+      ort.modul,
+      ort.kategorie,
+      r.wert,
+      JSON.stringify(terminStandGeloescht(r.x, ich, am)),
+      TEXTE.verweigert,
+    );
+  if (offen(await mitarbeitRoh(ort)).length)
+    throw new NichtUebernommen('den Vermerk an den Terminen dieses Protokolls');
 }

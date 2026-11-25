@@ -6,7 +6,9 @@
  *
  * - Der **Schlüssel** (`id`) ist aus Protokoll und Block-ID gebaut: ein Wert je Baustein, ein zweiter Versuch findet den
  *   ersten vor. Zwei Werte mit derselben ID (abgebrochenes Anlegen) → der mit der kleinsten Wert-ID gilt (`derArt`).
- * - **Nie hart löschen:** „Nicht eintragen“ rückgängig machen heißt `offen`, kein Löschen.
+ * - **Nie hart löschen:** „Nicht eintragen“ rückgängig machen heißt `offen`, kein Löschen. Wird das Protokoll gelöscht
+ *   (W6), bekommt jeder Stand seiner Sitzung den Vermerk `geloescht` (`terminStandGeloescht`) – in „Mitarbeit“ darf
+ *   niemand Werte löschen (S0, `sollRechte`), also bleibt der Wert, aber als Rest eines gelöschten Protokolls erkennbar.
  * - **Ein Eintrag im Kalender wird von „Nicht eintragen“ und „Wieder anzeigen“ nie überschrieben** (`wennNochOffen`):
  *   Hat eine zweite Person den Termin inzwischen eingetragen, steht er in ChurchTools – der Vermerk bleibt.
  */
@@ -26,6 +28,8 @@ export interface TerminStand {
   von: number;
   /** ISO-Zeit. */
   am: string;
+  /** Das Protokoll wurde gelöscht (W6) – wer, wann. Fehlt bei allen anderen. */
+  geloescht?: { von: number; am: string };
 }
 
 /** Der Schlüssel des Stands zu einem Baustein – auch die Zeilen-ID der Liste. */
@@ -50,8 +54,18 @@ export function istTerminStand(x: unknown): x is TerminStand {
         typeof k.id === 'number' &&
         typeof k.name === 'string' &&
         typeof k.zeit === 'string')) &&
-    (k === null || k === undefined || typeof k === 'object')
+    (k === null || k === undefined || typeof k === 'object') &&
+    (s.geloescht === undefined ||
+      (!!s.geloescht && typeof s.geloescht.von === 'number' && typeof s.geloescht.am === 'string'))
   );
+}
+
+/**
+ * **Der Stand eines gelöschten Protokolls** (W6): derselbe Stand, dazu `geloescht`. Ein schon vermerkter bleibt, wie er
+ * ist – ein zweiter Versuch schreibt nichts doppelt.
+ */
+export function terminStandGeloescht(s: TerminStand, von: number, am: string): TerminStand {
+  return s.geloescht ? s : { ...s, geloescht: { von, am } };
 }
 
 export interface TerminZiel {

@@ -5,6 +5,8 @@ import {
   standNachId,
   terminStandGeloescht,
   terminStandId,
+  terminStandNach,
+  terminStandWiederDa,
   wennNochOffen,
 } from './terminStand';
 
@@ -78,5 +80,37 @@ describe('terminStandGeloescht – das Protokoll wurde gelöscht (W6)', () => {
     const ok = neuerTerminStand(ZIEL, 'offen', null, 1, AM);
     for (const geloescht of [null, true, { von: '7', am: AM }, { von: 7 }])
       expect(istTerminStand({ ...ok, geloescht })).toBe(false);
+  });
+});
+
+describe('terminStandNach – der Stand passend zum Protokoll (Baustein entfernt bzw. zurückgeholt)', () => {
+  const B1 = neuerTerminStand(ZIEL, 'imKalender', KAL, 1, AM);
+  const WEG = terminStandGeloescht(B1, 7, AM);
+
+  it('Baustein nicht mehr im Protokoll → als gelöscht vermerkt, Stand und Kalender bleiben', () => {
+    expect(terminStandNach(B1, new Set(['b2']), 7, AM)).toEqual(WEG);
+  });
+
+  it('Protokoll gelöscht (`null`) → als gelöscht vermerkt, auch wenn der Baustein zuletzt drin stand', () => {
+    expect(terminStandNach(B1, null, 7, AM)).toEqual(WEG);
+  });
+
+  it('Baustein noch da → derselbe Stand (gleiche Referenz: nichts zu schreiben)', () => {
+    expect(terminStandNach(B1, new Set(['b1']), 7, AM)).toBe(B1);
+  });
+
+  it('Baustein wieder da (Rückgängig) → ohne Vermerk, sonst unverändert', () => {
+    const da = terminStandNach(WEG, new Set(['b1']), 9, AM);
+    expect(da).toEqual(B1);
+    expect('geloescht' in da).toBe(false);
+  });
+
+  it('schon vermerkt und weiter weg → derselbe Stand (der erste Vermerk bleibt)', () => {
+    expect(terminStandNach(WEG, new Set(), 9, '2027-01-01T00:00:00Z')).toBe(WEG);
+    expect(terminStandNach(WEG, null, 9, '2027-01-01T00:00:00Z')).toBe(WEG);
+  });
+
+  it('terminStandWiederDa: ohne Vermerk derselbe Stand', () => {
+    expect(terminStandWiederDa(B1)).toBe(B1);
   });
 });

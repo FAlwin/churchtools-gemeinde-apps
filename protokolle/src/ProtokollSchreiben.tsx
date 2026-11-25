@@ -48,6 +48,7 @@ import {
   type MitarbeitOrt,
 } from './aufgabenSchreiben';
 import { aufgabenAusRoh, derArt, mitarbeitRoh } from './mitarbeitWerte';
+import { termineAbgleichen } from './terminStandSchreiben';
 import { vorschlagSchreiben } from './vorschlaegeSchreiben';
 import { VorschlaegeKasten } from './Vorschlaege';
 import { VorschlagAblehnen } from './VorschlagFenster';
@@ -107,7 +108,9 @@ type Laden =
  * mit Rückfrage übernehmen – auch von sich selbst in einem anderen Fenster.
  *
  * S4-2: Aufgaben im Text sind To-Dos in „Mitarbeit“. Beim Speichern gleicht `aufgabenAbgleich` sie ab (das Protokoll
- * führt); Wer, Bis und Status ändern die Schildchen direkt am To-Do (`aufgabeAendern`).
+ * führt); Wer, Bis und Status ändern die Schildchen direkt am To-Do (`aufgabeAendern`). Ebenso die Stände der
+ * Termin-Bausteine (W14): Steht ein Baustein nicht mehr im Protokoll, wird sein Stand als gelöscht vermerkt
+ * (`termineAbgleichen`).
  *
  * S4-3a: feste Punkte („Offene To-Dos“, „Letztes Protokoll“) über `FestePunkteRahmen`; der Umschalter **„Lesen“**
  * zeigt dasselbe Protokoll als Lese-Ansicht (Alwin 26.10.2026) – ohne Sperre, der Editor bleibt dahinter bestehen.
@@ -226,26 +229,37 @@ export function ProtokollSchreiben({
   // Je Öffnen wird einmal eingefügt, was hinein soll – nicht bei jedem Neuzeichnen.
   const eingefuegt = useRef(false);
 
-  // To-Dos vor dem Schreiben abgleichen (S4-2) – beim Speichern und beim Freigeben (S6-1) derselbe Weg.
+  // To-Dos und Termin-Stände vor dem Schreiben abgleichen (S4-2) – beim Speichern und beim Freigeben (S6-1) derselbe Weg.
+  // Ein entfernter Termin-Baustein bekommt den Vermerk „gelöscht“, ein zurückgeholter verliert ihn (`termineAbgleichen`).
   const abgleich = useCallback(
     (d: readonly Block[]) =>
       mOrt
-        ? async () =>
+        ? async () => {
+            const a = ableiten(d);
+            const am = new Date().toISOString();
             setTodos(
               await aufgabenSchreiben(
                 mOrt,
                 (vorhanden) =>
                   aufgabenAbgleich({
-                    eintraege: ableiten(d).aufgaben,
+                    eintraege: a.aufgaben,
                     vorhanden,
                     gruppe: gruppeId,
                     sitzung: ort.sitzung,
                     von: schreiber.person,
-                    am: new Date().toISOString(),
+                    am,
                   }),
                 schreiber,
               ),
-            )
+            );
+            await termineAbgleichen(
+              mOrt,
+              ort.sitzung,
+              new Set(a.termine.map((t) => t.blockId)),
+              schreiber.person,
+              am,
+            );
+          }
         : undefined,
     [mOrt, gruppeId, ort.sitzung, schreiber, setTodos],
   );

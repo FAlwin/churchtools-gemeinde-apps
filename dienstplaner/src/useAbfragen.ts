@@ -208,8 +208,10 @@ export async function ladeBandLage(
 }
 
 /**
- * Das Band: die Abfrage (`null` ohne gültige) und – sobald Termine und Abwesenheiten da sind – mein Stand. `antworten` sind die
- * Antworten der Seite (nach dem Speichern sofort neu), `schreibStand` zählt jeden Speicherversuch hoch (Abwesenheiten neu).
+ * Das Band: die Abfrage (`band: null` ohne gültige) und – sobald Termine und Abwesenheiten da sind – mein Stand. `antworten` sind
+ * die Antworten der Seite (nach dem Speichern sofort neu), `schreibStand` zählt jeden Speicherversuch hoch (Abwesenheiten neu).
+ * `wartet`: Eine Abfrage ist verlangt, aber noch nicht geladen – die Seite wartet damit, sonst zeigte sie kurz „ab heute“ und
+ * spränge dann auf den Zeitraum der Abfrage (Fund im Browser, 25.11.2026).
  */
 export function useBand(o: {
   start: Start | undefined;
@@ -218,7 +220,7 @@ export function useBand(o: {
   zeitzone: string;
   antworten: Antworten;
   schreibStand: number;
-}): { lage: BandLage; stand: MeinStand<TerminZeile> | null } | null {
+}): { wartet: boolean; band: { lage: BandLage; stand: MeinStand<TerminZeile> | null } | null } {
   const { start, dienstgruppeId, heute, zeitzone } = o;
   const lageStand = useLaden(
     () =>
@@ -238,9 +240,10 @@ export function useBand(o: {
   useEffect(() => {
     if (schreibStand > 0) abwNeu();
   }, [schreibStand, abwNeu]);
-  if (!lage || !start) return null;
+  const wartet = dienstgruppeId !== null && (!start || lageStand.art === 'laedt');
+  if (!lage || !start) return { wartet, band: null };
   const abwesenheiten = abwStand.art === 'fertig' ? abwStand.daten : null;
-  return {
+  const band = {
     lage,
     stand:
       lage.zeilen && abwesenheiten
@@ -254,4 +257,5 @@ export function useBand(o: {
           })
         : null,
   };
+  return { wartet: false, band };
 }

@@ -276,7 +276,7 @@ export function Abwesenheiten({
   };
   const quelle = useMemo(() => ({ dienst, heute, stand }), [dienst, heute, stand]);
   const zusagen = useZusagen(ichId, dienstgruppen, heute, eigeneDienste, stand);
-  const band = useBand({
+  const { wartet, band } = useBand({
     start,
     dienstgruppeId: start ? abfrageGruppe : null,
     heute,
@@ -287,6 +287,16 @@ export function Abwesenheiten({
   const anfang: Zeitraum | undefined = band
     ? { art: 'eigen', von: band.lage.abfrage.von, bis: band.lage.abfrage.bis }
     : undefined;
+
+  // Mit Abfrage in der Adresse erst deren Zeitraum kennen, dann die Seite aufbauen (kein Springen von „ab heute“).
+  if (wartet)
+    return (
+      <div className={styles.seite}>
+        <p className={styles.hinweis} role="status">
+          Wird geladen …
+        </p>
+      </div>
+    );
 
   return (
     <QuelleKontext.Provider value={quelle}>

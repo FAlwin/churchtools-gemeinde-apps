@@ -219,6 +219,27 @@ describe('Band', () => {
     ).toBeTruthy();
   });
 
+  it('wartet auf die Abfrage, statt kurz „ab heute“ zu zeigen und dann zu springen (Fund im Browser, 25.11.2026)', async () => {
+    let freigeben: (s: AbfragenStand) => void = () => undefined;
+    abfragen.mockImplementation(
+      () =>
+        new Promise<AbfragenStand>((r) => {
+          freigeben = r;
+        }),
+    );
+    zeige();
+    expect(await screen.findByRole('status')).toHaveProperty('textContent', 'Wird geladen …');
+    // Solange die Abfrage lädt, baut sich die Seite nicht auf – sie lädt also auch keine Termine „ab heute“.
+    expect(screen.queryByText('Vorabend')).toBeNull();
+    expect(dienst.termine).not.toHaveBeenCalled();
+    await act(async () => {
+      freigeben(abfrageStand(ABFRAGE));
+      await Promise.resolve();
+    });
+    await screen.findByText(/noch \d+ von 6 offen/);
+    expect(screen.getAllByText('Gottesdienst')).toHaveLength(6);
+  });
+
   it('„Alle Termine zeigen“ führt zur Adresse ohne Abfrage', async () => {
     zeige();
     await klick(await screen.findByRole('button', { name: 'Alle Termine zeigen' }));

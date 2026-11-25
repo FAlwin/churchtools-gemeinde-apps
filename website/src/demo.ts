@@ -29,6 +29,18 @@
  *  - `?demo=aussehen-gesperrt` – wie `seiten`, aber das Aussehen (die Einstellungen) bearbeitet gerade jemand anderes.
  *  - `?demo=fehler` – ChurchTools antwortet nicht.
  *
+ * **Bereiche (W3b-4b):** Drei Fälle mit Seiten der Untergruppe „Website – Jugend“ („Jugendabend“ – eingereicht von Lena Kraft, nie
+ * online; „Freizeit 2027“ – gehört zu Jugend, steht online aber noch in der Kategorie der Website, muss also verschoben werden;
+ * „Jugend-Team“ – online in der Kategorie von Jugend). In diesen Fällen **gelten die Rechte auch beim Lesen und Schreiben der
+ * Werte** (sonst 403) – so sieht man, was ChurchTools sagen würde.
+ *  - `?demo=jugend-redakteur` – Mitarbeiter NUR in „Website – Jugend“ (Rechte: Entwürfe schreiben, beide Veröffentlicht lesen):
+ *    sieht nur die drei Jugend-Seiten, reicht ein, kein Aussehen/Einstellungen.
+ *  - `?demo=jugend-leitung` – Leiter NUR in „Website – Jugend“ (schreibt Entwürfe und `veroeffentlicht-g21`): sieht nur die
+ *    Jugend-Seiten, gibt sie frei; „Freizeit 2027“ freigeben schreibt nach Jugend, aus der Kategorie der Website darf er sie
+ *    nicht entfernen – die Meldung sagt, dass sie dort zusätzlich noch steht.
+ *  - `?demo=bereiche` – Leitung der Website (kein Admin) mit denselben Seiten: alle Seiten, „Bereich“ in „Seite einstellen“,
+ *    „Freizeit 2027“ freigeben verschiebt sie (neue Kategorie → nachlesen → alte löschen).
+ *
  * **Untergruppen (W3b-4a):** Die Gruppe „Website“ hat zwei direkte Untergruppen – „Website – Jugend“ (in allen eingerichteten
  * Fällen eingerichtet: Kategorie `veroeffentlicht-g21`, Rechte nach der Regel) und „Website – Technik“ (nicht eingerichtet:
  * Hinweis beim Start, unter „Wer darf was“ mit der Vorbelegung). „Website – Jugend – Band“ ist ein Enkel und zählt nicht.
@@ -95,7 +107,12 @@ export function demoStarten(fall: string): void {
     'eigene',
     'wackelt',
     'aussehen-gesperrt',
+    'jugend-redakteur',
+    'jugend-leitung',
+    'bereiche',
   ].includes(fall);
+  /** Die Fälle mit Seiten der Untergruppe Jugend (W3b-4b) – dort gelten die Rechte auch an den Werten. */
+  const mitBereichen = ['jugend-redakteur', 'jugend-leitung', 'bereiche'].includes(fall);
   const admin = [
     '',
     'leer',
@@ -121,6 +138,7 @@ export function demoStarten(fall: string): void {
   const werte = new Map<number, { id: number; dataCategoryId: number; value: string }[]>([
     [ENTWUERFE, []],
     [VEROEFFENTLICHT, []],
+    [VEROEFFENTLICHT_JUGEND, []],
   ]);
   let naechsteId = 1000;
   /** Eine Einheit so ablegen, wie `einheitSpeichern` es tut: Teile und Kopf. */
@@ -167,6 +185,9 @@ export function demoStarten(fall: string): void {
       'eigene',
       'wackelt',
       'aussehen-gesperrt',
+      'jugend-redakteur',
+      'jugend-leitung',
+      'bereiche',
     ].includes(fall)
   ) {
     let n = 0;
@@ -318,6 +339,54 @@ export function demoStarten(fall: string): void {
         });
       }
     }
+    // ── Bereiche (W3b-4b): Seiten der Untergruppe Jugend, online wie oben beschrieben.
+    if (mitBereichen) {
+      for (const s of [start, gruppen, impressum])
+        lege('seite', s.id, seiteAlsText(s), VEROEFFENTLICHT);
+      lege('menue', MENUE_ID, menueAlsText(menue), VEROEFFENTLICHT);
+      lege('einstellungen', EINSTELLUNGEN_ID, einstellungenAlsText(aussehen), VEROEFFENTLICHT);
+      const jugendabend: Seite = {
+        id: 'demo-jugendabend',
+        titel: 'Jugendabend',
+        pfad: 'jugendabend',
+        abschnitte: [],
+        // Am Ende, wie im Schema – der Text (und damit die Prüfsumme) hängt an der Reihenfolge.
+        bereich: JUGEND,
+      };
+      const freizeit: Seite = {
+        id: 'demo-freizeit',
+        titel: 'Freizeit 2027',
+        pfad: 'freizeit-2027',
+        abschnitte: [],
+        // Am Ende, wie im Schema – der Text (und damit die Prüfsumme) hängt an der Reihenfolge.
+        bereich: JUGEND,
+      };
+      const team: Seite = {
+        id: 'demo-jugend-team',
+        titel: 'Jugend-Team',
+        pfad: 'jugend-team',
+        abschnitte: [],
+        // Am Ende, wie im Schema – der Text (und damit die Prüfsumme) hängt an der Reihenfolge.
+        bereich: JUGEND,
+      };
+      for (const s of [jugendabend, freizeit, team]) lege('seite', s.id, seiteAlsText(s));
+      // „Freizeit 2027“ wurde freigegeben, als sie noch der Website gehörte – sie liegt in deren Kategorie.
+      const { bereich: _ohne, ...freizeitAlt } = freizeit;
+      lege('seite', freizeit.id, seiteAlsText(freizeitAlt), VEROEFFENTLICHT);
+      lege('seite', team.id, seiteAlsText(team), VEROEFFENTLICHT_JUGEND);
+      const w: WebsiteStatus = {
+        art: 'website-status',
+        fassung: 1,
+        id: jugendabend.id,
+        zustand: 'eingereicht',
+        von: 8,
+        name: 'Lena Kraft',
+        zeit: vorMin(30),
+      };
+      werte
+        .get(ENTWUERFE)!
+        .push({ id: naechsteId++, dataCategoryId: ENTWUERFE, value: JSON.stringify(w) });
+    }
     if (fall === 'aussehen-gesperrt') {
       const sperre: WebsiteSperre = {
         art: 'website-sperre',
@@ -362,9 +431,13 @@ export function demoStarten(fall: string): void {
     ? [ENTWUERFE, VEROEFFENTLICHT]
     : fall === 'leitung'
       ? [ENTWUERFE, VEROEFFENTLICHT]
-      : fall === 'redakteur'
-        ? [ENTWUERFE]
-        : [];
+      : fall === 'bereiche'
+        ? [ENTWUERFE, VEROEFFENTLICHT, VEROEFFENTLICHT_JUGEND]
+        : fall === 'jugend-leitung'
+          ? [ENTWUERFE, VEROEFFENTLICHT_JUGEND]
+          : fall === 'redakteur' || fall === 'jugend-redakteur'
+            ? [ENTWUERFE]
+            : [];
   const rechte = () => ({
     churchdb: { 'administer groups': admin },
     churchcore: { 'administer persons': admin },
@@ -484,13 +557,26 @@ export function demoStarten(fall: string): void {
     if (fall === 'fehler' && pfad === '/custommodules') return antwort(null, 502);
     if (pfad === '/csrftoken') return antwort('demo-csrf');
     if (pfad === '/whoami') return antwort({ id: 1, firstName: 'Helene', lastName: 'Wiebe' });
+    if (pfad === '/persons/1/groups' && (fall === 'jugend-redakteur' || fall === 'jugend-leitung'))
+      return antwort([
+        {
+          // Nur in der Untergruppe (wie Spike in der Messung W3b-4-0): Gruppen-ID als Text, Rolle = Gruppenart-Rolle.
+          group: { domainIdentifier: String(JUGEND), title: 'Website – Jugend' },
+          groupTypeRoleId: fall === 'jugend-leitung' ? 16 : 15,
+          groupMemberStatus: 'active',
+          memberEndDate: null,
+        },
+      ]);
     if (pfad === '/persons/1/groups')
       return antwort(
-        ['leitung', 'leitung-ohne-rechte', 'redakteur', 'mitglied'].includes(fall)
+        ['leitung', 'leitung-ohne-rechte', 'redakteur', 'mitglied', 'bereiche'].includes(fall)
           ? [
               {
                 group: { domainIdentifier: String(GRUPPE), title: 'Website' },
-                groupTypeRoleId: fall === 'leitung' || fall === 'leitung-ohne-rechte' ? 16 : 15,
+                groupTypeRoleId:
+                  fall === 'leitung' || fall === 'leitung-ohne-rechte' || fall === 'bereiche'
+                    ? 16
+                    : 15,
                 groupMemberStatus: 'active',
                 memberEndDate: null,
               },
@@ -596,6 +682,10 @@ export function demoStarten(fall: string): void {
       );
     if (wertePfad) {
       const kat = Number(wertePfad[1]);
+      // Bereiche (W3b-4b): Lesen nur mit Leserecht, Schreiben nur mit Schreibrecht – wie ChurchTools (dort 401 → „kein Recht“).
+      if (mitBereichen && method === 'GET' && !kategorien.some((k) => k.id === kat))
+        return antwort(null, 403);
+      if (mitBereichen && method !== 'GET' && !schreibt.includes(kat)) return antwort(null, 403);
       const liste = werte.get(kat) ?? [];
       const rumpf =
         typeof init?.body === 'string' ? (JSON.parse(init.body) as { value: string }) : null;

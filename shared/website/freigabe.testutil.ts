@@ -9,6 +9,12 @@ import { fehlerMit, type FehlerStatus } from './speicher.testutil';
  */
 export const ENTWUERFE = 1;
 export const ONLINE = 2;
+/**
+ * W3b-4b: „Veröffentlicht“ der Untergruppe Jugend – Kategorie 117 der Gruppe 347 (Messung W3b-4-0). Gruppen- und Kategorie-ID
+ * bewusst verschieden, damit eine Verwechslung auffällt.
+ */
+export const JUGEND = 347;
+export const JUGEND_ONLINE = 117;
 
 export type Zugriff2 = {
   art: 'LESEN' | 'POST' | 'PUT' | 'DELETE';
@@ -18,7 +24,7 @@ export type Zugriff2 = {
 };
 
 export function fakeFreigabeSpeicher() {
-  const werte: Record<number, Wert[]> = { [ENTWUERFE]: [], [ONLINE]: [] };
+  const werte: Record<number, Wert[]> = { [ENTWUERFE]: [], [ONLINE]: [], [JUGEND_ONLINE]: [] };
   let naechste = 1;
   const log: Zugriff2[] = [];
   const steuerung: { ausfall: (z: Zugriff2, nr: number) => Error | undefined } = {
@@ -89,6 +95,15 @@ export function fakeFreigabeSpeicher() {
     entwurfsOrt: { p: port, modul: 7, kategorie: ENTWUERFE },
     onlineOrt: { p: port, modul: 7, kategorie: ONLINE },
     freigabeOrt: { p: port, modul: 7, entwuerfe: ENTWUERFE, veroeffentlicht: ONLINE },
+    /** Mit der eingerichteten Untergruppe Jugend (W3b-4b). */
+    bereichsOrt: {
+      p: port,
+      modul: 7,
+      entwuerfe: ENTWUERFE,
+      veroeffentlicht: ONLINE,
+      untergruppen: [{ gruppe: JUGEND, kategorie: JUGEND_ONLINE }],
+    },
+    jugendOrt: { p: port, modul: 7, kategorie: JUGEND_ONLINE },
     /** Die Schreibzugriffe, als „1:POST“, „2:PUT 3“, „2:DELETE 5“ (Kategorie vorn). */
     schreibzugriffe: (kategorie?: number) =>
       log

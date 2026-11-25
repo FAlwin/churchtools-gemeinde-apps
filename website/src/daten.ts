@@ -6,6 +6,7 @@
  * stehen in `@shared/website/freigabe` und `status`.
  */
 import { modulPort } from '@ui/ct/modulPort';
+import { ApiError } from '@ui/ct/fehler';
 import { werteLesen } from '@shared/ct/modulDaten';
 import type { Schreiber, Sperre } from '@shared/ct/sperre';
 import {
@@ -30,11 +31,16 @@ import type { Einstellungen, Menue, Seite } from '@shared/website/modell';
 import {
   alleFreigeben,
   gibFrei,
+  onlineKategorien,
+  onlineSicht,
   seiteEntfernen,
   type AlleErgebnis,
   type Freigegeben,
+  type OnlineKategorie,
+  type OnlineSicht,
   type Ziel,
 } from '@shared/website/freigabe';
+import type { UntergruppenKategorie } from '@shared/website/einrichten';
 import {
   statusEntfernen,
   statusSetzen,
@@ -133,11 +139,14 @@ export const beendeEinstellungen = (o: EntwurfsOrt, ich: Schreiber) =>
 
 // ── Freigabe (W3b-2) ──────────────────────────────────────────────────────────────────────────────────────────────────
 
-/** Beide Kategorien der Website – für alles, was Entwurf und Online-Stand zusammen braucht. */
+/** Die Kategorien der Website – für alles, was Entwurf und Online-Stand zusammen braucht. */
 export interface FreigabeKategorien {
   modul: number;
   entwuerfe: number;
+  /** „Veröffentlicht“ der Website. */
   veroeffentlicht: number;
+  /** „Veröffentlicht“ der eingerichteten Untergruppen, die die Person sieht (W3b-4b) – fehlt: keine. */
+  untergruppen?: readonly UntergruppenKategorie[];
 }
 
 const freigabeOrt = (o: FreigabeKategorien) => ({ p: modulPort, ...o });
@@ -147,19 +156,40 @@ const entwurfsOrtVon = (o: FreigabeKategorien): SpeicherOrt => ({
   kategorie: o.entwuerfe,
 });
 
-/** Der Online-Stand: die Kategorie „Veröffentlicht“, gelesen wie jede andere (alle Rollen dürfen sie lesen). */
-export const ladeOnline = (o: FreigabeKategorien): Promise<WebsiteStand> =>
-  websiteLesen(modulPort, o.modul, o.veroeffentlicht);
+/**
+ * **Der Online-Stand aller Bereiche** (W3b-4b): jede Veröffentlicht-Kategorie, die die Person kennt, gelesen wie jede andere.
+ * **Eine Kategorie ohne Leserecht ist kein Fehler** (`401`/`403` → sie fehlt in der Liste); jeder andere Fehler wirft – der
+ * Online-Stand ist dann „unbekannt“, nicht „leer“.
+ */
+export async function ladeOnline(o: FreigabeKategorien): Promise<OnlineKategorie[]> {
+  const gelesen = await Promise.all(
+    onlineKategorien(freigabeOrt(o)).map(async (k) => {
+      try {
+        return { ...k, stand: await websiteLesen(modulPort, o.modul, k.kategorie) };
+      } catch (e) {
+        // Kein Leserecht (nicht „abgemeldet“ – das unterscheidet `istKeinRecht` schon): die Kategorie fehlt einfach.
+        if (modulPort.istKeinRecht(e) || (e instanceof ApiError && e.status === 403)) return null;
+        throw e;
+      }
+    }),
+  );
+  return gelesen.filter((k): k is OnlineKategorie => k !== null);
+}
+
+/** Entwurf und Online-Stand zusammen – für Reiter „Freigaben“ und Zähler. */
+export interface FreigabeDaten {
+  entwurf: WebsiteStand;
+  /** Der Online-Stand je Bereich (`onlineSicht`). */
+  online: OnlineSicht;
+}
 
 /** Entwurf und Online-Stand zusammen – für den Reiter „Freigaben“ und den Zähler. Scheitert eines, scheitert das Ganze. */
-export async function ladeFreigaben(
-  o: FreigabeKategorien,
-): Promise<{ entwurf: WebsiteStand; online: WebsiteStand }> {
+export async function ladeFreigaben(o: FreigabeKategorien): Promise<FreigabeDaten> {
   const [entwurf, online] = await Promise.all([
     websiteLesen(modulPort, o.modul, o.entwuerfe),
     ladeOnline(o),
   ]);
-  return { entwurf, online };
+  return { entwurf, online: onlineSicht(entwurf, online) };
 }
 
 export const setzeStatus = (
@@ -175,8 +205,11 @@ export const entferneStatus = (o: FreigabeKategorien, seiteId: string) =>
 export const gebeFrei = (o: FreigabeKategorien, ziel: Ziel): Promise<Freigegeben> =>
   gibFrei(freigabeOrt(o), ziel.einheit, ziel.id);
 
-export const entferneSeiteUndOnline = (o: FreigabeKategorien, seiteId: string) =>
-  seiteEntfernen(freigabeOrt(o), seiteId);
+export const entferneSeiteUndOnline = (
+  o: FreigabeKategorien,
+  seiteId: string,
+  bereich: number | null,
+) => seiteEntfernen(freigabeOrt(o), seiteId, bereich);
 
 export const gebeAllesFrei = (
   o: FreigabeKategorien,

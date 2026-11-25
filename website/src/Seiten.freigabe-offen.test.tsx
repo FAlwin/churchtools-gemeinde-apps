@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { WebsiteStand } from '@shared/website/speicher';
 import { menue, seite } from '@shared/website/website.testdaten';
+import { WEBSITE_LEITUNG, WEBSITE_REDAKTEUR } from '@shared/website/zugang';
 import * as D from './daten';
 import { Seiten } from './Seiten';
 
@@ -48,7 +49,7 @@ const ICH = { person: 5, name: 'Rita', fenster: 'f' };
 beforeEach(() => {
   vi.clearAllMocks();
   d.ladeWebsite.mockResolvedValue(stand());
-  d.ladeOnline.mockResolvedValue(stand());
+  d.ladeOnline.mockResolvedValue([{ bereich: null, kategorie: 21, stand: stand() }]);
 });
 
 describe('Ungespeichertes blockiert Einreichen und Veröffentlichen', () => {
@@ -59,7 +60,12 @@ describe('Ungespeichertes blockiert Einreichen und Veröffentlichen', () => {
         gemeinde="ECG"
         ich={ICH}
         rechte={{ html: false, menue: false }}
-        freigabe={{ zugang: 'redakteur', veroeffentlicht: 21, gruppe: 344, onGeaendert: vi.fn() }}
+        freigabe={{
+          zugang: WEBSITE_REDAKTEUR,
+          veroeffentlicht: 21,
+          gruppe: 344,
+          onGeaendert: vi.fn(),
+        }}
       />,
     );
     const knopf = await screen.findByRole('button', {
@@ -80,7 +86,12 @@ describe('Ungespeichertes blockiert Einreichen und Veröffentlichen', () => {
         gemeinde="ECG"
         ich={ICH}
         rechte={{ html: true, menue: true }}
-        freigabe={{ zugang: 'leitung', veroeffentlicht: 21, gruppe: 344, onGeaendert: vi.fn() }}
+        freigabe={{
+          zugang: WEBSITE_LEITUNG,
+          veroeffentlicht: 21,
+          gruppe: 344,
+          onGeaendert: vi.fn(),
+        }}
       />,
     );
     await screen.findByRole('button', { name: 'Mehr' });

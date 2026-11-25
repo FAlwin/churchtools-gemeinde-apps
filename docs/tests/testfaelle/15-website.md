@@ -628,8 +628,8 @@ ihre Rechte abweichen.
 6. **Leitung je Gruppe:** In „Entwürfe“ stehen jetzt Werte `website-leitung` – einer **ohne** `gruppe` (Website) und je Untergruppe einer mit
    `"gruppe": 347` bzw. der ID von Technik. Die Mails im Freigabe-Weg der Website (TF-WEBSITE-17) gehen weiter an die Leitung der Website.
 7. **Hinweis weg:** Fenster schließen: Der Hinweis oben ist verschwunden.
-8. **Als Spike (Mitarbeiter in 347):** Die Erweiterung öffnen: Er arbeitet als **Redakteur der ganzen Website** (Zwischenstand bis W3b-4b – er sieht
-   alle Seiten). Als **Leiter in 347** (Rolle per Werkzeug wechseln): ebenfalls Redakteur in der Oberfläche; in ChurchTools darf er in 117 schreiben.
+8. **Als Spike (Mitarbeiter in 347):** Die Erweiterung öffnen: Er sieht **nur die Seiten von „Website – Jugend“** (seit W3b-4b – der Rest steht in
+   TF-WEBSITE-19). Als **Leiter in 347** (Rolle per Werkzeug wechseln): Er gibt die Seiten von Jugend frei; in ChurchTools darf er in 117 schreiben.
 9. **Nicht-Admin der Website-Leitung schreibt in 117** (in der Messung offen geblieben): Spike per Werkzeug als **Leiter in 344** – er darf in
    117 schreiben (z. B. über die API-Probe des Werkzeugs).
 
@@ -639,5 +639,49 @@ ihre Rechte abweichen.
 - **Betrifft:** `shared/organigramm/gruppen.ts`, `shared/website/einrichten.ts`, `shared/website/rechte.ts`, `shared/website/mailWerte.ts`, `shared/website/zugang.ts`, `website/src/rechte.ts`, `website/src/WerDarfWas.tsx`, `website/src/RechteHinweis.tsx`, `website/src/leitungFehler.ts`, `website/src/demo.ts`
 - **Automatisiert:** teilweise – `shared/organigramm/gruppen.test.ts` (direkte Kinder, Enkel nicht), `shared/website/einrichten.test.ts` (Untergruppen aus der Hierarchie, Website nur über `entwuerfe-g`, Untergruppen-Kategorien), `shared/website/rechte.test.ts` (Soll Website/Untergruppe, nie fremde Veröffentlicht-Kategorie, `verwaltetVon`, Stufen zum Nachziehen, Hinweise), `shared/website/mailWerte.test.ts` (Leitung je Gruppe, alter Wert ohne `gruppe`), `website/src/rechte.test.ts` (Ablauf einrichten → nachziehen, Kategorie wiederverwendet, Teilfehler), `website/src/WerDarfWas.test.tsx`, `website/src/App.test.tsx`, `website/src/demo.test.ts`; die echten Rechte in ChurchTools und Spikes Rollen nur in der Test-Instanz
 - **Historie:** neu mit W3b-4a (23.11.2026)
+
+</details>
+
+### TF-WEBSITE-19 · Bereiche: Untergruppe sieht nur ihre Seiten, gibt ihre frei, Seite verschieben
+
+**Das brauchst du:** Die Website in der Test-Instanz mit eingerichteter Untergruppe **„Website – Jugend“** (347, Kategorie 117, TF-WEBSITE-18),
+Alwin als Leiter der Website (344), Spike nur in 347 (erst Mitarbeiter, dann Leiter – Rollen per Werkzeug, **nicht** „Person simulieren“). Zwei
+Browser (Alwin, Spike). Vorher als Alwin zwei Seiten anlegen: **„Jugendabend“** und **„Freizeit 2027“**, beide veröffentlichen (sie liegen dann
+in der Kategorie der Website).
+
+**Das muss passieren:** Eine Seite gehört der Website oder einer Untergruppe (**Seite einstellen → Bereich**, nur die Leitung der Website).
+Mitglieder einer Untergruppe sehen in „Seiten“ und „Freigaben“ nur die Seiten ihres Bereichs, die Vorschau zeigt aber Menü und Aussehen der ganzen
+Website. Die Leitung der Untergruppe gibt ihre Seiten frei – in die Kategorie der Untergruppe. Eine Seite, deren Bereich geändert wurde, wird beim
+nächsten Freigeben verschoben; was dabei nicht gelingt, steht in der Meldung.
+
+1. **Bereich setzen (Alwin):** „Jugendabend“ → **Seite einstellen**: Das Feld **Bereich** zeigt „Website“, „Website – Jugend“ (keine nicht
+   eingerichtete Untergruppe). „Website – Jugend“ wählen, **Fertig**. Dasselbe für „Freizeit 2027“. Unter **Freigaben** stehen beide als
+   „Geändert“ mit „Steht online noch in einem anderen Bereich – Freigeben verschiebt sie · Bereich „Website – Jugend““.
+2. **Verschieben (Alwin):** „Jugendabend“ **Veröffentlichen**: „„Jugendabend“ ist online.“ – ohne Zusatz. In ChurchTools (Werte der Erweiterung)
+   steht die Seite jetzt in **117**, nicht mehr in „Veröffentlicht“ der Website (107). „Freizeit 2027“ **nicht** freigeben (für Schritt 5).
+3. **Als Spike, Mitarbeiter in 347:** Die Erweiterung zeigt nur „Jugendabend“ und „Freizeit 2027“ (keine Startseite, kein Impressum, „Im Menü“
+   leer, kein Hinweis „Startseite anlegen“); kein Reiter Aussehen, kein Einstellungen. Die Vorschau zeigt Kopf und Menü der Website.
+   **Neue Seite** mit dem Titel einer Website-Seite, die Spike nicht sieht (z. B. „Impressum“): Die Adresse wird `/impressum-2/`. Anlegen: Die
+   Seite gehört zu Jugend (Alwin sieht sie in „Seite einstellen“ mit Bereich „Website – Jugend“). Sie **Zur Prüfung einreichen**.
+4. **Als Alwin:** Unter **Freigaben** steht Spikes Seite als „Eingereicht“ mit „· Bereich „Website – Jugend““. (Mail: bis W3b-4c keine – Spike
+   sieht die Leitung der Website nicht.) Noch **nicht** freigeben.
+5. **Als Spike, Leiter in 347** (Rolle per Werkzeug, Erweiterung neu laden): Reiter **Freigaben** mit Zähler 1; die Liste zeigt nur Seiten von
+   Jugend, **kein** Menü, **keine** Einstellungen. Spikes Seite **Freigeben** → online in 117. **„Freizeit 2027“ Veröffentlichen**: „„Freizeit 2027“
+   ist online. „Freizeit 2027“ steht zusätzlich noch online im Bereich „Website“ – dort ließ sie sich gerade nicht entfernen …“ – sie steht in
+   117 **und** in 107 (Spike darf in 107 nicht schreiben) und bleibt unter „Freigaben“ als „Geändert“.
+6. **Als Alwin:** „Freizeit 2027“ erneut **Veröffentlichen** → jetzt nur noch in 117. „Freigaben“ zeigt sie nicht mehr.
+7. **Ohne Bereich:** Eine Person, die in „Entwürfe“ schreiben darf, aber weder in 344 noch in 347 ist (z. B. Spike kurz aus 347 nehmen, Rolle
+   mit Rechten über eine andere Gruppe): Statt der Seiten steht „Du darfst an der Website mitarbeiten, bist aber in keiner ihrer Gruppen
+   eingetragen …“. Danach Spike wieder in 347.
+8. **Wer darf was (Abnahme W3b-4a):** Als Admin **Wer darf was** im Hinweis beim Start: Das Fenster springt zum Abschnitt „Wer darf was“. Mit
+   VoiceOver o. Ä.: Die Auswahlfelder heißen „Stufe von Leiter in „Website““ bzw. „… in „Website – Jugend““.
+9. **Handy:** Schritte 3 und 5 am Handy: Liste, Etiketten und Meldungen lesbar, nichts abgeschnitten.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/website/modell.ts`, `shared/website/zugang.ts`, `shared/website/freigabe.ts`, `shared/website/einrichten.ts`, `website/src/start.ts`, `website/src/App.tsx`, `website/src/Seiten.tsx`, `website/src/Freigaben.tsx`, `website/src/SeiteEinstellen.tsx`, `website/src/NeueSeite.tsx`, `website/src/daten.ts`, `website/src/freigabeAnzeige.ts`, `website/src/WerDarfWas.tsx`, `website/src/RollenStufen.tsx`, `website/src/demo.ts`
+- **Automatisiert:** teilweise – `shared/website/zugang.test.ts` (alle Zweige des Zugangs, Website geht vor, ohne Bereich, Rechte je Bereich), `shared/website/freigabe.test.ts` (richtige Kategorie, nicht eingerichtet, Verschieben in der Reihenfolge, alt löschen scheitert, Entfernen aus allen Kategorien, Online-Vergleich mit falschem Bereich, Liste/Zähler je Bereich), `website/src/start.test.ts` (Untergruppen, Mitgliedschaften, Lesefehler), `website/src/Seiten.bereiche.test.tsx`, `website/src/Freigaben.bereiche.test.tsx`, `website/src/Seitenarbeit.test.tsx` (Feld „Bereich“), `website/src/App.test.tsx`, `website/src/WerDarfWas.test.tsx`, `website/src/demo.test.ts` (Demo-Fälle `jugend-redakteur`, `jugend-leitung`, `bereiche`); die echten Rechte in ChurchTools und Spikes Rollen nur in der Test-Instanz
+- **Historie:** neu mit W3b-4b (23.11.2026)
 
 </details>

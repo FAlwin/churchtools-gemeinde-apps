@@ -1,9 +1,10 @@
 # Website – ChurchTools-Erweiterung
 
-> **Stand: W3b-4a (23.11.2026) – noch kein Release.** Gebaut: Grundgerüst (Einrichten, Seitenliste, Vorschau, Seiten anlegen und
+> **Stand: W3b-4b (23.11.2026) – noch kein Release.** Gebaut: Grundgerüst (Einrichten, Seitenliste, Vorschau, Seiten anlegen und
 > löschen – W3a), **Aussehen** und **Einstellungen** (W3a-3), **Wer darf was** und **Freigabe** für Redakteure und Leitung (W3b-1/-2),
 > **Mails im Freigabe-Weg** (W3b-3: Einreichen, Löschen anfragen, Zurückgeben, Freigeben), **Untergruppen einrichten** (W3b-4a: Kategorie
-> und Rechte je Untergruppe, „Wer darf was“, Hinweis beim Start – Abschnitt „Untergruppen – Stand W3b-4a“) und
+> und Rechte je Untergruppe, „Wer darf was“, Hinweis beim Start – Abschnitt „Untergruppen – Stand W3b-4a“), **Bereiche** (W3b-4b: Bereich
+> je Seite, Untergruppen sehen nur ihre Seiten, Freigeben und Verschieben je Bereich – Abschnitt „Bereiche – Stand W3b-4b“) und
 > der neue **Designer in der Vorschau** (W3c): Text direkt tippen, Bausteine und Abschnitte ziehen, Spaltenbreite und Abstand ziehen,
 > Rückgängig/Wiederholen für die Seite – Abschnitte „Wer darf was“, „Freigabe“ und „Bearbeiten in der Vorschau“ unten. Noch **nicht**
 > da: siehe „Was noch fehlt“. Das Bild der ganzen Website: Bauplan „Neue Website“
@@ -162,9 +163,75 @@ ist eine Entscheidung und kein Hinweis. Lesefehler → kein Hinweis.
 ihn unverändert); der Wert einer Untergruppe trägt `"gruppe": <ID>`. Die Rollen sind `group_role`-IDs der jeweiligen Gruppe. Gelesen wird
 erst in W3b-4c (Mails je Bereich).
 
-**Zwischenstand bis W3b-4b:** Mitglieder einer Untergruppe schreiben in „Entwürfe“, nicht in „Veröffentlicht“ der Website – die Oberfläche
-(`zugangFuer`) macht sie darum zu **Redakteuren der ganzen Website**, auch die Leitung einer Untergruppe. Sie sehen alle Seiten, reichen ein,
-geben nicht frei. Bereich je Seite, gefilterte Listen und Freigeben je Bereich kommen mit W3b-4b.
+**Seit W3b-4b** sieht und bearbeitet eine Untergruppe nur ihre Seiten – nächster Abschnitt.
+
+## Bereiche – Stand W3b-4b
+
+**Bereich einer Seite:** Feld `bereich` an der Seite (`seiteSchema`, Gruppen-ID einer Untergruppe, steht am Ende des Seiten-Texts). **Fehlt
+es, gehört die Seite der Gruppe „Website“** – alle Seiten von vor W3b-4b bleiben unverändert gültig. Ändern darf es nur die Leitung der Website
+(**Seite einstellen → Bereich**: „Website“ und alle **eingerichteten** Untergruppen mit Namen; nicht eingerichtete stehen nicht zur Wahl;
+„Website“ entfernt das Feld). Das Feld erscheint nur, wenn es eingerichtete Untergruppen gibt.
+
+**Wer bin ich?** (`zugangFuer` in `shared/website/zugang.ts`, Ergebnis `{ sieht, leitet }` – je „alle“ oder eine Liste von Untergruppen):
+
+| Wer                                                                   | sieht                       | gibt frei   |
+| --------------------------------------------------------------------- | --------------------------- | ----------- |
+| Admin; schreibt in Entwürfe **und** „Veröffentlicht“ der Website      | alle Seiten                 | alle Seiten |
+| schreibt in Entwürfe und in die Kategorie einer/mehrerer Untergruppen | ihre + aus Mitgliedschaften | nur ihre    |
+| schreibt nur in Entwürfe, Mitglied der Gruppe „Website“               | alle Seiten                 | –           |
+| schreibt nur in Entwürfe, Mitglied eingerichteter Untergruppen        | Seiten dieser Untergruppen  | –           |
+| schreibt nur in Entwürfe, in keiner dieser Gruppen                    | **keine** – Hinweis         | –           |
+
+Den Bereich eines Redakteurs liefern die **eigenen Mitgliedschaften** (`/persons/{ich}/groups`, `group.domainIdentifier`, ausgewertet mit
+`meineGruppen`); **die Website geht vor**. Wer in keiner Gruppe ist, sieht statt des Editors: „Du darfst an der Website mitarbeiten, bist
+aber in keiner ihrer Gruppen eingetragen …“. Ist die Hierarchie oder sind die Mitgliedschaften nicht lesbar, zeigt der Start „Erneut
+versuchen“ – es wird nie „kein Bereich“ geraten. Die Untergruppen beim Start: direkte Kinder (`/groups/hierarchies`), deren
+`veroeffentlicht-g<ID>` man sieht; ihr Name kommt für die Leitung der Website frisch aus der Gruppe (wie in „Wer darf was“), sonst aus dem
+Namen der Kategorie.
+
+**Was jemand sieht und darf** (je eine Funktion in `zugang.ts`):
+
+- **Seitenliste, „Im Menü“, „Freigaben“, Zähler:** nur Seiten der eigenen Bereiche (`sichtbareSeiten`, `freigabeListe`). Die **Vorschau**
+  rendert mit allen Seiten, dem ganzen Menü und dem Aussehen – die Seite sieht aus wie online.
+- **Aussehen, Einstellungen, Menü, eigenes HTML, „Startseite anlegen“, Bereich ändern:** nur Admin und Leitung der Website
+  (`darfAussehenUndMenue`). Den Knopf „Startseite anlegen“ hatten bis W3b-4a auch Redakteure; jetzt lesen sie „Die Startseite legt die
+  Leitung der Website an.“, Untergruppen sehen den Hinweis gar nicht.
+- **Freigeben, direkt veröffentlichen, zurückgeben, „Löschen angefragt“ bestätigen, Seite löschen:** die Leitung der Website für alle Seiten,
+  die Leitung einer Untergruppe nur für Seiten **ihres** Bereichs (`darfFreigeben(zugang, bereich)` – je Seite). Menü und Einstellungen stehen
+  nur bei der Leitung der Website in „Freigaben“. Wer eine Untergruppe leitet und zugleich Mitglied der Website ist, sieht alle Seiten, ist für
+  Website-Seiten aber Redakteur (einreichen).
+- **Einreichen, Löschen anfragen:** Redakteure für die Seiten, die sie sehen (wie bisher).
+
+**Neue Seite:** erbt den Bereich ihres Anlegers – wer alle Seiten sieht, legt für die Website an; wer nur über eine Untergruppe dabei ist, für
+diese; wer in mehreren ist, wählt im Fenster „Neue Seite“ (`bereicheFuerNeueSeite`). **Adressen sind über alle Bereiche eindeutig** (E-W30):
+„Neue Seite“ und die Prüfung vor dem Speichern bekommen **alle** Seiten, nicht nur die sichtbaren.
+
+**Freigeben je Bereich** (`gibFrei` in `shared/website/freigabe.ts`): Menü und Einstellungen in die Kategorie der Website, eine Seite in die
+Kategorie **ihres** Bereichs (`kategorieDesBereichs`). Ist ihr Bereich nicht eingerichtet (oder sieht man seine Kategorie nicht): „Die Seite
+„…“ gehört zu einer Untergruppe, die noch nicht eingerichtet ist – es wurde nichts veröffentlicht …“, **nichts** geschrieben.
+
+**Verschieben:** Wurde der Bereich einer veröffentlichten Seite geändert, liegt sie online noch in der alten Kategorie. Das nächste
+Freigeben: in die neue Kategorie schreiben → nachlesen (Stand gleich) → **erst dann** aus jeder anderen Kategorie löschen, in der sie liegt
+(`einheitLoeschen` liest selbst nach) → Status entfernen. Scheitert das Löschen der alten (z. B. die Leitung von Jugend darf in „Veröffentlicht“
+der Website nicht schreiben), ist die Seite im neuen Bereich online, und die Meldung sagt: „„…“ steht zusätzlich noch online im Bereich
+„Website“ – dort ließ sie sich gerade nicht entfernen …“. Das ist **kein** Fehler der Freigabe; unter „Freigaben“ bleibt die Seite als
+„Geändert“ mit der Zeile „Steht online noch in einem anderen Bereich – Freigeben verschiebt sie“. Eine Kategorie ohne Leserecht wird
+übersprungen.
+
+**Löschen und offline nehmen** (`seiteEntfernen`): aus **jeder** Veröffentlicht-Kategorie, in der die Seite steht, dann erst den Entwurf. Fehlt
+das Recht in der Kategorie des **eigenen** Bereichs: „kein Recht“, nichts gelöscht. Fehlt es in einer **fremden** Kategorie, bleibt die Seite
+dort; die Meldung nennt den Bereich, und die Leitung der Website sieht sie als „nur noch online“.
+
+**Online-Vergleich je Bereich** (`onlineSicht`): gelesen werden alle Veröffentlicht-Kategorien, die man kennt (`ladeOnline` – eine ohne
+Leserecht fehlt einfach, jeder andere Fehler heißt „Online-Stand unbekannt“). Der Stand einer Seite kommt aus der Kategorie ihres Bereichs;
+liegt sie (auch) in einer anderen, gilt sie als „Geändert“ (`falsch`). Menü und Einstellungen kommen aus der Kategorie der Website.
+
+**Mails (bis W3b-4c):** unverändert an die Leitung der Website-Gruppe. Ein Redakteur, der nur in einer Untergruppe ist, sieht deren
+Mitglieder nicht (Messung W3b-4-0) – „niemand“, keine Mail, kein Hinweis. Die Leitung sieht die Seite trotzdem unter „Freigaben“ samt
+Zähler. W3b-4c bringt die Mail an die Leitung der Untergruppe **und** der Website (E-W29).
+
+**Demo:** `?demo=jugend-redakteur` (nur Jugend-Seiten, einreichen), `?demo=jugend-leitung` (Jugend-Seiten freigeben; „Freizeit 2027“
+verschieben scheitert am Recht in der Website-Kategorie → Meldung), `?demo=bereiche` (Leitung der Website: Bereich-Feld, Verschieben gelingt).
 
 ## Freigabe – Stand W3b-2
 
@@ -644,8 +711,7 @@ mit Begründung bewusst keine).
 
 ## Was noch fehlt
 
-W3b-4b Bereich je Seite und Oberfläche (bis dahin sind Mitglieder einer Untergruppe Redakteure der ganzen Website, siehe „Untergruppen – Stand
-W3b-4a“) · W3b-4c Mails je Bereich · W4 Bilder · W5 Bau-Dienst und Veröffentlichen · Release
+W3b-4c Mails je Bereich (bis dahin bekommt bei Seiten einer Untergruppe niemand eine Mail, siehe „Bereiche – Stand W3b-4b“) · W4 Bilder · W5 Bau-Dienst und Veröffentlichen · Release
 (`website-v…`; Tag erst nach grünem Merge, siehe `.github/workflows/website-release.yml`).
 
 ## Release

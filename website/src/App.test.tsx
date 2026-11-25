@@ -4,8 +4,10 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { einrichtungAus } from '@shared/website/einrichten';
 import { kategorienFuer } from '@shared/website/einrichten';
 import { statusSetzen } from '@shared/website/status';
-import { seiteSpeichern, websiteAusWerten, type WebsiteStand } from '@shared/website/speicher';
-import { gibFrei } from '@shared/website/freigabe';
+import { seiteSpeichern, websiteAusWerten } from '@shared/website/speicher';
+import { gibFrei, nurWebsite } from '@shared/website/freigabe';
+import { WEBSITE_LEITUNG, WEBSITE_REDAKTEUR, type Zugang } from '@shared/website/zugang';
+import type { FreigabeDaten } from './daten';
 import { ENTWUERFE, ONLINE, fakeFreigabeSpeicher } from '@shared/website/freigabe.testutil';
 import { baustein, seiteMit } from '@shared/website/website.testdaten';
 import { App } from './App';
@@ -19,8 +21,11 @@ vi.mock('./start', () => ({ ladeStart: vi.fn() }));
 // über `ladeFreigaben` – sein Ergebnis steht in den Tests fest (aus dem echten Schreiben, nicht aus Literalen).
 vi.mock('./daten', () => ({ ladeFreigaben: vi.fn() }));
 vi.mock('./Freigaben', () => ({
-  Freigaben: ({ zugang, gruppe }: { zugang: string; gruppe: number }) => (
-    <p data-gruppe={gruppe}>FREIGABEN-INHALT {zugang}</p>
+  // Der Zugang als Wort (W3b-4b: ein Objekt `sieht`/`leitet`) – „leitung“, wer die Website leitet, sonst „redakteur“.
+  Freigaben: ({ zugang, gruppe }: { zugang: Zugang; gruppe: number }) => (
+    <p data-gruppe={gruppe}>
+      FREIGABEN-INHALT {zugang.leitet === 'alle' ? 'leitung' : 'redakteur'}
+    </p>
   ),
 }));
 const freigaben = vi.mocked(ladeFreigaben);
@@ -44,15 +49,18 @@ vi.mock('./EinstellungenFenster', () => ({
   EinstellungenFenster: ({
     onSchliessen,
     werDarfWas,
+    zuWerDarfWas,
     mail,
   }: {
     onSchliessen: () => void;
     werDarfWas?: unknown;
+    zuWerDarfWas?: boolean;
     mail?: { modul: number; kategorie: number };
   }) => (
     <button
       onClick={onSchliessen}
       data-wer-darf-was={werDarfWas ? 'ja' : 'nein'}
+      data-springen={zuWerDarfWas ? 'ja' : 'nein'}
       data-mail={mail ? `${mail.modul}/${mail.kategorie}` : 'nein'}
     >
       EINSTELLUNGEN-FENSTER
@@ -76,14 +84,14 @@ const start = (o: Partial<Start> = {}): Start => ({
   einrichtung,
   stand: 'fertig',
   admin: false,
-  zugang: 'leitung',
+  zugang: WEBSITE_LEITUNG,
   darfRechteSetzen: false,
   leitungOhneRechte: false,
   ...o,
 });
 
 /** Entwurf und Online-Stand nach echtem Schreiben: a eingereicht (Person 5), b zurückgegeben an Person 5, c Löschen angefragt (Person 5). */
-async function freigabeStand(): Promise<{ entwurf: WebsiteStand; online: WebsiteStand }> {
+async function freigabeStand(): Promise<FreigabeDaten> {
   const s = fakeFreigabeSpeicher();
   for (const id of ['a', 'b', 'c'])
     await seiteSpeichern(
@@ -100,10 +108,8 @@ async function freigabeStand(): Promise<{ entwurf: WebsiteStand; online: Website
     { person: 1, name: 'Helene', fenster: 'g' },
   );
   await statusSetzen(s.entwurfsOrt, 'c', { zustand: 'loeschenAngefragt' }, rita);
-  return {
-    entwurf: websiteAusWerten(s.werte[ENTWUERFE]),
-    online: websiteAusWerten(s.werte[ONLINE]),
-  };
+  const entwurf = websiteAusWerten(s.werte[ENTWUERFE]);
+  return { entwurf, online: nurWebsite(entwurf, websiteAusWerten(s.werte[ONLINE])) };
 }
 const zaehlerAmReiter = () =>
   screen.getByRole('button', { name: /^Freigaben/ }).querySelector('[data-zaehler]');
@@ -111,7 +117,7 @@ const zaehlerAmReiter = () =>
 beforeEach(async () => {
   freigaben.mockResolvedValue({
     entwurf: websiteAusWerten([]),
-    online: websiteAusWerten([]),
+    online: nurWebsite(websiteAusWerten([]), websiteAusWerten([])),
   });
   ladeStart.mockResolvedValue(start());
   pruefung.mockResolvedValue(null);
@@ -173,7 +179,7 @@ describe('Rahmen und Zugang', () => {
 
   it('nicht eingerichtet, Admin: die Einrichtung', async () => {
     ladeStart.mockResolvedValue(
-      start({ einrichtung: null, stand: 'einrichten', admin: true, zugang: 'admin' }),
+      start({ einrichtung: null, stand: 'einrichten', admin: true, zugang: WEBSITE_LEITUNG }),
     );
     render(<App />);
     expect(await screen.findByText('EINRICHTUNG')).toBeTruthy();
@@ -229,7 +235,7 @@ describe('Reiter „Einstellungen“ (W3a-3b)', () => {
 
 describe('Rollen in der Oberfläche (W3b-1, E-W22, E-W12)', () => {
   it('Redakteur: nur „Seiten“ und „Freigaben“ – kein Aussehen, kein Reiter Einstellungen', async () => {
-    ladeStart.mockResolvedValue(start({ zugang: 'redakteur' }));
+    ladeStart.mockResolvedValue(start({ zugang: WEBSITE_REDAKTEUR }));
     render(<App />);
     await screen.findByText('SEITEN-INHALT');
     expect(screen.getByRole('button', { name: 'Seiten' })).toBeTruthy();
@@ -239,7 +245,7 @@ describe('Rollen in der Oberfläche (W3b-1, E-W22, E-W12)', () => {
   });
 
   it('Redakteur: weder Menü noch Eigenes HTML; „Freigaben“ ist der Reiter für Redakteure', async () => {
-    ladeStart.mockResolvedValue(start({ zugang: 'redakteur' }));
+    ladeStart.mockResolvedValue(start({ zugang: WEBSITE_REDAKTEUR }));
     render(<App />);
     await screen.findByText('SEITEN-INHALT');
     expect(rechteDerSeiten()).toEqual({ html: false, menue: false });
@@ -248,8 +254,8 @@ describe('Rollen in der Oberfläche (W3b-1, E-W22, E-W12)', () => {
   });
 
   it('Leitung und Admin: Menü und Eigenes HTML, Aussehen und Einstellungen', async () => {
-    for (const zugang of ['leitung', 'admin'] as const) {
-      ladeStart.mockResolvedValue(start({ zugang, admin: zugang === 'admin' }));
+    for (const admin of [false, true]) {
+      ladeStart.mockResolvedValue(start({ zugang: WEBSITE_LEITUNG, admin }));
       const { unmount } = render(<App />);
       await screen.findByText('SEITEN-INHALT');
       expect(rechteDerSeiten()).toEqual({ html: true, menue: true });
@@ -270,7 +276,9 @@ describe('Rollen in der Oberfläche (W3b-1, E-W22, E-W12)', () => {
   });
 
   it('wer Rechte setzen darf, bekommt „Wer darf was“ im Fenster', async () => {
-    ladeStart.mockResolvedValue(start({ zugang: 'admin', admin: true, darfRechteSetzen: true }));
+    ladeStart.mockResolvedValue(
+      start({ zugang: WEBSITE_LEITUNG, admin: true, darfRechteSetzen: true }),
+    );
     render(<App />);
     await screen.findByText('SEITEN-INHALT');
     fireEvent.click(screen.getByRole('button', { name: 'Einstellungen' }));
@@ -279,7 +287,9 @@ describe('Rollen in der Oberfläche (W3b-1, E-W22, E-W12)', () => {
 
   it('Start-Prüfung (nur Admin): weichen Rechte ab, steht ein ruhiger Hinweis mit Weg zum Fenster', async () => {
     pruefung.mockResolvedValue({ art: 'abweicht', rollen: ['Mitarbeiter'] });
-    ladeStart.mockResolvedValue(start({ zugang: 'admin', admin: true, darfRechteSetzen: true }));
+    ladeStart.mockResolvedValue(
+      start({ zugang: WEBSITE_LEITUNG, admin: true, darfRechteSetzen: true }),
+    );
     render(<App />);
     expect(await screen.findByText(/stimmen die Rechte in ChurchTools nicht/)).toBeTruthy();
     expect(screen.getByText(/Mitarbeiter/)).toBeTruthy();
@@ -289,7 +299,9 @@ describe('Rollen in der Oberfläche (W3b-1, E-W22, E-W12)', () => {
   });
 
   it('Start-Prüfung: noch keine Rechte vergeben → Hinweis; alles in Ordnung → keiner', async () => {
-    ladeStart.mockResolvedValue(start({ zugang: 'admin', admin: true, darfRechteSetzen: true }));
+    ladeStart.mockResolvedValue(
+      start({ zugang: WEBSITE_LEITUNG, admin: true, darfRechteSetzen: true }),
+    );
     pruefung.mockResolvedValue({ art: 'nichts' });
     const { unmount } = render(<App />);
     expect(await screen.findByText(/noch keine Rechte an der Website/)).toBeTruthy();
@@ -302,7 +314,9 @@ describe('Rollen in der Oberfläche (W3b-1, E-W22, E-W12)', () => {
   });
 
   it('Start-Prüfung (W3b-4a): nicht eingerichtete und abweichende Untergruppen stehen im Hinweis – auch wenn die Website stimmt', async () => {
-    ladeStart.mockResolvedValue(start({ zugang: 'admin', admin: true, darfRechteSetzen: true }));
+    ladeStart.mockResolvedValue(
+      start({ zugang: WEBSITE_LEITUNG, admin: true, darfRechteSetzen: true }),
+    );
     pruefung.mockResolvedValue({
       art: 'untergruppen',
       untergruppen: [
@@ -324,7 +338,9 @@ describe('Rollen in der Oberfläche (W3b-1, E-W22, E-W12)', () => {
   });
 
   it('nach dem Schließen des Fensters „Einstellungen“ wird die Prüfung neu gelesen (Rechte können gesetzt sein)', async () => {
-    ladeStart.mockResolvedValue(start({ zugang: 'admin', admin: true, darfRechteSetzen: true }));
+    ladeStart.mockResolvedValue(
+      start({ zugang: WEBSITE_LEITUNG, admin: true, darfRechteSetzen: true }),
+    );
     pruefung.mockResolvedValueOnce({ art: 'nichts' }).mockResolvedValue(null);
     render(<App />);
     await screen.findByText(/noch keine Rechte an der Website/);
@@ -356,7 +372,7 @@ describe('Zähler am Reiter „Freigaben“ (W3b-2)', () => {
 
   it('Redakteur (Person 5): nur seine zurückgegebenen Seiten (1)', async () => {
     freigaben.mockResolvedValue(await freigabeStand());
-    ladeStart.mockResolvedValue(start({ zugang: 'redakteur', ichId: 5 }));
+    ladeStart.mockResolvedValue(start({ zugang: WEBSITE_REDAKTEUR, ichId: 5 }));
     render(<App />);
     await screen.findByText('SEITEN-INHALT');
     await waitFor(() => expect(zaehlerAmReiter()?.textContent).toBe('1'));
@@ -365,7 +381,7 @@ describe('Zähler am Reiter „Freigaben“ (W3b-2)', () => {
 
   it('Redakteur (eine andere Person): kein Zähler – fremde Seiten zählen nicht', async () => {
     freigaben.mockResolvedValue(await freigabeStand());
-    ladeStart.mockResolvedValue(start({ zugang: 'redakteur', ichId: 77 }));
+    ladeStart.mockResolvedValue(start({ zugang: WEBSITE_REDAKTEUR, ichId: 77 }));
     render(<App />);
     await screen.findByText('SEITEN-INHALT');
     await waitFor(() => expect(freigaben).toHaveBeenCalled());
@@ -377,5 +393,40 @@ describe('Zähler am Reiter „Freigaben“ (W3b-2)', () => {
     await screen.findByText('SEITEN-INHALT');
     await waitFor(() => expect(freigaben).toHaveBeenCalled());
     expect(zaehlerAmReiter()).toBeNull();
+  });
+});
+
+describe('Bereiche (W3b-4b)', () => {
+  it('Redakteur ohne erkennbaren Bereich: Hinweis statt Editor – keine Seiten, keine Reiter', async () => {
+    ladeStart.mockResolvedValue(start({ zugang: { sieht: [], leitet: [] } }));
+    render(<App />);
+    expect(await screen.findByText(/in keiner ihrer Gruppen eingetragen/)).toBeTruthy();
+    expect(screen.getByText(/Leitung der Gruppe „Website“ an/)).toBeTruthy();
+    expect(screen.queryByText('SEITEN-INHALT')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Freigaben/ })).toBeNull();
+  });
+
+  it('Leitung einer Untergruppe: Seiten und Freigaben, aber weder Aussehen noch Einstellungen, weder Menü noch eigenes HTML', async () => {
+    ladeStart.mockResolvedValue(start({ zugang: { sieht: [347], leitet: [347] } }));
+    render(<App />);
+    await screen.findByText('SEITEN-INHALT');
+    expect(rechteDerSeiten()).toEqual({ html: false, menue: false });
+    expect(screen.queryByRole('button', { name: 'Aussehen' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Einstellungen' })).toBeNull();
+    expect(screen.getByRole('button', { name: /^Freigaben/ })).toBeTruthy();
+  });
+
+  it('„Wer darf was“ im Start-Hinweis öffnet das Fenster MIT Sprung zum Abschnitt; der Reiter „Einstellungen“ ohne', async () => {
+    ladeStart.mockResolvedValue(
+      start({ zugang: WEBSITE_LEITUNG, admin: true, darfRechteSetzen: true }),
+    );
+    pruefung.mockResolvedValue({ art: 'nichts' });
+    render(<App />);
+    await screen.findByText(/noch keine Rechte an der Website/);
+    fireEvent.click(screen.getByRole('button', { name: 'Einstellungen' }));
+    expect(screen.getByText('EINSTELLUNGEN-FENSTER').getAttribute('data-springen')).toBe('nein');
+    fireEvent.click(screen.getByText('EINSTELLUNGEN-FENSTER'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Wer darf was' }));
+    expect(screen.getByText('EINSTELLUNGEN-FENSTER').getAttribute('data-springen')).toBe('ja');
   });
 });

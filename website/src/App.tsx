@@ -4,7 +4,12 @@ import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { useLaden } from '@ui/ct/useLaden';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { freigabeListe, freigabeZaehler } from '@shared/website/freigabe';
-import { darfAussehenUndMenue, darfEigenesHtml, darfFreigeben } from '@shared/website/zugang';
+import {
+  darfAussehenUndMenue,
+  darfEigenesHtml,
+  leitetEtwas,
+  ohneBereich,
+} from '@shared/website/zugang';
 import type { Reiter } from '@ui/bedienung/ReiterLeiste';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { Aussehen } from './Aussehen';
@@ -36,6 +41,10 @@ const REITER: Reiter<ReiterId>[] = [
  * **Einstellungen** (W3a-3b, ein Fenster). **Redakteure** (W3b-1) sehen nur „Seiten“ und „Freigaben“ – kein Aussehen, keine
  * Einstellungen (E-W22); Admins, die Rechte setzen dürfen, haben im Fenster „Einstellungen“ den Bereich „Wer darf was“.
  *
+ * **Bereiche (W3b-4b, E-W31):** Wer nur über Untergruppen dabei ist, sieht in „Seiten“ und „Freigaben“ nur die Seiten seiner
+ * Bereiche (die Regeln in `@shared/website/zugang`); die Leitung einer Untergruppe gibt nur diese frei. Ein Redakteur ohne
+ * erkennbaren Bereich bekommt statt des Editors einen Hinweis.
+ *
  * Reiter oben am Computer, unten am Handy – wie im Dienstplaner. Scheitert das Laden vorübergehend, gibt es „Erneut
  * versuchen“ statt einer halben Seite.
  */
@@ -44,6 +53,8 @@ export function App() {
   const [start, setStart] = useState<Start | null>(null);
   const [aktiv, setAktiv] = useState<ReiterId>('seiten');
   const [einstellungenOffen, setEinstellungenOffen] = useState(false);
+  /** Das Fenster wurde über „Wer darf was“ im Start-Hinweis geöffnet – es springt dann zu diesem Abschnitt. */
+  const [zuWerDarfWas, setZuWerDarfWas] = useState(false);
   /** Zählt, wie oft das Fenster „Einstellungen“ geschlossen wurde – die Prüfung der Rechte liest danach neu. */
   const [rechtePruefung, setRechtePruefung] = useState(0);
   /** Zählt gelungene Speicherungen der Einstellungen – „Seiten“ liest daraufhin die Einstellungen neu (W3a-3c). */
@@ -75,7 +86,9 @@ export function App() {
 
   useEffect(laden, [laden]);
 
-  const editor = start?.stand === 'fertig' && start.zugang !== null ? start : null;
+  // Ohne erkennbaren Bereich gibt es nichts zu bearbeiten – dann der Hinweis statt eines leeren Editors (W3b-4b).
+  const editor =
+    start?.stand === 'fertig' && start.zugang !== null && !ohneBereich(start.zugang) ? start : null;
   const entwuerfe = editor?.einrichtung?.entwuerfe ?? null;
 
   // Aussehen und Einstellungen ändern die ganze Website (eigenes CSS wird unverändert übernommen) – nur Leitung und Admin (E-W22).
@@ -86,23 +99,42 @@ export function App() {
     editor?.einrichtung && entwuerfe !== null && editor.einrichtung.veroeffentlicht !== null
       ? { entwuerfe, veroeffentlicht: editor.einrichtung.veroeffentlicht }
       : null;
-  const freigabeKategorien = editor && kategorien ? { modul: editor.modul, ...kategorien } : null;
+  const untergruppen = editor?.untergruppen;
+  /** Die Kategorien samt der Untergruppen (W3b-4b) – stabil, solange der Start derselbe ist (sonst lüde `useLaden` endlos). */
+  const freigabeKategorien = useMemo(
+    () =>
+      editor && kategorien
+        ? {
+            modul: editor.modul,
+            ...kategorien,
+            untergruppen: (untergruppen ?? []).map((u) => ({
+              gruppe: u.gruppe,
+              kategorie: u.kategorie,
+            })),
+          }
+        : null,
+    // `kategorien` ist bei jedem Zeichnen ein neues Objekt – die Nummern zählen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [editor, kategorien?.entwuerfe, kategorien?.veroeffentlicht, untergruppen],
+  );
+  /** Die Namen der Bereiche für Meldungen und Auswahlen: die Website und jede eingerichtete Untergruppe. */
+  const bereichsNamen = useMemo(
+    () => ({
+      website: editor?.einrichtung?.name ?? 'Website',
+      untergruppen: untergruppen ?? [],
+    }),
+    [editor, untergruppen],
+  );
   /** Die Website-Gruppe – an ihre Leitung gehen die Mails im Freigabe-Weg (W3b-3). Mit `kategorien` immer da. */
   const gruppe = editor?.einrichtung?.gruppe ?? null;
   // Entwurf und Online-Stand zusammen: für die Liste „Freigaben“ **und** den Zähler am Reiter. Neu gelesen wird beim Wechsel des
   // Reiters (so sieht man, was andere inzwischen eingereicht haben) und nach jeder Handlung (`freigabeStand`); die bisherigen
   // Daten bleiben stehen, bis neue da sind (vorübergehend ist nicht leer).
-  const fModul = freigabeKategorien?.modul;
-  const fEntwuerfe = freigabeKategorien?.entwuerfe;
-  const fVeroeffentlicht = freigabeKategorien?.veroeffentlicht;
   const freigaben = useLaden(
-    () =>
-      fModul !== undefined && fEntwuerfe !== undefined && fVeroeffentlicht !== undefined
-        ? ladeFreigaben({ modul: fModul, entwuerfe: fEntwuerfe, veroeffentlicht: fVeroeffentlicht })
-        : null,
+    () => (freigabeKategorien ? ladeFreigaben(freigabeKategorien) : null),
     // `freigabeStand` und `reiterAktiv` kommen im Aufruf nicht vor – sie sind nur der Anstoß zum Neulesen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [fModul, fEntwuerfe, fVeroeffentlicht, freigabeStand, reiterAktiv],
+    [freigabeKategorien, freigabeStand, reiterAktiv],
     { behalten: true },
   );
   const freigabeDaten = freigaben.stand.art === 'fertig' ? freigaben.stand.daten : null;
@@ -118,7 +150,7 @@ export function App() {
       ? {
           ...r,
           zaehler,
-          zaehlerName: `Freigaben, ${zaehler} ${darfFreigeben(editor?.zugang ?? null) ? 'offen' : 'zurückgegeben'}`,
+          zaehlerName: `Freigaben, ${zaehler} ${leitetEtwas(editor?.zugang ?? null) ? 'offen' : 'zurückgegeben'}`,
         }
       : r,
   );
@@ -127,10 +159,11 @@ export function App() {
     : undefined;
   const werDarfWas =
     editor?.darfRechteSetzen && editor.einrichtung && kategorien
-      ? { gruppe: editor.einrichtung.gruppe, kategorien }
+      ? { gruppe: editor.einrichtung.gruppe, kategorien, name: bereichsNamen.website }
       : undefined;
   const schliesseEinstellungen = () => {
     setEinstellungenOffen(false);
+    setZuWerDarfWas(false);
     setRechtePruefung((n) => n + 1);
   };
 
@@ -156,7 +189,10 @@ export function App() {
           gruppe={werDarfWas.gruppe}
           gruppenName={editor?.einrichtung?.name ?? 'Website'}
           kategorien={kategorien}
-          onOeffnen={() => setEinstellungenOffen(true)}
+          onOeffnen={() => {
+            setZuWerDarfWas(true);
+            setEinstellungenOffen(true);
+          }}
         />
       )}
       {editor && entwuerfe !== null && reiterAktiv === 'seiten' && (
@@ -171,6 +207,8 @@ export function App() {
               ? {
                   zugang: editor.zugang,
                   veroeffentlicht: kategorien.veroeffentlicht,
+                  untergruppen: freigabeKategorien?.untergruppen,
+                  bereiche: bereichsNamen,
                   gruppe,
                   onGeaendert: () => setFreigabeStand((n) => n + 1),
                 }
@@ -195,6 +233,7 @@ export function App() {
               <EinstellungenFenster
                 onSchliessen={schliesseEinstellungen}
                 werDarfWas={werDarfWas}
+                zuWerDarfWas={zuWerDarfWas}
                 mail={{ modul: editor.modul, kategorie: entwuerfe }}
               />
             )}
@@ -217,6 +256,7 @@ export function App() {
               ich={ich}
               gemeinde={editor.gemeinde}
               gruppe={gruppe}
+              bereiche={bereichsNamen}
               onGeaendert={() => setFreigabeStand((n) => n + 1)}
             />
           )}
@@ -230,6 +270,19 @@ export function App() {
 function Zugangsseite({ start, onEingerichtet }: { start: Start; onEingerichtet: () => void }) {
   if (start.stand === 'einrichten')
     return <Einrichtung start={start} onEingerichtet={onEingerichtet} />;
+  if (start.stand === 'fertig' && ohneBereich(start.zugang))
+    return (
+      <Hinweis titel="Website">
+        <p>
+          Du darfst an der Website mitarbeiten, bist aber in keiner ihrer Gruppen eingetragen. Darum
+          ist noch nicht klar, welche Seiten du bearbeitest.
+        </p>
+        <Leise>
+          Bitte sprich die Leitung der Gruppe „{start.einrichtung?.name ?? 'Website'}“ an – sie
+          trägt dich in die passende Gruppe ein. Danach siehst du hier deine Seiten.
+        </Leise>
+      </Hinweis>
+    );
   if (start.stand === 'fertig')
     return (
       <Hinweis titel="Website">

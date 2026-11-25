@@ -312,6 +312,12 @@ export const seiteSchema = z.object({
   beschreibung: z.string().max(300).optional(),
   startseite: z.boolean().optional(),
   abschnitte: z.array(abschnittSchema).max(50),
+  /**
+   * **Der Bereich der Seite** (W3b-4b, E-W31): die Gruppen-ID einer Untergruppe der Website. **Fehlt das Feld, gehört die Seite
+   * der Gruppe „Website“** – so bleiben alle Seiten von vor W3b-4b unverändert gültig. Ändern darf es nur die Leitung der
+   * Website („Seite einstellen“); eine neue Seite erbt den Bereich dessen, der sie anlegt (`zugang.ts`).
+   */
+  bereich: z.number().int().positive().optional(),
 });
 export type Seite = z.infer<typeof seiteSchema>;
 

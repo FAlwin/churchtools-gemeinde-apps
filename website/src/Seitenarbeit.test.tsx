@@ -974,3 +974,47 @@ describe('Gespeichert wird an die Seitenliste gemeldet', () => {
     ]);
   });
 });
+
+describe('Bereich in „Seite einstellen“ (W3b-4b)', () => {
+  const oeffnen = async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Seite einstellen' }));
+    return screen.findByRole('dialog');
+  };
+  // Website-Gruppe 344 = „Website“ (kein Feld), Jugend 347 und Technik 348 eingerichtet.
+  const WAHL = [
+    { wert: null, name: 'Website' },
+    { wert: 347, name: 'Website – Jugend' },
+    { wert: 348, name: 'Website – Technik' },
+  ];
+
+  it('nur mit `bereichWahl` (Leitung der Website) gibt es das Feld – sonst nicht', async () => {
+    const { unmount } = render(<Seitenarbeit {...props()} />);
+    expect(within(await oeffnen()).queryByLabelText('Bereich')).toBeNull();
+    unmount();
+    render(<Seitenarbeit {...props()} bereichWahl={WAHL} />);
+    const f = await oeffnen();
+    const feld = within(f).getByLabelText<HTMLSelectElement>('Bereich');
+    expect([...feld.options].map((o) => o.text)).toEqual([
+      'Website',
+      'Website – Jugend',
+      'Website – Technik',
+    ]);
+    expect(feld.value).toBe('');
+  });
+
+  it('Untergruppe wählen → die Seite wird mit `bereich` gespeichert; „Website“ nimmt das Feld wieder weg', async () => {
+    d.speichereSeite.mockImplementation(async (_o, s) => {
+      server.seite = s;
+    });
+    render(<Seitenarbeit {...props()} bereichWahl={WAHL} />);
+    let f = await oeffnen();
+    fireEvent.change(within(f).getByLabelText('Bereich'), { target: { value: '347' } });
+    fireEvent.click(within(f).getByRole('button', { name: 'Fertig' }));
+    await waitFor(() => expect(speicherte().at(-1)).toMatchObject({ bereich: 347 }));
+    f = await oeffnen();
+    expect(within(f).getByLabelText<HTMLSelectElement>('Bereich').value).toBe('347');
+    fireEvent.change(within(f).getByLabelText('Bereich'), { target: { value: '' } });
+    fireEvent.click(within(f).getByRole('button', { name: 'Fertig' }));
+    await waitFor(() => expect(speicherte().at(-1)).not.toHaveProperty('bereich'));
+  });
+});

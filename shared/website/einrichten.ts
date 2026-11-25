@@ -107,6 +107,27 @@ export function untergruppenKategorienAus(
   });
 }
 
+/** Eine eingerichtete Untergruppe mit dem Namen aus ihrer Kategorie (W3b-4b) – für Bereiche an Seiten und in Meldungen. */
+export interface BereichsKategorie extends UntergruppenKategorie {
+  /** Der Gruppenname aus dem Namen der Kategorie – `null`, wenn die Kategorie keinen trägt. */
+  name: string | null;
+}
+
+/**
+ * **Die eingerichteten Untergruppen samt Namen** (W3b-4b): dieselbe Regel wie `untergruppenKategorienAus`, dazu der Name aus der
+ * Kategorie („Website: Veröffentlicht · Website – Jugend“). Der ist für alle lesbar, die die Kategorie sehen – auch für den, der
+ * die Gruppe selbst nicht sehen darf.
+ */
+export function bereicheAus(
+  liste: readonly { id: number; shorty: string; name?: string }[],
+  untergruppen: readonly number[],
+): BereichsKategorie[] {
+  return untergruppenKategorienAus(liste, untergruppen).map((u) => ({
+    ...u,
+    name: gruppenNameAus(liste.find((k) => k.id === u.kategorie)?.name),
+  }));
+}
+
 export interface Einrichtung {
   /** Die gewählte Gruppe „Website“. */
   gruppe: number;

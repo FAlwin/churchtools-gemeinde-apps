@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { GruppenRolle } from '@shared/ct/rollenRechte';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
@@ -29,7 +29,21 @@ import styles from './Rechte.module.scss';
  * „Rechte setzen“, das die Untergruppe einrichtet (Kategorie + Rechte, danach die Website-Rollen nachziehen). Während ein
  * Bereich setzt, warten die anderen – beide ändern die Rechte der Website-Rollen.
  */
-export function WerDarfWas({ gruppe, kategorien }: { gruppe: number; kategorien: Kategorien }) {
+export function WerDarfWas({
+  gruppe,
+  kategorien,
+  name = 'Website',
+  springen = false,
+}: {
+  gruppe: number;
+  kategorien: Kategorien;
+  /** Der Name der Gruppe „Website“ – steht in den Namen der Auswahlfelder (Screenreader unterscheiden so die Abschnitte). */
+  name?: string;
+  /** Geöffnet über den Knopf „Wer darf was“ im Start-Hinweis: Der Abschnitt rollt ins Bild (Abnahme W3b-4a). */
+  springen?: boolean;
+}) {
+  const abschnitt = useRef<HTMLElement>(null);
+  const gesprungen = useRef(false);
   // Die Nummern einzeln (nicht das Objekt): `kategorien` ist bei jedem Zeichnen ein neues Objekt – das lüde sonst endlos neu.
   const { entwuerfe, veroeffentlicht } = kategorien;
   // `behalten`: Beim Nachlesen nach dem Setzen bleiben die Bereiche stehen (samt ihrer Meldung „gesetzt“).
@@ -42,9 +56,16 @@ export function WerDarfWas({ gruppe, kategorien }: { gruppe: number; kategorien:
   const [laeuftIn, setLaeuftIn] = useState<number | null>(null);
   const stand = geladen.stand;
   const kat: Kategorien = { entwuerfe, veroeffentlicht };
+  // Einmal, sobald die Rollen da sind – vorher ist der Abschnitt zu kurz, und das Fenster stünde nur am Ende. Rumpf in { }:
+  // `scrollIntoView` liefert in neuen Browsern ein Promise (Chrome 152 – weiße Seite).
+  useEffect(() => {
+    if (!springen || gesprungen.current || stand.art !== 'fertig') return;
+    gesprungen.current = true;
+    abschnitt.current?.scrollIntoView?.({ block: 'start' });
+  }, [springen, stand.art]);
 
   return (
-    <section aria-label="Wer darf was">
+    <section aria-label="Wer darf was" ref={abschnitt}>
       <h4 className={fenster.gruppe}>Wer darf was</h4>
       <p className={styles.erklaerung}>
         Redakteure bearbeiten Entwürfe der Seiten. Die Leitung kann zusätzlich veröffentlichen, das
@@ -72,6 +93,7 @@ export function WerDarfWas({ gruppe, kategorien }: { gruppe: number; kategorien:
             </p>
           )}
           <StufenBereich
+            gruppenName={name}
             rollen={stand.daten.rollen}
             ist={stand.daten.ist}
             gesperrt={laeuftIn !== null && laeuftIn !== 0}
@@ -94,6 +116,7 @@ export function WerDarfWas({ gruppe, kategorien }: { gruppe: number; kategorien:
                 </p>
               )}
               <StufenBereich
+                gruppenName={u.name}
                 rollen={u.rollen}
                 ist={u.kategorie === null ? undefined : u.ist}
                 gesperrt={laeuftIn !== null && laeuftIn !== u.gruppe}
@@ -119,6 +142,7 @@ export function WerDarfWas({ gruppe, kategorien }: { gruppe: number; kategorien:
  * Bausteine für die Website und jede Untergruppe. `ist` fehlt: noch nicht eingerichtet (gewählt ist der Vorschlag).
  */
 function StufenBereich({
+  gruppenName,
   rollen,
   ist,
   gesperrt,
@@ -126,6 +150,8 @@ function StufenBereich({
   setzen,
   onGesetzt,
 }: {
+  /** Steht im Namen jedes Auswahlfelds („Stufe von Leiter in „Website – Jugend““). */
+  gruppenName: string;
   rollen: readonly GruppenRolle[];
   ist: readonly RolleIst[] | undefined;
   /** Ein anderer Bereich setzt gerade. */
@@ -184,6 +210,7 @@ function StufenBereich({
   return (
     <>
       <RollenStufen
+        gruppenName={gruppenName}
         rollen={rollen}
         wahl={wahl}
         ist={ist}

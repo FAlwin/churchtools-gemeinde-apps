@@ -15,8 +15,11 @@
  *
  * **Wer ist „Leitung“?** Der Wert `website-leitung` (`mailWerte.ts`, vom Admin beim Festlegen der Stufen geschrieben); fehlt er
  * (bestehende Installationen), gilt dieselbe Vorbelegung wie in „Wer darf was“ (`vorschlag` in `rechte.ts` – nicht nachgebaut).
- * Empfänger sind die aktiven Mitglieder der Website-Gruppe mit einer dieser Rollen. **W3b-4 (Untergruppen):** Dann gehört zur
- * Seite ein Bereich, und die Leitung dieses Bereichs ist zusätzlich gemeint – an dieser Stelle (`leitungEmpfaenger`) kommt sie dazu.
+ * Empfänger sind die aktiven Mitglieder der Website-Gruppe mit einer dieser Rollen. **W3b-4c (Untergruppen, E-W29):** Seit W3b-4b
+ * gehört zur Seite ein Bereich, und die Leitung dieses Bereichs ist zusätzlich gemeint – an dieser Stelle (`leitungEmpfaenger`)
+ * kommt sie in W3b-4c dazu. **Bis dahin** findet ein Redakteur, der nur in einer Untergruppe ist, die Leitung der Website nicht
+ * (ihre Mitglieder sind für ihn unsichtbar, Messung W3b-4-0) – „niemand“, keine Mail, kein Hinweis; die Leitung sieht die Seite
+ * trotzdem unter „Freigaben“ samt Zähler.
  *
  * **Mailtext „kurz mit Link“:** wer, welche Seite, beim Zurückgeben die Anmerkung, ein Link in die Erweiterung. Alles, was ein
  * Mensch getippt hat (Seitentitel, Namen, Anmerkung), geht durch `htmlText` (`html.ts`) – ein Titel wie `<script>` bleibt Text.

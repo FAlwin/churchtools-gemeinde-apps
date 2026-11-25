@@ -5,7 +5,8 @@ import { ApiError } from '@ui/ct/fehler';
 import { seitenStand } from '@shared/website/freigabe';
 import type { EinheitStand, WebsiteStand } from '@shared/website/speicher';
 import type { SeitenStatus } from '@shared/website/status';
-import type { Zugang } from '@shared/website/zugang';
+import type { OnlineKategorie } from '@shared/website/freigabe';
+import { WEBSITE_LEITUNG, WEBSITE_REDAKTEUR, type Zugang } from '@shared/website/zugang';
 import { menue, seite } from '@shared/website/website.testdaten';
 import * as D from './daten';
 import * as M from './mailVersand';
@@ -31,14 +32,18 @@ const d = vi.mocked(D);
 const m = vi.mocked(M);
 
 const ORT = { modul: 7, kategorie: 20 };
-const KAT = { modul: 7, entwuerfe: 20, veroeffentlicht: 21 };
+const KAT = { modul: 7, entwuerfe: 20, veroeffentlicht: 21, untergruppen: [] };
 const START = seite({ id: 's', titel: 'Willkommen', pfad: 'start', startseite: true });
 const GRUPPEN = seite({ id: 'g', titel: 'Unsere Gruppen', pfad: 'unsere-gruppen' });
 const GRUPPE = 344;
 const ICH = { person: 5, name: 'Rita Redakteurin', fenster: 'f1' };
 const T = '2026-11-20T10:00:00.000Z';
 
-const online = (...ids: [string, string][]): WebsiteStand => ({
+/** Der Online-Stand, wie `ladeOnline` ihn liefert (W3b-4b: je Kategorie) – hier nur die der Website (21). */
+const online = (...ids: [string, string][]): OnlineKategorie[] => [
+  { bereich: null, kategorie: 21, stand: onlineStand(...ids) },
+];
+const onlineStand = (...ids: [string, string][]): WebsiteStand => ({
   ...stand(),
   staende: ids.map(
     ([id, st]): EinheitStand => ({ einheit: 'seite', id, stand: st, zeit: T, lesbar: true }),
@@ -71,7 +76,7 @@ const zeigen = (zugang: Zugang) =>
       ort={ORT}
       gemeinde="ECG"
       ich={ICH}
-      rechte={{ html: zugang !== 'redakteur', menue: zugang !== 'redakteur' }}
+      rechte={{ html: zugang !== WEBSITE_REDAKTEUR, menue: zugang !== WEBSITE_REDAKTEUR }}
       freigabe={{ zugang, veroeffentlicht: 21, gruppe: GRUPPE, onGeaendert }}
     />,
   );
@@ -102,7 +107,7 @@ async function seiteWaehlen(titel: string) {
 
 describe('Redakteur: Etikett und Einreichen', () => {
   it('nie online: „Entwurf“ und „Zur Prüfung einreichen“ – und das schreibt den Status „eingereicht“', async () => {
-    zeigen('redakteur');
+    zeigen(WEBSITE_REDAKTEUR);
     await seiteWaehlen('Unsere Gruppen');
     expect(within(toolbar()).getByText('Entwurf')).toBeTruthy();
     fireEvent.click(await screen.findByRole('button', { name: 'Zur Prüfung einreichen' }));
@@ -115,7 +120,7 @@ describe('Redakteur: Etikett und Einreichen', () => {
 
   it('online und unverändert: „Online“, es gibt nichts einzureichen', async () => {
     d.ladeOnline.mockResolvedValue(online(['g', seitenStand(GRUPPEN)]));
-    zeigen('redakteur');
+    zeigen(WEBSITE_REDAKTEUR);
     await seiteWaehlen('Unsere Gruppen');
     expect(await within(toolbar()).findByText('Online')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Zur Prüfung einreichen' })).toBeNull();
@@ -123,7 +128,7 @@ describe('Redakteur: Etikett und Einreichen', () => {
 
   it('online, aber seitdem geändert: „Geändert“ und Einreichen möglich', async () => {
     d.ladeOnline.mockResolvedValue(online(['g', 'ganz-anderer-stand']));
-    zeigen('redakteur');
+    zeigen(WEBSITE_REDAKTEUR);
     await seiteWaehlen('Unsere Gruppen');
     expect(await within(toolbar()).findByText('Geändert')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Zur Prüfung einreichen' })).toBeTruthy();
@@ -131,7 +136,7 @@ describe('Redakteur: Etikett und Einreichen', () => {
 
   it('schon eingereicht: kein zweites Einreichen – ändern darf man weiter (E-W24: „Seite einstellen“ bleibt)', async () => {
     d.ladeWebsite.mockResolvedValue(stand({ status: { g: st('eingereicht') } }));
-    zeigen('redakteur');
+    zeigen(WEBSITE_REDAKTEUR);
     await seiteWaehlen('Unsere Gruppen');
     expect(within(toolbar()).getByText('Eingereicht')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Zur Prüfung einreichen' })).toBeNull();
@@ -149,7 +154,7 @@ describe('Redakteur: Etikett und Einreichen', () => {
         },
       }),
     );
-    zeigen('redakteur');
+    zeigen(WEBSITE_REDAKTEUR);
     await seiteWaehlen('Unsere Gruppen');
     expect(within(toolbar()).getByText(/Bitte das Foto tauschen\./)).toBeTruthy();
     expect(within(toolbar()).getByText('Zurück')).toBeTruthy();
@@ -158,7 +163,7 @@ describe('Redakteur: Etikett und Einreichen', () => {
 
   it('scheitert das Einreichen (503): es wird NICHT „Eingereicht“ gezeigt, die Meldung sagt, was nicht geschah', async () => {
     d.setzeStatus.mockRejectedValue(new ApiError(503, 'weg'));
-    zeigen('redakteur');
+    zeigen(WEBSITE_REDAKTEUR);
     await seiteWaehlen('Unsere Gruppen');
     fireEvent.click(await screen.findByRole('button', { name: 'Zur Prüfung einreichen' }));
     expect(await screen.findByText(/nicht eingereicht\./)).toBeTruthy();
@@ -169,7 +174,7 @@ describe('Redakteur: Etikett und Einreichen', () => {
 
   it('der Online-Stand lässt sich nicht lesen: nichts Falsches („Online“ / „Entwurf“) – Einreichen geht trotzdem', async () => {
     d.ladeOnline.mockRejectedValue(new ApiError(503, 'weg'));
-    zeigen('redakteur');
+    zeigen(WEBSITE_REDAKTEUR);
     await seiteWaehlen('Unsere Gruppen');
     expect(await screen.findByRole('button', { name: 'Zur Prüfung einreichen' })).toBeTruthy();
     expect(within(toolbar()).queryByText('Online')).toBeNull();
@@ -179,7 +184,7 @@ describe('Redakteur: Etikett und Einreichen', () => {
 
 describe('Redakteur: Löschen anfragen statt Löschen (E-W23)', () => {
   async function einstellenOeffnen() {
-    zeigen('redakteur');
+    zeigen(WEBSITE_REDAKTEUR);
     await seiteWaehlen('Unsere Gruppen');
     fireEvent.click(await screen.findByRole('button', { name: 'Seite einstellen' }));
   }
@@ -232,7 +237,7 @@ describe('Leitung: direkt veröffentlichen, selbst löschen', () => {
   it('keine „Zur Prüfung einreichen“, aber „Veröffentlichen“ im Mehr-Menü – es gibt die Seite frei und nimmt den Status weg', async () => {
     d.ladeWebsite.mockResolvedValue(stand({ status: { g: st('eingereicht') } }));
     d.gebeFrei.mockResolvedValue({ stand: 'x', statusEntfernt: true });
-    zeigen('leitung');
+    zeigen(WEBSITE_LEITUNG);
     await seiteWaehlen('Unsere Gruppen');
     expect(screen.queryByRole('button', { name: 'Zur Prüfung einreichen' })).toBeNull();
     await veroeffentlichenKlicken();
@@ -246,7 +251,7 @@ describe('Leitung: direkt veröffentlichen, selbst löschen', () => {
 
   it('online und unverändert: nichts zu veröffentlichen (kein Mehr-Menü)', async () => {
     d.ladeOnline.mockResolvedValue(online(['g', seitenStand(GRUPPEN)]));
-    zeigen('leitung');
+    zeigen(WEBSITE_LEITUNG);
     await seiteWaehlen('Unsere Gruppen');
     await within(toolbar()).findByText('Online');
     expect(screen.queryByRole('button', { name: 'Mehr' })).toBeNull();
@@ -255,7 +260,7 @@ describe('Leitung: direkt veröffentlichen, selbst löschen', () => {
   it('scheitert das Veröffentlichen, steht das da – nichts gilt als online, der Status bleibt', async () => {
     d.ladeWebsite.mockResolvedValue(stand({ status: { g: st('eingereicht') } }));
     d.gebeFrei.mockRejectedValue(new ApiError(403, 'Dafür fehlt dir das Recht: nur die Leitung.'));
-    zeigen('admin');
+    zeigen(WEBSITE_LEITUNG);
     await seiteWaehlen('Unsere Gruppen');
     await veroeffentlichenKlicken();
     expect(await screen.findByText(/nicht veröffentlicht/)).toBeTruthy();
@@ -266,7 +271,7 @@ describe('Leitung: direkt veröffentlichen, selbst löschen', () => {
 
   it('ist die Seite online, der Status aber blieb (Aufräumen gescheitert), steht das als Hinweis – nicht verschwiegen', async () => {
     d.gebeFrei.mockResolvedValue({ stand: 'x', statusEntfernt: false, grund: 'fehler' });
-    zeigen('leitung');
+    zeigen(WEBSITE_LEITUNG);
     await seiteWaehlen('Unsere Gruppen');
     await veroeffentlichenKlicken();
     expect(await screen.findByText(/Status ließ sich aber gerade nicht zurücksetzen/)).toBeTruthy();
@@ -274,7 +279,7 @@ describe('Leitung: direkt veröffentlichen, selbst löschen', () => {
 
   it('löscht selbst: „Seite löschen“ bleibt – und eine online stehende Seite wird im Fenster erwähnt', async () => {
     d.ladeOnline.mockResolvedValue(online(['g', seitenStand(GRUPPEN)]));
-    zeigen('leitung');
+    zeigen(WEBSITE_LEITUNG);
     await seiteWaehlen('Unsere Gruppen');
     await within(toolbar()).findByText('Online');
     fireEvent.click(screen.getByRole('button', { name: 'Seite einstellen' }));
@@ -288,7 +293,7 @@ describe('Leitung: direkt veröffentlichen, selbst löschen', () => {
 describe('Etikett in der Liste', () => {
   it('Seiten mit Status tragen ihr Etikett in der Liste, andere nicht', async () => {
     d.ladeWebsite.mockResolvedValue(stand({ status: { g: st('eingereicht') } }));
-    zeigen('leitung');
+    zeigen(WEBSITE_LEITUNG);
     const liste = await screen.findByRole('complementary', { name: 'Seiten' });
     expect(within(liste).getByText('Eingereicht')).toBeTruthy();
     expect(within(liste).getAllByText(/Eingereicht|Zurück|Löschen angefragt/)).toHaveLength(1);
@@ -299,7 +304,7 @@ describe('Mails im Freigabe-Weg (W3b-3): Einreichen, Löschen anfragen, Veröffe
   const ORT_MAIL = { modul: 7, entwuerfe: 20, gruppe: GRUPPE };
 
   async function einreichen() {
-    zeigen('redakteur');
+    zeigen(WEBSITE_REDAKTEUR);
     await seiteWaehlen('Unsere Gruppen');
     fireEvent.click(await screen.findByRole('button', { name: 'Zur Prüfung einreichen' }));
   }
@@ -361,7 +366,7 @@ describe('Mails im Freigabe-Weg (W3b-3): Einreichen, Löschen anfragen, Veröffe
   it('Schalter aus oder niemand zu benachrichtigen: gar kein Hinweis', async () => {
     for (const art of ['aus', 'niemand'] as const) {
       m.mailAnLeitung.mockResolvedValue({ art });
-      const { unmount } = zeigen('redakteur');
+      const { unmount } = zeigen(WEBSITE_REDAKTEUR);
       await seiteWaehlen('Unsere Gruppen');
       fireEvent.click(await screen.findByRole('button', { name: 'Zur Prüfung einreichen' }));
       await within(toolbar()).findByText('Eingereicht');
@@ -372,7 +377,7 @@ describe('Mails im Freigabe-Weg (W3b-3): Einreichen, Löschen anfragen, Veröffe
 
   it('Löschen anfragen: Mail an die Leitung – mit eigenem Anlass, erst nach dem Status', async () => {
     m.mailAnLeitung.mockResolvedValue({ art: 'gesendet' });
-    zeigen('redakteur');
+    zeigen(WEBSITE_REDAKTEUR);
     await seiteWaehlen('Unsere Gruppen');
     fireEvent.click(await screen.findByRole('button', { name: 'Seite einstellen' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Löschen anfragen' }));
@@ -391,7 +396,7 @@ describe('Mails im Freigabe-Weg (W3b-3): Einreichen, Löschen anfragen, Veröffe
 
   it('scheitert das Löschen anfragen, geht keine Mail', async () => {
     d.setzeStatus.mockRejectedValue(new ApiError(503, 'weg'));
-    zeigen('redakteur');
+    zeigen(WEBSITE_REDAKTEUR);
     await seiteWaehlen('Unsere Gruppen');
     fireEvent.click(await screen.findByRole('button', { name: 'Seite einstellen' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Löschen anfragen' }));
@@ -413,7 +418,7 @@ describe('Mails im Freigabe-Weg (W3b-3): Einreichen, Löschen anfragen, Veröffe
     d.ladeWebsite.mockResolvedValue(stand({ status: { g: st('eingereicht', { von: 5 }) } }));
     d.gebeFrei.mockResolvedValue({ stand: 'x', statusEntfernt: true });
     m.mailFreigaben.mockResolvedValue({ art: 'gesendet' });
-    zeigen('leitung');
+    zeigen(WEBSITE_LEITUNG);
     await seiteWaehlen('Unsere Gruppen');
     await veroeffentlichen();
     expect(
@@ -431,7 +436,7 @@ describe('Mails im Freigabe-Weg (W3b-3): Einreichen, Löschen anfragen, Veröffe
 
   it('eine nicht eingereichte Seite (kein Status) zu veröffentlichen schickt keine Mail', async () => {
     d.gebeFrei.mockResolvedValue({ stand: 'x', statusEntfernt: true });
-    zeigen('leitung');
+    zeigen(WEBSITE_LEITUNG);
     await seiteWaehlen('Unsere Gruppen');
     await veroeffentlichen();
     await waitFor(() => expect(d.gebeFrei).toHaveBeenCalled());
@@ -441,7 +446,7 @@ describe('Mails im Freigabe-Weg (W3b-3): Einreichen, Löschen anfragen, Veröffe
   it('scheitert das Veröffentlichen, geht keine Mail', async () => {
     d.ladeWebsite.mockResolvedValue(stand({ status: { g: st('eingereicht', { von: 5 }) } }));
     d.gebeFrei.mockRejectedValue(new ApiError(503, 'weg'));
-    zeigen('leitung');
+    zeigen(WEBSITE_LEITUNG);
     await seiteWaehlen('Unsere Gruppen');
     await veroeffentlichen();
     expect(await screen.findByText(/nicht veröffentlicht/)).toBeTruthy();
@@ -452,7 +457,7 @@ describe('Mails im Freigabe-Weg (W3b-3): Einreichen, Löschen anfragen, Veröffe
     d.ladeWebsite.mockResolvedValue(stand({ status: { g: st('eingereicht', { von: 5 }) } }));
     d.gebeFrei.mockResolvedValue({ stand: 'x', statusEntfernt: false, grund: 'fehler' });
     m.mailFreigaben.mockResolvedValue({ art: 'unklar' });
-    zeigen('leitung');
+    zeigen(WEBSITE_LEITUNG);
     await seiteWaehlen('Unsere Gruppen');
     await veroeffentlichen();
     const text = (await screen.findByText(/Ob die Mail rausging, ist unklar/)).textContent ?? '';

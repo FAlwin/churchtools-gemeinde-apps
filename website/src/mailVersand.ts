@@ -44,7 +44,10 @@ import { leitungAusWerten, mailAnAusWerten } from '@shared/website/mailWerte';
 export interface MailOrt {
   modul: number;
   entwuerfe: number;
-  /** Die Website-Gruppe (Obergruppe). W3b-4: Untergruppen kommen später dazu. */
+  /**
+   * Die Website-Gruppe (Obergruppe). Untergruppen kommen in W3b-4c dazu (E-W29). Bis dahin liest ein Redakteur, der nur in einer
+   * Untergruppe ist, hier eine leere Mitgliederliste (unsichtbar, Messung W3b-4-0) → „niemand“, keine Mail (`mail.ts`).
+   */
   gruppe: number;
 }
 

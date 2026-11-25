@@ -8,6 +8,7 @@ import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import { Unklar } from '@ui/ct/fehler';
 import { useLaden } from '@ui/ct/useLaden';
 import { datumText } from '@shared/ct/datum';
+import { heuteImKalender } from '@shared/ct/zeit';
 import { punktBeschriftung } from '@shared/protokolle/dokument';
 import {
   aehnlicherTermin,
@@ -24,6 +25,11 @@ import { eventHinweis, hinweiseZusammen } from '@shared/protokolle/terminEvents'
 import { vorlageAnwenden, type TerminVorlage } from '@shared/protokolle/terminVorlagen';
 import { anfrageHinweis, angefragte } from '@shared/protokolle/besprechungsanfrage';
 import { mailsAnAndere } from '@shared/protokolle/einladungsmail';
+import {
+  anmeldungFuss,
+  anmeldungHinweis,
+  anmeldungTermine,
+} from '@shared/protokolle/terminAnmeldung';
 import { kalenderTermineAmTag } from './terminAnlegen';
 import { terminLegen } from './terminEintragen';
 import { terminVermerken } from './terminStandSchreiben';
@@ -31,9 +37,11 @@ import { ladeSchreibKalender } from './kalenderListe';
 import { ladeRessourcen } from './buchungenLesen';
 import { ladeEventVorlagen } from './eventsLesen';
 import { ladeKandidaten } from './besprechungsanfragen';
+import { ladeGruppenDesTyps, ladeGruppentypen } from './anmeldungLesen';
 import { ladeTags, ladeVorlagen, vorlageSpeichern } from './terminVorlagenLesen';
-import { EinladungHinweis } from './EinladungHinweis';
+import { EinladungHinweis, SofortHinweis } from './EinladungHinweis';
 import { TerminAnfragen } from './TerminAnfragen';
+import { TerminAnmeldung } from './TerminAnmeldung';
 import { TerminFormular } from './TerminFormular';
 import { TerminEvents } from './TerminEvents';
 import { TerminRessourcen } from './TerminRessourcen';
@@ -54,8 +62,13 @@ const KEINE: readonly number[] = [];
  * ähnlicher Termin, ist **„Nur verknüpfen – nichts Neues anlegen“** vorgewählt. Es geht keine Einladung raus. Der Reiter
  * **„Events“** (W15-3, `TerminEvents`) erscheint nur, wenn die Person im gewählten Kalender Events anlegen darf, **„Ressourcen“**
  * (W15-2, `TerminRessourcen`) nur, wenn sie Ressourcen buchen darf, **„Besprechungsanfragen“** (W15-4, `TerminAnfragen`) nur bei
- * einem Gruppenkalender – in der Reihenfolge von ChurchTools; der Reiter Anmeldung kommt mit W15-5. Die Leiste zeigt sich
- * erst bei mehr als einem Reiter.
+ * einem Gruppenkalender, **„Anmeldung“** (W15-5, `TerminAnmeldung`) nur, wenn die Person in mindestens einem Gruppentyp Gruppen
+ * anlegen darf – in der Reihenfolge von ChurchTools. Die Leiste zeigt sich erst bei mehr als einem Reiter.
+ *
+ * **Die Anmeldung legt sofort echte Gruppen an** (je Einzeltermin bis „heute + Tage im Voraus“, `anmeldungTermine`): Sie geht
+ * nur mit, wenn der Reiter da ist, der Schalter an ist, ein erlaubter Gruppentyp gewählt ist und nicht „Nur verknüpfen“ gilt.
+ * Der Fuß sagt vor dem Speichern, wie viele Gruppen entstehen. Fehlt danach `signup` am Termin oder eine Gruppe (oder ließ
+ * es sich nicht nachlesen), bleibt der Termin – das Fenster nennt es in EINER Meldung; gelöscht wird nie etwas.
  *
  * **Besprechungsanfragen verschicken sofort Mails** (jede andere Person bekommt „Neue Besprechungsanfrage“): Sie gehen nur
  * mit, wenn der Reiter da ist, der Schalter an ist und nicht „Nur verknüpfen“ gilt; wechselt der Kalender, ist die Auswahl
@@ -78,6 +91,7 @@ export function TerminFenster({
   ressourcenBuchen = KEINE,
   ressourcenVerwalten = KEINE,
   eventsAnlegen = KEINE,
+  gruppentypenAnlegen = KEINE,
   ich,
   zeitzone,
   onFertig,
@@ -98,6 +112,8 @@ export function TerminFenster({
   ressourcenVerwalten?: readonly number[];
   /** Kalender, in denen man Events anlegen darf (`edit events`) – nur dort gibt es den Reiter „Events“. */
   eventsAnlegen?: readonly number[];
+  /** Gruppentypen, in denen man Gruppen anlegen darf (`create groups of grouptype`, W15-5) – ohne keinen gibt es den Reiter „Anmeldung“ nicht. */
+  gruppentypenAnlegen?: readonly number[];
   /** Wo der Vermerk gespeichert wird („Mitarbeit“ der Gruppe). */
   ort: MitarbeitOrt;
   ich: number;
@@ -160,12 +176,39 @@ export function TerminFenster({
     [anfrageAn, anfrage, kandidatenListe, ich],
   );
 
-  // Reiter wie im ChurchTools-Dialog (Reihenfolge von dort): Kalender, Besprechungsanfragen, Events, Ressourcen – Anmeldung kommt mit W15-5.
-  type ReiterId = 'kalender' | 'anfragen' | 'events' | 'ressourcen';
+  // Anmeldung (W15-5): nicht an den Kalender gebunden, nur an die Gruppentypen. Typen werden nur geladen, wenn es den Reiter gibt;
+  // die Gruppen des gewählten Typs (Kopiervorlage) erst, wenn der Schalter an ist – und je Typ neu.
+  const erlaubteTypen = useMemo(() => new Set(gruppentypenAnlegen), [gruppentypenAnlegen]);
+  const darfAnmeldung = erlaubteTypen.size > 0;
+  const gruppentypen = useLaden(
+    () => (darfAnmeldung ? ladeGruppentypen(erlaubteTypen) : null),
+    [darfAnmeldung, erlaubteTypen],
+  );
+  const typenListe = useMemo(
+    () => (gruppentypen.stand.art === 'fertig' ? gruppentypen.stand.daten : []),
+    [gruppentypen.stand],
+  );
+  const anmeldungTyp = darfAnmeldung ? (e.anmeldung?.typ ?? null) : null;
+  const anmeldungGruppen = useLaden(
+    () => (anmeldungTyp !== null ? ladeGruppenDesTyps(anmeldungTyp) : null),
+    [anmeldungTyp],
+  );
+  // Was ChurchTools mit dem Speichern wirklich bekäme: Reiter da, erlaubter Typ gewählt – sonst nichts.
+  const anmeldungAktiv =
+    darfAnmeldung && e.anmeldung && e.anmeldung.typ !== null && erlaubteTypen.has(e.anmeldung.typ)
+      ? e.anmeldung
+      : null;
+  const heute = heuteImKalender(new Date(), zeitzone);
+
+  // Reiter wie im ChurchTools-Dialog (Reihenfolge von dort): Kalender, Besprechungsanfragen, Anmeldung, Events, Ressourcen.
+  type ReiterId = 'kalender' | 'anfragen' | 'anmeldung' | 'events' | 'ressourcen';
   const reiter: Reiter<ReiterId>[] = [
     { id: 'kalender', label: 'Kalender', icon: 'calendar' },
     ...(istGruppe
       ? [{ id: 'anfragen' as const, label: 'Besprechungsanfragen', icon: 'brief' as const }]
+      : []),
+    ...(darfAnmeldung
+      ? [{ id: 'anmeldung' as const, label: 'Anmeldung', icon: 'kreis-haken' as const }]
       : []),
     ...(darfEvents ? [{ id: 'events' as const, label: 'Events', icon: 'people' as const }] : []),
     ...(darfRessourcen
@@ -225,6 +268,8 @@ export function TerminFenster({
     (!unklarGesperrt || !!verknuepfen);
   // „Nur verknüpfen“ legt nichts an – dann geht auch keine Einladung raus.
   const mails = verknuepfen ? 0 : mailsAnAndere(eingeladen, ich);
+  // „Nur verknüpfen“ legt auch keine Gruppen an – dieselbe Rechnung wie die Vorschau im Reiter und das Nachlesen.
+  const gruppenAnzahl = verknuepfen ? 0 : anmeldungTermine(eintrag, anmeldungAktiv, heute).length;
   const personName = (id: number) =>
     kandidatenListe.find((k) => k.id === id)?.name ?? `Person ${id}`;
   const darfVorlage = kalenderId !== null && vorlagenSchreiben.includes(kalenderId);
@@ -236,7 +281,7 @@ export function TerminFenster({
     // „Ohne Vorlage“ stellt die Vorbelegung aus dem Protokoll wieder her.
     setE(
       v
-        ? vorlageAnwenden(eintrag, v, { buchbar, verwaltbar })
+        ? vorlageAnwenden(eintrag, v, { buchbar, verwaltbar, gruppentypen: erlaubteTypen })
         : { ...eintragVorbelegung(zeile, kalenderId), informieren: e.informieren },
     );
   };
@@ -289,7 +334,13 @@ export function TerminFenster({
     try {
       r = await terminLegen({
         // Events nur, wo die Person sie anlegen darf (der Reiter ist sonst weg) und nur beim Neu-Anlegen.
-        eintrag: { ...eintrag, kalender: kalenderId, events: darfEvents ? eintrag.events : {} },
+        // Anmeldung ebenso: nur mit Reiter und erlaubtem Gruppentyp (legt sofort Gruppen an).
+        eintrag: {
+          ...eintrag,
+          kalender: kalenderId,
+          events: darfEvents ? eintrag.events : {},
+          anmeldung: anmeldungAktiv,
+        },
         zeitzone,
         verknuepfen,
         neueTagsErlaubt: tagsVerwalten,
@@ -318,6 +369,7 @@ export function TerminFenster({
         r.buchungen ? buchungsHinweis(r.buchungen, ressourcenName) : null,
         r.events ? eventHinweis(r.events) : null,
         r.anfragen ? anfrageHinweis(r.anfragen, personName) : null,
+        r.anmeldung ? anmeldungHinweis(r.anmeldung) : null,
       ]),
     });
   };
@@ -476,6 +528,30 @@ export function TerminFenster({
               deaktiviert={beschaeftigt || !!verknuepfen}
             />
           )}
+          {aktiverReiter === 'anmeldung' && verknuepfen && (
+            <p className={felder.hinweis} role="status">
+              Du verknüpfst einen vorhandenen Termin – dabei werden keine Gruppen angelegt. Gruppen
+              für die Anmeldung gibt es nur beim Neu-Anlegen („Trotzdem neu anlegen“).
+            </p>
+          )}
+          {aktiverReiter === 'anmeldung' && (
+            <TerminAnmeldung
+              e={eintrag}
+              onAendern={setE}
+              typen={typenListe}
+              typenLaedt={gruppentypen.stand.art === 'laedt'}
+              typenFehler={gruppentypen.stand.art === 'fehler' ? gruppentypen.stand.fehler : null}
+              onTypenNeu={gruppentypen.neu}
+              gruppen={anmeldungGruppen.stand.art === 'fertig' ? anmeldungGruppen.stand.daten : []}
+              gruppenLaedt={anmeldungGruppen.stand.art === 'laedt'}
+              gruppenFehler={
+                anmeldungGruppen.stand.art === 'fehler' ? anmeldungGruppen.stand.fehler : null
+              }
+              onGruppenNeu={anmeldungGruppen.neu}
+              heute={heute}
+              deaktiviert={beschaeftigt || !!verknuepfen}
+            />
+          )}
           {aktiverReiter === 'events' && verknuepfen && (
             <p className={felder.hinweis} role="status">
               Du verknüpfst einen vorhandenen Termin – dabei werden keine Events angelegt. Events
@@ -548,6 +624,9 @@ export function TerminFenster({
             <span>Ersteller über Änderungen informieren</span>
           </label>
           <EinladungHinweis mails={mails} />
+          {anmeldungFuss(gruppenAnzahl) && (
+            <SofortHinweis>{anmeldungFuss(gruppenAnzahl)}</SofortHinweis>
+          )}
           {(mails === 0 || e.informieren) && (
             <p className={styles.gebucht}>
               {[

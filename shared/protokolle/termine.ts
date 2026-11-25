@@ -15,6 +15,7 @@ import { ableiten, type Punkt } from './dokument';
 import { terminStandId } from './terminStand';
 import { dokumentDerSitzung, type ProtokollTeil } from './speicher';
 import { laufVorgabe, type Buchung } from './terminRessourcen';
+import type { Anmeldung } from './terminAnmeldung';
 import type { Sitzung } from './sitzungen';
 import {
   istAutomatisch,
@@ -167,6 +168,11 @@ export interface Eintrag extends Wiederholung {
    * für ihn kein Event. **Die Nummer 0 („Standard“) ist gültig** – darum nie auf „leer“/falsy prüfen.
    */
   events: Record<string, number>;
+  /**
+   * Reiter „Anmeldung“ (W15-5): der Schalter „Gruppen für Anmeldung erstellen“ – `null` = aus (Vorgabe), sonst Gruppentyp,
+   * Tage im Voraus, Kopiervorlage, Tage bis zum Beenden. ChurchTools legt mit dem Speichern **sofort** echte Gruppen an.
+   */
+  anmeldung: Anmeldung | null;
 }
 
 /** Eine Stunde später, am selben Tag (nach 23:00 bleibt es 23:59 – ChurchTools-Termine hier enden nie am Folgetag). */
@@ -215,6 +221,7 @@ export function eintragVorbelegung(
     nachlauf: laufVorgabe(uhrzeit === null),
     buchungen: [],
     events: {},
+    anmeldung: null,
   };
 }
 

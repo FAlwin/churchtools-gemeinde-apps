@@ -1,0 +1,48 @@
+// Reiter „Anmeldung“ im Fenster „In Kalender eintragen“ (W15-5) – Felder kommen aus `TerminFormular.module.scss`, der
+// Schalter aus `TerminSchalter`; hier nur die Sätze, die Fragen (Beschriftung über dem Feld) und die Vorschau.
+
+.anmeldung {
+  min-width: 0;
+}
+
+.leise {
+  margin: 0 0 12px;
+  color: var(--text2);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+// Die Fragen sind lang – die Beschriftung steht darum über dem Feld, nicht links daneben.
+.frage {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+
+  > span {
+    color: var(--text);
+    font-size: 13.5px;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+}
+
+.vorschau {
+  margin: 4px 0 12px;
+  padding: 10px 12px;
+  border-radius: var(--r-ctrl);
+  background: var(--surface3);
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.45;
+
+  p {
+    margin: 0;
+  }
+
+  ul {
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+}

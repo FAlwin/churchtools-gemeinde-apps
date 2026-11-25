@@ -336,6 +336,10 @@ describe('„Nur verknüpfen“ und Vorlagen', () => {
           { ressource: 99, vorlauf: 5, nachlauf: 5, status: 1, menge: 1 },
         ],
         eventVorlage: null,
+        anmeldungTyp: null,
+        anmeldungTage: null,
+        anmeldungBeenden: null,
+        anmeldungVorlage: null,
       },
     ]);
     zeigen([1, 2], [2]);

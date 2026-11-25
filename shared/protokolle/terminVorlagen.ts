@@ -13,14 +13,17 @@
  * die die Person buchen darf, der Status ohne Verwalten-Recht als „Wartet auf Bestätigung“ –, beim Speichern gehen sie im
  * selben Format wieder hinaus. **Events** (W15-3): Die Vorlage trägt „Stored service-planning event template selections“ in
  * `events` – das Format ist **nicht gemessen**; erkennbar ist nur eine `eventTemplateId` (`eventVorlageAus`), die dann beim
- * Anwenden in alle Zeilen des Reiters „Events“ kommt. Beim Speichern schreiben wir nichts dazu. Die Anmeldung steht auch in
- * der Vorlage – sie wird erst in W15-5 ausgewertet und hier **nicht** übernommen.
+ * Anwenden in alle Zeilen des Reiters „Events“ kommt. Beim Speichern schreiben wir nichts dazu. **Anmeldung** (W15-5): Die
+ * Vorlage trägt `grouptypeId`, `daysForwardNo`, `daysArchiveGroupNo` und `templateGroupId` (Zahlen oder `null`, laut
+ * Schnittstelle) – beim Anwenden kommen sie in den Reiter „Anmeldung“ und schalten ihn an, **wenn** der Gruppentyp gesetzt und
+ * erlaubt ist; „Als Vorlage speichern“ schreibt dieselben Felder, wenn der Schalter an ist.
  */
 import { plusTage } from '../ct/datum';
 import type { Eintrag } from './termine';
 import { eintragAdresse, type TerminAdresse } from './terminFelder';
 import { buchungenAufRechte, type Buchung } from './terminRessourcen';
 import { vorlageFuerAlle } from './terminEvents';
+import { ANMELDUNG_VORGABE_TAGE } from './terminAnmeldung';
 import { bisVorgabe, istAutomatisch, ordinalAusDatum, WIEDERHOLUNG } from './terminWiederholung';
 
 const TAGSEKUNDEN = 86_400;
@@ -53,6 +56,14 @@ export interface TerminVorlage {
   buchungen: Buchung[];
   /** Die Eventvorlage, die `events` erkennbar nennt (W15-3) – `null`, wenn keine. **0 ist gültig.** */
   eventVorlage: number | null;
+  /** Die Anmeldung der Vorlage (W15-5): Gruppentyp `grouptypeId` – `null`, wenn keine. */
+  anmeldungTyp: number | null;
+  /** `daysForwardNo` – Tage im Voraus; `null`, wenn die Vorlage keine nennt. */
+  anmeldungTage: number | null;
+  /** `daysArchiveGroupNo` – Tage nach dem Termin bis zum Beenden. */
+  anmeldungBeenden: number | null;
+  /** `templateGroupId` – die Kopiervorlage. */
+  anmeldungVorlage: number | null;
 }
 
 const zahl = (x: unknown): number | null => {
@@ -113,6 +124,12 @@ function eventVorlageAus(roh: unknown): number | null {
   return null;
 }
 
+/** Eine Nummer der Anmeldung: ganzzahlig und größer als 0 – sonst `null` (auch eine 0 heißt hier „keine“). */
+function nummerAus(x: unknown): number | null {
+  const n = zahl(x);
+  return n !== null && Number.isInteger(n) && n > 0 ? n : null;
+}
+
 /** Eine Vorlage aus der Antwort von ChurchTools – `null`, wenn Nummer, Kalender oder Titel fehlen. */
 function vorlageAus(roh: unknown): TerminVorlage | null {
   const o = objekt(roh);
@@ -147,6 +164,10 @@ function vorlageAus(roh: unknown): TerminVorlage | null {
     imAuftrag: zahl(o.onBehalfOfPid),
     buchungen: buchungenAus(o.bookings),
     eventVorlage: eventVorlageAus(o.events),
+    anmeldungTyp: nummerAus(o.grouptypeId),
+    anmeldungTage: nummerAus(o.daysForwardNo),
+    anmeldungBeenden: nummerAus(o.daysArchiveGroupNo),
+    anmeldungVorlage: nummerAus(o.templateGroupId),
   };
 }
 
@@ -201,7 +222,12 @@ export function vorlageAnwenden(
   e: Eintrag,
   v: TerminVorlage,
   /** Was die Person buchen und verwalten darf – ohne Angabe übernimmt die Vorlage keine Buchungen. */
-  rechte: { buchbar: ReadonlySet<number>; verwaltbar: ReadonlySet<number> } = {
+  rechte: {
+    buchbar: ReadonlySet<number>;
+    verwaltbar: ReadonlySet<number>;
+    /** Gruppentypen, in denen man Gruppen anlegen darf (W15-5) – ohne Angabe übernimmt die Vorlage keine Anmeldung. */
+    gruppentypen?: ReadonlySet<number>;
+  } = {
     buchbar: new Set(),
     verwaltbar: new Set(),
   },
@@ -245,6 +271,16 @@ export function vorlageAnwenden(
     imAuftrag: v.imAuftrag,
     buchungen: buchungenAufRechte(v.buchungen, rechte.buchbar, rechte.verwaltbar),
     events: {},
+    // Anmeldung (W15-5): Mit gesetztem und erlaubtem Gruppentyp schaltet die Vorlage den Reiter an – sonst bleibt er aus.
+    anmeldung:
+      v.anmeldungTyp !== null && rechte.gruppentypen?.has(v.anmeldungTyp)
+        ? {
+            typ: v.anmeldungTyp,
+            tage: v.anmeldungTage ?? ANMELDUNG_VORGABE_TAGE,
+            vorlage: v.anmeldungVorlage,
+            beenden: v.anmeldungBeenden,
+          }
+        : null,
   };
   // Events (W15-3): Nennt die Vorlage eine Eventvorlage, kommt sie in alle Zeilen der neuen Reihe (0 zählt!).
   return v.eventVorlage === null ? neu : { ...neu, events: vorlageFuerAlle(neu, v.eventVorlage) };
@@ -284,6 +320,15 @@ export function vorlageRumpf(e: Eintrag & { kalender: number }): Record<string, 
     ...(adresse ? { address: adresse } : {}),
     ...(nummern.length ? { tags: nummern } : {}),
     ...(e.imAuftrag !== null ? { onBehalfOfPid: e.imAuftrag } : {}),
+    // Anmeldung (W15-5): nur mit Schalter an und gewähltem Gruppentyp; leere Auswahlen fehlen.
+    ...(e.anmeldung && e.anmeldung.typ !== null
+      ? {
+          grouptypeId: e.anmeldung.typ,
+          daysForwardNo: e.anmeldung.tage,
+          ...(e.anmeldung.beenden !== null ? { daysArchiveGroupNo: e.anmeldung.beenden } : {}),
+          ...(e.anmeldung.vorlage !== null ? { templateGroupId: e.anmeldung.vorlage } : {}),
+        }
+      : {}),
     // Buchungen im Altformat von ChurchTools (Zahlen als Text) – so liest `buchungenAus` sie wieder.
     ...(e.buchungen.length
       ? {

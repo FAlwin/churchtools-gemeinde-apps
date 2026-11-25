@@ -23,6 +23,11 @@
  * `anfragen` (gleiche Form wie `buchungen`) und bricht nichts ab. Eine unklare Antwort beim Anlegen bleibt `Unklar`
  * (`terminAnlegen`) – nie ein zweites `POST`, sonst gingen die Mails doppelt raus.
  *
+ * **Anmeldung** (W15-5): Mit `eintrag.anmeldung` (Schalter an, Gruppentyp gewählt) legt ChurchTools **sofort echte Gruppen** an –
+ * je Einzeltermin bis „heute + Tage im Voraus“ (`anmeldungTermine`, dieselbe Rechnung wie Vorschau und Fuß). Auch hier sagt
+ * ein `201` nichts: `anmeldungNachlesen` prüft `signup` am gelesenen Termin und liest die Gruppen des Typs; das Ergebnis steht
+ * in `anmeldung`, bricht nichts ab, und es wird **nie gelöscht**.
+ *
  * Zeitgrenzen und Netzfehler markieren nie etwas als „im Kalender“ oder „nicht eintragen“.
  */
 import {
@@ -34,9 +39,12 @@ import {
 import { minute } from '@shared/protokolle/sitzungen';
 import { eintragZusatz } from '@shared/protokolle/terminFelder';
 import { eventsFuer } from '@shared/protokolle/terminEvents';
+import { anmeldungTermine, type AnmeldungErgebnis } from '@shared/protokolle/terminAnmeldung';
 import { plusTage } from '@shared/ct/datum';
+import { heuteImKalender } from '@shared/ct/zeit';
 import { Unklar } from '@ui/ct/fehler';
 import { anfragenNachlesen } from './besprechungsanfragen';
+import { anmeldungNachlesen } from './anmeldungLesen';
 import { buchungenNachlesen } from './buchungenLesen';
 import { eventsNachlesen } from './eventsLesen';
 import {
@@ -83,6 +91,8 @@ export async function terminLegen(q: {
   events?: { fehlend: string[]; unklar: boolean };
   /** Nur nach dem Anlegen mit Besprechungsanfragen: `fehlend` = Personen ohne Anfrage, `unklar` = nicht lesbar. */
   anfragen?: { fehlend: number[]; unklar: boolean };
+  /** Nur nach dem Anlegen mit Anmeldung: `signupFehlt`, `fehlend` = Namen der Gruppen, die nicht da sind, `unklar` = nicht lesbar. */
+  anmeldung?: AnmeldungErgebnis;
 }> {
   if (q.verknuepfen) return { art: 'verknuepft', id: q.verknuepfen.id };
   const e = q.eintrag;
@@ -90,6 +100,8 @@ export async function terminLegen(q: {
   const z = eintragZeitraum(e, q.zeitzone);
   const events = eventsFuer(e, q.zeitzone);
   const eingeladen = q.eingeladen ?? [];
+  // Die Gruppen, die ChurchTools jetzt anlegt – VOR dem Anlegen gerechnet (derselbe „heute“ wie beim Absenden).
+  const gruppenErwartet = anmeldungTermine(e, e.anmeldung, heuteImKalender(new Date(), q.zeitzone));
   const id = await terminAnlegen({
     kalender: e.kalender,
     titel,
@@ -103,8 +115,10 @@ export async function terminLegen(q: {
     // Mit Einladungen sagt die Meldung, dass ein zweiter Versuch alle doppelt einlädt.
     unklar: eingeladen.length ? UNKLAR : UNKLAR_OHNE_EINLADUNG,
   });
+  let signup: unknown;
   try {
     const roh = await terminLaden({ kalender: e.kalender, id });
+    signup = roh.signup;
     const start = roh.startDate;
     const passt =
       roh.title === titel &&
@@ -129,11 +143,21 @@ export async function terminLegen(q: {
   const anfragen = eingeladen.length
     ? await anfragenNachlesen({ termin: { kalender: e.kalender, id }, gewuenscht: eingeladen })
     : undefined;
+  const anmeldung =
+    e.anmeldung && e.anmeldung.typ !== null
+      ? await anmeldungNachlesen({
+          signup,
+          typ: e.anmeldung.typ,
+          titel,
+          erwartet: gruppenErwartet,
+        })
+      : undefined;
   return {
     art: 'angelegt',
     id,
     ...(buchungen ? { buchungen } : {}),
     ...(eventsErgebnis ? { events: eventsErgebnis } : {}),
     ...(anfragen ? { anfragen } : {}),
+    ...(anmeldung ? { anmeldung } : {}),
   };
 }

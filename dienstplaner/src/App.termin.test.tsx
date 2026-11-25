@@ -9,6 +9,10 @@ import { ladeTermine } from './ladeTermine';
 import { startFuer } from './start.testutil';
 import { LEERER_PLAN } from '@shared/dienstplan/zeile.testutil';
 
+// „Meine Anzeige“ (L4-5) gleicht mit ChurchTools ab – hier ohne Netz.
+vi.mock('@ui/ct/ablagePort', async () => ({
+  ablagePort: (await import('./ablageOffline.testutil')).ablagePortOffline,
+}));
 vi.mock('./start', async (original) => ({
   ...(await original<typeof import('./start')>()),
   ladeStart: vi.fn(),

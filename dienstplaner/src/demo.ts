@@ -9,6 +9,7 @@
  * die Seite neu laden setzt ihn zurück. **Rückblick und Ø (L4-4):** Der Gottesdienst vor einer Woche (108, `#/termin/108`) hat einen
  * fertigen Live-Verlauf – Karte „Rückblick“ mit eingeholt/überzogen und einer Zeile „nicht im Schnitt“ (die Gebetsgemeinschaft); die zwei
  * Gottesdienste davor (109, 110) liefern nur ihren Verlauf für „Ø bisher“ (und das leise „Ø“ beim Ablauf bearbeiten, z. B. in 101).
+ * **Meine Anzeige (L4-5):** Reiter „Einstellungen“ → sechs Haken; gespeichert wird in einer Personen-Datei (hier im Speicher, `personenDateiDemo`).
  * Wird nie mitgebaut (siehe `main.tsx`).
  */
 import { liveListe } from '@shared/ct/liveAgenda';
@@ -1249,6 +1250,65 @@ function liveDemo(f: URLSearchParams): unknown {
 const PERSONEN_FEHLER_MS = 3000;
 let demoGestartet = 0;
 
+/**
+ * Die Personen-Dateien (L4-5, „Meine Anzeige“: `dienstplaner_anzeige.json`) – im Speicher, wie ChurchTools sie liefert:
+ * `GET /files/person/<id>` listet, `POST` hängt eine Datei an (ChurchTools überschreibt nie, jede Fassung hat eine neue ID),
+ * `DELETE /files/<id>` löscht, der Inhalt kommt von der `fileUrl`. Damit wirkt das Umschalten in `?demo` sofort und
+ * bleibt beim Neuladen der Seite erhalten (zusätzlich merkt sich das Gerät die Wahl).
+ */
+const PERSONEN_DATEIEN = new Map<
+  number,
+  { id: number; person: number; name: string; text: string }
+>();
+let naechstePersonenDateiId = 9000;
+const demoDateiAdresse = (id: number) => `${window.location.origin}/demo-personendatei/${id}`;
+
+async function personenDateiDemo(
+  methode: string,
+  pfad: string,
+  body: BodyInit | null | undefined,
+): Promise<Response | undefined> {
+  const antwort = (daten: unknown, status = 200) =>
+    new Response(JSON.stringify({ data: daten }), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  const liste = /^\/api\/files\/person\/(\d+)$/.exec(pfad);
+  if (liste) {
+    const person = Number(liste[1]);
+    if (methode === 'POST' && body instanceof FormData) {
+      const f = body.get('files[]');
+      if (f instanceof Blob) {
+        const name = f instanceof File ? f.name : 'datei';
+        PERSONEN_DATEIEN.set(naechstePersonenDateiId, {
+          id: naechstePersonenDateiId,
+          person,
+          name,
+          text: await f.text(),
+        });
+        naechstePersonenDateiId++;
+      }
+    }
+    if (methode === 'GET' || methode === 'POST') {
+      return antwort(
+        [...PERSONEN_DATEIEN.values()]
+          .filter((d) => d.person === person)
+          .map((d) => ({ id: d.id, name: d.name, fileUrl: demoDateiAdresse(d.id) })),
+      );
+    }
+  }
+  const loeschen = /^\/api\/files\/(\d+)$/.exec(pfad);
+  if (loeschen && methode === 'DELETE' && PERSONEN_DATEIEN.delete(Number(loeschen[1]))) {
+    return antwort(null);
+  }
+  const inhalt = /^\/demo-personendatei\/(\d+)$/.exec(pfad);
+  if (inhalt && methode === 'GET') {
+    const d = PERSONEN_DATEIEN.get(Number(inhalt[1]));
+    return d ? new Response(d.text, { status: 200 }) : new Response('{}', { status: 404 });
+  }
+  return undefined;
+}
+
 export function demoStarten(fall: string): void {
   demoGestartet = Date.now();
   // ChurchTools gibt der Erweiterung einen Behälter mit fester Höhe (gemessen 07.10.2026); auf der nackten
@@ -1267,11 +1327,13 @@ export function demoStarten(fall: string): void {
     const r = roh as { data: Record<string, unknown> };
     return { data: { ...r.data, dienstplaner: speicher.rechte() } };
   };
-  window.fetch = (input, init) => {
+  window.fetch = async (input, init) => {
     const url = new URL(
       typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
     );
     const methode = init?.method ?? 'GET';
+    const personenDatei = await personenDateiDemo(methode, url.pathname, init?.body);
+    if (personenDatei) return personenDatei;
     const rumpf = typeof init?.body === 'string' ? (JSON.parse(init.body) as unknown) : undefined;
     const s =
       speicher.anfrage(methode, url.pathname, rumpf) ??

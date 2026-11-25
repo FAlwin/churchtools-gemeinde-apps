@@ -43,3 +43,36 @@
   color: var(--red);
   font-size: 14px;
 }
+
+// „Meine Anzeige“ (L4-5): Haken untereinander, die zwei Spalten-Haken eingerückt unter „Rückblick“.
+.meine {
+  margin-top: 20px;
+}
+
+.haken {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+
+  label {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 4px 0;
+    color: var(--text);
+    font-size: 14px;
+  }
+
+  input {
+    margin-top: 3px;
+  }
+
+  input:disabled + span {
+    color: var(--text3);
+  }
+}
+
+.eingerueckt {
+  margin-left: 24px;
+}

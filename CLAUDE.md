@@ -955,6 +955,9 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **`protokolle-v1.6.0` (24.11.2026):** W16 (Mitlesen `useMitlesen`, Anwesenheit als Schnappschuss `zumLesen`, Stufe „Schreibt mit“ –
+  `shared/protokolle/zugang.ts`, #1132), W15-1/-2 (Termin-Fenster wie der ChurchTools-Kalender: Reiter Kalender + Ressourcen, #1127/#1131;
+  Events/Besprechungsanfragen/Anmeldung folgen) und #1125 (Rückgängig nach KI, Kalender-Link).
 - **`protokolle-v1.5.1` (21.11.2026):** Live-Fund – der Protokoll-Kasten (`card-list`, `overflow: hidden`) schnitt die
   Aufklapp-Felder der Bausteine am Protokollende ab; `.blatt` jetzt `overflow: visible`, Wächter
   `ui/design/protokollBlattUeberlauf.test.ts` (#1119).

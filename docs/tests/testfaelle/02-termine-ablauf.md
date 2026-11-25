@@ -615,6 +615,74 @@ seiner alten Zeit weiter, als wäre man nie weg gewesen. Die kurzen Stopps zähl
 
 </details>
 
+### TF-ABLAUF-52 · „Meine Anzeige“ einstellen – gilt auf allen meinen Geräten
+
+**Das brauchst du:** Zwei Geräte (z. B. Rechner und Handy), an beiden mit derselben ChurchTools-Person angemeldet; eine zweite Person ohne Planer-Recht; für die Spalten einen Termin mit Rückblick (TF-ABLAUF-50).
+
+**Das muss passieren:** Im Reiter **„Einstellungen“** steht unter „Live-Ansicht – für alle“ der Abschnitt **„Meine Anzeige“** („Gilt für dich auf allen deinen Geräten.“) mit sechs Haken, alle **an**. **Jeder** darf sie ändern, auch wer nicht planen darf; die Betriebsarten darüber bleiben Planern vorbehalten. Die Wahl wirkt sofort, ohne „Speichern“.
+
+1. Reiter „Einstellungen“ öffnen: sechs Haken – „−1 / +1 Min“ in der Live-Ansicht, Durchschnitt beim Ablauf bearbeiten, Rückblick im Termin, darunter eingerückt Spalte „Ø bisher“ und Spalte „±“, Infos meiner Dienstgruppen in der Live-Ansicht –, alle an.
+2. „Rückblick im Termin zeigen“ ausschalten: die zwei eingerückten Spalten-Haken werden grau und lassen sich nicht ändern (ihre Auswahl bleibt erhalten). Wieder einschalten: sie sind wieder frei.
+3. Am Rechner „Durchschnitt beim Ablauf bearbeiten zeigen“ ausschalten, rund 3 Sekunden warten, das Handy **neu laden** und „Einstellungen“ öffnen: der Haken ist dort auch aus.
+4. Dieselbe Änderung am Handy rückgängig machen, am Rechner neu laden: wieder an. (Haken, die nie angefasst wurden, bleiben „an“ – auch wenn die Standardwerte später einmal anders wären.)
+5. Als Person **ohne** Planer-Recht: Die Haken lassen sich ändern, die Betriebsarten oben sind grau, unten steht „Fertig“ statt „Speichern“.
+6. **ChurchTools nicht erreichbar** (WLAN am Gerät aus, dann einen Haken ändern): der Haken bleibt wie gewählt, darunter steht leise „Noch nicht in ChurchTools gespeichert …“. WLAN wieder an, Seite neu laden: die Wahl ist da und auf dem anderen Gerät ebenfalls. **Es gehen keine Einstellungen verloren**, und beim bloßen Öffnen wird nichts geschrieben.
+7. **Demo** (`…/?demo`): „Einstellungen“ → Haken umschalten wirkt sofort und bleibt nach Neuladen der Seite stehen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `dienstplaner/src/meineAnzeige.ts`, `dienstplaner/src/MeineAnzeigeAnschluss.tsx`, `dienstplaner/src/EinstellungenFenster.tsx`, `ui/ct/useAblageSpiegel.ts`, `shared/ct/personenAblage.ts`
+- **Automatisiert:** ja – `dienstplaner/src/MeineAnzeigeAnschluss.test.tsx` (gegen die echte Personen-Ablage: Standard schreibt nichts, Laden, 504/502 überschreiben nichts, nur gewählte Felder, zwei Geräte, Fehler beim Speichern, je Person getrennt), `dienstplaner/src/meineAnzeige.test.ts`, `dienstplaner/src/EinstellungenFenster.meineAnzeige.test.tsx`, `dienstplaner/src/App.test.tsx`; von Hand bleiben echte zwei Geräte und ChurchTools mit Dateirechten (Personen-Datei `dienstplaner_anzeige.json`)
+- **Historie:** Live-Ansicht 2, L4-5 (23.11.2026, A15, T7)
+
+</details>
+
+### TF-ABLAUF-53 · „Meine Anzeige“ wirkt: Live-Ansicht, Ablauf bearbeiten, Rückblick
+
+**Das brauchst du:** Einen Termin, dessen Live-Agenda läuft (und eine Person mit Steuer-Recht), Infos je Dienstgruppe am Ablauf, einen Termin mit Rückblick und Ø (TF-ABLAUF-50/51).
+
+**Das muss passieren:** Jeder Haken schaltet genau eines; die Rechnung dahinter bleibt.
+
+1. **„−1 / +1 Min“ aus:** In der Live-Ansicht fehlen die zwei Knöpfe, „Zurück“ und „Weiter“ bleiben; die Restzeit läuft wie vorher. An: sie sind wieder da.
+2. **„Infos meiner Dienstgruppen“ aus:** Weder unter „Jetzt“ noch klein in der Liste stehen Infos. An: nur die Infos der Dienstgruppen, in denen du **an diesem Termin eingeteilt** bist (bei laufendem und kommenden Punkten, nicht bei erledigten); bist du nirgends eingeteilt, gilt die Wahl unter „Spalten“.
+3. **„Durchschnitt beim Ablauf bearbeiten“ aus:** Beim Bearbeiten steht kein leises „Ø“ unter der Dauer; der Rückblick bleibt.
+4. **„Rückblick im Termin zeigen“ aus:** Keine Karte „Rückblick“; das Ø beim Bearbeiten bleibt (eigener Haken).
+5. **Spalte „Ø bisher“ / „±“ aus:** Die Spalte fehlt im Rückblick (am Handy der Wert in der Zeile); ohne „Ø bisher“ fehlt auch die Erklärung darunter.
+6. **Demo** (`…/?demo`, Termin „Gottesdienst (Live-Probe)“ für Live, `#/termin/108` für den Rückblick).
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `dienstplaner/src/LiveAnsicht.tsx`, `dienstplaner/src/Rueckblick.tsx`, `dienstplaner/src/TerminAnsicht.tsx`, `shared/ct/liveAgenda.ts`
+- **Automatisiert:** ja – `dienstplaner/src/LiveAnsicht.meineAnzeige.test.tsx` (−1/+1, Infos), `dienstplaner/src/TerminAnsicht.rueckblick.test.tsx` (Rückblick, Ø, Spalten), `dienstplaner/src/Rueckblick.test.tsx`, `dienstplaner/src/TerminAnsicht.test.tsx` (A16: eigene Dienstgruppen, Rückfall auf „Spalten“); von Hand bleibt das Aussehen
+- **Historie:** Live-Ansicht 2, L4-5 (23.11.2026, A13, A15, A16)
+
+</details>
+
+### TF-ABLAUF-54 · Startseite: Knopf „Live“
+
+**Das brauchst du:** Einen Termin mit Ablauf, der bald stattfindet (Rechner und Handy), dazu am besten einen am Vortag und einen schon vorbei.
+
+**Das muss passieren:** In der Karte „Als Nächstes“ steht neben „Musik-App“ und „Ablauf & Dienste“ der Knopf **„Live“** – nur **am Tag des Termins ab 0 Uhr** (Ortszeit der Gemeinde) **bis zum Ende des Termins**. Ein Klick öffnet direkt die Live-Ansicht dieses Termins.
+
+1. Am Vortag steht der Knopf **nicht** da, am Tag des Termins schon, auch am frühen Morgen. Nach dem Ende des Termins ist die Karte beim nächsten Termin – ohne Knopf, wenn der nicht heute ist.
+2. Ein Termin, der über Mitternacht geht (z. B. 23 bis 1 Uhr): Der Knopf bleibt bis zum Ende.
+3. Ohne Ablauf am Termin gibt es **keinen** Knopf.
+4. Knopf mit Rahmen, nicht gefüllt – „Musik-App“ bleibt der einzige gefüllte Knopf. Läuft die Live-Agenda gerade in ChurchTools, steht darin der rote Punkt wie bei „Live“ im Termin; sonst das Uhr-Symbol wie bei „Live“ im Termin.
+5. Klick: Die Live-Ansicht öffnet sich über dem Termin (Adresse `…#/termin/<id>/live`). „Schließen“ führt in die Termin-Ansicht; Neuladen öffnet Live danach nicht noch einmal. Steuern darf nur, wer am Dienst „Live-Agenda steuern“ hat.
+6. **Handy (375 px):** „Live“ steht mit Wort und Rahmen in derselben Zeile neben „Ablauf & Dienste“ (nichts abgeschnitten); „Musik-App“ darf darüber in einer eigenen Zeile stehen.
+7. **Demo** (`…/?demo`): Der Termin „Gottesdienst (Live-Probe)“ ist heute – der Knopf ist zu sehen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `dienstplaner/src/Startseite.tsx`, `dienstplaner/src/liveFenster.ts`, `dienstplaner/src/reiter.ts`, `dienstplaner/src/ladeLive.ts`
+- **Automatisiert:** ja – `dienstplaner/src/liveFenster.test.ts` (Vortag 23:59, Tag 0:00, Ende, über Mitternacht, ohne Ende, Zeitzone), `dienstplaner/src/Startseite.live.test.tsx` (Knopf, Punkt, Klick, ohne Ablauf), `dienstplaner/src/ladeLive.test.ts`, `dienstplaner/src/reiter.test.ts`, `dienstplaner/src/TerminAnsicht.test.tsx` (Live gleich offen); von Hand bleibt das Aussehen am Handy
+- **Historie:** Live-Ansicht 2, L4-5 (23.11.2026)
+
+</details>
+
 ### TF-ABLAUF-16 · „Weitere Infos“ am Termin
 
 **Das brauchst du:** Einen Test-Termin, an dem in ChurchTools unter „i“ (Weitere Infos) zwei Zeilen stehen; eine

@@ -12,7 +12,7 @@
 - **Neue Tags** lassen sich nur anlegen, wenn du in ChurchTools Termin-Tags verwalten darfst; sonst wählst du vorhandene.
 - Bleibt wie bisher: Vorbelegung aus dem Termin-Baustein, „Nur verknüpfen“ bei einem ähnlichen Termin am selben Tag, Nachlesen nach unklarer Antwort, Vermerk im Reiter und
   „Nochmal vermerken“. Es werden weiterhin keine Einladungen verschickt; ist „Ersteller informieren“ an, steht dazu ein Satz. Noch nicht dabei: „Im Auftrag von“ und „Bild“ sowie die
-  weiteren Reiter von ChurchTools (Besprechungsanfragen, Anmeldung, Events, Ressourcen) – sie folgen in eigenen Schritten.
+  weiteren Reiter von ChurchTools (Besprechungsanfragen, Anmeldung, Events) – sie folgen in eigenen Schritten; „Ressourcen“ ist mit W15-2 schon dabei.
 
 ### Geändert (Protokolle)
 

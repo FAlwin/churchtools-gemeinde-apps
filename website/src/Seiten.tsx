@@ -32,7 +32,9 @@ import {
   bleibtHinweis,
   mailHinweis,
   misserfolg,
+  nichtVerschobenText,
   seitenEtikett,
+  verschobenHinweis,
   type BereichsNamen,
   type MailZweck,
 } from './freigabeAnzeige';
@@ -51,6 +53,7 @@ import {
   setzeStatus,
   speichereMenue,
   speichereSeite,
+  wechsleBereich,
   type EntwurfsOrt,
 } from './daten';
 import { neueId } from './ids';
@@ -317,6 +320,29 @@ export function Seiten({
         );
     }, 'Die Seite wurde nicht veröffentlicht – online steht weiter die bisherige Fassung.');
 
+  /**
+   * **Bereich gewechselt (W3b-4b-2, E-W32):** Der Entwurf mit dem neuen Bereich ist gespeichert – jetzt wandert die
+   * veröffentlichte Fassung mit (`wechsleBereich`; steht die Seite nicht online, geschieht nichts). Danach wird der Online-Stand
+   * neu gelesen, damit „Online/Geändert“ stimmt. Scheitert es, ist das **kein** Speicherfehler: eigene Meldung, online bleibt der
+   * alte Bereich, „Veröffentlichen“ verschiebt sie.
+   */
+  const bereichNachziehen = (s: Seite, alt: number | null) => {
+    if (!kategorien || !freigabe) return;
+    const n = namen ?? { website: 'Website', untergruppen: [] };
+    void handle(
+      async () => {
+        try {
+          const r = await wechsleBereich(kategorien, s.id, alt, bereichVon(s));
+          if (r.verschoben) setMeldung(verschobenHinweis(s.titel, bereichVon(s), r.bleibtIn, n));
+        } finally {
+          online.neu();
+          freigabe.onGeaendert();
+        }
+      },
+      nichtVerschobenText(s.titel, alt, n),
+    );
+  };
+
   /** Eine gespeicherte Seite (und ggf. das Menü) in den gelesenen Stand übernehmen – ohne neu zu lesen. */
   const uebernehmen = (neueSeite: Seite, neuesMenue: Menue | null) =>
     geladen.setze((alt) => ({
@@ -452,6 +478,7 @@ export function Seiten({
                 rechte={rechte}
                 bereichWahl={bereichWahl}
                 onGespeichert={(neueSeite, neuesMenue) => uebernehmen(neueSeite, neuesMenue)}
+                onBereichGewechselt={freigabe && websiteLeitung ? bereichNachziehen : undefined}
                 onOffen={setUngespeichert}
                 onLoeschen={() =>
                   freigabe && !darfFrei ? setAnfragen(aktuell) : setLoeschen(aktuell)

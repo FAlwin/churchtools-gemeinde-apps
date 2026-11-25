@@ -8,8 +8,8 @@
   mitarbeiten darf, aber in keiner ihrer Gruppen ist, bekommt einen Hinweis statt einer leeren Liste.
 - **Die Leitung einer Untergruppe gibt ihre Seiten frei** – in die Kategorie ihres Bereichs, auch mit „Alles freigeben“. Aussehen,
   Einstellungen, Menü, eigenes HTML, Startseite und Bereich bleiben bei der Leitung der Website.
-- **Seite verschieben:** Wurde der Bereich einer schon veröffentlichten Seite geändert, schreibt das nächste Freigeben sie in die neue
-  Kategorie, liest nach und entfernt sie erst dann aus der alten. Klappt das Entfernen nicht, steht sie online im neuen Bereich und die
+- **Seite verschieben beim Freigeben:** Steht eine Seite online noch in einer anderen Kategorie als der ihres Bereichs, schreibt Freigeben
+  sie in die richtige, liest nach und entfernt sie erst dann aus der alten. Klappt das Entfernen nicht, steht sie online im neuen Bereich und die
   Meldung sagt, dass sie zusätzlich noch im alten steht; unter „Freigaben“ bleibt sie als „Geändert“.
 
 ### Geändert (Website)

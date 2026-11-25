@@ -143,6 +143,17 @@ export function bereichVon(seite: Pick<Seite, 'bereich'>): number | null {
   return seite.bereich ?? null;
 }
 
+/**
+ * **Den Bereich setzen** (W3b-4b-2) – `null` (Website) entfernt das Feld, sonst steht es **am Ende**, wie im Schema. Der
+ * gespeicherte Text und damit die Prüfsumme (`stand`) hängen an der Reihenfolge der Felder: Entwurf („Seite einstellen“, „Neue
+ * Seite“) und verschobene Online-Fassung (`bereichWechseln`) nutzen darum dieselbe Regel – sonst wären sie bei gleichem Inhalt
+ * „geändert“.
+ */
+export function bereichSetzen<T extends { bereich?: number }>(seite: T, bereich: number | null): T {
+  const { bereich: _alt, ...rest } = seite;
+  return (bereich === null ? rest : { ...rest, bereich }) as T;
+}
+
 function enthaelt(b: Bereiche, bereich: number | null): boolean {
   return b === 'alle' || (bereich !== null && b.includes(bereich));
 }

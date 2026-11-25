@@ -39,7 +39,8 @@
  *    Jugend-Seiten, gibt sie frei; „Freizeit 2027“ freigeben schreibt nach Jugend, aus der Kategorie der Website darf er sie
  *    nicht entfernen – die Meldung sagt, dass sie dort zusätzlich noch steht.
  *  - `?demo=bereiche` – Leitung der Website (kein Admin) mit denselben Seiten: alle Seiten, „Bereich“ in „Seite einstellen“,
- *    „Freizeit 2027“ freigeben verschiebt sie (neue Kategorie → nachlesen → alte löschen).
+ *    „Freizeit 2027“ freigeben verschiebt sie (neue Kategorie → nachlesen → alte löschen). Den Bereich einer online stehenden Seite
+ *    ändern (z. B. „Impressum“ → „Website – Jugend“) verschiebt ihre Online-Fassung sofort (W3b-4b-2) – Meldung und Etikett „Online“.
  *
  * **Untergruppen (W3b-4a):** Die Gruppe „Website“ hat zwei direkte Untergruppen – „Website – Jugend“ (in allen eingerichteten
  * Fällen eingerichtet: Kategorie `veroeffentlicht-g21`, Rechte nach der Regel) und „Website – Technik“ (nicht eingerichtet:

@@ -1018,3 +1018,68 @@ describe('Bereich in „Seite einstellen“ (W3b-4b)', () => {
     await waitFor(() => expect(speicherte().at(-1)).not.toHaveProperty('bereich'));
   });
 });
+
+describe('Bereich gewechselt → Online-Fassung wandert mit (W3b-4b-2, E-W32)', () => {
+  const oeffnen = async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Seite einstellen' }));
+    return screen.findByRole('dialog');
+  };
+  const WAHL = [
+    { wert: null, name: 'Website' },
+    { wert: 347, name: 'Website – Jugend' },
+  ];
+  const einstellen = async (feld: string, wert: string) => {
+    const f = await oeffnen();
+    fireEvent.change(within(f).getByLabelText(feld), { target: { value: wert } });
+    fireEvent.click(within(f).getByRole('button', { name: 'Fertig' }));
+  };
+
+  it('ERST nach dem gelungenen Speichern des Entwurfs, mit dem alten Bereich – zurück auf „Website“ ebenso', async () => {
+    const onBereichGewechselt = vi.fn();
+    render(<Seitenarbeit {...props({ onBereichGewechselt })} bereichWahl={WAHL} />);
+    await einstellen('Bereich', '347');
+    await waitFor(() => expect(onBereichGewechselt).toHaveBeenCalledTimes(1));
+    expect(onBereichGewechselt.mock.calls[0][0]).toMatchObject({ id: 's', bereich: 347 });
+    expect(onBereichGewechselt.mock.calls[0][1]).toBeNull();
+    // Gespeichert war der Entwurf schon, als es ausgelöst wurde.
+    expect(d.speichereSeite.mock.invocationCallOrder[0]).toBeLessThan(
+      onBereichGewechselt.mock.invocationCallOrder[0],
+    );
+    await einstellen('Bereich', '');
+    await waitFor(() => expect(onBereichGewechselt).toHaveBeenCalledTimes(2));
+    expect(onBereichGewechselt.mock.calls[1][0]).not.toHaveProperty('bereich');
+    expect(onBereichGewechselt.mock.calls[1][1]).toBe(347);
+  });
+
+  it('nur der Titel geändert: nichts verschoben', async () => {
+    const onBereichGewechselt = vi.fn();
+    render(<Seitenarbeit {...props({ onBereichGewechselt })} bereichWahl={WAHL} />);
+    await einstellen('Titel', 'Neuer Titel');
+    await waitFor(() => expect(d.speichereSeite).toHaveBeenCalledTimes(1));
+    expect(onBereichGewechselt).not.toHaveBeenCalled();
+  });
+
+  it('Speichern scheitert (503): nichts verschoben – erst „Erneut versuchen“, das gelingt, löst es (einmal) aus', async () => {
+    d.speichereSeite.mockRejectedValueOnce(new ApiError(503, 'x'));
+    const onBereichGewechselt = vi.fn();
+    render(<Seitenarbeit {...props({ onBereichGewechselt })} bereichWahl={WAHL} />);
+    await einstellen('Bereich', '347');
+    fireEvent.click(await screen.findByRole('button', { name: 'Erneut versuchen' }));
+    await screen.findByText('Gespeichert');
+    expect(onBereichGewechselt).toHaveBeenCalledTimes(1);
+  });
+
+  it('ein fremder Stand mit anderem Bereich (übernommen, nicht gespeichert) verschiebt nichts – auch nicht beim nächsten Speichern', async () => {
+    server.seite = { ...START, bereich: 347 };
+    const onBereichGewechselt = vi.fn();
+    render(<Seitenarbeit {...props({ onBereichGewechselt })} bereichWahl={WAHL} />);
+    // Das erste „Seite einstellen“ nimmt die Sperre und übernimmt dabei den neueren Stand vom Server.
+    fireEvent.click(screen.getByRole('button', { name: 'Seite einstellen' }));
+    await waitFor(() => expect(d.beginneBearbeiten).toHaveBeenCalled());
+    await einstellen('Titel', 'Neuer Titel');
+    await waitFor(() =>
+      expect(speicherte().at(-1)).toMatchObject({ titel: 'Neuer Titel', bereich: 347 }),
+    );
+    expect(onBereichGewechselt).not.toHaveBeenCalled();
+  });
+});

@@ -1,6 +1,6 @@
 # Website – ChurchTools-Erweiterung
 
-> **Stand: W3b-4b (23.11.2026) – noch kein Release.** Gebaut: Grundgerüst (Einrichten, Seitenliste, Vorschau, Seiten anlegen und
+> **Stand: W3b-4b-2 (25.11.2026) – noch kein Release.** Gebaut: Grundgerüst (Einrichten, Seitenliste, Vorschau, Seiten anlegen und
 > löschen – W3a), **Aussehen** und **Einstellungen** (W3a-3), **Wer darf was** und **Freigabe** für Redakteure und Leitung (W3b-1/-2),
 > **Mails im Freigabe-Weg** (W3b-3: Einreichen, Löschen anfragen, Zurückgeben, Freigeben), **Untergruppen einrichten** (W3b-4a: Kategorie
 > und Rechte je Untergruppe, „Wer darf was“, Hinweis beim Start – Abschnitt „Untergruppen – Stand W3b-4a“), **Bereiche** (W3b-4b: Bereich
@@ -170,7 +170,8 @@ erst in W3b-4c (Mails je Bereich).
 **Bereich einer Seite:** Feld `bereich` an der Seite (`seiteSchema`, Gruppen-ID einer Untergruppe, steht am Ende des Seiten-Texts). **Fehlt
 es, gehört die Seite der Gruppe „Website“** – alle Seiten von vor W3b-4b bleiben unverändert gültig. Ändern darf es nur die Leitung der Website
 (**Seite einstellen → Bereich**: „Website“ und alle **eingerichteten** Untergruppen mit Namen; nicht eingerichtete stehen nicht zur Wahl;
-„Website“ entfernt das Feld). Das Feld erscheint nur, wenn es eingerichtete Untergruppen gibt.
+„Website“ entfernt das Feld). Das Feld erscheint nur, wenn es eingerichtete Untergruppen gibt. Steht die Seite schon online, wandert die
+veröffentlichte Fassung sofort mit (siehe „Bereich wechseln“ unten).
 
 **Wer bin ich?** (`zugangFuer` in `shared/website/zugang.ts`, Ergebnis `{ sieht, leitet }` – je „alle“ oder eine Liste von Untergruppen):
 
@@ -210,13 +211,38 @@ diese; wer in mehreren ist, wählt im Fenster „Neue Seite“ (`bereicheFuerNeu
 Kategorie **ihres** Bereichs (`kategorieDesBereichs`). Ist ihr Bereich nicht eingerichtet (oder sieht man seine Kategorie nicht): „Die Seite
 „…“ gehört zu einer Untergruppe, die noch nicht eingerichtet ist – es wurde nichts veröffentlicht …“, **nichts** geschrieben.
 
-**Verschieben:** Wurde der Bereich einer veröffentlichten Seite geändert, liegt sie online noch in der alten Kategorie. Das nächste
-Freigeben: in die neue Kategorie schreiben → nachlesen (Stand gleich) → **erst dann** aus jeder anderen Kategorie löschen, in der sie liegt
+**Bereich wechseln (W3b-4b-2, E-W32):** Ändert die Leitung der Website in „Seite einstellen“ den Bereich einer Seite, die online steht, wird
+**erst der Entwurf gespeichert und dann sofort die veröffentlichte Fassung verschoben** (`bereichWechseln` in `shared/website/freigabe.ts`,
+ausgelöst von `Seitenarbeit` → `onBereichGewechselt`, nur nach einem gelungenen Speichern mit geändertem Bereich – nie beim Übernehmen eines
+fremden Stands). Anlass: Bis dahin blieb die Seite online im alten Bereich; gab danach die Leitung der Untergruppe frei, landete sie in deren
+Kategorie, die alte Kopie bei der Website durfte sie nicht löschen – die Seite stand **doppelt online**, und nur die Leitung der Website
+hätte aufräumen können. Der Ablauf:
+
+1. Alle Veröffentlicht-Kategorien **frisch** lesen (eine ohne Leserecht wird übersprungen; jeder andere Lesefehler bricht ab – „unbekannt“
+   ist nie „nicht online“). Steht die Seite in keiner anderen als der des neuen Bereichs: nichts zu tun.
+2. Die **Online-Fassung** nehmen (die Kopie im alten Bereich, sonst die jüngste), **nur `bereich` ändern** (`bereichSetzen` – dieselbe Regel
+   wie der Entwurf, das Feld steht am Ende) und den Text sonst Zeichen für Zeichen lassen. **Nicht den Entwurf veröffentlichen** – der kann
+   ungeprüfte Änderungen tragen. Nicht vollständig lesbar → nichts tun, Meldung.
+3. Derselbe Ablauf wie beim Freigeben (`inBereichSchreiben`): neue Kategorie schreiben → nachlesen → **erst dann** aus allen anderen löschen.
+   Der Status der Seite bleibt unberührt – freigegeben ist damit nichts.
+4. Den Online-Stand neu lesen: Ist der Entwurf bis auf den Bereich gleich der Online-Fassung, steht danach „Online“.
+
+**Fehler:** Scheitert Lesen oder Schreiben, bleibt online alles, wie es war; der Entwurf trägt den neuen Bereich (das Speichern gilt als
+gelungen – eigene Meldung): „Der neue Bereich von „…“ ist gespeichert. Online steht die Seite aber vorerst noch im Bereich „…“ –
+„Veröffentlichen“ verschiebt sie.“ Gelingt das Schreiben, aber das Löschen der alten nicht, steht die Seite in beiden – dieselbe Meldung wie
+beim Freigeben (`bleibtHinweis`), und „Freigaben“ zeigt sie weiter als „Geändert“ (`verschieben`).
+
+**Verschieben beim Freigeben:** Liegt eine Seite online noch in einer anderen Kategorie (das Verschieben beim Bereichswechsel scheiterte,
+oder sie wurde vor W3b-4b-2 umgestellt), verschiebt sie das nächste Freigeben: in die neue Kategorie schreiben → nachlesen (Stand gleich) → **erst dann** aus jeder anderen Kategorie löschen, in der sie liegt
 (`einheitLoeschen` liest selbst nach) → Status entfernen. Scheitert das Löschen der alten (z. B. die Leitung von Jugend darf in „Veröffentlicht“
 der Website nicht schreiben), ist die Seite im neuen Bereich online, und die Meldung sagt: „„…“ steht zusätzlich noch online im Bereich
 „Website“ – dort ließ sie sich gerade nicht entfernen …“. Das ist **kein** Fehler der Freigabe; unter „Freigaben“ bleibt die Seite als
 „Geändert“ mit der Zeile „Steht online noch in einem anderen Bereich – Freigeben verschiebt sie“. Eine Kategorie ohne Leserecht wird
 übersprungen.
+
+**Regel für den Bau-Dienst (W5): eine Seite, mehrere Kopien.** Steht dieselbe Seiten-ID in mehreren Veröffentlicht-Kategorien (z. B. nach
+einem halb gescheiterten Verschieben), gilt **nur die jüngste Kopie** (die Zeit im Kopf, `zeit`); die andere wird **nie ausgeliefert** und
+als Warnung gemeldet. Das Feld `bereich` allein reicht zur Entscheidung nicht: Die alte Kopie bei der Website hat gar keins.
 
 **Löschen und offline nehmen** (`seiteEntfernen`): aus **jeder** Veröffentlicht-Kategorie, in der die Seite steht, dann erst den Entwurf. Fehlt
 das Recht in der Kategorie des **eigenen** Bereichs: „kein Recht“, nichts gelöscht. Fehlt es in einer **fremden** Kategorie, bleibt die Seite
@@ -231,7 +257,8 @@ Mitglieder nicht (Messung W3b-4-0) – „niemand“, keine Mail, kein Hinweis. 
 Zähler. W3b-4c bringt die Mail an die Leitung der Untergruppe **und** der Website (E-W29).
 
 **Demo:** `?demo=jugend-redakteur` (nur Jugend-Seiten, einreichen), `?demo=jugend-leitung` (Jugend-Seiten freigeben; „Freizeit 2027“
-verschieben scheitert am Recht in der Website-Kategorie → Meldung), `?demo=bereiche` (Leitung der Website: Bereich-Feld, Verschieben gelingt).
+verschieben scheitert am Recht in der Website-Kategorie → Meldung), `?demo=bereiche` (Leitung der Website: Bereich-Feld, Verschieben gelingt; den Bereich einer online stehenden Seite wie „Impressum“ auf
+„Website – Jugend“ stellen → sie wandert sofort mit, die Meldung sagt es).
 
 ## Freigabe – Stand W3b-2
 

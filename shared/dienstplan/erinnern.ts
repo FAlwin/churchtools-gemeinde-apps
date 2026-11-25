@@ -28,6 +28,7 @@ import type { PersonenDaten } from './personenDaten';
 import { pauseAm, type Personenliste } from './personenliste';
 import { istVorgesehen, personenRaster, rasterDienste } from './personenRaster';
 import type { Plan, PlanGruppe, PlanSpalte } from './plan';
+import { plaetzeStand } from './platzNachEntwurf';
 
 /** Ein Termin, wie die Mail ihn aufführt. */
 export interface OffenerTermin {
@@ -73,14 +74,85 @@ const offenerTermin = (s: PlanSpalte): OffenerTermin => ({
 });
 
 /**
- * Die Spalten, an denen erinnert werden kann: aus den gezeigten (`spalten`) die, die nicht in der Vergangenheit liegen
- * (`tag >= heute` – ein Termin von heute zählt) und nicht abgesagt sind. In der Reihenfolge von `spalten`.
+ * **Zählt dieser Termin überhaupt?** Die eine Stelle für „nicht vorbei, nicht abgesagt“ (`tag >= heute` – ein Termin von
+ * heute zählt): `erinnerSpalten` (Planer: gezeigte Spalten) und `offeneTermine` (je Person, auch für die Startseite)
+ * fragen hier.
+ */
+export const terminZaehlt = (t: { tag: string; abgesagt?: boolean }, heute: string): boolean =>
+  !t.abgesagt && t.tag >= heute;
+
+/**
+ * Die Spalten, an denen erinnert werden kann: aus den gezeigten (`spalten`) die, die `terminZaehlt` (nicht in der
+ * Vergangenheit, nicht abgesagt). In der Reihenfolge von `spalten`.
  */
 export function erinnerSpalten(plan: Plan, spalten: readonly number[], heute: string): number[] {
   return spalten.filter((i) => {
     const s = plan.spalten[i];
-    return s !== undefined && !s.abgesagt && s.tag >= heute;
+    return s !== undefined && terminZaehlt(s, heute);
   });
+}
+
+/**
+ * **Hat die Dienstgruppe an dieser Spalte Dienste?** Mindestens ein Dienst mit Plätzen (sonst „nicht vorgesehen“ oder
+ * alles „aus“). Die eine Stelle für diese Frage – „Erinnern“ (`fehlendeInGruppe`) und die Termine einer Abfrage
+ * (`termineFuerAbfrage`) fragen hier. Entwürfe zählen nicht (es geht um vorhandene Plätze, nicht um freie).
+ */
+export const gruppeHatDienste = (g: PlanGruppe, spalte: number): boolean =>
+  g.zeilen.some((z) => plaetzeStand(z.zellen[spalte] ?? null).anzahl > 0);
+
+/**
+ * **Die Termine einer Abfrage** (R-1): die Termin-IDs der Spalten im Zeitraum `von`–`bis` (einschließlich), die
+ * `terminZaehlt` (nicht vorbei, nicht abgesagt) und an denen die Dienstgruppe Dienste mit Plätzen hat – dieselbe Auswahl
+ * wie bei „Erinnern“ (`erinnerSpalten`, `gruppeHatDienste`). In der Reihenfolge des Plans. Der Planer rechnet sie beim
+ * Start der Abfrage und speichert sie in der Abfrage; später hinzugekommene Termine gehören bewusst nicht dazu.
+ */
+export function termineFuerAbfrage(
+  plan: Plan,
+  gruppe: PlanGruppe,
+  von: string,
+  bis: string,
+  heute: string,
+): number[] {
+  const imZeitraum = plan.spalten.flatMap((s, i) => (s.tag >= von && s.tag <= bis ? [i] : []));
+  return erinnerSpalten(plan, imZeitraum, heute)
+    .filter((i) => gruppeHatDienste(gruppe, i))
+    .map((i) => plan.spalten[i].id);
+}
+
+/**
+ * **„Offen“ – die eine Regel je Person** (aus `fehlendeInGruppe` herausgelöst, damit „Erinnern“ und die Startseite
+ * dasselbe rechnen): Ein Termin ist für die Person offen, wenn er `terminZaehlt` (nicht vorbei, nicht abgesagt), die
+ * Dienstgruppe dort Dienste hat (`vorgesehen`, ohne Angabe ja), die Person weder geantwortet hat noch eingeteilt ist –
+ * und sie dort nicht pausiert. `offen` sind die Termine in der Reihenfolge von `termine`; `pausiert` die, die ohne Pause
+ * offen wären (nur Pause hielt sie heraus – „Erinnern“ zählt danach, wer ausgelassen wird).
+ *
+ * Weiß nichts von `personenRaster`: Wer antwortet, eingeteilt oder pausiert ist, kommt als Frage je Termin herein – der
+ * Planer beantwortet sie aus dem Raster, die Mitarbeitenden aus ihren eigenen Daten.
+ */
+export function offeneTermine<T extends { tag: string; abgesagt?: boolean }>(o: {
+  termine: readonly T[];
+  /** Heute, `YYYY-MM-DD` (Ortszeit der Gemeinde). */
+  heute: string;
+  /** Antwort aus „Wann kann ich?“ **oder** Abwesenheit (Nein = Abwesenheit, `decktTermin`). */
+  beantwortet: (t: T) => boolean;
+  /** In der Dienstgruppe an diesem Termin zugesagt oder angefragt. */
+  eingeteilt: (t: T) => boolean;
+  /** Pause der Person an diesem Tag (`pauseAm`). */
+  pausiert: (t: T) => boolean;
+  /** Hat die Dienstgruppe dort Dienste? Ohne Angabe ja. */
+  vorgesehen?: (t: T) => boolean;
+}): { offen: T[]; pausiert: T[] } {
+  const ohnePause = o.termine.filter(
+    (t) =>
+      terminZaehlt(t, o.heute) &&
+      (o.vorgesehen?.(t) ?? true) &&
+      !o.beantwortet(t) &&
+      !o.eingeteilt(t),
+  );
+  return {
+    offen: ohnePause.filter((t) => !o.pausiert(t)),
+    pausiert: ohnePause.filter((t) => o.pausiert(t)),
+  };
 }
 
 /**
@@ -176,20 +248,29 @@ export function fehlendeInGruppe(o: {
     }
   }
   // Die Gruppe hat an einem Termin Dienste, wenn dort mindestens ein Dienst Plätze hat (sonst „nicht vorgesehen“).
-  const hatDienste = spalten.map((_, pos) => raster.blocks.some((b) => b.plaetze[pos].anzahl > 0));
+  const hatDienste = spalten.map((i) => gruppeHatDienste(o.gruppe, i));
+  const termine = spalten.map((i) => offenerTermin(o.plan.spalten[i]));
+  /** Position in `spalten` je Termin-ID – die Fragen unten gelten je Termin. */
+  const posVon = new Map(termine.map((t, pos) => [t.terminId, pos]));
 
   const personen: Fehlende[] = [];
   const pausiert: number[] = [];
   for (const personId of mitglieder) {
-    const ohnePause = spalten.flatMap((i, pos) =>
-      hatDienste[pos] && !beantwortet[pos].has(personId) && !eingeteilt[pos].has(personId)
-        ? [offenerTermin(o.plan.spalten[i])]
-        : [],
-    );
-    const termine = ohnePause.filter((t) => pauseAm(liste, personId, t.tag) === null);
-    if (termine.length > 0)
-      personen.push({ personId, name: namen.get(personId) ?? `Person ${personId}`, termine });
-    else if (ohnePause.length > 0) pausiert.push(personId);
+    const { offen, pausiert: nurPause } = offeneTermine({
+      termine,
+      heute: o.heute,
+      vorgesehen: (t) => hatDienste[posVon.get(t.terminId)!],
+      beantwortet: (t) => beantwortet[posVon.get(t.terminId)!].has(personId),
+      eingeteilt: (t) => eingeteilt[posVon.get(t.terminId)!].has(personId),
+      pausiert: (t) => pauseAm(liste, personId, t.tag) !== null,
+    });
+    if (offen.length > 0)
+      personen.push({
+        personId,
+        name: namen.get(personId) ?? `Person ${personId}`,
+        termine: offen,
+      });
+    else if (nurPause.length > 0) pausiert.push(personId);
   }
   personen.sort((a, b) => a.name.localeCompare(b.name, 'de') || a.personId - b.personId);
   return { art: 'ok', personen, pausiert };

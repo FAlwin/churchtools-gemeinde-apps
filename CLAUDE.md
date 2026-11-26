@@ -955,6 +955,11 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.42.1 und `protokolle-v1.8.1` (27.11.2026) = leere Datumsfelder unter iOS.** Ein leeres Datumsfeld zeigt unter iOS
+  nichts und fiel ohne greifende feste Höhe auf Rand und Polster zusammen (Liederheft Von/Bis wegen `flex: 1` in der
+  Spalte, Dienstplaner Abfrage/Person ohne `height`). Fix im Baustein `datumsfeld`: `::-webkit-date-and-time-value
+{ min-height: 1lh }` (#1182, Wächter `datumsfeld.test.ts`), im iPad-Simulator gemessen. Gab es schon vor v2.42.0.
+  **Dienstplaner bewusst zurückgestellt** (Alwin): ein Release brächte die nicht abgenommene Etappe „Abfragen“ mit.
 - **v2.42.0 (26.11.2026) = iPad-Kopf scharf, Ablaufpunkt als Seite, Infos in der Zelle.** Am iPad (installierte App,
   iPadOS 26) steht der Kopf ohne Reiter jetzt unter dem Unschärfe-Band – die iPad-Ausnahme für `--inhalt-pad-top` ist weg
   (#1174, Wächter in `reiterObenRand.test.ts`). Dazu seit v2.41.0: Ablaufpunkt öffnet überall eine Seite (`PunktSeite`),

@@ -955,15 +955,19 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.42.1 und `protokolle-v1.8.1` (27.11.2026) = leere Datumsfelder unter iOS.** Ein leeres Datumsfeld zeigt unter iOS
+  nichts und fiel ohne greifende feste Höhe auf Rand und Polster zusammen (Liederheft Von/Bis wegen `flex: 1` in der
+  Spalte, Dienstplaner Abfrage/Person ohne `height`). Fix im Baustein `datumsfeld`: `::-webkit-date-and-time-value
+{ min-height: 1lh }` (#1182, Wächter `datumsfeld.test.ts`), im iPad-Simulator gemessen. Gab es schon vor v2.42.0.
+  **Dienstplaner bewusst zurückgestellt** (Alwin): ein Release brächte die nicht abgenommene Etappe „Abfragen“ mit.
+  `protokolle-v1.8.1` bringt dazu die Anwesenheit im Dunkeln mit: Kasten `--bg` statt `--surface3`, sonst hatten die
+  Knöpfe „Anwesend/Abwesend“ dessen Farbe (#1186, gefunden bei TF-PROT-33 Schritt 10).
 - **v2.42.0 (26.11.2026) = iPad-Kopf scharf, Ablaufpunkt als Seite, Infos in der Zelle.** Am iPad (installierte App,
   iPadOS 26) steht der Kopf ohne Reiter jetzt unter dem Unschärfe-Band – die iPad-Ausnahme für `--inhalt-pad-top` ist weg
   (#1174, Wächter in `reiterObenRand.test.ts`). Dazu seit v2.41.0: Ablaufpunkt öffnet überall eine Seite (`PunktSeite`),
   Infos der Dienstgruppen direkt in der Zelle bearbeiten (Tour `setlist-edit-v9`), Datumsfelder in Safari mittig. Auf
   Alwins Wunsch ohne eigene Abnahme in der Test-Instanz veröffentlicht. Dienstplaner, Protokolle, Website, Anmeldungen
   bleiben bei ihren eigenen Tags.
-- **`protokolle-v1.8.1` (27.11.2026):** Anwesenheit im Dunkeln: Kasten `--bg` statt `--surface3`, sonst hatten die Knöpfe
-  „Anwesend/Abwesend“ dessen Farbe (#1186, gefunden bei TF-PROT-33 Schritt 10); leere Datumsfelder am iPad/iPhone eine Zeile
-  hoch (`m.datumsfeld`, alle Apps, #1182).
 - **`protokolle-v1.8.0` (26.11.2026):** Termin-Fenster komplett wie der CT-Dialog „Termin erstellen“: **„Im Auftrag von“**
   (Vorschläge beim Tippen, `PersonenSuche` mit `beimTippen`, #1165/#1170) und **„Bild“** (Upload nach dem Anlegen über
   `appointment_image`, nachgelesen, #1170). Mail-Regel: Einlader = `imAuftrag ?? ich` (`mailsAnAndere`, gemessen 26.11.2026,

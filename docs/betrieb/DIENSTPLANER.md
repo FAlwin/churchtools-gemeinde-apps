@@ -185,10 +185,10 @@ einer „Nur abwesend“-Gruppe nicht.
   sich das Dokument der Gruppe nicht lesen (Netz), ist sie gesperrt („Art der Abfrage nicht geladen“, „Erneut versuchen“); ein unlesbares Dokument gilt wie überall als „Zusagen“.
 - **Mail der Abfrage:** `mailFuer(…, art)` – bei „Nur abwesend“ ist der Standardtext „… Bitte trag bis <Frist> im Dienstplaner ein, an welchen Terminen du nicht kannst, und tippe auf „Fertig“.“
   (`standardText`); ein eigener Text im Erinnerungsplan gilt für beide Arten. **Offen:** Der Editor in Einstellungen füllt das Textfeld weiter mit dem Zusagen-Standard; bleibt er unverändert, wird
-  beim Speichern kein eigener Text gespeichert und die Mail nimmt den passenden Standard. Der Editor folgt mit der Einstellungs-Seite (V-6).
+  beim Speichern kein eigener Text gespeichert und die Mail nimmt den passenden Standard. Der Editor folgt in einem eigenen kleinen Schritt nach V-6.
 
-**Einstellungen für alle** (Live-Ansicht 2, L4-2, seit Alwin 23.11.2026): Der letzte Reiter **„Einstellungen“** öffnet ein Fenster mit
-der **Betriebsart der Live-Ansicht** (bis Beginn nach der Uhr, ab Beginn klicken = Standard · immer nach der Uhr · von Anfang an klicken).
+**Einstellungen für alle** (Live-Ansicht 2, L4-2, seit Alwin 23.11.2026): Der letzte Reiter **„Einstellungen“** öffnet die **Seite `#/einstellungen`**
+(seit V-6, 26.11.2026; vorher ein Fenster) mit der **Betriebsart der Live-Ansicht** (bis Beginn nach der Uhr, ab Beginn klicken = Standard · immer nach der Uhr · von Anfang an klicken).
 Gespeichert ist sie als **ein Wert** in der Ablage **„Einstellungen“** (Kürzel `dienstplaner-einstellungen`, Modul Dienstplaner; die
 App legt sie beim ersten Speichern an, wenn jemand Kategorien anlegen darf). **Ändern dürfen Planer** (prüft die App) – damit ChurchTools
 es auch durchlässt, braucht die Ablage für die Planer **Daten anlegen, ändern** und für **alle, die den Dienstplaner nutzen, Daten
@@ -231,7 +231,18 @@ alte kennt. Geschrieben wird mit demselben Recht wie der Verlauf („ändern“ 
 nichts. Zwei Planer, die im selben Augenblick schreiben, können sich theoretisch eine Markierung wegschreiben (ChurchTools prüft keine Version);
 das ist bewusst hingenommen – es sind seltene, von Hand gesetzte Markierungen, und das nächste Setzen/Lesen holt sie nach.
 
-**Meine Anzeige** (Live-Ansicht 2, L4-5, Alwin 23.11.2026): Unter „Einstellungen“ stellt **jede Person für sich** ein, was sie sehen will –
+**Die Seite „Einstellungen“** (V-6, 26.11.2026, Entwurf V v2 Abschnitt 4): Von oben **„Meine Anzeige“** (wirkt sofort, zählt nie als Änderung),
+**„Live-Ansicht – für alle“** (alle sehen sie, ändern nur Planer) und – nur für Planer – **„Verfügbarkeit & Erinnerungen“**. Statt Fenster-Knöpfen steht **eine Leiste
+unten**, nur für Planer und nur, solange etwas ungespeichert ist: **„N Änderung(en) nicht gespeichert · Verwerfen · Speichern“**. N zählt eine Funktion
+(`anzahlAenderungen` in `einstellungenTexte.ts`): Live-Ansicht, Art der Verfügbarkeits-Abfrage und Erinnerungsplan je eine, also höchstens 3. **Speichern** schreibt nur, was
+geändert ist (Betriebsart und Erinnerungsplan getrennt, nichts wird wiederholt) und schließt nichts: Bei Erfolg verschwindet die Leiste; scheitert ein Teil, steht die Meldung
+(„Live-Ansicht: … Gespeichert: Erinnerungen für Musik.“) in der Leiste, und N zählt nur noch den Rest. **Verwerfen** setzt alles auf den gelesenen Stand zurück. **Weg von der
+Seite mit Ungespeichertem:** Reiterklick und „Zurück“ im Browser fragen „Änderungen verwerfen?“ („Verwerfen und wechseln“ / „Abbrechen“; bei „Zurück“ setzt die App die Adresse auf
+`#/einstellungen` zurück, bis die Antwort da ist); Neu laden oder Tab schließen löst den Hinweis des Browsers aus. Der Gruppenwechsel im Erinnerungs-Abschnitt hat seine eigene Rückfrage.
+„Einrichten …“ ist gesperrt, solange der Plan Ungespeichertes hat – so geht dabei nichts verloren. Die Adresse `#/einstellungen` kennt `reiterAusAdresse` nicht (es liefert „Start“);
+`App.tsx` fragt sie zuerst ab, damit auf der Seite weder die Startseite noch deren Termine noch „Hallo …“ erscheinen.
+
+**Meine Anzeige** (Live-Ansicht 2, L4-5, Alwin 23.11.2026): Auf der Seite „Einstellungen“ stellt **jede Person für sich** ein, was sie sehen will –
 sechs Haken, **Standard alles an**: „−1 / +1 Min“ in der Live-Ansicht (nur die Knöpfe; die Rechnung bleibt), Durchschnitt beim Ablauf
 bearbeiten, Rückblick im Termin (darunter eingerückt die Spalten „Ø bisher“ und „±“, nur wählbar, solange der Rückblick an ist) und die Infos
 der eigenen Dienstgruppen in der Live-Ansicht (A16: nur die Dienstgruppen, in denen man an diesem Termin eingeteilt ist – sonst die Wahl unter
@@ -248,15 +259,15 @@ richtig startet.
 
 _Sicher gegen Verlust:_ Abgeglichen wird beim Öffnen, kurz (1,5 s) nach jeder Änderung, beim Weglegen der Seite und wenn das Netz zurückkommt –
 **Feld für Feld, die jüngere Änderung gewinnt**; ersetzt wird als Doppelschritt (neue Fassung hochladen, nachlesen, erst dann die alte löschen).
-Scheitert etwas **vorübergehend** (Netz, 5xx, Zeitgrenze), bleibt alles im Gerät und wird beim nächsten Anlass nachgeholt; im Fenster steht leise
+Scheitert etwas **vorübergehend** (Netz, 5xx, Zeitgrenze), bleibt alles im Gerät und wird beim nächsten Anlass nachgeholt; auf der Seite steht leise
 „Noch nicht in ChurchTools gespeichert …“, die Auswahl bleibt sichtbar. Die Datei wird **nie mit Standardwerten überschrieben**: Ein
 misslungenes Lesen lädt nichts hoch (die Ablage wirft), und hochgeladen wird nur, was die Person gewählt hat. Den Abgleich teilen sich Dienstplaner und
 Protokolle (`ui/ct/useAblageSpiegel.ts`). Die Demo (`?demo`) hält die Personen-Datei im Speicher (`demo.ts`), zusätzlich merkt sich das Gerät die Wahl.
 
-**Verfügbarkeit fragen – je Dienstgruppe** (V-2, 26.11.2026, nur Planer): Im Fenster „Einstellungen“ steht im Abschnitt **„Verfügbarkeit & Erinnerungen“**
+**Verfügbarkeit fragen – je Dienstgruppe** (V-2, 26.11.2026, nur Planer): Auf der Seite „Einstellungen“ steht im Abschnitt **„Verfügbarkeit & Erinnerungen“**
 (der der gewählten Dienstgruppe) ganz oben die Wahl **„Verfügbarkeit fragen“**: **Ja · Vielleicht · Nein** (Zusagen, wie bisher; Startwert für jede Gruppe) oder
-**Nur abwesend** (jede Person hakt nur an, wann sie nicht kann, alle anderen Termine gelten als „kann“). Gespeichert wird sie mit dem einen „Speichern“ des
-Fensters im selben Dokument wie der Erinnerungsplan (`dienstplaner-abfragen-<Dienstgruppe>`, Feld `verfuegbarkeit`: `zusagen` | `abwesend`; ein älteres Dokument
+**Nur abwesend** (jede Person hakt nur an, wann sie nicht kann, alle anderen Termine gelten als „kann“). Gespeichert wird sie mit dem einen „Speichern“ der
+Leiste im selben Dokument wie der Erinnerungsplan (`dienstplaner-abfragen-<Dienstgruppe>`, Feld `verfuegbarkeit`: `zusagen` | `abwesend`; ein älteres Dokument
 ohne das Feld gilt als `zusagen`, ein anderer Wert macht es unlesbar) – mit Version, Konflikt-Schutz und Nachlesen wie der Plan. **Anders als der Plan gilt die Art
 sofort**, auch während einer laufenden Abfrage. Die eine Regel dazu ist `fragtZusagen(inhalt)` in `shared/dienstplan/abfragen.ts` (ohne Dokument: ja). Die
 Oberfläche „Verfügbarkeit“ richtet sich seit V-3 danach (Umschalter „Abwesenheiten | Zusagen“ nur mit einer Zusagen-Gruppe, Termine unter „Zusagen“ nur mit Diensten dieser Gruppen);
@@ -775,7 +786,7 @@ aufrufen). Testnutzer Spike (19) hat nur „Dienstplaner sehen“.
 - **Live-Ansicht, Betriebsart und Zeitkonto** (L4-2): **eine** Rechnung in `shared/ct/liveAgenda.ts` (`liveLage`: `betriebsart`,
   `konto`, `kontoSek`); die Anzeige `dienstplaner/src/LiveAnsicht.tsx` rechnet nichts nach. Die Betriebsart liest `useBetriebsart` (alle 30 s,
   nach Fehler alle 5 s; ein Lesefehler ändert eine gelesene Art nie), Lesen/Speichern der Einstellung `shared/dienstplan/liveEinstellungen.ts`
-  (Dokument mit Version wie „Was das Organigramm zeigt“), Fenster `dienstplaner/src/EinstellungenFenster.tsx` (über `ErweiterungsSeite`,
+  (Dokument mit Version wie „Was das Organigramm zeigt“), Seite `dienstplaner/src/EinstellungenSeite.tsx` (Adresse `#/einstellungen`; der Reiter kommt von `ErweiterungsSeite`,
   Prop `einstellungen`, R13). **Zeitkonto** = Plan-Ende des Punkts minus voraussichtliches Ende (sekundengenau, laufend, gegen den
   ursprünglichen Plan; „−1 / +1 Min“ ändert nur den Kreis).
 - **Live-Verlauf, ±, Prognose und Fehlklick** (L4-3): **eine** Rechnung in `shared/ct/liveVerlauf.ts` (Wechsel zusammenführen, wirksame Läufe
@@ -796,7 +807,7 @@ aufrufen). Testnutzer Spike (19) hat nur „Dienstplaner sehen“.
   nach „Live“), `useVerlaufDaten.ts` rechnet den Schnitt, `Rueckblick.tsx` zeigt die Karte, `TerminAnsicht.tsx` verdrahtet sie und reicht das
   „Ø“ an `useAblaufBearbeiten` (`schnittText`, gemeinsamer Baustein in `ui/ablauf/`). `meineAnzeige.ts` hält die Schalter (Standard alles an,
   `anzeigeAus` liest sie aus der Personen-Datei) und den Kontext; **L4-5** füttert ihn über `MeineAnzeigeAnschluss.tsx` (um die ganze Seite in `App.tsx`; Personen-Datei und Schlüssel in `anzeigeAblage.ts`;
-  Abgleich `ui/ct/useAblageSpiegel.ts`, derselbe Baustein wie die To-Do-Einstellungen der Protokolle); das Fenster ist `EinstellungenFenster.tsx`. Das Lied-Merkmal (`LivePunkt.lied`, `Wechsel.lied`, Ablage `l`) kommt von `liveListe`; ältere Verläufe
+  Abgleich `ui/ct/useAblageSpiegel.ts`, derselbe Baustein wie die To-Do-Einstellungen der Protokolle); die Seite ist `EinstellungenSeite.tsx`. Das Lied-Merkmal (`LivePunkt.lied`, `Wechsel.lied`, Ablage `l`) kommt von `liveListe`; ältere Verläufe
   ohne Merkmal zählen für den Schnitt nach Titel.
   Die Demo hat drei vergangene Gottesdienste mit Verlauf (108 mit Rückblick und einer Zeile „nicht im Schnitt“, 109/110 für Ø).
 - Release: Tag `dienstplan-vX.Y.Z` → `dienstplaner-release.yml` → gemeinsame Vorlage

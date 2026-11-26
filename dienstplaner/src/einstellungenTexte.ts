@@ -40,3 +40,17 @@ export function einstellungenFehlerText(grund: SpeicherGrund, lesen: boolean): s
       return 'Das ist zu groß für einen Wert in ChurchTools.';
   }
 }
+
+/**
+ * **Wie viele ungespeicherte Änderungen die Leiste der Einstellungen-Seite nennt** – die einzige Stelle, die zählt: die
+ * Live-Ansicht (Betriebsart), die Art der Verfügbarkeits-Abfrage und der Erinnerungsplan je eine. „Meine Anzeige“ wirkt
+ * sofort und kommt hier nicht vor. Höchstens 3.
+ */
+export function anzahlAenderungen(g: { live: boolean; art: boolean; plan: boolean }): number {
+  return [g.live, g.art, g.plan].filter(Boolean).length;
+}
+
+/** „1 Änderung nicht gespeichert“ / „2 Änderungen nicht gespeichert“. */
+export function aenderungenText(n: number): string {
+  return `${n} ${n === 1 ? 'Änderung' : 'Änderungen'} nicht gespeichert`;
+}

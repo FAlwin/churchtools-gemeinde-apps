@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { STANDARD_BETRIEBSART } from '@shared/ct/liveAgenda';
-import { EinstellungenFenster } from './EinstellungenFenster';
+import { EinstellungenSeite } from './EinstellungenSeite';
 import {
   ANZEIGE_FELDER,
   AnzeigeKontext,
@@ -34,10 +34,9 @@ function zeige(o: { planer?: boolean; anzeige?: Partial<MeineAnzeige>; fehler?: 
         abgleichFehler: o.fehler ?? false,
       }}
     >
-      <EinstellungenFenster
+      <EinstellungenSeite
         darfAendern={o.planer ?? false}
         ich={{ personId: 1, name: 'Alwin' }}
-        onSchliessen={() => {}}
         lesen={() =>
           Promise.resolve({
             betriebsart: STANDARD_BETRIEBSART,
@@ -56,12 +55,12 @@ const haken = (f: keyof MeineAnzeige) =>
 
 afterEach(cleanup);
 
-describe('EinstellungenFenster – Meine Anzeige (L4-5)', () => {
-  it('zeigt den Abschnitt unter „Live-Ansicht – für alle“ mit dem Wortlaut des Entwurfs; alles an', async () => {
+describe('EinstellungenSeite – Meine Anzeige (L4-5)', () => {
+  it('zeigt den Abschnitt oben, vor „Live-Ansicht – für alle“, mit dem Wortlaut des Entwurfs; alles an', async () => {
     zeige();
     await screen.findByRole('radiogroup');
     const titel = screen.getAllByRole('heading').map((h) => h.textContent);
-    expect(titel).toEqual(['Live-Ansicht – für alle', 'Meine Anzeige']);
+    expect(titel).toEqual(['Einstellungen', 'Meine Anzeige', 'Live-Ansicht – für alle']);
     expect(screen.getByText('Gilt für dich auf allen deinen Geräten.')).toBeTruthy();
     expect(screen.getAllByRole('checkbox')).toHaveLength(6);
     for (const f of ANZEIGE_FELDER) expect(haken(f).checked).toBe(true);
@@ -84,18 +83,27 @@ describe('EinstellungenFenster – Meine Anzeige (L4-5)', () => {
     expect(haken('minutenKnoepfe').disabled).toBe(false);
     fireEvent.click(haken('minutenKnoepfe'));
     expect(setzen).toHaveBeenCalledWith({ minutenKnoepfe: false });
-    // Oben nichts zu speichern; geschlossen wird mit „Fertig“.
+    // Nichts zu speichern: keine Leiste (und kein „Fertig“ mehr – die Seite wird mit einem Reiter verlassen).
     expect(screen.queryByRole('button', { name: 'Speichern' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Fertig' })).toBeTruthy();
+    expect(screen.queryByRole('group', { name: 'Noch nicht gespeichert' })).toBeNull();
   });
 
-  it('Planer: die Betriebsarten oben sind offen, „Speichern“ gehört nur zu ihnen; „Meine Anzeige“ ändert sich ohne Speichern', async () => {
+  it('Planer: die Betriebsarten sind offen, die Leiste mit „Speichern“ gehört nur zu ihnen; „Meine Anzeige“ ändert sich ohne Leiste', async () => {
     const { setzen } = zeige({ planer: true });
     await screen.findByRole('radiogroup');
     for (const r of screen.getAllByRole<HTMLInputElement>('radio')) expect(r.disabled).toBe(false);
-    expect(screen.getByRole('button', { name: 'Speichern' })).toBeTruthy();
+    const leiste = () => screen.queryByRole('group', { name: 'Noch nicht gespeichert' });
+    expect(leiste()).toBeNull();
     fireEvent.click(haken('schnittBeimPlanen'));
     expect(setzen).toHaveBeenCalledWith({ schnittBeimPlanen: false });
+    // „Meine Anzeige“ zählt nie als Änderung – auch nicht, wenn alle Haken umgelegt sind.
+    for (const f of ANZEIGE_FELDER) fireEvent.click(haken(f));
+    expect(leiste()).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Speichern' })).toBeNull();
+    // Erst die Betriebsart bringt die Leiste.
+    fireEvent.click(screen.getByRole('radio', { name: /Von Anfang an klicken/ }));
+    expect(leiste()?.textContent).toContain('1 Änderung nicht gespeichert');
+    expect(screen.getByRole('button', { name: 'Speichern' })).toBeTruthy();
   });
 
   it('die zwei Spalten gehören zum Rückblick: ist er aus, sind sie gesperrt (ihr Wert bleibt), sonst frei', async () => {

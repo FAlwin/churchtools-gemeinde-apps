@@ -5,7 +5,7 @@ import type { Dienstgruppe } from '@shared/ct/dienstgruppen';
 import { STANDARD_BETRIEBSART } from '@shared/ct/liveAgenda';
 import type { AbfragenInhalt } from '@shared/dienstplan/abfragen';
 import { standardInhalt, type AbfragenStand } from '@shared/dienstplan/abfragenSpeicher';
-import { EinstellungenFenster } from './EinstellungenFenster';
+import { EinstellungenSeite } from './EinstellungenSeite';
 import type { Lage, Lauf, EinrichtenAnschluss } from './einrichtenAbfragen';
 
 vi.mock('./einrichtenAbfragen', async (original) => ({
@@ -91,7 +91,7 @@ function zeige(
   const anschluss = { port: {} } as EinrichtenAnschluss;
   const gruppenIds = vi.fn(() => [21]);
   render(
-    <EinstellungenFenster
+    <EinstellungenSeite
       darfAendern
       ich={ICH}
       abfragen={{
@@ -102,7 +102,6 @@ function zeige(
           ? {}
           : { einrichten: { darf: o.darf ?? true, anschluss, gruppenIds } }),
       }}
-      onSchliessen={() => {}}
       lesen={() =>
         Promise.resolve({
           betriebsart: STANDARD_BETRIEBSART,

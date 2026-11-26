@@ -109,3 +109,14 @@ export const ADRESSE_VORLAGEN = '#/vorlagen';
 export function adresseFuerVorlage(id: number): string {
   return `#/vorlage/${id}`;
 }
+
+/**
+ * **Die Seite „Einstellungen“** (V-6, Entwurf V v2 Abschnitt 4): `#/einstellungen`, vorher ein Fenster. Kein eigener Reiter
+ * dieser Liste – `ErweiterungsSeite` hängt ihren Reiter „Einstellungen“ selbst hinten an (R13). `reiterAusAdresse` kennt die
+ * Adresse nicht und liefert dafür „Start“: Wer auf Start-Zweige schaut, muss **zuerst** `istEinstellungenAdresse` fragen.
+ */
+export const ADRESSE_EINSTELLUNGEN = '#/einstellungen';
+
+export function istEinstellungenAdresse(hash: string): boolean {
+  return hash === ADRESSE_EINSTELLUNGEN;
+}

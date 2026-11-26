@@ -97,7 +97,7 @@ interface Props<T extends string> {
   /**
    * **Einstellungen als letzter Reiter** (E24, „Ruhige Bedienung“ B8b): jede App, deren Einstellungen jemand
    * öffnen darf, gibt nur diese Funktion – Name, Symbol und Platz (ganz rechts, am Handy ganz unten rechts) kommen von
-   * hier, damit jede App sie an derselben Stelle hat. Der Reiter öffnet das Fenster der App (E18: Fenster nicht stark
+   * hier, damit jede App sie an derselben Stelle hat. Der Reiter öffnet das Fenster oder die Seite der App (E18: Fenster nicht stark
    * verändern); `offen` hebt ihn hervor, solange es offen ist. Wer sie nicht öffnen darf, bekommt keinen Reiter (die App
    * gibt dann nichts) – die Rechte bleiben bei der App. Hat die App sonst keine Reiter, entsteht ein einzelner
    * Start-Reiter davor (`startName`).
@@ -153,7 +153,7 @@ export function ErweiterungsSeite<T extends string = string>({
 }: Props<T>) {
   // Nur der App-Name, klein oben (E24) – der Gemeindename steht schon in der ChurchTools-Leiste darüber.
   const appName = <p className={styles.app}>{app}</p>;
-  // Einstellungen: letzter Reiter, öffnet das Fenster der App. Ohne eigene Reiter steht davor ein einzelner Start-Reiter.
+  // Einstellungen: letzter Reiter, öffnet das Fenster oder die Seite der App. Ohne eigene Reiter steht davor ein einzelner Start-Reiter.
   const reiter: Reiter<string>[] = [
     ...(bereiche?.reiter ??
       (einstellungen ? [{ id: 'start', label: startName, icon: 'home' }] : [])),

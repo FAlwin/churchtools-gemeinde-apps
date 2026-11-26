@@ -684,7 +684,7 @@ angelegt wird. Danach stehen in ChurchTools Gruppe, Routine und je Planer die zw
 
 - **Priorität:** normal
 - **Betrifft:** `shared/dienstplan/abfrageAutomatik.ts`, `dienstplaner/src/einrichtenAbfragen.ts`, `dienstplaner/src/EinrichtenFenster.tsx`, `dienstplaner/src/ErinnerungsplanAbschnitt.tsx`, `dienstplaner/src/useErinnerungsplan.ts`, `dienstplaner/src/abfragenTexte.ts`, `shared/dienstplan/abfragen.ts`, `shared/ct/gruppenart.ts`
-- **Automatisiert:** weitgehend – `shared/dienstplan/abfrageAutomatik.test.ts` (Planer-Liste aus beiden Quellen, Soll gegen Ist mit den zwei Rechten), `dienstplaner/src/einrichtenAbfragen.test.ts` (Reihenfolge, Rechte vor und nach dem Schreiben gelesen, ersetzendes `PUT` erkannt, Fehlerzweige einzeln, Wiederholen ohne Doppel), `dienstplaner/src/EinstellungenFenster.einrichten.test.tsx` (Kasten für Admin und Nicht-Admin, Fenster nennt die Planer und die zwei Rechte); **nur von Hand:** dass ChurchTools die Gruppe wirklich so anlegt (Typ, „automatisch annehmen“, Beschreibung, Routine), dass `PUT /permissions/person/{id}` die Rechte **hinzufügt** statt zu ersetzen, und die Form der Antwort von `GET /permissions/person/{id}`
+- **Automatisiert:** weitgehend – `shared/dienstplan/abfrageAutomatik.test.ts` (Planer-Liste aus beiden Quellen, Soll gegen Ist mit den zwei Rechten), `dienstplaner/src/einrichtenAbfragen.test.ts` (Reihenfolge, Rechte vor und nach dem Schreiben gelesen, ersetzendes `PUT` erkannt, Fehlerzweige einzeln, Wiederholen ohne Doppel), `dienstplaner/src/EinstellungenSeite.einrichten.test.tsx` (Kasten für Admin und Nicht-Admin, Fenster nennt die Planer und die zwei Rechte); **nur von Hand:** dass ChurchTools die Gruppe wirklich so anlegt (Typ, „automatisch annehmen“, Beschreibung, Routine), dass `PUT /permissions/person/{id}` die Rechte **hinzufügt** statt zu ersetzen, und die Form der Antwort von `GET /permissions/person/{id}`
 - **Historie:** Dienstplaner R-5a (25.11.2026), umgestellt auf „Planer wie alle“ mit R-5b, Bauplan „Abfragen mit Frist + Erinnerungsplan“; Messung `messung-runden.md`
 
 </details>
@@ -736,18 +736,18 @@ selbst. Wer antwortet, steht danach nicht mehr in der Gruppe.
 **Das brauchst du:** Den Dienstplaner in der **Test-Instanz**, ein **Planer-Konto** für mindestens eine Dienstgruppe (besser zwei, eine davon ohne Planer-Recht für
 dieses Konto), ein Konto **ohne** Planer-Recht, und Zugriff auf ChurchTools zum Nachsehen (Ablage „Einstellungen“ des Dienstplaners).
 
-**Das muss passieren:** Planer stellen je Dienstgruppe ein, wie die Verfügbarkeit gefragt wird; die Wahl wird mit dem „Speichern“ des Fensters gespeichert und gilt
+**Das muss passieren:** Planer stellen je Dienstgruppe ein, wie die Verfügbarkeit gefragt wird; die Wahl wird mit dem „Speichern“ der Leiste auf der Seite „Einstellungen“ gespeichert und gilt
 sofort. Wer nicht plant, sieht die Wahl nicht. (Dass die Oberfläche sich danach richtet, steht in TF-VERF-23, die Abfrage mit „Fertig“ in TF-VERF-24; das Planen in TF-VERF-25 – hier prüfst du nur die Einstellung.)
 
 1. Als Planer **Einstellungen** öffnen: Der Abschnitt **„Verfügbarkeit & Erinnerungen“** beginnt mit **„Verfügbarkeit fragen“** und zwei Wahlpunkten mit je einer Erklärzeile
    („Jede Person sagt je Termin zu, vielleicht oder ab. …“ / „Jede Person hakt nur an, wann sie nicht kann. …“). Vorgewählt ist **Ja · Vielleicht · Nein**.
-2. **Nur abwesend** wählen, **Speichern** → das Fenster schließt. Wieder öffnen: **Nur abwesend** ist gewählt. (ChurchTools: Das Dokument der Dienstgruppe enthält `verfuegbarkeit: abwesend`;
+2. **Nur abwesend** wählen → unten erscheint die Leiste „1 Änderung nicht gespeichert“, **Speichern** → die Leiste verschwindet (die Seite bleibt). Die Seite neu öffnen: **Nur abwesend** ist gewählt. (ChurchTools: Das Dokument der Dienstgruppe enthält `verfuegbarkeit: abwesend`;
    Erinnerungsplan und eingerichtete Erinnerungen sind unverändert.)
-3. Zurück auf **Ja · Vielleicht · Nein** → Speichern → bleibt so. **Nichts ändern** und Speichern → das Fenster schließt, es wird nichts geschrieben (die Version in ChurchTools
+3. Zurück auf **Ja · Vielleicht · Nein** → Speichern → bleibt so. **Nichts ändern**: es gibt keine Leiste, es wird nichts geschrieben (die Version in ChurchTools
    bleibt gleich).
 4. Mehrere Dienstgruppen: In Gruppe A **Nur abwesend** wählen, noch nicht speichern, die Gruppe wechseln → Rückfrage „Änderungen verwerfen?“; „Abbrechen“ behält die Wahl.
    Gruppe B hat ihre **eigene** Wahl (Startwert, wenn nie gesetzt).
-5. **Konflikt:** In zwei Fenstern (zwei Planer, dieselbe Gruppe) in beiden eine andere Wahl treffen, im ersten Speichern, dann im zweiten → „… hat das inzwischen geändert – nichts
+5. **Konflikt:** In zwei Browser-Fenstern (zwei Planer, dieselbe Gruppe) in beiden eine andere Wahl treffen, im ersten Speichern, dann im zweiten → „… hat das inzwischen geändert – nichts
    überschrieben“, es steht der Stand des ersten da.
 6. Als Konto **ohne** Planer-Recht: In den Einstellungen gibt es **keine** Wahl „Verfügbarkeit fragen“ (nur die Live-Ansicht und „Meine Anzeige“).
 7. Ein Planer ohne Recht an der Ablage „Einstellungen“: Speichern scheitert mit dem Hinweis auf die fehlenden Rechte, nichts wird verändert.
@@ -755,8 +755,8 @@ sofort. Wer nicht plant, sieht die Wahl nicht. (Dass die Oberfläche sich danach
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `shared/dienstplan/abfragen.ts`, `shared/dienstplan/abfragenSpeicher.ts`, `dienstplaner/src/useErinnerungsplan.ts`, `dienstplaner/src/ErinnerungsplanAbschnitt.tsx`, `dienstplaner/src/abfragenTexte.ts`, `dienstplaner/src/EinstellungenFenster.tsx`
-- **Automatisiert:** weitgehend – `shared/dienstplan/abfragen.test.ts` (Schema: Altbestand ohne Feld → „zusagen“, ungültiger Wert → unlesbar; `fragtZusagen`), `dienstplaner/src/EinstellungenFenster.erinnerungen.test.tsx` (nur für Planer sichtbar, Speichern schreibt das Feld und lässt Plan/Einrichtung unberührt, nichts geändert → kein Schreiben, Konflikt, Gruppenwechsel). Von Hand bleibt der Durchklick mit echtem ChurchTools.
+- **Betrifft:** `shared/dienstplan/abfragen.ts`, `shared/dienstplan/abfragenSpeicher.ts`, `dienstplaner/src/useErinnerungsplan.ts`, `dienstplaner/src/ErinnerungsplanAbschnitt.tsx`, `dienstplaner/src/abfragenTexte.ts`, `dienstplaner/src/EinstellungenSeite.tsx`
+- **Automatisiert:** weitgehend – `shared/dienstplan/abfragen.test.ts` (Schema: Altbestand ohne Feld → „zusagen“, ungültiger Wert → unlesbar; `fragtZusagen`), `dienstplaner/src/EinstellungenSeite.erinnerungen.test.tsx` (nur für Planer sichtbar, Speichern schreibt das Feld und lässt Plan/Einrichtung unberührt, nichts geändert → kein Schreiben, Konflikt, Gruppenwechsel). Von Hand bleibt der Durchklick mit echtem ChurchTools.
 - **Historie:** Dienstplaner V-2 (26.11.2026), Bauplan „Zuschnitt V“, Entwurf `verfuegbarkeit-einstellungen-v4.html`
 
 </details>
@@ -833,7 +833,7 @@ mehr in der Hilfsgruppe und bekommt keine Mail mehr. Gespeichert wird nur „hat
 
 - **Priorität:** hoch
 - **Betrifft:** `shared/dienstplan/verfuegbarkeit.ts`, `shared/dienstplan/erinnern.ts`, `shared/dienstplan/abfrageStand.ts`, `shared/dienstplan/abfrageMail.ts`, `shared/dienstplan/personenAntworten.ts`, `dienstplaner/src/ladeVerfuegbarkeit.ts`, `dienstplaner/src/ladeAntworten.ts`, `dienstplaner/src/useAbfragen.ts`, `dienstplaner/src/useAbfrageLage.ts`, `dienstplaner/src/useAbfrageRegeln.ts`, `dienstplaner/src/AbfrageBand.tsx`, `dienstplaner/src/AbfrageKarte.tsx`, `dienstplaner/src/Abwesenheiten.tsx`, `dienstplaner/src/ErinnernFenster.tsx`, `dienstplaner/src/einrichtenAbfragen.ts`, `dienstplaner/src/EinrichtenFenster.tsx`, `ui/abwesenheiten/AbwesenheitenSeite.tsx`
-- **Automatisiert:** weitgehend – `shared/dienstplan/abfrageFertig.test.ts` (die Tabelle bestätigt / alle abwesend / teils / nichts für beide Arten, Planer und Mitarbeitende rechnen gleich, Regel einer Gruppe, Texte), `shared/dienstplan/verfuegbarkeit.test.ts` („Fertig“: alter Wert lesbar, Erhalt, Nachlesen, Konflikt, kaputtes Feld, anderer Fassung unangetastet), `dienstplaner/src/Abwesenheiten.abfrage.test.tsx` (Band, Fertig, grünes Band, „erst speichern“, R1, Fehler, Austritt nach Fertig), `dienstplaner/src/Startseite.abfrage.test.tsx` (Karte, kein Balken, Austritt), `dienstplaner/src/Planen.abfrage.test.tsx` (Stand, Eintragen beim Start, Abgleich), `dienstplaner/src/Planen.erinnern.test.tsx` (Erinnern schließt Bestätigte aus, Sperren, Einleitung), `dienstplaner/src/ladeVerfuegbarkeit.test.ts`, `dienstplaner/src/ladeAntworten.test.ts`, `dienstplaner/src/einrichtenAbfragen.test.ts` und `dienstplaner/src/EinstellungenFenster.einrichten.test.tsx` (Ablage einrichten), `dienstplaner/src/Planen.abfrage.test.tsx` (Start ohne Ablage). Von Hand bleibt der Durchklick mit echtem ChurchTools (Hilfsgruppe, Mails, Rechte an der Antworten-Ablage) und das Handy.
+- **Automatisiert:** weitgehend – `shared/dienstplan/abfrageFertig.test.ts` (die Tabelle bestätigt / alle abwesend / teils / nichts für beide Arten, Planer und Mitarbeitende rechnen gleich, Regel einer Gruppe, Texte), `shared/dienstplan/verfuegbarkeit.test.ts` („Fertig“: alter Wert lesbar, Erhalt, Nachlesen, Konflikt, kaputtes Feld, anderer Fassung unangetastet), `dienstplaner/src/Abwesenheiten.abfrage.test.tsx` (Band, Fertig, grünes Band, „erst speichern“, R1, Fehler, Austritt nach Fertig), `dienstplaner/src/Startseite.abfrage.test.tsx` (Karte, kein Balken, Austritt), `dienstplaner/src/Planen.abfrage.test.tsx` (Stand, Eintragen beim Start, Abgleich), `dienstplaner/src/Planen.erinnern.test.tsx` (Erinnern schließt Bestätigte aus, Sperren, Einleitung), `dienstplaner/src/ladeVerfuegbarkeit.test.ts`, `dienstplaner/src/ladeAntworten.test.ts`, `dienstplaner/src/einrichtenAbfragen.test.ts` und `dienstplaner/src/EinstellungenSeite.einrichten.test.tsx` (Ablage einrichten), `dienstplaner/src/Planen.abfrage.test.tsx` (Start ohne Ablage). Von Hand bleibt der Durchklick mit echtem ChurchTools (Hilfsgruppe, Mails, Rechte an der Antworten-Ablage) und das Handy.
 - **Historie:** Dienstplaner V-4 (26.11.2026), Bauplan „Zuschnitt V“, Entwurf `verfuegbarkeit-einstellungen-v4.html` (Abschnitt „Abfragen“ in v2)
 
 </details>
@@ -859,5 +859,31 @@ eine mit **Nur abwesend** (TF-VERF-22). In der „Nur abwesend“-Gruppe hat ein
 - **Betrifft:** `shared/dienstplan/personenAntworten.ts`, `shared/dienstplan/personenRaster.ts`, `dienstplaner/src/useAbfrageRegeln.ts`, `dienstplaner/src/App.tsx`
 - **Automatisiert:** weitgehend – `shared/dienstplan/personenAntworten.einordnung.test.ts` (`antwortFuer`/`antwortenFuerPlatz` bei „Nur abwesend“, nur ausgeblendet), `shared/dienstplan/personenRaster.antworten.test.ts` (Block `nurAbwesend`, Abwesenheit bleibt, Spaltenkopf), `dienstplaner/src/useAbfrageRegeln.test.ts` (`nurAbwesendAus` aus `ladeRegeln`, Lesefehler zählen nicht). Von Hand bleibt der Durchklick mit echtem ChurchTools und das Handy.
 - **Historie:** Dienstplaner V-5 (26.11.2026), Bauplan „Zuschnitt V“, Entwurf `verfuegbarkeit-einstellungen-v4.html`
+
+</details>
+
+### TF-VERF-26 · Einstellungen als Seite: Leiste, Verwerfen, Rückfrage
+
+**Das brauchst du:** Den Dienstplaner in der **Test-Instanz**, ein **Planer-Konto** für mindestens zwei Dienstgruppen, ein Konto **ohne** Planer-Recht, Rechner und Handy.
+
+**Das muss passieren:** „Einstellungen“ ist eine Seite mit der Adresse `…#/einstellungen`, kein Fenster. Unten steht eine Leiste, solange etwas nicht gespeichert ist; wer die Seite so verlässt, wird vorher gefragt.
+
+1. Reiter **„Einstellungen“** öffnen (am Handy unten rechts): Der Reiter ist markiert, oben steht die Überschrift **Einstellungen**, **kein** „Hallo …“ und keine Karten der Startseite. Von oben: **Meine Anzeige**, **Live-Ansicht – für alle**, **Verfügbarkeit & Erinnerungen** (der letzte nur für Planer).
+2. Nichts geändert: **keine** Leiste. Einen Haken bei **Meine Anzeige** umlegen: wirkt sofort, die Leiste erscheint **nicht**.
+3. Bei **Live-Ansicht** eine andere Betriebsart wählen: unten erscheint **„1 Änderung nicht gespeichert“** mit **Verwerfen** und **Speichern**. Zusätzlich bei einer Dienstgruppe die Art („Nur abwesend“) ändern und eine Erinnerung entfernen: **„2 Änderungen …“**, dann **„3 Änderungen …“** – nie mehr als drei. Am Handy steht die Leiste **über** der unteren Reiterleiste und verdeckt keinen Reiter.
+4. **Verwerfen**: alle drei Wahlen springen auf den gespeicherten Stand zurück, die Leiste verschwindet, nichts wird geschrieben.
+5. Wieder zwei Dinge ändern, **Speichern**: „Wird gespeichert …“, beide Knöpfe gesperrt; danach verschwindet die Leiste, die Seite **bleibt offen** und zeigt den neuen Stand. Scheitert ein Teil (Netz kurz weg): Meldung in der Leiste („Live-Ansicht: … Gespeichert: Erinnerungen für Technik.“), die Zahl sinkt auf das, was noch fehlt.
+6. Etwas ändern, dann oben auf einen **anderen Reiter** tippen: Fenster **„Änderungen verwerfen?“**. **Abbrechen** → du bleibst auf der Seite, die Änderung steht noch da. Nochmal tippen, **Verwerfen und wechseln** → du bist auf dem Reiter, die Änderung ist weg (Seite neu öffnen: gespeicherter Stand).
+7. Etwas ändern, dann im Browser **Zurück**: dieselbe Rückfrage, die Adresse bleibt `#/einstellungen`, es kommt **genau eine** Rückfrage. **Abbrechen** → du bleibst; **Verwerfen und wechseln** → du gehst dorthin, wo „Zurück“ hinführt.
+8. Etwas ändern, die Seite **neu laden** oder den Tab schließen: der Browser warnt. Ohne Änderung (oder nach Verwerfen/Speichern) warnt er nicht.
+9. Innerhalb von **Verfügbarkeit & Erinnerungen** die Dienstgruppe wechseln, während deren Plan geändert ist: **eine** Rückfrage (die des Abschnitts), keine zweite.
+10. Als Konto **ohne** Planer-Recht: Live-Ansicht nur zum Ansehen, keine Leiste, auch nach Umlegen eines „Meine Anzeige“-Hakens; beim Reiterwechsel keine Rückfrage.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `dienstplaner/src/EinstellungenSeite.tsx`, `dienstplaner/src/EinstellungenSeite.module.scss`, `dienstplaner/src/einstellungenTexte.ts`, `dienstplaner/src/useErinnerungsplan.ts`, `dienstplaner/src/reiter.ts`, `dienstplaner/src/App.tsx`, `ui/erweiterung/ErweiterungsSeite.tsx`
+- **Automatisiert:** weitgehend – `dienstplaner/src/EinstellungenSeite.test.tsx` (Leiste mit Zahl, Verwerfen, „Wird gespeichert …“, `beforeunload` nur bei Änderungen, Meldung an die App, `anzahlAenderungen`/`aenderungenText`, Fehlerzweige), `dienstplaner/src/EinstellungenSeite.erinnerungen.test.tsx` (2 und 3 Änderungen, Verwerfen mit allen Teilen, Teilfehler: N sinkt, Gruppenwechsel nur eine Rückfrage), `dienstplaner/src/EinstellungenSeite.meineAnzeige.test.tsx` („Meine Anzeige“ erzeugt keine Leiste, ohne Planer-Recht keine Leiste), `dienstplaner/src/App.test.tsx` (Seite unter `#/einstellungen` ohne Startseite/„Hallo“/Termine, Reiter markiert, Rückfrage bei Reiterklick und `hashchange` – beide Antworten, keine Schleife). Von Hand bleiben die Lage der Leiste am Handy über der Reiterleiste, das echte „Zurück“/Neuladen im Browser und ChurchTools mit Rechten.
+- **Historie:** Dienstplaner V-6 (26.11.2026), Bauplan „Zuschnitt V“, Entwurf V v2 Abschnitt 4 / v4
 
 </details>

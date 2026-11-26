@@ -28,6 +28,9 @@
  * ein `201` nichts: `anmeldungNachlesen` prüft `signup` am gelesenen Termin und liest die Gruppen des Typs; das Ergebnis steht
  * in `anmeldung`, bricht nichts ab, und es wird **nie gelöscht**.
  *
+ * **Bild** (Feld „Bild“): Nach dem Anlegen lädt `bildHochladen` die Datei hoch und liest den Termin neu (`appointment.image`);
+ * das Ergebnis steht in `bild` (`fehlt`/`unklar`) und bricht nichts ab. Bei „Nur verknüpfen“ gibt es keinen Upload.
+ *
  * Zeitgrenzen und Netzfehler markieren nie etwas als „im Kalender“ oder „nicht eintragen“.
  */
 import {
@@ -46,6 +49,7 @@ import { Unklar } from '@ui/ct/fehler';
 import { anfragenNachlesen } from './besprechungsanfragen';
 import { anmeldungNachlesen } from './anmeldungLesen';
 import { buchungenNachlesen } from './buchungenLesen';
+import { bildHochladen } from './bildHochladen';
 import { eventsNachlesen } from './eventsLesen';
 import {
   kalenderTermineAmTag,
@@ -82,6 +86,8 @@ export async function terminLegen(q: {
    * eine Mail**. Leer oder fehlend: keine Einladung. Bei „Nur verknüpfen“ geht nichts raus (kein Anlegen).
    */
   eingeladen?: readonly number[];
+  /** Das Bild des Termins – wird nach dem Anlegen hochgeladen. Bei „Nur verknüpfen“ ohne Wirkung. */
+  bild?: File | null;
 }): Promise<{
   art: 'angelegt' | 'verknuepft';
   id: number;
@@ -93,6 +99,8 @@ export async function terminLegen(q: {
   anfragen?: { fehlend: number[]; unklar: boolean };
   /** Nur nach dem Anlegen mit Anmeldung: `signupFehlt`, `fehlend` = Namen der Gruppen, die nicht da sind, `unklar` = nicht lesbar. */
   anmeldung?: AnmeldungErgebnis;
+  /** Nur nach dem Anlegen mit Bild: `fehlt` = nach dem Hochladen kein Bild am Termin, `unklar` = nicht lesbar. */
+  bild?: { fehlt: boolean; unklar: boolean };
 }> {
   if (q.verknuepfen) return { art: 'verknuepft', id: q.verknuepfen.id };
   const e = q.eintrag;
@@ -152,9 +160,13 @@ export async function terminLegen(q: {
           erwartet: gruppenErwartet,
         })
       : undefined;
+  const bild = q.bild
+    ? await bildHochladen({ kalender: e.kalender, termin: id, bild: q.bild })
+    : undefined;
   return {
     art: 'angelegt',
     id,
+    ...(bild ? { bild } : {}),
     ...(buchungen ? { buchungen } : {}),
     ...(eventsErgebnis ? { events: eventsErgebnis } : {}),
     ...(anfragen ? { anfragen } : {}),

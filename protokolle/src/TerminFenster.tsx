@@ -22,6 +22,7 @@ import {
 import type { TerminStand } from '@shared/protokolle/terminStand';
 import { buchungsHinweis } from '@shared/protokolle/terminRessourcen';
 import { eventHinweis, hinweiseZusammen } from '@shared/protokolle/terminEvents';
+import { bildHinweis } from '@shared/protokolle/terminBild';
 import { vorlageAnwenden, type TerminVorlage } from '@shared/protokolle/terminVorlagen';
 import { anfrageHinweis, angefragte } from '@shared/protokolle/besprechungsanfrage';
 import { mailsAnAndere } from '@shared/protokolle/einladungsmail';
@@ -75,6 +76,10 @@ const KEINE: readonly number[] = [];
  * **geleert** (nicht nur ausgeblendet). Der Fuß sagt vor dem Speichern, an wie viele Personen es geht. Nach einer **unklaren
  * Antwort** beim Anlegen ist „Speichern“ gesperrt, bis die Prüfung „steht schon da?“ neu gelaufen ist und den Termin
  * gefunden hat (dann „Verknüpfen“) – nie ein zweites `POST`, sonst gingen die Mails doppelt raus.
+ *
+ * **Im Auftrag von** (`TerminImAuftrag`) macht die gewählte Person zum Einlader der Besprechungsanfrage – dann bekomme auch ich eine Mail
+ * (`mailsAnAndere(eingeladen, imAuftrag ?? ich)`). Das **Bild** (`TerminBildFeld`) liegt hier als Datei im Zustand (nicht im `Eintrag`), geht nach dem
+ * Anlegen hoch (`terminLegen`, bei „Nur verknüpfen“ nie) und wird danach nachgelesen; fehlt es, steht es in der Meldung wie eine fehlende Buchung.
  *
  * Nach dem Anlegen kommt der Vermerk „im Kalender“. Scheitert nur der Vermerk, steht der Termin trotzdem – dann bleibt
  * das Fenster mit „Nochmal vermerken“ offen (wiederholt nur den Vermerk, legt nichts doppelt an). Fehlt nach dem Anlegen eine
@@ -244,6 +249,9 @@ export function TerminFenster({
   const [trotzdem, setTrotzdem] = useState(false);
   const verknuepfen = treffer && !trotzdem ? treffer : null;
 
+  // Das Bild gehört nicht zum `Eintrag` (eine Datei, keine Daten) und bleibt bei einer Vorlage stehen.
+  const [bild, setBild] = useState<File | null>(null);
+
   const [laeuft, setLaeuft] = useState(false);
   // Nach einer unklaren Antwort beim Anlegen: Speichern ist gesperrt, bis die Prüfung „steht schon da?“ den Termin gefunden hat.
   const [unklarGesperrt, setUnklarGesperrt] = useState(false);
@@ -347,6 +355,8 @@ export function TerminFenster({
         neueTagsErlaubt: tagsVerwalten,
         // Nur mit Schalter an, im Gruppenkalender und nicht beim Verknüpfen (`eingeladen` ist sonst leer).
         eingeladen: verknuepfen ? [] : eingeladen,
+        // Das Bild wird nach dem Anlegen hochgeladen; `terminLegen` lädt bei „Nur verknüpfen“ nichts hoch.
+        bild,
       });
     } catch (x) {
       setFehler(fehlerMeldung(x));
@@ -371,6 +381,7 @@ export function TerminFenster({
         r.events ? eventHinweis(r.events) : null,
         r.anfragen ? anfrageHinweis(r.anfragen, personName) : null,
         r.anmeldung ? anmeldungHinweis(r.anmeldung) : null,
+        r.bild ? bildHinweis(r.bild) : null,
       ]),
     });
   };
@@ -600,6 +611,8 @@ export function TerminFenster({
                 tagsVerwalten={tagsVerwalten}
                 deaktiviert={beschaeftigt}
                 onAendern={setE}
+                bild={bild}
+                onBild={setBild}
                 onKalender={(id) => {
                   setTrotzdem(false);
                   setUnklarGesperrt(false);

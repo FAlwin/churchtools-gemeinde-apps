@@ -13,6 +13,8 @@ import { TextKnopf } from '@ui/bedienung/TextKnopf';
 import { ZeilenKnopf } from '@ui/bedienung/ZeilenKnopf';
 import { Icon } from '@ui/icons/icons';
 import { DatumMarken } from './DatumMarken';
+import { TerminBildFeld } from './TerminBildFeld';
+import { TerminImAuftrag } from './TerminImAuftrag';
 import type { KalenderEintrag } from './kalenderListe';
 import type { TagEintrag } from './terminVorlagenLesen';
 import styles from './TerminFormular.module.scss';
@@ -103,13 +105,19 @@ interface Props {
   onAendern: (neu: Eintrag) => void;
   onKalender: (id: number) => void;
   onTag: (tag: string) => void;
+  /** Das gewählte Bild (bleibt im Speicher, hochgeladen wird nach dem Anlegen) – gehört nicht zum `Eintrag`. */
+  bild: File | null;
+  onBild: (b: File | null) => void;
 }
 
 /**
  * **Der Reiter „Kalender“ des ChurchTools-Dialogs „Termin erstellen“** (W15-1), Feld für Feld in der Reihenfolge und mit dem
  * Wortlaut von ChurchTools: Kalender · Titel · Untertitel · intern · Ganztägig · Beginn · Ende · Wiederholungen (mit
- * Wochentag-Auswahl, Bis, Alle x, Weitere Termine, Ausnahmen) · Beschreibung · Link · Ort · Tags. „Im Auftrag von“ fehlt
- * (keine Personensuche zum Wiederverwenden), „Bild“ kommt später. Die Regeln stehen in `@shared/protokolle`.
+ * Wochentag-Auswahl, Bis, Alle x, Weitere Termine, Ausnahmen) · Beschreibung · Link · Im Auftrag von (`TerminImAuftrag`) ·
+ * Ort · Bild (`TerminBildFeld`) · Tags. Die Regeln stehen in `@shared/protokolle`.
+ *
+ * **Bild und Vorlagen:** ChurchTools kennt `appointment_template` für Vorlagenbilder – ungemessen, hier nicht gebaut. Eine
+ * Vorlage lässt das gewählte Bild in Ruhe, und „Als Vorlage speichern“ schreibt kein Bild.
  */
 export function TerminFormular(p: Props) {
   const { e, deaktiviert: aus } = p;
@@ -306,6 +314,9 @@ export function TerminFormular(p: Props) {
           onChange={(ev) => set('link', ev.target.value)}
         />
       </Reihe>
+      <Reihe label="Im Auftrag von" gruppe>
+        <TerminImAuftrag id={e.imAuftrag} deaktiviert={aus} onWahl={(id) => set('imAuftrag', id)} />
+      </Reihe>
       <Reihe label="Ort" gruppe>
         {ortZeigen ? (
           <div className={styles.ortFelder}>
@@ -357,6 +368,9 @@ export function TerminFormular(p: Props) {
             + Hinzufügen
           </TextKnopf>
         )}
+      </Reihe>
+      <Reihe label="Bild" gruppe>
+        <TerminBildFeld bild={p.bild} onBild={p.onBild} deaktiviert={aus} />
       </Reihe>
       <Reihe label="Tags" gruppe>
         <div className={styles.marken}>

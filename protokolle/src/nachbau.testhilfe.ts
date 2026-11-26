@@ -47,6 +47,12 @@
  * ChurchTools sagt „201“ und speichert `signup` nicht; `gruppenSchlucken`: legt keine Gruppen an; `gruppenLesenFehler`: das
  * Lesen der Gruppen eines Typs scheitert (500). Wöchentliche Serien (`repeatId` 7, `repeatUntil`) kennt der Nachbau.
  *
+ * Bild (gemessen 26.11.2026): `POST /files/appointment_image/{id}` (multipart, `files[]`) speichert das Bild am Termin – ein
+ * zweites ersetzt das erste –, `GET …/appointments/{id}` liefert es als `appointment.image` (sonst `null`). `bildFehler`
+ * antwortet dem Upload mit einem Fehler (`angelegt` heißt: trotzdem gespeichert), `bildSchlucken`: „200“, aber nichts wird
+ * gespeichert. `bildUploads` zählt die Uploads (Nummer des Termins). Hochgeladen wird per `XMLHttpRequest` (`ctHochladen`) –
+ * der Nachbau ersetzt ihn und antwortet wie `fetch`. Personen: `GET /search` und `GET /persons?ids[]` lesen `personen`.
+ *
  * Beiträge (S6-2, gemessen 11.11.2026): `GET /post/groups` nennt die Gruppen aus `beitragsGruppen` (`type: postPossible`);
  * `POST /posts` legt an und liefert die ID, `GET /posts/{id}` liest nach (404, wenn es ihn nicht gibt).
  * `beitragFehler` antwortet dem `POST` mit einem Fehler – `angelegt` heißt: trotzdem angelegt; `beitragLesenFehler`
@@ -115,7 +121,17 @@ export interface Nachbau {
     /** Weitere Grundfelder (Untertitel, Beschreibung, Ort …) und Wiederholung – wie gelesen. */
     felder?: Record<string, unknown>;
     repeatId?: number;
+    /** Das Bild am Termin (`appointment.image`), wenn eins hochgeladen wurde. */
+    bild?: { id: number; name: string; imageUrl: string };
   }[];
+  /** Personen für `GET /search` und `GET /persons?ids[]` (Feld „Im Auftrag von“). */
+  personen: { id: number; vor: string; nach: string }[];
+  /** `POST /files/appointment_image/{id}` antwortet mit diesem Fehler – `angelegt`: das Bild ist trotzdem gespeichert. */
+  bildFehler: AnlegeFehler | null;
+  /** `POST /files/appointment_image/{id}` sagt „200“, speichert aber nichts. */
+  bildSchlucken: boolean;
+  /** Die Nummern der Termine, zu denen ein Bild hochgeladen wurde – je Upload eine. */
+  bildUploads: number[];
   /** Kalender wie `GET /calendars` (W15-4: `type` – nur `group` hat den Reiter „Besprechungsanfragen“). */
   kalender: { id: number; name: string; type: string }[];
   /** Einträge wie `GET /calendars/{id}/meetingrequest/candidates` (W15-4, gemessen 25.11.2026). */
@@ -253,6 +269,10 @@ export function nachbauStarten(): Nachbau {
     schluckeWert: null,
     fehlerBei: null,
     termine: [],
+    personen: [],
+    bildFehler: null,
+    bildSchlucken: false,
+    bildUploads: [],
     kalender: [{ id: 4, name: 'Gemeindeleitung', type: 'group' }],
     kandidaten: [],
     kandidatenFehler: false,
@@ -575,6 +595,38 @@ export function nachbauStarten(): Nachbau {
       }
       return f ? fehlerAntwort(f) : json(201, { data: { id } });
     }
+    // Personen suchen und lesen (Feld „Im Auftrag von“) – Formen wie `ui/ct/personen.ts` sie liest.
+    if (pfad === '/search' && m === 'GET') {
+      const q = (adresse.searchParams.get('query') ?? '').toLowerCase();
+      return json(200, {
+        data: s.personen
+          .filter((p) => `${p.vor} ${p.nach}`.toLowerCase().includes(q))
+          .map((p) => ({ domainType: 'person', domainIdentifier: String(p.id) })),
+      });
+    }
+    if (pfad === '/persons' && m === 'GET') {
+      const ids = adresse.searchParams.getAll('ids[]').map(Number);
+      return json(200, {
+        data: s.personen
+          .filter((p) => ids.includes(p.id))
+          .map((p) => ({ id: p.id, firstName: p.vor, lastName: p.nach })),
+      });
+    }
+    // Das Bild eines Termins (gemessen 26.11.2026): multipart `files[]`, Antwort „200“ mit den Dateien; ein zweites ersetzt das erste.
+    const bildT = /^\/files\/appointment_image\/(\d+)$/.exec(pfad);
+    if (bildT && m === 'POST') {
+      s.bildUploads.push(Number(bildT[1]));
+      const f = s.bildFehler;
+      if (f && !f.angelegt) return fehlerAntwort(f);
+      const t = s.termine.find((x) => x.id === Number(bildT[1]));
+      if (!t) return json(404, { message: 'weg' });
+      const datei = init?.body instanceof FormData ? init.body.get('files[]') : null;
+      if (!(datei instanceof Blob)) return json(422, { message: 'keine Datei' });
+      const name = datei instanceof File ? datei.name : 'bild';
+      const bild = { id: s.naechste++, name, imageUrl: `https://ct.test/files/${name}` };
+      if (!s.bildSchlucken) t.bild = bild;
+      return f ? fehlerAntwort(f) : json(200, { data: [bild] });
+    }
     const einT = /^\/calendars\/(\d+)\/appointments\/(\d+)$/.exec(pfad);
     if (einT && m === 'GET') {
       if (s.terminLesenFehler) return json(500, { message: 'weg' });
@@ -590,6 +642,7 @@ export function nachbauStarten(): Nachbau {
                 isInternal: false,
                 repeatId: t.repeatId ?? 0,
                 signup: null,
+                image: t.bild ?? null,
                 ...t.felder,
               },
               calculatedDates: vorkommen(t).map((v) => ({
@@ -912,6 +965,41 @@ export function nachbauStarten(): Nachbau {
   };
   vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) =>
     Promise.resolve(antwort(input, init)),
+  );
+  // `ctHochladen` sendet per `XMLHttpRequest` (Fortschritt) – hier antwortet der Nachbau wie bei `fetch`.
+  vi.stubGlobal(
+    'XMLHttpRequest',
+    class {
+      status = 0;
+      responseText = '';
+      withCredentials = false;
+      upload: { onprogress: unknown; onload: (() => void) | null } = {
+        onprogress: null,
+        onload: null,
+      };
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      private methode = 'GET';
+      private adresse = '';
+      open(methode: string, adresse: string): void {
+        this.methode = methode;
+        this.adresse = adresse;
+      }
+      setRequestHeader(): void {}
+      abort(): void {}
+      getAllResponseHeaders(): string {
+        return 'content-type: application/json';
+      }
+      send(body: FormData): void {
+        void Promise.resolve().then(async () => {
+          const res = antwort(this.adresse, { method: this.methode, body });
+          this.status = res.status;
+          this.responseText = await res.text();
+          this.upload.onload?.();
+          this.onload?.();
+        });
+      }
+    },
   );
   return s;
 }

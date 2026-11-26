@@ -272,10 +272,13 @@ export function VertretungFenster({
             </>
           ) : (
             <>
-              <p className={styles.hinweis}>
-                Die Antworten aus „Verfügbarkeit“ sind für dich nicht lesbar – darum steht hier das
-                ganze Team, ohne Einordnung.
-              </p>
+              {/* Bei „Nur abwesend“ (V-5) gibt es nichts einzuordnen – dann kein Hinweis, er wäre falsch. */}
+              {liste.grund === 'nichtLesbar' && (
+                <p className={styles.hinweis}>
+                  Die Antworten aus „Verfügbarkeit“ sind für dich nicht lesbar – darum steht hier
+                  das ganze Team, ohne Einordnung.
+                </p>
+              )}
               <Abschnitt
                 titel="Team"
                 art="ohne"

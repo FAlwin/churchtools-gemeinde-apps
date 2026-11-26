@@ -852,13 +852,14 @@ eine mit **Nur abwesend** (TF-VERF-22). In der „Nur abwesend“-Gruppe hat ein
 3. Fragen **alle** gezeigten Gruppen „Nur abwesend“ (Filter auf diese Gruppe): kein Spaltenkopf „n ja · m vielleicht“, keine Farblegende Ja/Vielleicht.
 4. An einem freien Platz der „Nur abwesend“-Gruppe **Wer kann?** öffnen: eine Liste wie früher (ohne Abschnitte „Hat Ja gesagt“ / „Vielleicht“); Abwesende sind als abwesend markiert.
    Der **Zauberstab** für diesen Dienst schlägt vor, ohne auf Ja/Vielleicht zu achten.
-5. In **Einstellungen** die Gruppe zurück auf **Ja · Vielleicht · Nein** stellen und speichern, Planen neu öffnen: Die früheren Ja/Vielleicht sind wieder da.
+5. Als Mitarbeiter/in dieser Gruppe an einem zugesagten Dienst **Vertretung suchen** öffnen: Statt „Hat Ja gesagt · Vielleicht · Ohne Antwort“ steht **„Team“** mit allen, die in Frage kommen – **ohne** den Hinweis „nicht lesbar“, nichts vorab angehakt; wer abwesend ist, fehlt.
+6. In **Einstellungen** die Gruppe zurück auf **Ja · Vielleicht · Nein** stellen und speichern, Planen neu öffnen: Die früheren Ja/Vielleicht sind wieder da (auch in „Vertretung suchen“ wieder die Abschnitte).
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `shared/dienstplan/personenAntworten.ts`, `shared/dienstplan/personenRaster.ts`, `dienstplaner/src/useAbfrageRegeln.ts`, `dienstplaner/src/App.tsx`
-- **Automatisiert:** weitgehend – `shared/dienstplan/personenAntworten.einordnung.test.ts` (`antwortFuer`/`antwortenFuerPlatz` bei „Nur abwesend“, nur ausgeblendet), `shared/dienstplan/personenRaster.antworten.test.ts` (Block `nurAbwesend`, Abwesenheit bleibt, Spaltenkopf), `dienstplaner/src/useAbfrageRegeln.test.ts` (`nurAbwesendAus` aus `ladeRegeln`, Lesefehler zählen nicht). Von Hand bleibt der Durchklick mit echtem ChurchTools und das Handy.
+- **Betrifft:** `shared/dienstplan/personenAntworten.ts`, `shared/dienstplan/personenRaster.ts`, `dienstplaner/src/useAbfrageRegeln.ts`, `dienstplaner/src/App.tsx`, `shared/dienstplan/vertretung.ts`, `dienstplaner/src/ladeVertretung.ts`, `dienstplaner/src/VertretungFenster.tsx`
+- **Automatisiert:** weitgehend – `shared/dienstplan/personenAntworten.einordnung.test.ts` (`antwortFuer`/`antwortenFuerPlatz` bei „Nur abwesend“, nur ausgeblendet), `shared/dienstplan/personenRaster.antworten.test.ts` (Block `nurAbwesend`, Abwesenheit bleibt, Spaltenkopf), `dienstplaner/src/useAbfrageRegeln.test.ts` (`nurAbwesendAus` aus `ladeRegeln`, Lesefehler zählen nicht, `ladeAntwortenMitArt`), `shared/dienstplan/vertretung.test.ts` und `dienstplaner/src/Vertretung.test.tsx` („Vertretung suchen“ bei „Nur abwesend“). Von Hand bleibt der Durchklick mit echtem ChurchTools und das Handy.
 - **Historie:** Dienstplaner V-5 (26.11.2026), Bauplan „Zuschnitt V“, Entwurf `verfuegbarkeit-einstellungen-v4.html`
 
 </details>

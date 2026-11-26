@@ -20,10 +20,9 @@ import { Planen } from './Planen';
 import { katalogAus } from './planEntwuerfe';
 import { ladeTerminVorlagen } from './ladeBeiwerk';
 import { ladePersonen } from './ladePersonen';
-import { ladeAntworten } from './ladeAntworten';
 import { ERINNERN } from './ladeErinnern';
 import { ladeAbfragen, speichereAbfragen } from './ladeAbfragen';
-import { ladeRegeln, nurAbwesendAus } from './useAbfrageRegeln';
+import { ladeAntwortenMitArt } from './useAbfrageRegeln';
 import { antwortenAblageStand, richteAntwortenEin } from './ladeVerfuegbarkeit';
 import { ctAutomatikAnschluss, ctEinrichtenAnschluss } from './einrichtenAbfragen';
 import { gruppenIdsDerDienste } from '@shared/dienstplan/abfrageAutomatik';
@@ -232,15 +231,7 @@ export function App() {
     async (ids: readonly number[]) => {
       if (!start) throw new Error('kein Start');
       const gruppen = planbareDienstgruppen(start).filter((g) => ids.includes(g.id));
-      const [antworten, regeln] = await Promise.all([
-        ladeAntworten(gruppen),
-        ladeRegeln(
-          ladeAbfragen,
-          gruppen.map((g) => g.id),
-          heuteImKalender(),
-        ),
-      ]);
-      return { ...antworten, nurAbwesend: nurAbwesendAus(regeln) };
+      return ladeAntwortenMitArt(gruppen, heuteImKalender());
     },
     [start],
   );

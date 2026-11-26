@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { standardInhalt, type AbfragenStand } from '@shared/dienstplan/abfragenSpeicher';
-import { ladeRegeln, nurAbwesendAus } from './useAbfrageRegeln';
+import { KEINE_ANTWORTEN } from '@shared/dienstplan/personenAntworten';
+import { ladeAntwortenMitArt, ladeRegeln, nurAbwesendAus } from './useAbfrageRegeln';
 
 /**
  * V-5: Welche Dienstgruppen „Nur abwesend“ fragen – gegen den Erzeuger (`ladeRegeln` mit nachgebautem Lader), nicht gegen
@@ -57,5 +58,35 @@ describe('nurAbwesendAus (V-5)', () => {
 
   it('ohne Gruppen: leer', () => {
     expect(nurAbwesendAus(new Map()).size).toBe(0);
+  });
+});
+
+describe('ladeAntwortenMitArt (V-5: Planen und „Vertretung suchen“)', () => {
+  const g = (id: number) => ({ id, name: `Gruppe ${id}`, fuerAlle: false });
+  it('die Antworten mit `nurAbwesend` aus den Regeln – je Gruppe', async () => {
+    const antworten = { ...KEINE_ANTWORTEN, sichtbar: new Set([3, 4]) };
+    const r = await ladeAntwortenMitArt([g(3), g(4)], HEUTE, {
+      antworten: () => Promise.resolve(antworten),
+      abfragen: (id) =>
+        Promise.resolve(
+          stand(id === 3 ? { inhalt: { ...standardInhalt(), verfuegbarkeit: 'abwesend' } } : {}),
+        ),
+    });
+    expect([...(r.nurAbwesend ?? [])]).toEqual([3]);
+    expect(r.sichtbar).toBe(antworten.sichtbar);
+  });
+
+  it('scheitern die Antworten, wirft es (wie `ladeAntworten`) – ein nicht lesbares Abfragen-Dokument dagegen nicht', async () => {
+    await expect(
+      ladeAntwortenMitArt([g(3)], HEUTE, {
+        antworten: () => Promise.reject(new Error('offline')),
+        abfragen: () => Promise.resolve(stand({})),
+      }),
+    ).rejects.toThrow('offline');
+    const r = await ladeAntwortenMitArt([g(3)], HEUTE, {
+      antworten: () => Promise.resolve(KEINE_ANTWORTEN),
+      abfragen: () => Promise.reject(new Error('Netz')),
+    });
+    expect(r.nurAbwesend?.size).toBe(0);
   });
 });

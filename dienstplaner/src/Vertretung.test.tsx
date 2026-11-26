@@ -284,6 +284,7 @@ describe('Fenster „Vertretung suchen“', () => {
           { personId: 47, name: 'Ben Test', a: null, notiz: null },
           { personId: 50, name: 'David Test', a: null, notiz: null },
         ],
+        grund: 'nichtLesbar',
       },
       abwesenheitenUnbekannt: true,
     };
@@ -297,6 +298,24 @@ describe('Fenster „Vertretung suchen“', () => {
     // Nichts vorab angehakt – es gibt kein „Ja“.
     expect(haken('Ben Test').checked).toBe(false);
     expect(knopf('Absagen')).toBeTruthy();
+  });
+
+  it('„Nur abwesend“ (V-5): „Team“ ohne Einordnung und OHNE den Hinweis „nicht lesbar“', async () => {
+    const lage: VertretungLage = {
+      ...ENTWURFS_LAGE,
+      vorschlaege: {
+        art: 'ohneAntworten',
+        team: [{ personId: 47, name: 'Ben Test', a: null, notiz: null }],
+        grund: 'nurAbwesend',
+      },
+    };
+    oeffne(
+      vertretungAttrappe({ anschluss: anschlussAttrappe({ lage: () => Promise.resolve(lage) }) }),
+    );
+    expect(await screen.findByRole('region', { name: 'Team' })).toBeTruthy();
+    expect(screen.queryByText(/nicht lesbar/)).toBeNull();
+    expect(screen.queryByText('Hat Ja gesagt')).toBeNull();
+    expect(haken('Ben Test').checked).toBe(false);
   });
 
   it('Team nicht sichtbar oder niemand in Frage: ehrlicher Satz', async () => {

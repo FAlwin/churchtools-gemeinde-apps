@@ -36,7 +36,7 @@ import {
 import { rollenAus, type Person, type RohRolle } from '@shared/organigramm/mitglieder';
 import { dienstPort } from './dienstPort';
 import { ctMailSenden } from './ladeErinnern';
-import { ladeAntworten } from './ladeAntworten';
+import { ladeAntwortenMitArt } from './useAbfrageRegeln';
 import { port } from './ladeEntwuerfe';
 import { ladePersonen } from './ladePersonen';
 import { grundSatz, ladeVerfuegbarkeit } from './ladeVerfuegbarkeit';
@@ -131,7 +131,7 @@ function dienstUndGruppe(
 
 /**
  * Lädt die Lage für einen eigenen Dienst: Mitglieder + Abwesenheiten (`ladePersonen`, mit den Rollen für die Leitung), die
- * Antworten der Dienstgruppe (`ladeAntworten`) und die Termine des Tages. **Wirft** bei 401 und bei jeder vorübergehenden
+ * Antworten der Dienstgruppe samt ihrer Art (`ladeAntwortenMitArt`, V-5) und die Termine des Tages. **Wirft** bei 401 und bei jeder vorübergehenden
  * Störung (s. oben).
  */
 export async function ladeLage(start: Start, d: EigenerDienst): Promise<VertretungLage> {
@@ -146,7 +146,8 @@ export async function ladeLage(start: Start, d: EigenerDienst): Promise<Vertretu
       rollen,
     }),
     // Ohne Dienstgruppe gibt es keine Antworten zu lesen – dann steht nur das Team da.
-    gruppe ? ladeAntworten([gruppe]) : Promise.resolve(KEINE_ANTWORTEN),
+    // Mit der Art (V-5): Bei „Nur abwesend“ ordnet das Fenster nicht nach Ja/Vielleicht, es steht das Team da.
+    gruppe ? ladeAntwortenMitArt([gruppe], heuteImKalender()) : Promise.resolve(KEINE_ANTWORTEN),
     ctDaten<unknown>(`/events?from=${d.tag}&to=${plusTage(d.tag, 1)}&include=eventServices`),
   ]);
   if (!Array.isArray(tagesTermine))

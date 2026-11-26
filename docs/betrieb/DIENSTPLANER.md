@@ -549,8 +549,10 @@ nennt je Entwurf „Anfrage an …“ bzw. „Direkt zuteilen: …“ und zählt
     `antwortFuer`/`antwortenFuerPlatz` fragen. Woher die Art kommt: Der Lader der App (`antwortenLaden` in `App.tsx`) liest mit den
     Antworten die Dokumente der Abfragen (`ladeRegeln`, `nurAbwesendAus` in `useAbfrageRegeln.ts`); ist ein Dokument gerade nicht lesbar,
     zählt die Gruppe wie vor V-5 als Zusagen (nur Anzeige, nichts geht verloren). Gelesen wird gedrosselt (höchstens drei
-    Dokumente gleichzeitig, wie die Antworten). **Offen:** „Vertretung suchen“ der Mitglieder lädt die Antworten über einen eigenen Weg
-    (`useVertretung`) ohne die Art – dort ordnen alte Ja/Vielleicht einer „Nur abwesend“-Gruppe die Vorschläge noch.
+    Dokumente gleichzeitig, wie die Antworten). **„Vertretung suchen“ (27.11.2026):** Das Fenster lädt die
+    Antworten der Dienstgruppe über denselben Baustein (`ladeAntwortenMitArt` in `useAbfrageRegeln.ts`, aufgerufen in `ladeLage`) und
+    ordnet über `antwortenGelten` – bei „Nur abwesend“ steht das **ganze Team** ohne Abschnitte und ohne den Hinweis „nicht lesbar“
+    (`Vorschlaege.grund = 'nurAbwesend'`), Abwesende fehlen wie immer.
 - **Antworten in „Wer kann?“ und im Zauberstab (E5c-4, 19.11.2026, Entwurf `e5c-wann-kann-ich.html` Bereich 3, Variante A):**
   **Eine Regel für Raster, „Wer kann?“ und Zauberstab** in `shared/dienstplan/personenAntworten.ts`: `antwortFuer` (Antwort einer
   Person auf einen Termin im Blick auf einen Dienst, mit Sichtbarkeit der Dienstgruppe) und `antwortStufe` (Ja / Vielleicht / keine /

@@ -114,6 +114,11 @@
 
   &::-webkit-date-and-time-value {
     text-align: left;
+    // Leer mindestens eine Zeile hoch. iOS zeigt in einem leeren Datumsfeld nichts – ohne Inhalt fiel das Feld auf
+    // Rand und Polster zusammen, sobald keine feste Höhe griff: ohne `height` (Dienstplaner „Abfrage“, „Person“) oder
+    // mit `flex: 1` in einer Spalte (Liederheft Von/Bis, Alwin am iPad, 26.11.2026: 18 statt 35 px). Im iPad-Simulator
+    // gemessen; Chrome und Desktop-Safari bleiben gleich hoch. Wächter: `datumsfeld.test.ts`.
+    min-height: 1lh;
   }
 }
 

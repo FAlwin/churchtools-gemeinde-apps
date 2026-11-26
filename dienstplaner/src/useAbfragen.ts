@@ -1,10 +1,10 @@
 /**
- * **Die laufenden Abfragen für Startseite und „Wann kann ich?“** (R-3): Laden und Zusammenstellen. Die Rechnung steht in
+ * **Die laufenden Abfragen für Startseite und „Verfügbarkeit“** (R-3): Laden und Zusammenstellen. Die Rechnung steht in
  * `shared/dienstplan/abfrageStand.ts` (`meinStandInAbfrage` → `offeneTermine`); hier wird nur geholt, was sie braucht.
  *
  * **Ladeweg (Startseite):** Die Startseite lädt ihre Termine nur 8 Wochen voraus – eine Abfrage kann weiter hinten liegen.
  * Darum holt `ladeKarten` den **Zeitraum der Abfrage** selbst (`ladeZeitraum`, dieselbe Abfrage wie der Zeitraum-Knopf in
- * Planen). Antworten: `ladeVerfuegbarkeit` (derselbe Speicher wie „Wann kann ich?“), Abwesenheiten: `ladeAbwesenheiten`.
+ * Planen). Antworten: `ladeVerfuegbarkeit` (derselbe Speicher wie „Verfügbarkeit“), Abwesenheiten: `ladeAbwesenheiten`.
  *
  * **Die Startseite darf daran nie scheitern:** Jeder Fehler (nicht lesbar, kein Recht, Netz) ergibt „keine Karte“ – nie einen
  * Fehlerbalken, nie ein Schreiben. Wer die Antworten nicht lesen kann (`lesefehler`, kein bereiter Speicher), sieht keine
@@ -244,7 +244,7 @@ export function useStartAbfragen(start: Start, heute: string, zeitzone: string):
   return stand.art === 'fertig' ? stand.daten : KEINE;
 }
 
-/** Die Abfrage hinter dem Band in „Wann kann ich?“ und die Termine ihres Zeitraums (`zeilen`: `null` = nicht ladbar). */
+/** Die Abfrage hinter dem Band in „Verfügbarkeit“ und die Termine ihres Zeitraums (`zeilen`: `null` = nicht ladbar). */
 export interface BandLage extends AbfrageLage {
   zeilen: TerminZeile[] | null;
 }

@@ -5,7 +5,7 @@ import type { Abfrage } from '@shared/dienstplan/abfragen';
 import styles from './AbfrageBand.module.scss';
 
 /**
- * **Das schmale Band über „Wann kann ich?“** (R-3, Entwurf Schritt 5): Etikett, „Abfrage Musik · 01.02.–31.03. · noch 7 von 9
+ * **Das schmale Band über „Verfügbarkeit“** (R-3, Entwurf Schritt 5): Etikett, „Abfrage Musik · 01.02.–31.03. · noch 7 von 9
  * offen“ und rechts still „Alle Termine zeigen“ (die Seite ohne Abfrage). `stand` ist `null`, solange noch geladen wird – dann
  * steht das Band ohne Zahl da, statt eine falsche zu zeigen.
  */

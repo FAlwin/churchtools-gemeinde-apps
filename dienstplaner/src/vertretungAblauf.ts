@@ -67,7 +67,7 @@ export interface MailZiel {
   personId: number;
   name: string;
   rolle: MailRolle;
-  /** Ihre Antwort aus „Wann kann ich?“ zu diesem Termin (nur Gefragte) – steht als Satz in der Mail. */
+  /** Ihre Antwort aus „Verfügbarkeit“ zu diesem Termin (nur Gefragte) – steht als Satz in der Mail. */
   antwort: Zusage | null;
 }
 

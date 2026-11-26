@@ -15,7 +15,7 @@ import { ganzSichtbar, planbar } from './start';
 import { startFuer } from './start.testutil';
 
 /**
- * Antworten aus „Wann kann ich?“ in der Ansicht „Personen“ (E5c-3): Farbe/Text der Zelle, Kopf, Legende, Hinweis im Block,
+ * Antworten aus „Verfügbarkeit“ in der Ansicht „Personen“ (E5c-3): Farbe/Text der Zelle, Kopf, Legende, Hinweis im Block,
  * Fehlerzweige. Die Rechnung steht in `shared/dienstplan/personenRaster.antworten.test.ts`; die Antworten kommen aus
  * `antwortBereinigt` (Erzeuger). Plan wie in `Planen.personen.test.tsx`: Ton (Technik, Dienst 6), Gesang (Musik, Dienst 9).
  */
@@ -225,7 +225,7 @@ describe('Personen-Raster mit Antworten – Fehler zerstören nichts', () => {
     const t = await raster();
     const kasten = await screen.findByRole('alert');
     expect(kasten.textContent).toMatch(
-      /Antworten aus „Wann kann ich\?“ konnten nicht geladen werden/,
+      /Antworten aus „Verfügbarkeit“ konnten nicht geladen werden/,
     );
     expect(screen.queryByRole('group', { name: 'Legende zu den Farben' })).toBeNull();
     expect(within(t).queryByText(/ja · .* vielleicht/)).toBeNull();

@@ -404,7 +404,7 @@ $anzahl-farben: 8;
     repeating-linear-gradient(135deg, var(--antwort-nein-schraffur) 0 4px, transparent 4px 9px),
     linear-gradient(var(--antwort-nein-toenung), var(--antwort-nein-toenung));
 }
-// Antwort aus „Wann kann ich?“ (E5c-3): Ja grün, Vielleicht gelblich – als Auflage über der Zeilenfarbe (Zebra, Fokus,
+// Antwort aus „Verfügbarkeit“ (E5c-3): Ja grün, Vielleicht gelblich – als Auflage über der Zeilenfarbe (Zebra, Fokus,
 // Hervorheben bleiben darunter sichtbar). Abwesend (`abwZelle`) setzt sich nie zusammen damit: Abwesenheit schlägt die Antwort.
 .raster td.antwortJa {
   background-image: linear-gradient(var(--antwort-ja), var(--antwort-ja));

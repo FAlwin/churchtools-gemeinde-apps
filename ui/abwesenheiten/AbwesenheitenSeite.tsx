@@ -97,7 +97,7 @@ export interface AbwesenheitenTeile {
 }
 
 /**
- * **„Wann kann ich?“ (Dienstplaner E5c-1c):** Mit dieser Angabe zeigt jeder Termin **Ja · Vielleicht · Nein** statt des
+ * **„Verfügbarkeit“ (Dienstplaner E5c-1c):** Mit dieser Angabe zeigt jeder Termin **Ja · Vielleicht · Nein** statt des
  * Hakens „Abwesend“. „Nein“ ist der bisherige Haken (eine ChurchTools-Abwesenheit mit Terminfenster); Ja und Vielleicht
  * gehören in den Speicher der Dienstgruppen (`@shared/dienstplan/verfuegbarkeit`) – wie sie dorthin kommen, regelt die App.
  * **Ohne diese Angabe bleibt alles wie bisher** (Musik-App: Abhakfeld).
@@ -148,7 +148,7 @@ export interface AbwesenheitenSeiteProps {
    * sitzt (auch vorgemerkt), damit die App warnen kann („bitte auch den Dienst absagen“). Ohne: nichts.
    */
   terminZusatz?: (ev: AbsenceEvent, abwesend: boolean) => ReactNode;
-  /** „Wann kann ich?“ – drei Knöpfe statt des Hakens, siehe `Zusagen`. Ohne: der Haken. */
+  /** „Verfügbarkeit“ – drei Knöpfe statt des Hakens, siehe `Zusagen`. Ohne: der Haken. */
   zusagen?: Zusagen;
   /** Setzt die Teile in den Rahmen der App. */
   rahmen: (teile: AbwesenheitenTeile) => ReactNode;

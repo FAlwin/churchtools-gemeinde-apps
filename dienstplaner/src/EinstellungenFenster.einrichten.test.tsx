@@ -240,12 +240,12 @@ describe('Fenster „Erinnerungen für Musik einrichten“', () => {
     expect(within(f).getByRole('button', { name: 'Einrichten' })).toBeTruthy();
   });
 
-  it('der Text nennt den Reiter nicht neu „Wann kann ich?“', async () => {
+  it('der Text nennt den Reiter nicht neu „Verfügbarkeit“', async () => {
     vi.mocked(schreiben.lageLesen).mockResolvedValue(lage());
     zeige();
     const f = await oeffnen();
     await within(f).findAllByText(/Gruppe „/);
-    expect(f.textContent).not.toContain('Wann kann ich');
+    expect(f.textContent).not.toContain('Verfügbarkeit');
   });
 
   it('Klick auf „Einrichten“ ruft einrichten und zeigt, was angelegt wurde – und liest das Dokument neu', async () => {

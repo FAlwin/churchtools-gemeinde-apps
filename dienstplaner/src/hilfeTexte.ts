@@ -30,7 +30,7 @@ export const HILFE_PLANEN: readonly HilfeAbschnitt[] = [
     titel: 'Eintragen',
     punkte: [
       'Matrix: freien Platz antippen → „Wer kann?“ → Entwurf.',
-      '„Wer kann?“ sortiert nach den Antworten aus „Wann kann ich?“: erst Ja, dann Vielleicht, dann keine Antwort; „Kann nicht / abwesend“ ist eingeklappt.',
+      '„Wer kann?“ sortiert nach den Antworten aus „Verfügbarkeit“: erst Ja, dann Vielleicht, dann keine Antwort; „Kann nicht / abwesend“ ist eingeklappt.',
       'Kleines Schild „Vertretung gesucht“ an einem freien Platz: Jemand hat abgesagt und im Team nach einer Vertretung gefragt (Hinweis: Wer abgesagt hat, wer gefragt wurde). Der Platz lässt sich ganz normal planen.',
       '„Personen“: leere Zelle antippen = Anfrage, nochmal = direkt, nochmal = weg.',
       'Belegten Platz antippen (auch in „Personen“): zurückziehen oder ersetzen.',
@@ -40,7 +40,7 @@ export const HILFE_PLANEN: readonly HilfeAbschnitt[] = [
   {
     titel: 'Antworten in „Personen“',
     punkte: [
-      'Die Farbe der Zelle ist die Antwort aus „Wann kann ich?“: grün = Ja, gelb = Vielleicht, rot schraffiert = Nein oder abwesend, weiß = keine Antwort.',
+      'Die Farbe der Zelle ist die Antwort aus „Verfügbarkeit“: grün = Ja, gelb = Vielleicht, rot schraffiert = Nein oder abwesend, weiß = keine Antwort.',
       'Darunter im Spaltenkopf: wie viele Personen Ja oder Vielleicht geantwortet haben. Notiz und „nur für …“ stehen im Tooltip der Zelle.',
     ],
   },
@@ -63,7 +63,7 @@ export const HILFE_PLANEN: readonly HilfeAbschnitt[] = [
     titel: 'Plätze und Zauberstab',
     punkte: [
       'Regler in der Gruppenzeile: Plätze, Dienste ein/aus, Vorlage – wirkt sofort (Plätze auch über die Zeile „Plätze“ in „Personen“).',
-      'Zauberstab: schlägt Personen für freie Plätze vor, als Entwurf – wer in „Wann kann ich?“ Ja gesagt hat, kommt zuerst.',
+      'Zauberstab: schlägt Personen für freie Plätze vor, als Entwurf – wer in „Verfügbarkeit“ Ja gesagt hat, kommt zuerst.',
       'Stift am Namen: Vorlieben der Person – wirkt sofort.',
     ],
   },

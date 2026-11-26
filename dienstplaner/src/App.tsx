@@ -62,7 +62,7 @@ import { MeineAnzeigeAnschluss } from './MeineAnzeigeAnschluss';
 const KEINE_ZEILEN: TerminZeile[] = [];
 
 /**
- * Der Dienstplaner in ChurchTools (Bauplan E2/E3): Start · Termine · Planen · Wann kann ich? Am Computer
+ * Der Dienstplaner in ChurchTools (Bauplan E2/E3): Start · Termine · Planen · Verfügbarkeit Am Computer
  * stehen die Reiter oben neben dem Namen, am Handy unten wie in der Musik-App (Entwurf v17).
  * Scheitert das Laden vorübergehend, gibt es „Erneut versuchen“ statt einer halben Seite.
  */
@@ -80,9 +80,9 @@ export function App() {
   const [wochen, setWochen] = useState(WOCHEN_JE_SCHRITT);
   const zeitzone = gemeindeZeitzone();
   // Die Liedauswahl im Punkt-Fenster (LW2b) – mit den Lied-Rechten aus dem Start.
-  // Die eigenen Dienstgruppen – dorthin gehören Ja/Vielleicht in „Wann kann ich?“. Eine feste Liste je Start.
+  // Die eigenen Dienstgruppen – dorthin gehören Ja/Vielleicht in „Verfügbarkeit“. Eine feste Liste je Start.
   const eigeneGruppen = useMemo(() => (start ? eigeneDienstgruppen(start) : []), [start]);
-  // Die eigenen Dienste – daraus wählt man in „Wann kann ich?“ bei der Notiz „nur bestimmte Dienste“ (E5c-2).
+  // Die eigenen Dienste – daraus wählt man in „Verfügbarkeit“ bei der Notiz „nur bestimmte Dienste“ (E5c-2).
   const meineDienste = useMemo(
     () => (start ? eigeneDienste(start).map((d) => ({ id: d.id, name: d.name })) : []),
     [start],
@@ -136,7 +136,7 @@ export function App() {
   const terminId = terminAusAdresse(hash);
   // Planen mit einer Gruppe von der Startseite (Wunsch 7) – nur für diesen Besuch.
   const fokusGruppe = planenGruppeAusAdresse(hash);
-  // „Wann kann ich?“ mit einer Abfrage (R-3): `#/abwesenheiten?abfrage=<Dienstgruppe>`.
+  // „Verfügbarkeit“ mit einer Abfrage (R-3): `#/abwesenheiten?abfrage=<Dienstgruppe>`.
   const abfrageGruppe = abwesenheitenAbfrageAusAdresse(hash);
   // Die Seite „Ablaufvorlagen“ (E10-V3a): eine Unterseite von „Planen“, nur für den, der „Planen“ sieht. Ohne das Recht
   // gilt die Adresse als unbekannt und führt zum Start.
@@ -185,7 +185,7 @@ export function App() {
     [start],
   );
 
-  // Die Antworten aus „Wann kann ich?“ für „Personen“ (E5c-3) – nur die Dienstgruppen, die man planen darf: Fremde Antworten
+  // Die Antworten aus „Verfügbarkeit“ für „Personen“ (E5c-3) – nur die Dienstgruppen, die man planen darf: Fremde Antworten
   // zeigt die App sonst nur Planern. Mitglieder lesen nur die Markierungen „Vertretung gesucht“ ihrer eigenen Dienstgruppen
   // (E5c-6, `useVertretung`). Stabil, solange der Start gleich bleibt.
   const antwortenLaden = useCallback(

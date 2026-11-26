@@ -39,7 +39,7 @@ describe('usePersonenAntworten', () => {
     expect(result.current.antworten).toBe(DA); // nicht „keine Antworten“
     expect(result.current.fehler).toBeNull();
     expect(result.current.neuFehler?.nochmal).toBe(true);
-    expect(result.current.neuFehler?.text).toMatch(/Antworten aus „Wann kann ich\?“/);
+    expect(result.current.neuFehler?.text).toMatch(/Antworten aus „Verfügbarkeit“/);
   });
 
   it('der erste Abruf scheitert: kein Bestand – leer (nichts sichtbar) und ein Fehler; 401 ohne „nochmal“', async () => {

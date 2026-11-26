@@ -127,7 +127,7 @@ export function useEinteilen({
    */
   modusFuer?: (dienstId: number) => Modus;
   /**
-   * Die Antworten aus „Wann kann ich?“ (E5c-4) für „Wer kann?“ und den Zauberstab – derselbe Lader wie in „Personen“ (App:
+   * Die Antworten aus „Verfügbarkeit“ (E5c-4) für „Wer kann?“ und den Zauberstab – derselbe Lader wie in „Personen“ (App:
    * `antwortenLaden`, nur planbare Dienstgruppen). Ohne Angabe sind beide wie vor E5c-4.
    */
   antwortenLader?: AntwortenLader;

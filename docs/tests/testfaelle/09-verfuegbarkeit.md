@@ -294,13 +294,13 @@ Eintrag; Löschen fragt immer nach.
 **Das brauchst du:** Den Dienstplaner in der **Test-Instanz**, ein Konto ohne Admin-Recht mit mindestens einem
 kommenden Dienst (eingeteilt) und einer offenen Anfrage (z. B. Spike), Zugriff auf ChurchTools zum Nachsehen.
 
-**Das muss passieren:** Der Reiter **„Wann kann ich?"** (bis E5c-1c „Abwesenheiten", Adresse `#/abwesenheiten` bleibt) zeigt
+**Das muss passieren:** Der Reiter **„Verfügbarkeit"** (bis E5c-1c „Abwesenheiten", Adresse `#/abwesenheiten` bleibt) zeigt
 dieselbe Seite wie die Musik-App (Termine | Einträge, Zeitraum, Filter, Speichern-Leiste, Fenster) – für jeden, ohne eigenes
 Recht. Statt des Hakens hat jeder Termin **Ja · Vielleicht · Nein**, „Nein" ist die Abwesenheit (Ja/Vielleicht: TF-VERF-11).
 Unter jedem Termin stehen die eigenen Dienste; wer bei einem Termin mit Dienst „Nein" wählt, sieht in Rot, dass er auch den
 Dienst absagen soll.
 
-1. Dienstplaner öffnen → Reiter **Wann kann ich?** (am Handy unten, am Rechner oben). Statt „Hier trägst du bald ein …"
+1. Dienstplaner öffnen → Reiter **Verfügbarkeit** (am Handy unten, am Rechner oben). Statt „Hier trägst du bald ein …"
    steht die Terminliste ab heute, darüber **eine Werkzeugzeile** (seit B4): links **Termine | Einträge** (Merker an „Einträge“),
    in der Mitte der **Zeitraum** mit ‹ ›, rechts – wenn eine Veranstaltung mehrfach vorkommt – **Filter** und der grüne Knopf
    **+ Zeitraum eintragen**. Unter „Einträge“ fehlen Zeitraum und Filter, der grüne Knopf bleibt. Eine leere Notiz heißt leise
@@ -311,7 +311,7 @@ Dienst absagen soll.
    **Speichern** → in ChurchTools ein Eintrag mit der Uhrzeit des Termins, ohne Kennzeichen. Der Dienst selbst bleibt
    (absagen geht über „Dienste" bzw. die Startseite).
 4. Über **+ Zeitraum eintragen** eine Woche eintragen, unter **Einträge** ändern und löschen (Rückfrage) – wie TF-VERF-04.
-5. Startseite: die Karte **„Wann kann ich?"** führt in diesen Reiter.
+5. Startseite: die Karte **„Verfügbarkeit"** führt in diesen Reiter.
 6. Aufräumen: Einträge aus 3–4 löschen.
 
 <details><summary>Technisches</summary>
@@ -323,7 +323,7 @@ Dienst absagen soll.
 
 </details>
 
-### TF-VERF-11 · „Wann kann ich?“ – Ja, Vielleicht, Nein
+### TF-VERF-11 · „Verfügbarkeit“ – Ja, Vielleicht, Nein
 
 **Das brauchst du:** Den Dienstplaner in der **Test-Instanz**, ein Konto ohne Admin-Recht, das Mitglied einer
 ChurchTools-Gruppe ist, die an einem Dienst hängt (also in einer Dienstgruppe), und für diese Dienstgruppe den Speicher
@@ -335,7 +335,7 @@ Vielleicht gelb, Nein rot) und fett. Eine Wahl ist nur **vorgemerkt** (blauer Ri
 dann steht „Nein" als Abwesenheit mit der Terminzeit in ChurchTools, Ja/Vielleicht im Speicher der Dienstgruppe. Am Handy
 stehen die drei Knöpfe als eigene Zeile unter dem Termin, gleich breit.
 
-1. Reiter **Wann kann ich?** öffnen. Beim ersten Termin **Ja**, beim zweiten **Vielleicht**, beim dritten **Nein** wählen →
+1. Reiter **Verfügbarkeit** öffnen. Beim ersten Termin **Ja**, beim zweiten **Vielleicht**, beim dritten **Nein** wählen →
    unten steht **„3 Änderungen vorgemerkt"**. **Verwerfen** → alles zurück. Nochmal wählen, **Speichern** →
    „3 Änderungen gespeichert". Neu laden (F5): die Wahl steht noch genauso da.
 2. In ChurchTools nachsehen: bei „Nein" eine Abwesenheit mit der Zeit des Termins (Ende eine Minute früher); Ja und
@@ -399,10 +399,10 @@ Leiste zählt mit), bis unten **Speichern** gedrückt ist. Termine ohne Antwort 
 
 </details>
 
-### TF-VERF-13 · Antworten aus „Wann kann ich?“ in der Planer-Ansicht „Personen“
+### TF-VERF-13 · Antworten aus „Verfügbarkeit“ in der Planer-Ansicht „Personen“
 
 **Das brauchst du:** Dienstplaner in der **Test-Instanz**, ein Konto, das den Dienst **planen** darf (Gruppe Musik), und der
-Speicher „Antworten Musik“ mit dem Recht „sehen“ darauf. Mehrere Personen, die vorher in „Wann kann ich?“ geantwortet haben
+Speicher „Antworten Musik“ mit dem Recht „sehen“ darauf. Mehrere Personen, die vorher in „Verfügbarkeit“ geantwortet haben
 (Ja, Vielleicht, eine mit Notiz, eine mit „nur Gesang“, eine mit Ja an einem Tag, an dem sie auch abwesend ist), sowie ein
 Termin, den niemand beantwortet hat.
 
@@ -419,7 +419,7 @@ abwesend) oder weiß (keine Antwort); die Tags „zugesagt“, „angefragt“ u
    die Person ist im Kopf nicht mitgezählt. Ist sie dort auch eingeteilt, sieht man weiter den roten Rahmen.
 6. Einen **Dienst-Block, dessen Antworten man nicht sehen darf** (kein Recht auf „Antworten …“ der Gruppe oder noch nicht
    eingerichtet): Im Block steht „Antworten nicht sichtbar“, die Zellen sind **nicht** weiß eingefärbt-als-„keine Antwort“.
-7. Netz kurz trennen und die Seite neu laden: über dem Raster steht „Die Antworten aus „Wann kann ich?“ konnten nicht geladen
+7. Netz kurz trennen und die Seite neu laden: über dem Raster steht „Die Antworten aus „Verfügbarkeit“ konnten nicht geladen
    werden …“ mit **Erneut versuchen**; es gibt keine Legende und keine Zahlen im Kopf. Netz wieder an, Knopf → Farben da.
 8. Am Handy: die Legende bricht um (kein Querscrollen der Seite), die Farben sind gut zu unterscheiden; Dunkelmodus: dieselben
    Farben, nur abgedunkelt.
@@ -433,7 +433,7 @@ abwesend) oder weiß (keine Antwort); die Tags „zugesagt“, „angefragt“ u
 
 </details>
 
-### TF-VERF-14 · „Wer kann?“ und Zauberstab mit den Antworten aus „Wann kann ich?“
+### TF-VERF-14 · „Wer kann?“ und Zauberstab mit den Antworten aus „Verfügbarkeit“
 
 **Das brauchst du:** Wie TF-VERF-13 – Dienstplaner in der **Test-Instanz**, ein Konto, das die Dienstgruppe (Musik) **planen** darf, der
 Speicher „Antworten Musik“ mit dem Recht „sehen“, und für einen Termin mit **freiem Platz** mindestens: eine Person mit Ja, eine mit
@@ -484,7 +484,7 @@ die Mail und verschickt je Person eine eigene.
    „Im Dienstplaner eintragen“.
 3. „Text anpassen“: Betreff und Text ändern (auch ein `<` und `&` eintippen) – die Vorschau zeigt es, in der Mail steht der Text unverändert als Text.
 4. „Eine Kopie an mich“ anhaken und senden: „1 Mail verschickt.“ Im Postfach kommt **eine** Mail an (plus genau **eine** Kopie, nicht mehrere); der Knopf
-   „Im Dienstplaner eintragen“ öffnet „Wann kann ich?“ der Erweiterung; darunter hängen die Termin-Knöpfe von ChurchTools.
+   „Im Dienstplaner eintragen“ öffnet „Verfügbarkeit“ der Erweiterung; darunter hängen die Termin-Knöpfe von ChurchTools.
 5. Mit Ja/Nein beantworten und das Fenster neu öffnen: Du stehst nicht mehr in der Liste. An einem Termin, an dem du eingeteilt bist, auch nicht.
 6. Konto ohne das Recht, Mails zu Terminen zu schicken (falls vorhanden): „ChurchTools erlaubt dir nicht, Mails zu Terminen zu schicken.“, nichts verschickt.
 7. Netz trennen und senden (mit zwei Test-Konten): angehalten, „X von Y verschickt“; die Person, bei der es hakte, steht als „unklar, ob die Mail rausging“ und
@@ -556,7 +556,7 @@ Listen von **Musik** und **Technik** ändern, **Predigt** (Programm) hat keine S
    niemanden mehr, darüber steht ruhig „1 Person wird wegen Pause nicht erinnert.“ und „In den gewählten Dienstgruppen muss niemand erinnert werden.“
    (ohne Pause stünde Clara mit „Fr, 27.11.“ in der Liste). **Zauberstab** im Block **Ton** (Technik): Der Vorschlag für Di, 01.12. ist **Spike**, nicht Anna;
    in der Auswahl steht Anna unter „Passt eher nicht“ mit „Pause bis 02.12.26“, Ben mit „Pause“. Die Pause gilt nur für die Dienstgruppe ihrer Liste:
-   Annas Pause in **Musik** (bis in zehn Tagen) ändert für Technik nichts. Selbst antworten (Wann kann ich?) und von Hand einteilen geht weiter.
+   Annas Pause in **Musik** (bis in zehn Tagen) ändert für Technik nichts. Selbst antworten (Verfügbarkeit) und von Hand einteilen geht weiter.
 
 <details><summary>Technisches</summary>
 
@@ -575,7 +575,7 @@ Musik-App und die Protokolle.
 **Das muss passieren:** Jedes Fenster liegt vor allem anderen; dahinter ist alles abgedunkelt, auch das grüne Plus und die Reiterleiste.
 Es gibt kein Blatt von unten mehr – auch Auswahlen („⋯“, „Matrix ⌄“, „Neu ⌄“) sind ein Fenster mit Titel und ✕.
 
-1. **Wann kann ich?** → das grüne **+** → „Zeitraum eintragen“ geht auf. Das Plus unten rechts ist **abgedunkelt unter dem Fenster**
+1. **Verfügbarkeit** → das grüne **+** → „Zeitraum eintragen“ geht auf. Das Plus unten rechts ist **abgedunkelt unter dem Fenster**
    (vorher lag es hell darüber, rechts unten neben „Abbrechen“). Auch die Reiterleiste ganz unten ist abgedunkelt.
 2. **Planen** (mit Entwürfen): **Matrix ⌄** öffnet das Fenster „Ansicht“ mit den Ansichten – die Leiste „3 Entwürfe … Ansehen & senden“ und die
    Reiterleiste liegen dahinter. Eine Ansicht tippen: das Fenster geht zu, die Ansicht wechselt. **⋯** öffnet „Mehr“; **Erinnern** und
@@ -598,7 +598,7 @@ Es gibt kein Blatt von unten mehr – auch Auswahlen („⋯“, „Matrix ⌄�
 **Das brauchst du:** Den Dienstplaner in der **Test-Instanz** mit **drei Konten ohne Admin-Recht** im selben Team eines Dienstes
 (zum Beispiel Gesang): **Anna** (am Termin für den Dienst zugesagt), **Ben** und **Finn** (Mitglieder des Teams, ohne Einteilung am
 Termin), dazu eine Person mit **Planer-Recht** für die Dienstgruppe. Für die Dienstgruppe den Speicher „Antworten …" mit Rechten
-(sehen, anlegen, ändern, löschen) für alle Mitglieder; Ben hat zu diesem Termin **Ja**, Finn **Vielleicht** in „Wann kann ich?"
+(sehen, anlegen, ändern, löschen) für alle Mitglieder; Ben hat zu diesem Termin **Ja**, Finn **Vielleicht** in „Verfügbarkeit"
 gesagt, ein vierter hat **Nein** (Abwesenheit). Für das Übernehmen braucht das Team in ChurchTools das Gruppenrecht **`+entry free`**
 („freie Plätze selbst eintragen") – zum Gegenprüfen ein Konto ohne dieses Recht. Mail-Postfach von Ben, Finn und der Leitung.
 
@@ -630,20 +630,20 @@ drückt, hat den Dienst**, ohne dass ein Planer etwas tut. Übernimmt niemand, s
    **Zwei Plätze:** Hat der Dienst zwei Plätze und war der zweite schon vorher frei, bleibt das Schild nur am abgesagten Platz; übernimmt Ben ihn, verschwinden Schild **und** Zeile (auch bei Ben selbst), obwohl der andere Platz frei ist. Wer am Termin in diesem Dienst schon eingeteilt ist, sieht „Übernehmen“ nie.
 7. **Ohne das Recht `+entry free`:** „Übernehmen" sagt **„Du darfst dich hier nicht selbst eintragen – frag die Leitung."**, der Platz
    bleibt frei, die Zeile bleibt stehen.
-8. **Die Markierung bleibt:** Anna speichert nach der Suche in „Wann kann ich?" etwas Neues → das Schild in „Planen" und die Zeile
+8. **Die Markierung bleibt:** Anna speichert nach der Suche in „Verfügbarkeit" etwas Neues → das Schild in „Planen" und die Zeile
    bei Ben stehen weiter (die Markierung steckt im selben Wert wie ihre Antworten und darf beim Speichern nicht verloren gehen).
 9. **Teil-Fehlschläge (nur mit Test-Aufbau):** eine gefragte Person **ohne Mail-Adresse** → das Fenster sagt, für wen ChurchTools keine
    Adresse hat, und bietet kein „Erneut senden" dafür an. Fällt der Mailversand aus (ChurchTools antwortet nicht), steht „Abgesagt.
    Mail an … nicht verschickt." – „Erneut senden" schickt **nur** an die ohne Mail, und nur auf Klick. Fehlt der Speicher „Antworten …"
    der Dienstgruppe, sagt das Fenster, dass **nichts abgesagt** wurde.
-10. Aufräumen: den Dienst wieder zusagen lassen, die Antworten und Markierungen entfernen (Termin vergangen, oder in „Wann kann ich?" speichern
+10. Aufräumen: den Dienst wieder zusagen lassen, die Antworten und Markierungen entfernen (Termin vergangen, oder in „Verfügbarkeit" speichern
     nach Ablauf).
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
 - **Betrifft:** `shared/dienstplan/vertretung.ts`, `shared/dienstplan/verfuegbarkeit.ts`, `shared/dienstplan/antworten.ts`, `dienstplaner/src/VertretungFenster.tsx`, `dienstplaner/src/VertretungTeile.tsx`, `dienstplaner/src/vertretungAblauf.ts`, `dienstplaner/src/ladeVertretung.ts`, `dienstplaner/src/useVertretung.ts`, `dienstplaner/src/TauschTeile.tsx`, `dienstplaner/src/Startseite.tsx`, `dienstplaner/src/PlanPlaetze.tsx`, `dienstplaner/src/Planen.tsx`
-- **Automatisiert:** weitgehend – `shared/dienstplan/vertretung.test.ts` (wen man fragen kann, gilt-nur-bei-freiem-Platz, „Für dich offen", Schilder, Mail-Texte, Übernehmen mit allen Zweigen), `shared/dienstplan/verfuegbarkeit.test.ts` (Markierung im eigenen Wert, Erhalt beim Speichern aus „Wann kann ich?"), `shared/dienstplan/antworten.test.ts` (Absagen nach der Zusage), `dienstplaner/src/vertretungAblauf.test.ts` (Reihenfolge Markierung → Absage → Mails, Teil-Fehlschläge, „Erneut senden"), `dienstplaner/src/Vertretung.test.tsx` (Fenster, Knopf neben „Tauschen", Startseite), `dienstplaner/src/useVertretung.test.tsx` (Übernehmen), `dienstplaner/src/Planen.vertretung.test.tsx` (Schild), `dienstplaner/src/ladeVertretung.test.ts`; **nur von Hand:** dass die Mails wirklich ankommen (Absender, Knopf, Kopie), die Rechte (`+entry free`, Speicher „Antworten …") an der Instanz und die Bedienung am Handy
+- **Automatisiert:** weitgehend – `shared/dienstplan/vertretung.test.ts` (wen man fragen kann, gilt-nur-bei-freiem-Platz, „Für dich offen", Schilder, Mail-Texte, Übernehmen mit allen Zweigen), `shared/dienstplan/verfuegbarkeit.test.ts` (Markierung im eigenen Wert, Erhalt beim Speichern aus „Verfügbarkeit"), `shared/dienstplan/antworten.test.ts` (Absagen nach der Zusage), `dienstplaner/src/vertretungAblauf.test.ts` (Reihenfolge Markierung → Absage → Mails, Teil-Fehlschläge, „Erneut senden"), `dienstplaner/src/Vertretung.test.tsx` (Fenster, Knopf neben „Tauschen", Startseite), `dienstplaner/src/useVertretung.test.tsx` (Übernehmen), `dienstplaner/src/Planen.vertretung.test.tsx` (Schild), `dienstplaner/src/ladeVertretung.test.ts`; **nur von Hand:** dass die Mails wirklich ankommen (Absender, Knopf, Kopie), die Rechte (`+entry free`, Speicher „Antworten …") an der Instanz und die Bedienung am Handy
 - **Historie:** Dienstplaner E5c-6 (21.11.2026), Entwurf `e5c-6-vertretung.html` v1; Messung `messung-e5c.md` § E5c-6
 
 </details>

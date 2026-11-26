@@ -12,7 +12,7 @@ import { adresseFuer } from './reiter';
 
 /**
  * E5c-5: der Anschluss an ChurchTools. Nichts geht raus – `ctAnfrage` ist ein Spion. Geprüft: Weg, Methode und Rumpf von
- * `POST /events/send` und dass der Knopf in der Mail auf „Wann kann ich?“ der Erweiterung zeigt.
+ * `POST /events/send` und dass der Knopf in der Mail auf „Verfügbarkeit“ der Erweiterung zeigt.
  */
 beforeEach(() => anfrage.mockReset());
 
@@ -40,14 +40,14 @@ describe('ctMailSenden', () => {
 });
 
 describe('erinnernLink', () => {
-  it('die volle Adresse: Instanz + Kürzel der Erweiterung + Adresse des Reiters „Wann kann ich?“', () => {
+  it('die volle Adresse: Instanz + Kürzel der Erweiterung + Adresse des Reiters „Verfügbarkeit“', () => {
     expect(adresseFuer('abwesenheiten')).toBe('#/abwesenheiten');
     expect(erinnernLink()).toBe('https://ct.test/ccm/dienstplaner/#/abwesenheiten');
   });
 });
 
 describe('abfrageLink', () => {
-  it('führt auf „Wann kann ich?“ mit der Abfrage der Dienstgruppe', () => {
+  it('führt auf „Verfügbarkeit“ mit der Abfrage der Dienstgruppe', () => {
     expect(abfrageLink(4)).toBe('https://ct.test/ccm/dienstplaner/#/abwesenheiten?abfrage=4');
   });
 });

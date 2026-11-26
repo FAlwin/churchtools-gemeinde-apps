@@ -45,7 +45,7 @@ import { ladeTerminStaende, type TerminStand } from './terminStand';
 import { ladeVorliebe, speichereVorliebe } from './ladeVorlieben';
 import type { Vorliebe, VorliebenGrund } from '@shared/dienstplan/vorlieben';
 
-/** Der Anschluss an den Speicher des Dienstplaners – auch „Wann kann ich?“ (`ladeVerfuegbarkeit`) liest und schreibt darüber. */
+/** Der Anschluss an den Speicher des Dienstplaners – auch „Verfügbarkeit“ (`ladeVerfuegbarkeit`) liest und schreibt darüber. */
 export const port = entwurfPortFuer(() => MODUL_KUERZEL);
 
 /** Die ID des eigenen Moduls – je Sitzung einmal gesucht; ein Fehlschlag wird nicht gemerkt. */

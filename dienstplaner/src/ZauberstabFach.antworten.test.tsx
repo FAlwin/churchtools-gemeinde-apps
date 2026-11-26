@@ -112,7 +112,7 @@ describe('ZauberstabFach mit Antworten (E5c-4)', () => {
     zeige(() => Promise.reject(new ApiError(503, 'x')));
     await screen.findByText('1 Vorschlag');
     expect(auswahl().selectedOptions[0].textContent).toBe('Anna (0×)');
-    expect(screen.getByText(/Antworten aus „Wann kann ich\?“ gerade nicht geladen/)).toBeTruthy();
+    expect(screen.getByText(/Antworten aus „Verfügbarkeit“ gerade nicht geladen/)).toBeTruthy();
   });
 
   it('ohne Lader: wie bisher, kein Hinweis', async () => {

@@ -1,5 +1,5 @@
 /**
- * **Ja / Vielleicht – der Speicher-Kern** (Bauplan E5c-1b, „Wann kann ich?“). Nur Regeln, keine Oberfläche, keine
+ * **Ja / Vielleicht – der Speicher-Kern** (Bauplan E5c-1b, „Verfügbarkeit“). Nur Regeln, keine Oberfläche, keine
  * Netzwerk-Technik: Der Aufrufer reicht einen `EntwurfPort` herein (derselbe Anschluss wie bei den Entwürfen).
  *
  * Wo es liegt: im Speicher der Erweiterung, **eine Kategorie je Dienstgruppe** (`antwortenSchublade`), darin
@@ -140,7 +140,7 @@ export function antwortenSchublade(gruppe: { id: number; name: string }): Katego
     kuerzel: `dienstplaner-antworten-${gruppe.id}`,
     name: `Antworten ${gruppe.name}`.slice(0, 50),
     beschreibung:
-      `Ja/Vielleicht-Antworten der Dienstgruppe „${gruppe.name}“ aus „Wann kann ich?“ – vom ` +
+      `Ja/Vielleicht-Antworten der Dienstgruppe „${gruppe.name}“ aus „Verfügbarkeit“ – vom ` +
       'Dienstplaner angelegt, bitte nicht löschen.',
   };
 }
@@ -478,9 +478,9 @@ async function eineKategorieSchreiben(
     return fehl(grundAus(p, e));
   }
 
-  // Die gesuchten Vertretungen (E5c-6) gehören zum Wert der Person: Wer nur die Antworten speichert („Wann kann ich?“),
+  // Die gesuchten Vertretungen (E5c-6) gehören zum Wert der Person: Wer nur die Antworten speichert („Verfügbarkeit“),
   // gibt `undefined` mit – dann bleibt, was FRISCH gelesen dasteht (nicht, was die Seite beim Öffnen sah). Sonst löschte
-  // jedes Speichern in „Wann kann ich?“ die Markierung. Vergangenes fällt auch hier heraus.
+  // jedes Speichern in „Verfügbarkeit“ die Markierung. Vergangenes fällt auch hier heraus.
   const vertretungenZiel = vertretungenAb(vertretungen ?? eigene[0]?.vertretungen ?? {}, heute);
   const hatVertretung = Object.keys(vertretungenZiel).length > 0;
   const leer = Object.keys(antworten).length === 0 && !hatVertretung;

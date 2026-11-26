@@ -1,11 +1,11 @@
 /**
  * **Mein Stand in einer Abfrage** (Bauplan R-3, 25.11.2026): was Mitarbeitende zu einer laufenden Abfrage sehen – die Karte
- * auf der Startseite, das Band in „Wann kann ich?“ und (später, R-5) das Austragen beim Antworten. Nur Rechnen und Texte;
+ * auf der Startseite, das Band in „Verfügbarkeit“ und (später, R-5) das Austragen beim Antworten. Nur Rechnen und Texte;
  * geladen wird in `dienstplaner/src/useAbfragen.ts`.
  *
  * **Eine Rechnung für alle:** „Offen“ ist ausschließlich `offeneTermine` (`erinnern.ts`) – dieselbe Regel wie bei „Erinnern“.
  * Hier werden ihr nur die Fragen der eigenen Daten beantwortet:
- * - `beantwortet`: eigene Ja/Vielleicht-Antwort (`antworten`, wie „Wann kann ich?“) **oder** eigene Abwesenheit, die den
+ * - `beantwortet`: eigene Ja/Vielleicht-Antwort (`antworten`, wie „Verfügbarkeit“) **oder** eigene Abwesenheit, die den
  *   Termin deckt (`decktTermin`, dieselbe Regel wie überall);
  * - `eingeteilt`: eigener Dienst (zugesagt oder angefragt) an dem Termin **in dieser Dienstgruppe**;
  * - `pausiert`: nie – Mitarbeitende können ihre Pause nicht lesen, Pausierte sehen die Karte (Alwin, 25.11.2026).
@@ -145,7 +145,7 @@ export const abfrageKartenText = (o: {
   `${o.gruppe} fragt für ${termineText(o.stand.gesamt)} (${tagMonat(o.abfrage.von)}–${tagMonat(o.abfrage.bis)}). Noch ${o.stand.offen} offen.`;
 
 /**
- * „Abfrage Musik · 01.02.–31.03. · noch 7 von 9 offen“ – das Band in „Wann kann ich?“ (`stand` fehlt, solange es lädt).
+ * „Abfrage Musik · 01.02.–31.03. · noch 7 von 9 offen“ – das Band in „Verfügbarkeit“ (`stand` fehlt, solange es lädt).
  * Ist nichts mehr offen: „· alles eingetragen“ statt „noch 0 von 9 offen“. Nur der Text ändert sich – die Karte auf der Startseite
  * hat für den fertigen Zustand keine eigene Farbe oder Regel, das Band auch nicht.
  */

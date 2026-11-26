@@ -266,7 +266,7 @@ export function PersonenRaster({
   sicht: Sicht;
   /** Lädt Mitglieder und Abwesenheiten – ohne bleibt es bei den Eingeteilten. */
   lader?: PersonenLader;
-  /** Lädt die Antworten aus „Wann kann ich?“ (E5c-3) – ohne gibt es keine Farbe aus Antworten. */
+  /** Lädt die Antworten aus „Verfügbarkeit“ (E5c-3) – ohne gibt es keine Farbe aus Antworten. */
   antwortenLader?: AntwortenLader;
   /** Die Farbe eines Dienstes (`personenFarben.ts`). */
   farbe: (dienstId: number) => number;
@@ -295,7 +295,7 @@ export function PersonenRaster({
     zeitraum,
   );
 
-  // Die Antworten aus „Wann kann ich?“ (E5c-3): je Dienstgruppe der gezeigten Dienste (nicht je Zeitraum – sie gelten je Termin).
+  // Die Antworten aus „Verfügbarkeit“ (E5c-3): je Dienstgruppe der gezeigten Dienste (nicht je Zeitraum – sie gelten je Termin).
   const antwortGruppen = [
     ...new Set(
       rasterDienste(plan, spalten, gruppen).flatMap((x) =>
@@ -619,7 +619,7 @@ export function PersonenRaster({
           <td
             key={termine[pos].id}
             className={klasse || undefined}
-            // Die Antwort aus „Wann kann ich?“ in Worten – die Farbe allein trägt die Bedeutung nicht (Notiz, „nur für …“).
+            // Die Antwort aus „Verfügbarkeit“ in Worten – die Farbe allein trägt die Bedeutung nicht (Notiz, „nur für …“).
             // Für Vorleser steht sie als versteckter Text in der Zelle (ein `aria-label` an der Zelle würde deren Inhalt verdecken).
             title={antwort ?? undefined}
             // Ein Klick irgendwo in der Zelle (auch auf einem Tag darin) – der Knopf darunter ist für Tastatur und Vorleser;

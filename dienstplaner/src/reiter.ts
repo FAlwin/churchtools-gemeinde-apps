@@ -16,7 +16,7 @@ export const ALLE_REITER: Reiter<ReiterId>[] = [
   { id: 'start', label: 'Start', icon: 'home' },
   { id: 'termine', label: 'Dienste', icon: 'calendar' },
   { id: 'planen', label: 'Planen', icon: 'grid' },
-  { id: 'abwesenheiten', label: 'Wann kann ich?', icon: 'user-slash' },
+  { id: 'abwesenheiten', label: 'Verfügbarkeit', icon: 'user-slash' },
 ];
 
 /**
@@ -29,7 +29,7 @@ export function sichtbareReiter(darfPlanen: boolean): Reiter<ReiterId>[] {
 
 /** Der Reiter aus der Adresse (`#/termine`) – Regel in `@ui/bedienung/reiterAdresse`. Unbekannt → Start. */
 export function reiterAusAdresse(hash: string, erlaubt: Reiter<ReiterId>[]): ReiterId {
-  // „Wann kann ich?“ mit einer Abfrage (`#/abwesenheiten?abfrage=4`, R-3) ist trotz Anhang der Reiter selbst.
+  // „Verfügbarkeit“ mit einer Abfrage (`#/abwesenheiten?abfrage=4`, R-3) ist trotz Anhang der Reiter selbst.
   if (abwesenheitenAbfrageAusAdresse(hash) !== null)
     return ausAdresse('#/abwesenheiten', erlaubt, 'start');
   // Gruppen-Besuch und Vorlagen gehören beide zu „Planen“ – dort bleibt der Reiter markiert.
@@ -57,7 +57,7 @@ export function adresseFuerPlanenGruppe(gruppeId: number): string {
 }
 
 /**
- * **„Wann kann ich?“ mit einer Abfrage** (R-3, 25.11.2026): `#/abwesenheiten?abfrage=4` – die Karte auf der Startseite führt
+ * **„Verfügbarkeit“ mit einer Abfrage** (R-3, 25.11.2026): `#/abwesenheiten?abfrage=4` – die Karte auf der Startseite führt
  * dorthin, die Seite zeigt dann genau den Zeitraum der Abfrage der Dienstgruppe 4. Ohne Anhang (oder mit einem kaputten)
  * ist es die Seite wie immer. Eine eigene Adresse, damit Zurück und Neuladen gehen.
  */

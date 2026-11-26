@@ -934,7 +934,7 @@ function ablaufDemo(
 function speicherDemo(fall: string) {
   const kategorien = [
     { id: 40, shorty: 'dienstplaner-entwuerfe-4', name: 'Entwürfe Musik' },
-    // „Wann kann ich?“ (E5c-1c): Alwins Ja/Vielleicht für Musik – Technik hat keine Antworten-Schublade.
+    // „Verfügbarkeit“ (E5c-1c): Alwins Ja/Vielleicht für Musik – Technik hat keine Antworten-Schublade.
     { id: 41, shorty: 'dienstplaner-antworten-4', name: 'Antworten Musik' },
     // Personenliste (PL-1): Technik hat dafür eine Schublade – ohne Entwürfe, nur mit der Liste.
     { id: 42, shorty: 'dienstplaner-entwuerfe-3', name: 'Entwürfe Technik' },

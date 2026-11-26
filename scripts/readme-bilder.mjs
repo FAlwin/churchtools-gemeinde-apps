@@ -281,8 +281,8 @@ async function aufnehmen(browser) {
     await p(1000);
     await knopf('Dienste').click();
     await p(2000);
-    // Seit E5c-1c (#1031) heißt der Reiter „Wann kann ich?“ und hat je Termin Ja · Vielleicht · Nein statt des Hakens.
-    await knopf('Wann kann ich?').click();
+    // Seit E5c-1c (#1031) heißt der Reiter „Verfügbarkeit“ und hat je Termin Ja · Vielleicht · Nein statt des Hakens.
+    await knopf('Verfügbarkeit').click();
     await p(1200);
     await page
       .getByRole('button', { name: /^Vielleicht – / })
@@ -462,7 +462,7 @@ const STANDBILDER = [
     'dienstplaner',
     '',
     QUER,
-    (p) => knopfIn(p, 'Wann kann ich?').click(),
+    (p) => knopfIn(p, 'Verfügbarkeit').click(),
   ],
   ['dienstplaner-planen', 'dienstplaner', '', QUER, (p) => knopfIn(p, 'Planen').click()],
   ['organigramm-baum', 'organigramm', '', QUER],

@@ -783,7 +783,7 @@ describe('Vertretung gesucht – Markierung im eigenen Wert', () => {
     });
   });
 
-  it('Erhalt: Speichern in „Wann kann ich?“ (nur die Antworten) löscht die Markierung NICHT – in keiner Kategorie', async () => {
+  it('Erhalt: Speichern in „Verfügbarkeit“ (nur die Antworten) löscht die Markierung NICHT – in keiner Kategorie', async () => {
     const { port } = speicher();
     await eigeneAntwortenSchreiben(port, MODUL, [K1, K2], ANNA, A1, HEUTE);
     await vertretungMarkieren(
@@ -794,7 +794,7 @@ describe('Vertretung gesucht – Markierung im eigenen Wert', () => {
       { terminId: TERMIN, vertretung: markierung() },
       HEUTE,
     );
-    // So speichert „Wann kann ich?“: nur Antworten – ohne Wissen von der Markierung (die Seite wurde davor geladen).
+    // So speichert „Verfügbarkeit“: nur Antworten – ohne Wissen von der Markierung (die Seite wurde davor geladen).
     const neu = antw({ '1': ['vielleicht', '2026-12-06'] });
     const r = await eigeneAntwortenSchreiben(port, MODUL, [K1, K2], ANNA, neu, HEUTE);
     expect(r.every((x) => x.ok)).toBe(true);
@@ -806,7 +806,7 @@ describe('Vertretung gesucht – Markierung im eigenen Wert', () => {
     });
   });
 
-  it('Erhalt auch, wenn „Wann kann ich?“ alle Antworten entfernt: der Wert bleibt wegen der Markierung stehen', async () => {
+  it('Erhalt auch, wenn „Verfügbarkeit“ alle Antworten entfernt: der Wert bleibt wegen der Markierung stehen', async () => {
     const { port, eigene } = speicher();
     await eigeneAntwortenSchreiben(port, MODUL, [K1], ANNA, A1, HEUTE);
     await vertretungMarkieren(

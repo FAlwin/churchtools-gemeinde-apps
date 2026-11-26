@@ -15,7 +15,7 @@ import { antwortBereinigt, type Antworten, type Zusage } from './verfuegbarkeit'
 import type { RohTermin } from './termine';
 
 /**
- * E5c-3: Antworten aus „Wann kann ich?“ in der Ansicht „Personen“. Tests gegen die Erzeuger: Plan aus `planAus`,
+ * E5c-3: Antworten aus „Verfügbarkeit“ in der Ansicht „Personen“. Tests gegen die Erzeuger: Plan aus `planAus`,
  * Abwesenheiten aus `abwesenheitenAus`, Antworten aus `antwortBereinigt` (dieselbe Form wie beim Lesen und Schreiben).
  *
  * Dienste: Gitarre und Gesang (Musik = Dienstgruppe 4), Ton (Technik = 3). Termine 1, 2, 3 (Schlüssel der Antworten = ID als Text).

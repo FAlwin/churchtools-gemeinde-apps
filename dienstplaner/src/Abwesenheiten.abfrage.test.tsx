@@ -28,7 +28,7 @@ import type { Start } from './start';
 import { startFuer } from './start.testutil';
 
 /**
- * **R-3: „Wann kann ich?“ mit der Abfrage** – das Band über der Liste, die Liste im Zeitraum der Abfrage, „X offen“ aus
+ * **R-3: „Verfügbarkeit“ mit der Abfrage** – das Band über der Liste, die Liste im Zeitraum der Abfrage, „X offen“ aus
  * derselben Rechnung wie die Karte (`meinStand` → `offeneTermine`), Aktualisierung nach dem Speichern. Heute = Di 10.11.2026,
  * Musik (4) fragt Feb–Mär 2027. Termine 101–106 wie in `Startseite.abfrage.test.tsx`: offen sind 101 und 105 (von 6).
  */

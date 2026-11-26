@@ -16,7 +16,7 @@ import {
 } from './ladeVerfuegbarkeit';
 
 /**
- * **„Wann kann ich?“ (E5c-1c)** – die Seite mit Ja · Vielleicht · Nein im Dienstplaner. Die Abwesenheiten (Nein) laufen
+ * **„Verfügbarkeit“ (E5c-1c)** – die Seite mit Ja · Vielleicht · Nein im Dienstplaner. Die Abwesenheiten (Nein) laufen
  * gegen eine Attrappe des ChurchTools-Dienstes, Ja/Vielleicht gegen eine Attrappe des Speichers, die wie ChurchTools
  * den geschriebenen Stand beim nächsten Laden zurückgibt. Wie Speicher und Rechte wirklich rechnen, prüft
  * `ladeVerfuegbarkeit.test.ts` (und im Kern `verfuegbarkeit.test.ts`).

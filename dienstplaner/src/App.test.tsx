@@ -154,7 +154,7 @@ describe('Reiter des Dienstplaners (E3-1)', () => {
         .getAllByRole('button')
         .map((b) => b.textContent),
       // „Einstellungen“ ist der letzte Reiter (R13) – für alle.
-    ).toEqual(['Start', 'Dienste', 'Planen', 'Wann kann ich?', 'Einstellungen']);
+    ).toEqual(['Start', 'Dienste', 'Planen', 'Verfügbarkeit', 'Einstellungen']);
     // Im Kopf der Seite, eine Reiterzeile unter dem App-Namen – am Rechner (R4/E4).
     expect(bereiche.closest('header')).not.toBeNull();
     expect(screen.getByText('Hallo Alwin')).toBeTruthy();

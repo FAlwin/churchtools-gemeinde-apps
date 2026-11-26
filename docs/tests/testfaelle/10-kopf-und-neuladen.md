@@ -33,7 +33,7 @@ des Bandes.
    2b. **Unterer Rand in der installierten App und in der ChurchTools-App** (29.10.2026): Die Reiterleiste endet an der
    Bildschirmkante (nichts ragt darunter), die Beschriftung steht wie vorher ~20 pt über der Kante. Im Lied stehen die
    Pfeile der Fußleiste deutlich über dem Home-Strich (62 pt in der installierten App, ~40 pt in der ChurchTools-App).
-   Das Plus steht in **Abwesenheiten** und im **Ablauf** gleich weit über dem, was darunter liegt – auch in **„Wann kann ich?“ des
+   Das Plus steht in **Abwesenheiten** und im **Ablauf** gleich weit über dem, was darunter liegt – auch in **„Verfügbarkeit“ des
    Dienstplaners** (Handy, B8a): fest unten rechts über der Reiterleiste, nicht am Listenende unter dem Bildschirmrand. Nach dem
    Abhaken klebt dort auch die Speichern-Leiste unten am Bildschirm.
 3. In jedem der vier: **hochschieben**. Die Überschrift wandert nach oben, läuft unter das Band und

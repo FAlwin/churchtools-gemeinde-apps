@@ -12,7 +12,7 @@ export interface ZeitraumPfeil {
 /**
  * **Die Zeitraum-Leiste** (R5/E6, „Ruhige Bedienung“ B3, B4): EIN gerahmtes Element ‹ [Zeitraum] › für die Mitte der
  * Werkzeugzeile (`Werkzeugzeile`, `mitte`). Der Zeitraum-Knopf (`ZeitraumKnopf`) steht als `knopf` zwischen den Pfeilen; Pfeile
- * und Knopf haben darin keinen eigenen Rand. Bis B4 gab es das nur in „Planen“ (`Terminleiste`) – seit „Wann kann ich?“ denselben
+ * und Knopf haben darin keinen eigenen Rand. Bis B4 gab es das nur in „Planen“ (`Terminleiste`) – seit „Verfügbarkeit“ denselben
  * Rahmen nutzt, ist es ein Baustein.
  *
  * Am Handy (`handy`) füllt der Knopf die Breite; die Pfeile gibt es dort nur, wenn `blaettern` es sagt (der Aufrufer weiß,

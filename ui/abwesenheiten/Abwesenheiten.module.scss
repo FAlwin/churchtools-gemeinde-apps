@@ -543,3 +543,38 @@
 .notizLinkMit {
   color: var(--text2);
 }
+
+// „Alle Einträge …“ als Fenster (Dienstplaner V-3): die Liste der Einträge, ohne den Platz fürs schwebende Plus von `.wrap`.
+.eintraegeFenster {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+// „Deine Zeiträume“ (V-3): eine Zeile je Zeitraum – Etikett mit dem Grund, der Zeitraum, „›“ am Ende (`KlickZeile`).
+.zeitraumZeile {
+  padding: 10px 14px;
+  color: var(--text);
+  font-family: var(--ui);
+  font-size: 14px;
+  & + & {
+    box-shadow: inset 0 1px 0 var(--hair);
+  }
+}
+.zeitraumText {
+  flex: 1;
+  min-width: 0;
+}
+
+// Das Schild der Dienstgruppe am Termin in „Zusagen“ (V-3): klein, grau, neben dem Namen.
+.schild {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 3px;
+  background: var(--surface3);
+  color: var(--text2);
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: 1px;
+}

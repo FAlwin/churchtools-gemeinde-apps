@@ -39,11 +39,17 @@
 >   hinten die Zahl der Dienste; ab neun Terminen in Blöcken zu je acht) oder **„Je Person“** (je Eingeteiltem ein Abschnitt mit seinen Terminen: Datum, Uhrzeit, Termin, Dienst; beim ganzen Plan
 >   mit der Gruppe hinter dem Dienst; dazu die Reihe **„Seiten“**: _Seite je Person_ oder _Untereinander_, dann wandert ein Abschnitt, der nicht mehr auf die Seite passt, ganz auf die nächste).
 >   Abgesagte Termine fehlen in beiden Personen-Ansichten; gezählt wird wie bei „Wer wie oft?“. Am Handy ein Termin auf einmal.
-> - **Verfügbarkeit:** je Termin **Ja**, **Vielleicht** oder **Nein** (Nein = Abwesenheit in ChurchTools, nur für die Terminzeit),
->   dazu eine Notiz (leise „+ Notiz“, mit Notiz nur ihr Text) und „nur bestimmte Dienste“; Urlaub als Zeitraum (ganze Tage).
->   **Eine Werkzeugzeile** (seit B4): links „Termine | Einträge“ (an „Einträge“ ein blauer Kreis mit der Zahl der anstehenden Einträge),
->   in der Mitte der Zeitraum mit ‹ ›, rechts **Filter** und der grüne Knopf **+ Zeitraum eintragen** (am Handy das runde Plus).
->   Unter „Einträge“ gibt es weder Zeitraum noch Filter. Dieselbe Seite nutzt die Musik-App (Abwesenheiten). Ja/Vielleicht liegen im Speicher „Antworten
+> - **Verfügbarkeit** (seit V-3, 26.11.2026): **Eine Werkzeugzeile** (B4/R5) – links der Umschalter **„Abwesenheiten | Zusagen“** (nur, wenn mindestens eine **eigene**
+>   Dienstgruppe nach Zusagen fragt, `fragtZusagen`; sonst gibt es nur Abwesenheiten, ohne Umschalter), in der Mitte der Zeitraum mit ‹ ›, rechts **Filter**, **⋯**
+>   und – nur in „Abwesenheiten“ – der grüne Knopf **+ Zeitraum eintragen** (am Handy das runde Plus). **Beim Öffnen „Abwesenheiten“**; über eine Abfrage
+>   (`#/abwesenheiten?abfrage=<Dienstgruppe>`, Karte oder Mail) einer Gruppe mit Zusagen öffnet **„Zusagen“**. **Abwesenheiten:** alle Termine mit dem Haken
+>   „Abwesend“ (wie in der Musik-App), oben die Karte **„Deine Zeiträume“** (Abwesenheiten über mehrere Tage oder ganztägig, die den gezeigten Zeitraum schneiden; Tipp =
+>   ändern; ohne solche Einträge keine Karte) und im **⋯ „Alle Einträge …“** (die volle Liste, anstehend und früher, als Fenster). **Zusagen:** je Termin **Ja**, **Vielleicht** oder **Nein**
+>   (Nein = dieselbe Abwesenheit in ChurchTools, nur für die Terminzeit), dazu eine Notiz (leise „+ Notiz“) und „nur bestimmte Dienste“ – aber nur an Terminen, an denen
+>   eine Zusagen-Gruppe der Person Dienste hat (gültiger Platz in einem Dienst der Gruppe, `zusagenTermine`), die Gruppe als kleines Schild in der Unterzeile; kein „+ Zeitraum“.
+>   Am Handy stehen Ja · Vielleicht · Nein ausgeschrieben in voller Breite unter dem Termin. Eine Speichern-Leiste für beide Ansichten. Lesefehler und nicht lesbare Dokumente
+>   gelten als „Zusagen“ (nichts geht verloren); lassen sich die Termine der Zusagen nicht laden, stehen alle da. **Das gilt auch, wenn ChurchTools die Plätze nicht vollständig liefert:** Einem einfachen Mitglied gibt es zu einem Dienst nur die eigenen Einträge, wenn es die Dienstgruppe nicht sehen oder planen darf und sie nicht „für alle sichtbar“ ist (`ganzSichtbar`, dieselbe Regel wie in der Matrix) – dann ließe der Filter genau die Termine weg, an denen noch eine Antwort fehlt; deshalb stehen unter „Zusagen“ alle Termine, ohne Schild. Im **⋯** steht neben „Alle Einträge …“ auch **Hilfe**. „Abwesenheit ändern“ über „Alle Einträge“ hat „‹“ und „Abbrechen“ zurück zur Liste, das X schließt beide. Dieselbe Seite nutzt die Musik-App (Abwesenheiten) – dort bleibt
+>   „Termine | Einträge“ wie bisher (Option `ansichten` am gemeinsamen Baustein). Ja/Vielleicht liegen im Speicher „Antworten
 >   <Dienstgruppe>“ (einmal „Einrichten“, Rechte setzt die Verwaltung). Die Adresse bleibt `#/abwesenheiten`.
 > - **Vertretung suchen** (E5c-6, 21.11.2026, noch nicht released): An einem **zugesagten** eigenen Dienst (Start, Dienste, Termin-Ansicht) steht neben
 >   „Tauschen“ der leise Knopf **„Vertretung suchen“**. Das Fenster zeigt, wer im Team den Dienst an **diesem Termin** machen kann (**Hat Ja gesagt** ·
@@ -215,7 +221,8 @@ Protokolle (`ui/ct/useAblageSpiegel.ts`). Die Demo (`?demo`) hält die Personen-
 Fensters im selben Dokument wie der Erinnerungsplan (`dienstplaner-abfragen-<Dienstgruppe>`, Feld `verfuegbarkeit`: `zusagen` | `abwesend`; ein älteres Dokument
 ohne das Feld gilt als `zusagen`, ein anderer Wert macht es unlesbar) – mit Version, Konflikt-Schutz und Nachlesen wie der Plan. **Anders als der Plan gilt die Art
 sofort**, auch während einer laufenden Abfrage. Die eine Regel dazu ist `fragtZusagen(inhalt)` in `shared/dienstplan/abfragen.ts` (ohne Dokument: ja). Die
-Oberfläche „Verfügbarkeit“, die Abfrage und das Planen richten sich erst in den nächsten Schritten (V-3 bis V-5) danach – bis dahin ändert die Wahl dort nichts.
+Oberfläche „Verfügbarkeit“ richtet sich seit V-3 danach (Umschalter „Abwesenheiten | Zusagen“ nur mit einer Zusagen-Gruppe, Termine unter „Zusagen“ nur mit Diensten dieser Gruppen);
+die Abfrage („Nur abwesend“ mit „Fertig“) und das Planen folgen in V-4 und V-5 – bis dahin zeigen Abfragen solcher Gruppen nichts Neues.
 
 **Live-Ansicht von der Startseite** (L4-5, Alwin 23.11.2026): In „Als Nächstes“ steht neben „Musik-App“ und „Ablauf & Dienste“ der Knopf
 **„Live“** – **am Tag des Termins ab 0 Uhr (Ortszeit der Gemeinde, `liveFenster.ts`) bis zum Ende des Termins** (`endDate`; ohne eigenes Ende

@@ -13,7 +13,12 @@ import { ZeitraumLeiste } from '../bedienung/ZeitraumLeiste';
 import { FilterKnopf } from '../bedienung/FilterKnopf';
 import { Segment } from '../bedienung/Segment';
 import { AnsichtWahl } from '../bedienung/AnsichtWahl';
+import { Etikett } from '../bedienung/Etikett';
+import { HilfeFenster, type HilfeAbschnitt } from '../bedienung/HilfeKnopf';
+import { KlickZeile } from '../bedienung/KlickZeile';
+import { MehrMenue } from '../bedienung/MehrMenue';
 import { Werkzeugzeile } from '../bedienung/Werkzeugzeile';
+import { Sheet } from '../fenster/Sheet';
 import { HANDY_BREITE, useMedienAbfrage } from '../bedienung/useMedienAbfrage';
 import { ApiError } from '../ct/fehler';
 import {
@@ -33,6 +38,7 @@ import {
   type Antworten,
   type Zusage,
 } from '@shared/dienstplan/verfuegbarkeit';
+import type { VerfuegbarkeitAnsicht } from '@shared/dienstplan/verfuegbarkeitAnsicht';
 import { plusTage, tagImMonat } from '@shared/ct/wochen';
 import { letzterTag, monatLabel, monatNurKurz, monatPlus, monatVon } from '@shared/ct/monate';
 import { AbsenceSheet, type Entwurf } from './AbsenceSheet';
@@ -47,6 +53,7 @@ import {
   zeitraumKurz,
 } from './absenceDatum';
 import { ausgeblendetAusAlterWahl, filtereTermine, knoepfeAus } from './terminFilter';
+import { deineZeitraeume } from './zeitraeume';
 import styles from './Abwesenheiten.module.scss';
 
 // Nicht exportiert (Fast Refresh mag nur Komponenten als Export) – wer die Zahlen braucht, liest sie hier.
@@ -123,6 +130,36 @@ export interface Zusagen {
   speichern: (antworten: Antworten) => Promise<{ ok: true } | { ok: false; text: string }>;
 }
 
+/**
+ * **Die zwei Ansichten „Abwesenheiten | Zusagen“** (Dienstplaner V-3, Entwurf `verfuegbarkeit-einstellungen-v4.html`). Mit dieser
+ * Angabe ersetzt die Seite „Termine | Einträge“:
+ * - **Abwesenheiten:** die schlichte Liste mit dem Haken „Abwesend“, oben die Karte „Deine Zeiträume“ (Abwesenheiten über
+ *   mehrere Tage oder ganztägig, Tipp = ändern), im „⋯“ „Alle Einträge …“ (die volle Liste, auch Früheres).
+ * - **Zusagen** (nur mit `zusagenMoeglich`, sonst gibt es keinen Umschalter): Ja · Vielleicht · Nein – nur an Terminen, an denen
+ *   eine Gruppe mit Zusagen Dienste hat, die Gruppe als Schild am Termin. Kein „+ Zeitraum“ hier (R3).
+ *
+ * „Nein“ ist in beiden Ansichten dieselbe ChurchTools-Abwesenheit; es gibt EINE Speichern-Leiste. Ja/Vielleicht speichert die
+ * Seite über `zusagen` – ohne Zusagen-Gruppe braucht die App es nicht zu übergeben. **Ohne diese Angabe bleibt alles wie
+ * bisher** (Musik-App: „Termine | Einträge“ bzw. Haken).
+ */
+export interface Ansichten {
+  /** Mindestens eine eigene Dienstgruppe fragt nach Zusagen: dann gibt es den Umschalter und die Ansicht „Zusagen“. */
+  zusagenMoeglich: boolean;
+  /** Womit die Seite aufgeht (nur mit `zusagenMoeglich` kann das „zusagen“ sein). */
+  start: VerfuegbarkeitAnsicht;
+  /**
+   * Die Termine der Ansicht „Zusagen“ mit den Namen ihrer Gruppen, für den gezeigten Zeitraum – ein Hook (immer dieselbe
+   * Funktion übergeben). `aktiv`: Nur dann soll geladen werden (die Ansicht ist offen). Ergebnis: `undefined` = lädt,
+   * `null` = nicht zu ermitteln (dann stehen alle Termine da, ohne Schild – nichts geht verloren), sonst die Zuordnung.
+   */
+  useZusagenTermine: (
+    bereich: { von: string; bis: string },
+    aktiv: boolean,
+  ) => ReadonlyMap<number, string[]> | null | undefined;
+  /** Die Hilfe zur Seite: „Hilfe“ im „⋯“ neben „Alle Einträge …“ (Entwurf v4), das Fenster dazu gehört der Seite. Ohne: kein Eintrag. */
+  hilfe?: { seite: string; abschnitte: readonly HilfeAbschnitt[] };
+}
+
 export interface AbwesenheitenSeiteProps {
   /** Schreiben braucht Netz (ChurchTools). */
   online: boolean;
@@ -148,8 +185,10 @@ export interface AbwesenheitenSeiteProps {
    * sitzt (auch vorgemerkt), damit die App warnen kann („bitte auch den Dienst absagen“). Ohne: nichts.
    */
   terminZusatz?: (ev: AbsenceEvent, abwesend: boolean) => ReactNode;
-  /** „Verfügbarkeit“ – drei Knöpfe statt des Hakens, siehe `Zusagen`. Ohne: der Haken. */
+  /** „Verfügbarkeit“ – drei Knöpfe statt des Hakens, siehe `Zusagen`. Ohne: der Haken (mit `ansichten`: nur in „Zusagen“). */
   zusagen?: Zusagen;
+  /** Die Ansichten „Abwesenheiten | Zusagen“ statt „Termine | Einträge“ – siehe `Ansichten`. Ohne: wie bisher. */
+  ansichten?: Ansichten;
   /** Setzt die Teile in den Rahmen der App. */
   rahmen: (teile: AbwesenheitenTeile) => ReactNode;
   /**
@@ -160,6 +199,8 @@ export interface AbwesenheitenSeiteProps {
 }
 
 type Seite = 'termine' | 'eintraege';
+/** Der Hook ohne `ansichten`: nichts zu laden. */
+const keineZusagenTermine: Ansichten['useZusagenTermine'] = () => undefined;
 /** Eine vorgemerkte Ja/Vielleicht-Antwort samt Notiz und Diensten – wie `Antwort`, ohne den Tag (den hat der Termin). */
 type ZusageWahl = Omit<Antwort, 'tag'>;
 
@@ -220,6 +261,7 @@ export function AbwesenheitenSeite({
   filter,
   terminZusatz,
   zusagen,
+  ansichten,
   rahmen,
   anfangsZeitraum = AB_HEUTE,
 }: AbwesenheitenSeiteProps) {
@@ -243,6 +285,21 @@ export function AbwesenheitenSeite({
   const [laeuft, setLaeuft] = useState<'fenster' | 'loeschen' | 'sichern' | null>(null);
 
   const [seite, setSeite] = useState<Seite>('termine');
+  // Die Ansicht des Dienstplaners (V-3): ohne Zusagen-Gruppe gibt es nur „Abwesenheiten“.
+  const [ansichtWahl, setAnsichtWahl] = useState<VerfuegbarkeitAnsicht>(
+    ansichten?.zusagenMoeglich ? ansichten.start : 'abwesenheiten',
+  );
+  /** Die Ansicht „Zusagen“ ist offen – nur mit `ansichten`, nur mit Zusagen-Gruppe. */
+  const imZusagenBlatt = ansichten?.zusagenMoeglich === true && ansichtWahl === 'zusagen';
+  /**
+   * Ja · Vielleicht · Nein statt des Hakens: ohne `ansichten` (Dienstplaner vor V-3, Tests) überall, wo `zusagen` da ist;
+   * mit `ansichten` nur in „Zusagen“. Gespeichert wird Ja/Vielleicht über `zusagen` in jeder Ansicht (eine Leiste).
+   */
+  const dreiKnopf = zusagen !== undefined && (ansichten === undefined || imZusagenBlatt);
+  /** „Alle Einträge …“ im „⋯“ (nur mit `ansichten`): die volle Liste als Fenster. */
+  const [alleEintraege, setAlleEintraege] = useState(false);
+  /** „Hilfe“ im „⋯“ – das Fenster gehört der Seite, nicht dem Menü (wie in „Dienste“). */
+  const [hilfeOffen, setHilfeOffen] = useState(false);
   const [frueher, setFrueher] = useState(false);
   /**
    * Vorgemerkte Häkchen: **Termin-ID** → gewünschter Zustand (true = abwesend).
@@ -309,8 +366,15 @@ export function AbwesenheitenSeite({
   };
   // Termine im Zeitraum – nur ab heute (Vergangenes steht unter „Einträge → Früher“), ohne ausgeblendete Arten.
   const ab = grenzen.von > heute ? grenzen.von : heute;
+  const useZusagenTermine = ansichten?.useZusagenTermine ?? keineZusagenTermine;
+  const zusagenJeTermin = useZusagenTermine({ von: ab, bis: grenzen.bis }, imZusagenBlatt);
+  /** In „Zusagen“ lädt die Zuordnung noch – bis dahin steht dort keine Liste (sie spränge sonst von „alle“ auf „gefiltert“). */
+  const zusagenLaedt = imZusagenBlatt && zusagenJeTermin === undefined;
+  /** In „Zusagen“ nur Termine mit Diensten einer Zusagen-Gruppe; ist sie nicht zu ermitteln (`null`), stehen alle da. */
+  const zeigtTermin = (e: AbsenceEvent): boolean =>
+    !imZusagenBlatt || zusagenJeTermin === null || (!!zusagenJeTermin && zusagenJeTermin.has(e.id));
   const zeitraumEvents = filtereTermine(
-    alleEvents.filter((e) => e.date >= ab && e.date <= grenzen.bis),
+    alleEvents.filter((e) => e.date >= ab && e.date <= grenzen.bis && zeigtTermin(e)),
     ausgeblendet,
     arten,
   );
@@ -711,7 +775,7 @@ export function AbwesenheitenSeite({
    */
   const notizLink = (ev: AbsenceEvent) => {
     const jetzt = antwortFuer(ev);
-    if (!zusagen || jetzt === null) return null;
+    if (!dreiKnopf || !zusagen || jetzt === null) return null;
     const nein = jetzt === 'nein';
     if (nein && !kommentarAenderbar(ev)) return null;
     const text = nein ? kommentarFuer(ev) : (zusageFuer(ev)?.notiz ?? '');
@@ -735,7 +799,7 @@ export function AbwesenheitenSeite({
     return (
       <div
         key={`ev-${ev.id}`}
-        className={`${styles.zeile}${zusagen ? ' ' + styles.zeileAntwort : ''}`}
+        className={`${styles.zeile}${dreiKnopf ? ' ' + styles.zeileAntwort : ''}`}
       >
         {datumKachel(ev.date, uhrzeit(ev.startDate), k.soll ? 'rot' : 'blau')}
         <div className={styles.text}>
@@ -747,11 +811,18 @@ export function AbwesenheitenSeite({
                   zeitfensterKurz(a) ? ` · ${zeitfensterKurz(a)}` : ''
                 }`
               : ''}
+            {/* Das Schild der Gruppe steht in der Unterzeile – am Handy wäre es hinter einem langen Titel abgeschnitten. */}
+            {imZusagenBlatt &&
+              zusagenJeTermin?.get(ev.id)?.map((g) => (
+                <span key={g} className={styles.schild}>
+                  {g}
+                </span>
+              ))}
           </span>
           {terminZusatz?.(ev, k.soll)}
           {notizLink(ev)}
         </div>
-        {zusagen ? (
+        {dreiKnopf ? (
           dreiKnoepfe(ev, k)
         ) : (
           <button
@@ -830,7 +901,8 @@ export function AbwesenheitenSeite({
   const neu = useNeuAnlegen({
     label: 'Zeitraum eintragen',
     onClick: zeitraumOeffnen,
-    sichtbar: !laedt && !fehler && anzahl === 0,
+    // In „Zusagen“ gibt es kein „+ Zeitraum“ (R3: Grün nur, wo man etwas anlegt).
+    sichtbar: !laedt && !fehler && anzahl === 0 && !imZusagenBlatt,
     disabled: !online,
     dataTour: 'verf-plus',
   });
@@ -861,21 +933,59 @@ export function AbwesenheitenSeite({
   // Die Werkzeugzeile (R5/E24, B4): Ansicht links, Zeitraum in der Mitte, Filter und „+ Zeitraum eintragen“ rechts. Ein Wort
   // für den Reiter „Einträge“ trägt den Merker (blau gefüllter Kreis, in derselben Zeile). Auf „Einträge“ gibt es keinen
   // Zeitraum und keinen Filter – beides wirkt nur auf die Termine.
-  const imTermineReiter = seite === 'termine';
+  // Mit `ansichten` (V-3) gibt es „Termine | Einträge“ nicht: Zeitraum und Filter stehen in beiden Ansichten, die Einträge
+  // liegen im „⋯“ („Alle Einträge …“).
+  const imTermineReiter = ansichten !== undefined || seite === 'termine';
+  const mehrMenue =
+    ansichten && !imZusagenBlatt ? (
+      <MehrMenue
+        handy={handy}
+        titel="Mehr"
+        optionen={[
+          {
+            label: 'Alle Einträge …',
+            symbol: <Icon name="liste" size={18} />,
+            onClick: () => setAlleEintraege(true),
+          },
+          ...(ansichten.hilfe
+            ? [
+                {
+                  label: 'Hilfe',
+                  symbol: <Icon name="hilfe" size={18} />,
+                  onClick: () => setHilfeOffen(true),
+                },
+              ]
+            : []),
+        ]}
+      />
+    ) : null;
+  const ansichtenWahl = ansichten ? (
+    ansichten.zusagenMoeglich ? (
+      <AnsichtWahl
+        value={ansichtWahl}
+        onChange={setAnsichtWahl}
+        handy={handy}
+        options={[
+          { value: 'abwesenheiten', label: 'Abwesenheiten' },
+          { value: 'zusagen', label: 'Zusagen' },
+        ]}
+      />
+    ) : undefined
+  ) : (
+    <AnsichtWahl
+      value={seite}
+      onChange={setSeite}
+      handy={handy}
+      options={[
+        { value: 'termine', label: 'Termine' },
+        { value: 'eintraege', label: 'Einträge', zahl: anstehend.length },
+      ]}
+    />
+  );
   const werkzeug = (
     <Werkzeugzeile
       handy={handy}
-      links={
-        <AnsichtWahl
-          value={seite}
-          onChange={setSeite}
-          handy={handy}
-          options={[
-            { value: 'termine', label: 'Termine' },
-            { value: 'eintraege', label: 'Einträge', zahl: anstehend.length },
-          ]}
-        />
-      }
+      links={ansichtenWahl}
       mitte={
         imTermineReiter ? (
           <ZeitraumLeiste
@@ -927,21 +1037,60 @@ export function AbwesenheitenSeite({
               ]}
             />
           )}
+          {mehrMenue}
           {neu.kopf}
         </>
       }
     />
   );
 
+  // „Deine Zeiträume“ (V-3): nur in der Ansicht „Abwesenheiten“ und nur, wenn es solche Einträge im gezeigten Zeitraum gibt.
+  const zeitraeume = ansichten && !imZusagenBlatt ? deineZeitraeume(liste, ab, grenzen.bis) : [];
+  const standardGrund = daten.gruende?.find((g) => g.standard)?.id ?? null;
+  const zeitraeumeKarte = zeitraeume.length > 0 && (
+    <section aria-label="Deine Zeiträume">
+      <div className={styles.sec}>
+        Deine Zeiträume
+        <span>{zeitraeume.length}</span>
+      </div>
+      <div className={styles.liste}>
+        {zeitraeume.map((a) => (
+          <KlickZeile
+            key={a.id}
+            className={styles.zeitraumZeile}
+            onClick={() =>
+              online
+                ? setEntwurf({ art: 'aendern', absence: a })
+                : onToast('Zum Ändern brauchst du Netz.')
+            }
+          >
+            <Etikett ton={a.reasonId === standardGrund ? 'neutral' : 'rot'}>
+              {a.reason ?? 'Abwesend'}
+            </Etikett>
+            <span className={styles.zeitraumText}>
+              {zeitraumKurz(a)}
+              {a.startDate === a.endDate ? ' · ganztägig' : ''}
+            </span>
+          </KlickZeile>
+        ))}
+      </div>
+    </section>
+  );
+
   const termineSeite = (
     <>
-      {zusagen?.hinweis && (
+      {zeitraeumeKarte}
+      {dreiKnopf && zusagen?.hinweis && (
         <ZusageHinweis hinweis={zusagen.hinweis} einrichten={zusagen.einrichten} />
       )}
       <section data-tour="verf-termine">
         {monatsGruppen.length === 0 && (
           <div className={styles.liste}>
-            <div className={styles.leer}>Kein Termin in diesem Zeitraum.</div>
+            <div className={styles.leer}>
+              {zusagenLaedt
+                ? 'Termine mit Diensten werden geladen …'
+                : 'Kein Termin in diesem Zeitraum.'}
+            </div>
           </div>
         )}
         {monatsGruppen.map((g) => (
@@ -960,8 +1109,10 @@ export function AbwesenheitenSeite({
        * ChurchTools sehen darf. Wer welchen Dienst hat, weiß die App nicht (Dienst-Einteilung ist Phase 2).
        */}
       <p className={styles.hinweis}>
-        Alle Termine aus ChurchTools – wer eingeteilt ist, spielt hier keine Rolle.{' '}
-        {zusagen
+        {imZusagenBlatt
+          ? 'Termine, an denen deine Dienstgruppe Dienste hat.'
+          : 'Alle Termine aus ChurchTools – wer eingeteilt ist, spielt hier keine Rolle.'}{' '}
+        {dreiKnopf
           ? 'Deine Antwort wird erst mit „Speichern“ übernommen – Ja und Vielleicht sehen die Planer deiner Dienstgruppe – und wer am Termin eine Vertretung sucht; Nein steht als Abwesenheit in ChurchTools.'
           : 'Ein Haken wird erst mit „Speichern" eingetragen.'}
       </p>
@@ -985,9 +1136,11 @@ export function AbwesenheitenSeite({
           <b>{frueher ? 'Nichts in der Vergangenheit.' : 'Noch nichts eingetragen.'}</b>
           {frueher
             ? 'Was du einträgst, bleibt hier ein Jahr lang stehen.'
-            : zusagen
-              ? 'Unter „Termine“ bei einem Termin „Nein“ wählen – oder über das Plus einen Zeitraum eintragen.'
-              : 'Unter „Termine" ein Kästchen abhaken – oder über das Plus einen Zeitraum eintragen.'}
+            : ansichten
+              ? 'Unter „Abwesenheiten“ ein Kästchen abhaken – oder über „+ Zeitraum“ einen Zeitraum eintragen.'
+              : zusagen
+                ? 'Unter „Termine“ bei einem Termin „Nein“ wählen – oder über das Plus einen Zeitraum eintragen.'
+                : 'Unter „Termine" ein Kästchen abhaken – oder über das Plus einen Zeitraum eintragen.'}
         </div>
       ) : (
         gruppiert(eintraegeListe).map((g) => (
@@ -1035,6 +1188,20 @@ export function AbwesenheitenSeite({
         neu.schwebend
       )}
 
+      {hilfeOffen && ansichten?.hilfe && (
+        <HilfeFenster
+          seite={ansichten.hilfe.seite}
+          abschnitte={ansichten.hilfe.abschnitte}
+          onClose={() => setHilfeOffen(false)}
+        />
+      )}
+
+      {alleEintraege && ansichten && (
+        <Sheet title="Alle Einträge" knoepfe={null} onClose={() => setAlleEintraege(false)}>
+          <div className={styles.eintraegeFenster}>{eintraegeSeite}</div>
+        </Sheet>
+      )}
+
       {entwurf && (
         <AbsenceSheet
           entwurf={entwurf}
@@ -1044,7 +1211,12 @@ export function AbwesenheitenSeite({
           gruende={daten.gruende ?? []}
           standardGrund={daten.gruende?.find((g) => g.standard)?.id ?? null}
           nurLesen={entwurf.art === 'aendern' && entwurf.absence.endDate < heute}
-          onClose={() => setEntwurf(null)}
+          // Liegt es über „Alle Einträge“: „‹“ und „Abbrechen“ führen dorthin zurück, das X schließt beide (Fensterregel).
+          onClose={() => {
+            setEntwurf(null);
+            setAlleEintraege(false);
+          }}
+          zurueck={alleEintraege && entwurf.art === 'aendern' ? () => setEntwurf(null) : undefined}
           onSubmit={speichernFenster}
           onDelete={entfernen}
         />
@@ -1100,7 +1272,9 @@ export function AbwesenheitenSeite({
     // Die Werkzeugzeile steht an der Stelle der Überschrift – „Abwesenheiten“ sagt schon der Reiter (28.10.2026).
     werkzeug,
     inhalt: (
-      <div className={styles.wrap}>{seite === 'termine' ? termineSeite : eintraegeSeite}</div>
+      <div className={styles.wrap}>
+        {ansichten || seite === 'termine' ? termineSeite : eintraegeSeite}
+      </div>
     ),
     ueberlagerung,
     laedt,

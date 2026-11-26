@@ -6,6 +6,8 @@ import type { Dienstgruppe } from '@shared/ct/dienstgruppen';
 import type { Antworten } from '@shared/dienstplan/verfuegbarkeit';
 import type { AbwesenheitenDienst } from '@ui/abwesenheiten/ctDienst';
 import { Abwesenheiten } from './Abwesenheiten';
+import { standardInhalt } from '@shared/dienstplan/abfragenSpeicher';
+import { ladeAbfragen } from './ladeAbfragen';
 import { ladeMeineDienste } from './ladeBeiwerk';
 import {
   ladeVerfuegbarkeit,
@@ -27,6 +29,8 @@ const dienst = {
   loeschen: vi.fn<AbwesenheitenDienst['loeschen']>(),
 };
 vi.mock('@ui/abwesenheiten/ctDienst', () => ({ abwesenheitenDienst: () => dienst }));
+// Die Gruppe fragt nach Zusagen (Startwert) – dann gibt es in der Seite den Umschalter „Abwesenheiten | Zusagen“.
+vi.mock('./ladeAbfragen', () => ({ ladeAbfragen: vi.fn(), speichereAbfragen: vi.fn() }));
 vi.mock('./ladeBeiwerk', () => ({ ladeMeineDienste: vi.fn() }));
 vi.mock('./ladeVerfuegbarkeit', async (orig) => ({
   ...(await orig<typeof import('./ladeVerfuegbarkeit')>()),
@@ -89,6 +93,12 @@ beforeEach(() => {
   dienst.aendern.mockResolvedValue({} as Absence);
   dienst.loeschen.mockResolvedValue(undefined);
   vi.mocked(ladeMeineDienste).mockResolvedValue(new Map());
+  vi.mocked(ladeAbfragen).mockResolvedValue({
+    inhalt: standardInhalt(),
+    gespeichert: null,
+    unlesbar: false,
+    fehler: null,
+  });
   laden.mockImplementation(() => Promise.resolve(stand));
   speichern.mockImplementation((_v, _p, antworten) => {
     stand = { ...stand, antworten };
@@ -112,6 +122,8 @@ const GD1 = 'So, 08.11.';
 const GA = 'Mi, 11.11.';
 const bereitSein = async () => {
   await screen.findByText('Gebetsabend');
+  // Die Seite geht mit „Abwesenheiten“ auf; Ja · Vielleicht · Nein stehen unter „Zusagen“.
+  fireEvent.click(await screen.findByRole('button', { name: 'Zusagen' }));
   await waitFor(() => expect(laden).toHaveBeenCalled());
   await act(async () => {
     await Promise.resolve();

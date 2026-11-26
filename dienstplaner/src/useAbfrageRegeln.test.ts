@@ -40,6 +40,21 @@ describe('nurAbwesendAus (V-5)', () => {
     expect([...nurAbwesendAus(regeln)]).toEqual([1]);
   });
 
+  it('ladeRegeln liest höchstens drei Dokumente gleichzeitig (ChurchTools bremst sonst)', async () => {
+    let jetzt = 0;
+    let hoechstens = 0;
+    const lader = async (): Promise<AbfragenStand> => {
+      jetzt++;
+      hoechstens = Math.max(hoechstens, jetzt);
+      await new Promise((r) => setTimeout(r, 0));
+      jetzt--;
+      return stand({});
+    };
+    const regeln = await ladeRegeln(lader, [1, 2, 3, 4, 5, 6, 7], HEUTE);
+    expect(regeln.size).toBe(7);
+    expect(hoechstens).toBe(3);
+  });
+
   it('ohne Gruppen: leer', () => {
     expect(nurAbwesendAus(new Map()).size).toBe(0);
   });

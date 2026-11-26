@@ -7,6 +7,794 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.42.0] – 2026-11-26
+
+### Behoben (Musik-App)
+
+- iPad (installierte App): Der Kopf von Ablauf, Liedblatt und Editor steht jetzt unter dem milchigen Unschärfe-Band von iPadOS 26 und ist wieder scharf. Bisher galt dafür noch eine alte iPad-Ausnahme, die ihn direkt unter die Uhr setzte.
+
+### Neu (Dienstplaner)
+
+- **Abfrage bei „Nur abwesend“ mit „Fertig“:** Fragt deine Dienstgruppe nur nach Abwesenheiten, ist ein freier Termin keine Antwort. Die Karte auf dem Start sagt „Trag ein, wann du nicht kannst, und tippe auf „Fertig““, und die Mail ebenso. Die Karte und der Link in der Mail führen zu **Verfügbarkeit → Abwesenheiten**; dort steht über der Liste ein Band mit dem Knopf **„Fertig“**. Danach wird das Band grün („Danke! An allen anderen Terminen im Zeitraum kannst du. Ändern geht jederzeit.“); wer später noch Häkchen setzt, bleibt fertig. Bei vorgemerkten Häkchen steht „erst speichern“.
+- **Wer fertig ist, bekommt keine Erinnerung mehr:** Nach „Fertig“ trägt sich die Person aus der Hilfsgruppe aus. Fertig ist auch, wer an allen Terminen der Abfrage abwesend ist. Der Stand im Fenster „Abfrage“, das Eintragen beim Start, der Abgleich und „Erinnern“ rechnen für „Nur abwesend“ genauso (Ja/Vielleicht zählen dort nicht).
+
+- **„Einrichten …“ legt auch die Ablage „Antworten <Gruppe>“ an:** Das Fenster sagt vorher, ob sie angelegt wird oder schon da ist, und meldet sie nachher nachgelesen. Eine Abfrage bei „Nur abwesend“ startet nur, wenn die Ablage bereit ist – sonst steht da: „Für <Gruppe> fehlt die Ablage „Antworten <Gruppe>“ – erst „Einrichten …“ in den Einstellungen.“
+
+### Intern (Dienstplaner)
+
+- „Hat geantwortet“ liegt im eigenen Wert der Antworten-Ablage der Dienstgruppe (Feld `fertig`: Abfrage-ID → Zeitpunkt, kein „Ja“); alte Werte ohne das Feld bleiben lesbar, Speichern der Antworten und „Vertretung suchen“ erhalten es. „Offen“ je Art steht an einer Stelle (`beantwortetNach`).
+
+### Geändert (Dienstplaner)
+
+- **„Verfügbarkeit“ ist aufgeräumt:** Unter den Reitern steht eine Werkzeugzeile. Links wählst du **„Abwesenheiten | Zusagen“** – den Umschalter gibt es nur, wenn mindestens eine deiner Dienstgruppen nach Zusagen fragt, sonst siehst du direkt die Abwesenheiten. Beim Öffnen steht **„Abwesenheiten“**; über eine Abfrage einer Gruppe mit Zusagen (Karte, Mail) öffnet **„Zusagen“**.
+- **Abwesenheiten:** alle Termine mit dem Haken „Abwesend“. Oben steht die Karte **„Deine Zeiträume“** (Urlaub, ganze Tage – ein Tipp ändert den Eintrag). „Termine | Einträge“ gibt es hier nicht mehr; die volle Liste liegt im **⋯ unter „Alle Einträge …“**.
+- **Zusagen:** Ja · Vielleicht · Nein – nur an Terminen, an denen deine Dienstgruppe mit Zusagen Dienste hat, die Gruppe als kleines Schild. „Nein“ ist dieselbe Abwesenheit wie im anderen Teil. Gruppen mit „Nur abwesend“ fragen die Abfrage dazu erst in einem späteren Schritt anders.
+
+### Doku (Protokolle)
+
+- Stand in `docs/betrieb/PROTOKOLLE.md` und `CLAUDE.md` auf v1.8.0 („Im Auftrag von“ und „Bild“ im Termin-Fenster, Vorlagen-Events, gelöschte Termine im Reiter „Termine“; #1165, #1167, #1168, #1170).
+
+### Neu (Protokolle)
+
+- „In Kalender eintragen“ hat jetzt auch **„Im Auftrag von“**: Du tippst einen Namen, darunter erscheinen Vorschläge, ein Klick wählt die Person – wie im ChurchTools-Dialog „Termin erstellen“. Wichtig: Wer „im Auftrag“ einlädt, ist der Einlader der Besprechungsanfrage – dann bekommst auch du selbst eine Mail, und das Fenster sagt es vor dem Speichern. Kommt die Person aus einer Termin-Vorlage, steht ihr Name im Feld.
+- Neu im selben Fenster: **„Bild“**. „+ Hinzufügen“ öffnet die Dateiwahl, eine kleine Vorschau zeigt das Bild, ✕ entfernt es. Es wird nach dem Anlegen hochgeladen und gilt für die ganze Serie. Kommt es nicht am Termin an, bleibt der Termin bestehen, und das Fenster sagt, dass du das Bild in ChurchTools nachtragen musst.
+
+### Intern (alle Apps)
+
+- Der Baustein „Personensuche“ hat eine zweite Bedienart „beim Tippen“ (`beimTippen`): ohne Suchknopf, entprellt, mit Tastatur. Eine späte Antwort auf einen kürzeren Suchtext überschreibt die Treffer des längeren nie mehr – auch nicht in der Bedienart mit Knopf.
+
+### Neu (Dienstplaner)
+
+- In den Einstellungen legen Planer je Dienstgruppe fest, wie die Verfügbarkeit gefragt wird: **Ja · Vielleicht · Nein** (wie bisher, für alle Gruppen voreingestellt) oder **Nur abwesend** (jede Person hakt nur an, wann sie nicht kann; alle anderen Termine gelten als „kann“). Die Wahl steht oben im Abschnitt, der jetzt „Verfügbarkeit & Erinnerungen“ heißt, wird mit dem einen „Speichern“ gespeichert und gilt sofort. Die Verfügbarkeit selbst, die Abfrage und das Planen richten sich erst in den nächsten Schritten danach.
+
+### Behoben (Protokolle)
+
+- Reiter „Termine“: Ein Termin, der in ChurchTools inzwischen gelöscht wurde, steht nicht mehr unter „Im Kalender“ mit einem Link ins Leere, sondern wieder oben unter „Noch nicht im Kalender“ mit dem Hinweis „in ChurchTools gelöscht“ und kann neu eingetragen werden.
+
+### Behoben (Protokolle)
+
+- **Termin-Vorlagen mit Events:** Eine in ChurchTools gespeicherte Vorlage mit Eventvorlage setzt diese jetzt beim Anwenden in alle Zeilen des Reiters „Events“. Vorher blieb die Auswahl leer, weil ChurchTools das Feld anders nennt als vermutet (gemessen: `events: [{eventTemplate: "0"}]`). „Als Vorlage speichern“ schreibt die Eventvorlage jetzt im selben Format mit.
+- **Vorlage mit „Im Auftrag von“:** Hat eine ChurchTools-Vorlage „Im Auftrag von“ gesetzt, ist diese Person der Einlader der Besprechungsanfrage, und auch du bekommst eine Mail. Der Fuß des Fensters sagt das jetzt („Die Einladung geht sofort per Mail an 1 Person.“), statt „Es werden keine Einladungen verschickt“.
+
+### Intern (Anmeldungen + Organigramm)
+
+- Die Personensuche (Feld, „Suchen“, Treffer zum Antippen) ist ein gemeinsamer Baustein `ui/bedienung/PersonenSuche` mit `usePersonenSuche`. „Anmeldung von Hand“, die Vertrauenspersonen bei den Nachweisen und „Person aufnehmen“ im Organigramm nutzen ihn, jede Stelle mit ihrem bisherigen Aussehen. Er ist die Grundlage für „Im Auftrag von“ in den Protokollen. Bei weniger als zwei Zeichen löst Enter keine Suche mehr aus.
+
+### Geändert (Dienstplaner)
+
+- Der Reiter „Wann kann ich?“ heißt jetzt „Verfügbarkeit“. Die Adresse bleibt gleich, und auch die Texte und Hilfen nennen den neuen Namen.
+
+### Behoben (Dienstplaner)
+
+- **Zähler direkt nach dem Start:** Nach „Abfrage starten“ stand oben „7 Personen bekommen Erinnerungen“ und unten „1 Person bekommt noch Erinnerungen“. Der Abgleich beim Öffnen las die Hilfsgruppe, während der Start noch Personen eintrug. Nach einem Start in diesem Fenster läuft kein Abgleich daneben; unten steht dieselbe Zahl wie oben. Beim erneuten Öffnen gleicht der Stand wie bisher ab.
+- **Das Fenster „Abfrage“ wählt die richtige Dienstgruppe vor:** Hat eine der Dienstgruppen eine laufende Abfrage, ist die erste davon gewählt – nicht mehr immer die erste der Liste.
+
+### Geändert (Dienstplaner)
+
+- Das Band in „Wann kann ich?“ sagt bei nichts Offenem „· alles eingetragen“ statt „noch 0 von 4 offen“.
+- Die Erinnerungs-Mails kommen von ChurchTools' Standard-Absender (`noreply@churchtools.de`), nicht von der Person, die die Abfrage startet: ChurchTools übernimmt den Absender im Schritt „E-Mail senden“ nicht (gemessen). Dokumentation und Testfälle sagen das jetzt ehrlich.
+
+### Intern (Dienstplaner)
+
+- Die Pfade zur Hilfsgruppe (`mitgliederPfad`, `routinenPfad`) stehen nur noch in `einrichtenAbfragen.ts`; `abfrageAutomatikLauf.ts` nimmt sie von dort.
+
+### Intern (Anmeldungen)
+
+- Beim Anlegen eines Termins geht der Ort jetzt als `address.name` an ChurchTools statt als veralteter Alias `meetingAt`. Beim Lesen wird `meetingAt` weiter angenommen, `name` hat Vorrang (#1161).
+
+### Neu (Dienstplaner)
+
+- **Abfragen erinnern automatisch:** Ist eine Dienstgruppe in ChurchTools eingerichtet, setzt der Start einer Abfrage die Routine in Gang – ChurchTools verschickt die Erinnerungen selbst (gegen 0:15 Uhr, auch wenn niemand den Dienstplaner öffnet), an alle, die dann noch offen sind. Beim Start trägt der Dienstplaner die Offenen in die Hilfsgruppe ein und sagt, wer eingetragen ist und wer fehlt („Fehlende nachtragen“ am Starttag); steht noch jemand von einer früheren Abfrage in der Gruppe, startet nichts („Gruppe leeren“). Ohne Einrichtung oder ohne Recht an der Hilfsgruppe startet die Abfrage wie bisher, mit ehrlichem Hinweis.
+- **Austragen beim Antworten:** Wer alles beantwortet hat, trägt sich nach dem Speichern oder beim Laden der Startseite selbst aus der Hilfsgruppe aus – dann kommt keine Erinnerung mehr. Beim Öffnen des Stands trägt der Dienstplaner außerdem alle aus, die inzwischen geantwortet haben, eingeteilt oder pausiert sind (nie ein). „Abfrage beenden“ trägt erst alle aus.
+- **Planer werden wie alle erinnert:** Das Einrichten macht Planer nicht mehr zu Leitern der Hilfsgruppe, sondern gibt ihnen zwei Rechte nur für diese Gruppe („Gruppe inkl. ihrer Gruppenmitglieder sehen“ und „Gruppenmitgliedschaften einer Gruppe bearbeiten“). Das Fenster nennt vorher die Planer und die zwei Rechte; „Leiter nachtragen“ heißt jetzt „Rechte nachtragen“.
+
+### Geändert (Dienstplaner)
+
+- „Nächste Erinnerung“ auf der Startseite zählt bei laufender Abfrage erst ab morgen (die von heute ist schon raus). Eine Planänderung während einer laufenden Abfrage gilt erst für die nächste – ein leiser Satz in den Einstellungen sagt es.
+
+### Doku (Protokolle)
+
+- Stand in `docs/betrieb/PROTOKOLLE.md` und `CLAUDE.md` auf v1.7.1 (Reiter „Termine“ ohne doppelte Abrufe, #1158).
+
+### Behoben (Protokolle)
+
+- **Reiter „Termine“ (und Start, To-Dos, Suche) fragt ChurchTools weniger:** Gruppen, die denselben Kalender nutzen, lasen beim Laden
+  dieselben Termine, Besprechungsanfragen, Kategorien und Protokolle je Gruppe noch einmal – live am 25.11.2026 im Reiter „Termine“
+  95 Abrufe, 52 davon doppelt (bis zu 5× dieselbe Adresse). Jetzt fragt ein Ladevorgang jede Adresse nur einmal. Wer die Erweiterung
+  direkt auf „Termine“ öffnet, bekommt die To-Dos für den Hinweis auf fällige To-Dos aus derselben Übersicht statt aus einem eigenen Abruf.
+
+### Intern (Protokolle)
+
+- `einmalLesen()` in `protokolle/src/lesen.ts`: ein Leser je Ladevorgang auf Basis von `merkeVersprechen` (kein neuer Speicher);
+  `ladeUebersicht` reicht ihn über alle Gruppen an `ladeSitzungen`, `andereImKalender`, `termineMitAnfrage`, `treffenLesen`,
+  `anfragenLesen` und `terminLaden` (`Leser`, Vorgabe weiter `ctDaten`). Bewusst nicht seitenweit: Nach „Eintragen“ oder „Erneut
+  versuchen“ wird frisch gelesen. Der Nachbau zählt jetzt auch volle Adressen mit Abfrage (`adressen`); `lesenEinmal.test.ts` prüft
+  „keine Adresse doppelt“ (im Nachbau mit drei Gruppen im selben Kalender vorher 30 Abrufe auf 15 Adressen, jetzt 15).
+- Bleibt bewusst: Die Gruppentreffen einer Gruppe werden für die eigene Liste ab heute und für den Abgleich „anderer Gruppen im
+  selben Kalender“ ab gestern gelesen – zwei verschiedene Adressen.
+
+### Neu (Dienstplaner)
+
+- **Erinnerungen in ChurchTools einrichten:** Im Fenster „Einstellungen“ zeigt der Kasten „In ChurchTools“, ob die Erinnerungen einer Dienstgruppe dort eingerichtet sind. Admins („Berechtigungen verwalten“) richten sie mit „Einrichten …“ ein: Das Fenster sagt vorher, was angelegt wird – eine Hilfsgruppe „Dienstplaner: Antwort fehlt – <Dienstgruppe>“ im Gruppentyp „Dienstplaner“ mit einer Routine, und alle Planer der Dienstgruppe werden Leiter der Gruppe – und zeigt danach, was in ChurchTools nachgelesen dasteht. Wiederholbar: es wird nur ergänzt, was fehlt; nichts wird gelöscht. Der Start einer Abfrage verschickt noch nichts selbst (folgt).
+
+### Neu (Dienstplaner)
+
+- **Erinnerungsplan je Dienstgruppe in den Einstellungen:** Im Fenster „Einstellungen“ gibt es für Planer den Abschnitt „Abfragen – Erinnerungen“. Je Dienstgruppe, die man planen darf, stellt man frei ein, wann erinnert wird (beim Öffnen, so viele Tage vor der Frist, am Tag der Frist, nach der Frist alle n Tage höchstens m-mal), dazu Betreff und Text der Mail mit den Platzhaltern `{zeitraum}`, `{frist}`, `{gruppe}` und `{vorname}`. Eine kleine Vorschau zeigt, an welchen Tagen die Erinnerungen kämen. Das eine „Speichern“ schreibt nur, was sich geändert hat. Verschickt wird automatisch erst, wenn die Erinnerungen in ChurchTools eingerichtet sind (folgt).
+
+### Doku (Protokolle)
+
+- Stand in `docs/betrieb/PROTOKOLLE.md` und `CLAUDE.md` auf v1.7.0 (W15-3 Events, W15-4 Besprechungsanfragen, W15-5 Anmeldung, W16-Folgekorrekturen #1145/#1146/#1148); Handtest TF-PROT-32 mit test-25.11 in der Test-Instanz bestanden (ein TEST-Termin mit Events, Saal, eigener Besprechungsanfrage und Anmeldung – alles in ChurchTools angekommen, beim Löschen mit abgeräumt, keine Mail).
+
+### Neu (Dienstplaner)
+
+- **Laufende Abfrage auf der Startseite und in „Wann kann ich?“.** Wer in einer Dienstgruppe mit laufender Abfrage ist, sieht auf Start direkt unter „Als Nächstes“ die Karte „Wann kannst du im Februar und März?“ – blau mit der Frist, nach der Frist rot („Frist vorbei“) –, dazu wie viele Termine noch offen sind. „Jetzt eintragen“ öffnet „Wann kann ich?“ mit genau dem Zeitraum der Abfrage; darüber steht ein schmales Band („noch 7 von 9 offen“, „Alle Termine zeigen“), das sich nach dem Speichern aktualisiert. Offen ist ein Termin, solange weder eine Antwort noch eine Abwesenheit noch eine Einteilung in dieser Dienstgruppe da ist. Ist nichts mehr offen, verschwindet die Karte. Planer sehen in der Karte „Planen“ je laufender Abfrage eine Zeile mit der nächsten Erinnerung; ein Tipp öffnet den Stand.
+
+### Neu (Protokolle)
+
+- **Anmeldung beim Eintragen in den Kalender (W15-5).** Im Fenster „In Kalender eintragen“ gibt es – wie im ChurchTools-Dialog „Termin erstellen“ – den Reiter **„Anmeldung“** zwischen
+  „Besprechungsanfragen“ und „Events“ (am Handy in der Auswahl „Bereich“). Er erscheint, wenn du in mindestens einem Gruppentyp Gruppen anlegen darfst. Ein Schalter **„Gruppen für Anmeldung erstellen“**
+  (bei einem Einzeltermin „Gruppe für Anmeldung erstellen“, aus ist die Vorgabe) öffnet **Gruppentyp** (nur deine erlaubten Typen, „Kleingruppe“ vorgewählt), **Tage im Voraus** (14), **Gruppe als
+  Kopiervorlage** (nur Gruppen des gewählten Typs – ein Typwechsel leert sie) und **Tage nach dem Termin bis zum Beenden**. Darunter zeigt die Vorschau, welche Gruppen ChurchTools direkt erstellt und mit dem
+  Kalender verknüpft – ein Eintrag je Einzeltermin zwischen heute und „heute + Tage im Voraus“.
+- **ChurchTools legt die Gruppen sofort an – das Fenster sagt es vorher:** Im Fuß steht „Beim Speichern legt ChurchTools sofort N Gruppen an.“ Die Anmeldung geht nur mit, wenn der Reiter da ist, der Schalter an ist, ein
+  erlaubter Gruppentyp gewählt ist und nicht „Nur verknüpfen“ gilt. Wird der Termin gelöscht, gehen seine Gruppen mit (in ChurchTools gemessen).
+- **Ehrlich nachgelesen:** Nach dem Speichern prüft die Erweiterung, dass die Anmeldung am Termin steht und dass zu jedem angekündigten Einzeltermin eine Gruppe „<Titel> – TT.MM.JJJJ, HH:MM“ da ist. Fehlt etwas, bleibt der
+  Termin stehen, der Vermerk im Protokoll entsteht trotzdem, und das Fenster nennt es (zusammen mit Buchungen, Events und Anfragen in **einer** Meldung; „Fertig“ schließt es). Ließ sich das Nachlesen nicht erledigen, steht das
+  ausdrücklich da – nicht als „fehlt“. Es wird nie etwas gelöscht.
+- **Termin-Vorlagen mit Anmeldung:** Eine Vorlage mit Gruppentyp schaltet den Schalter an und füllt Typ, Tage, Kopiervorlage und Beenden (nur mit erlaubtem Typ); „Als Vorlage speichern“ schreibt dieselben Felder, wenn der Schalter an ist.
+
+### Intern (Protokolle)
+
+- Regeln `shared/protokolle/terminAnmeldung.ts` (Vorgaben, `anmeldungTermine` = **eine** Rechnung für Vorschau, Fuß und Nachlesen, Rumpf `signup`, Hinweise), Recht `shared/ct/gruppenTypRechte.ts`
+  (`churchdb` „create groups of grouptype“), Lesen/Nachlesen `protokolle/src/anmeldungLesen.ts` (Gruppentypen, Gruppen eines Typs über `ctAlleSeiten`), Oberfläche `TerminAnmeldung.tsx`; `Eintrag.anmeldung`,
+  `TerminVorlage.anmeldung…`, `terminLegen` liefert `anmeldung`. Testnachbau und `?demo` legen die Gruppen wie ChurchTools an (drei Gruppentypen, einer nicht erlaubt).
+- Der Schalter mit Beschriftung ist jetzt ein Baustein (`TerminSchalter.tsx`, vorher in `TerminAnfragen.tsx`), der Satz vor dem Speichern „ChurchTools tut es sofort“ ebenso (`SofortHinweis` in `EinladungHinweis.tsx`).
+
+### Neu (Dienstplaner)
+
+- **Abfrage mit Frist starten und ihren Stand sehen.** In Planen gibt es im ⋯-Menü neben „Erinnern“ den Punkt „Abfrage …“. Planer wählen Dienstgruppe, Zeitraum, Frist und wann die Abfrage öffnet; darunter steht „Was passiert wann“ mit den Zahlen von heute (wer fehlt noch, wer pausiert, wer ist fertig). Läuft für die Dienstgruppe schon eine Abfrage, zeigt das Fenster ihren Stand: noch offen, fertig, pausiert, dazu die Zeitleiste. „Abfrage beenden“ fragt vorher nach. Automatische Erinnerungen gibt es noch nicht – bis dahin bleibt „Erinnern“.
+
+### Intern (Dienstplaner)
+
+- **Abfragen mit Frist – der Kern, noch ohne Oberfläche** (R-1). Je Dienstgruppe gibt es ein eigenes Dokument in der Kategorie „Einstellungen“ (Betriebsart und andere Dienstgruppen bleiben unberührt) mit Abfragen und Erinnerungsplan. `erinnerungsTage` ist die eine Stelle für „Was passiert wann“ (nur Tage ab heute, vor dem Öffnen und ab Beginn des Zeitraums entfallen). „Offen“ ist jetzt eine Regel (`offeneTermine`), die „Erinnern“ benutzt und die Startseite später mitbenutzt – ohne Änderung am Verhalten von „Erinnern“.
+
+### Neu (Protokolle)
+
+- **Besprechungsanfragen beim Eintragen in den Kalender (W15-4).** Im Fenster „In Kalender eintragen“ gibt es – wie im ChurchTools-Dialog „Termin erstellen“ – den Reiter **„Besprechungsanfragen“** zwischen
+  „Kalender“ und „Events“, **aber nur, wenn der gewählte Kalender ein Gruppenkalender ist** (beim Gemeindekalender fehlt er, wie in ChurchTools). Ein Schalter **„Besprechungsanfrage erstellen“** (aus ist die
+  Vorgabe) schaltet das Suchfeld **„Nach Name oder Gruppe suchen …“** und die Tabelle **Name (mit Gruppe) | Status** frei; **du** bist vorgewählt und nicht abwählbar, jede Person steht nur einmal da, „alle“
+  wählt die angezeigten. Wiederholungstermine werden als Serie angefragt.
+- **Die Mail kommt sofort – das Fenster sagt es vorher:** Statt „Es werden keine Einladungen verschickt.“ steht im Fuß „Die Einladung geht **sofort** per Mail an N Personen.“ (du selbst bekommst keine). Anfragen
+  gehen nur mit, wenn der Reiter da ist, der Schalter an ist und nicht „Nur verknüpfen“ gilt. **Wechselst du den Kalender, ist die Auswahl geleert** – nichts wird versehentlich aus einem anderen Kalender mitgeschickt.
+  Termin-Vorlagen kennen keine Besprechungsanfragen und übernehmen oder speichern nichts davon.
+- **Ehrlich nachgelesen:** Nach dem Speichern liest die Erweiterung die Anfragen des neuen Termins nach. Fehlt eine Person, bleibt der Termin stehen, der Vermerk im Protokoll entsteht trotzdem, und das Fenster nennt
+  die Person (zusammen mit fehlenden Buchungen oder Events in **einer** Meldung; „Fertig“ schließt es). Ließ sich das Nachlesen nicht erledigen, steht das ausdrücklich da – nicht als „fehlt“.
+- **Kein zweiter Termin nach unklarer Antwort:** Antwortet ChurchTools beim Anlegen nicht eindeutig und der Termin ist nicht auffindbar, bleibt „Speichern“ gesperrt, bis die Prüfung „steht schon da?“ neu gelaufen
+  ist. Findet sie den Termin, heißt der Knopf „Verknüpfen“ – es entsteht weder ein zweiter Termin noch eine zweite Mail. (Das gilt jetzt auch für Termine ohne Einladung.)
+
+### Intern (Protokolle)
+
+- **Die Regel „ich bekomme keine Mail“ steht jetzt an einer Stelle:** `shared/protokolle/einladungsmail.ts` (`mailsAnAndere`) – benutzt von „Nächste Sitzung festlegen“, „Sitzung bearbeiten“ (auch Serie und Absagen),
+  „Protokoll löschen“ und dem neuen Reiter. Der Satz „Die Einladung geht sofort per Mail an N Personen.“ ist der Baustein `EinladungHinweis.tsx`.
+- Regeln `shared/protokolle/besprechungsanfrage.ts` (`kandidatenAus` entdoppelt nach Personen-ID, `kandidatenFiltern`, `angefragte`, `anfrageHinweis`), Lesen/Nachlesen `protokolle/src/besprechungsanfragen.ts`
+  (`ladeKandidaten`, `anfragenNachlesen`), Oberfläche `TerminAnfragen.tsx`; `KalenderEintrag.gruppe`, `terminLegen({ eingeladen })` liefert `anfragen`. Testnachbau (mit Mail-Protokoll beim Anlegen) und `?demo`
+  kennen Gruppenkalender, Kandidaten und Anfragen.
+- **Am Handy eine Auswahl „Bereich“ statt der Reiter.** Vier Reiter (bald fünf) passten nicht in die Breite, der Rest war nur durch seitliches Wischen zu finden. Am Handy steht oben
+  jetzt eine Auswahl **„Bereich“** (Kalender, Besprechungsanfragen, Events, Ressourcen) – wie dort schon die Termin-Vorlagen; am PC bleiben die Reiter wie in ChurchTools.
+
+### Neu (Protokolle)
+
+- **Events anlegen beim Eintragen in den Kalender (W15-3).** Im Fenster „In Kalender eintragen“ gibt es jetzt – wie im ChurchTools-Dialog „Termin erstellen“ – den Reiter **„Events“** zwischen „Kalender“
+  und „Ressourcen“ (nur, wenn du in ChurchTools im **gewählten Kalender** Events anlegen darfst – wechselst du den Kalender, kommt der Reiter oder geht). Die Tabelle **Event-Datum | Eventvorlage** hat
+  **eine Zeile je Einzeltermin der Reihe** (Datum und Uhrzeit untereinander, ganztägig nur das Datum; ohne Wiederholung genau eine Zeile, höchstens 200 – dann steht der Hinweis „Es werden nur die ersten
+  200 Termine gezeigt“) und je Zeile eine Auswahl der **Eventvorlagen** (leer = für diesen Termin kein Event; auch die Vorlage „Standard“ funktioniert). Wählst du bei mehreren Zeilen eine Vorlage, fragt das
+  Fenster wie ChurchTools: **„Soll die Vorlage für alle Termine übernommen werden?“** – Bestätigen setzt sie in allen Zeilen, Abbrechen nur in dieser. Am Handy wird jede Zeile zur Karte.
+- **Ausnahmen, weitere Termine, Bis und Wiederholungsart** wirken auf die Zeilen: Die Erweiterung rechnet die Einzeltermine selbst aus (täglich, wöchentlich, monatlich nach Datum und nach Wochentag,
+  jährlich, manuell – wie ChurchTools: gibt es den 31. oder 29.02. nicht, rutscht der Termin in den Folgemonat, und es geht von dort weiter) und schickt für jedes Event den **genauen Beginn** des Einzeltermins mit, auch über die Zeitumstellung hinweg.
+- **Ehrlich nachgelesen:** Nach dem Speichern liest die Erweiterung die Events nach. Fehlt eines, bleibt der Termin stehen, der Vermerk im Protokoll entsteht trotzdem, und das Fenster nennt die Termine,
+  für die du das Event in ChurchTools anlegen musst („Fertig“ schließt es). Fehlen Buchung und Event, steht beides in **einer** Meldung. Ließ sich das Nachlesen nicht erledigen, steht das
+  ausdrücklich da – nicht als „fehlt“.
+- Bei **„Nur verknüpfen“** werden keine Events angelegt – der Reiter sagt es und ist gesperrt. Termin-Vorlagen, die erkennbar eine Eventvorlage nennen, setzen sie in alle Zeilen; ihr Format ist noch
+  nicht gemessen, ohne erkennbare Angabe bleibt alles leer. „Als Vorlage speichern“ schreibt keine Events.
+
+### Intern (Protokolle)
+
+- Regeln ohne Oberfläche: `shared/protokolle/terminReihe.ts` (`einzeltermine`: die Einzeltermine einer Reihe, Obergrenze 200; `einzelterminBeginn`: exakter UTC-Beginn je Tag), `terminEvents.ts`
+  (`eventVorlagenAus`, `eventsFuer`, `vorlageFuerAlle`/`vorlageFuerZeile`, `eventHinweis`, `hinweiseZusammen` – die eine Stelle für „fehlt/unklar“-Hinweise von Buchungen und Events), Recht
+  `shared/ct/eventRechte.ts` (`churchservice` „edit events“, über `start.ts` bis ins Fenster). `Eintrag.events` (Tag → Eventvorlage, **0 ist gültig**); `TerminVorlage.eventVorlage`;
+  `terminRumpf` schreibt `events: [{startDate, eventTemplateId}]`. Lesen/Nachlesen `protokolle/src/eventsLesen.ts` (`ladeEventVorlagen`, `eventsNachlesen`), `terminLegen` liefert `events`.
+  Oberfläche `TerminEvents.tsx`. Testnachbau und `?demo` kennen Eventvorlagen und Events.
+
+### Behoben (Gebetsabend + Organigramm + Website + Protokolle)
+
+- **Fehlendes Recht nennt nicht mehr eine falsche Regel:** Wenn ChurchTools etwas verweigerte, wofür die Erweiterung
+  keinen eigenen Hinweis hat (z. B. einen Termin lesen), stand dort immer derselbe Satz – etwa „Den Gebetsabend
+  einrichten und starten darf die Technik“ oder „Protokolle sehen die Rollen, die ein Admin … freigegeben hat“. Jetzt
+  steht dort allgemein, wen man fragt. Einrichten, Starten, Gruppen ändern und Bearbeiten behalten ihre eigenen
+  Hinweise.
+- **Protokolle:** Wer ein Protokoll löscht, dessen Gruppentreffen man in ChurchTools nicht löschen darf, liest als Grund
+  jetzt „Dir fehlt in ChurchTools das Recht, Gruppentreffen zu pflegen“ statt „Protokolle sehen die Rollen …“.
+
+### Behoben (Protokolle)
+
+- **Ein Termin-Baustein, der aus dem Protokoll entfernt wird, hinterlässt keinen unvermerkten Stand mehr.** Bisher blieb
+  sein Stand im Reiter „Termine“ (`termin-stand` in „Mitarbeit“) einfach liegen. Jetzt gleicht das Speichern (und das
+  Freigeben) die Stände wie die To-Dos ab: Steht ein Baustein nicht mehr im Protokoll, wird sein Stand **als gelöscht
+  vermerkt** – nie hart gelöscht (in „Mitarbeit“ darf niemand Werte löschen, S0) –, und nachgelesen. Kommt der Baustein
+  zurück (Rückgängig), fällt der Vermerk wieder weg; „im Kalender“ und „nicht eintragen“ bleiben dabei, wie sie waren. Ist
+  nichts zu ändern, wird nur einmal gelesen. Eine Regel für Speichern und Löschen: `terminStandNach` in
+  `shared/protokolle/terminStand.ts`, geschrieben von `termineAbgleichen` in `protokolle/src/terminStandSchreiben.ts`
+  (`termineAlsGeloescht` beim Löschen ist derselbe Abgleich mit „kein Protokoll mehr“).
+
+### Behoben (Protokolle)
+
+- **„Schreibt mit“ bekam die Knöpfe der Leitung, wenn die Rolle die Gruppe nicht sehen darf:** Manche Gruppentypen
+  verbergen die Gruppe vor ihren Teilnehmern. Dann kannte die Erweiterung die eigene Rolle nicht und zeigte „Schreibt mit“
+  wie der Leitung „Neue Sitzung“, „Freigeben“ und „Löschen“. Jetzt entscheidet in diesem Fall, ob ChurchTools für die
+  Gruppe „Gruppentreffen pflegen“ meldet – das hat nach dem Einrichten nur die Leitung (Admins sind immer Leitung).
+  Gefunden im Handtest am 25.11.2026; betroffen war nur, wo eine Rolle schon auf „Schreibt mit“ stand.
+
+### Behoben (Protokolle)
+
+- **Protokoll löschen vermerkt auch die Stände im Reiter „Termine“ als gelöscht (W6).** Bisher blieben die Stände der Termin-Bausteine
+  (`termin-stand` in „Mitarbeit“: „im Kalender“, „nicht eintragen“) eines gelöschten Protokolls unsichtbar liegen. Jetzt
+  werden sie – immer, ohne eigenes Häkchen – **als gelöscht vermerkt**, nie hart gelöscht (in „Mitarbeit“ darf niemand Werte
+  löschen, S0), und nachgelesen. Der Schritt läuft nach der zweiten Sperrprüfung direkt vor dem Protokoll; scheitert er, steht
+  das Protokoll noch, und „Nochmal versuchen“ vermerkt nichts doppelt. Auch doppelte Werte aus einem abgebrochenen Anlegen
+  werden erfasst. `termineAlsGeloescht` in `protokolle/src/terminStandSchreiben.ts`, Regel `terminStandGeloescht` in
+  `shared/protokolle/terminStand.ts`.
+
+### Neu (Website)
+
+- **Bereich ändern verschiebt sofort (W3b-4b-2):** Stellt die Leitung der Website in **Seite einstellen → Bereich** eine Seite um,
+  die schon online steht, wandert die veröffentlichte Fassung gleich nach dem Speichern in den neuen Bereich – nur ihr Bereich ändert
+  sich, ungeprüfte Änderungen im Entwurf gehen dabei nicht online. So steht eine Seite nie doppelt online, wenn danach die Leitung der
+  Untergruppe freigibt. Klappt das Verschieben gerade nicht, ist der Bereich trotzdem
+  gespeichert, und die Meldung sagt, dass die Seite online vorerst noch im alten Bereich steht („Veröffentlichen“ verschiebt sie).
+
+### Intern (Website)
+
+- `bereichWechseln` in `shared/website/freigabe.ts`; `gibFrei` und der Bereichswechsel teilen sich den Ablauf „schreiben → nachlesen →
+  alt löschen“ (`inBereichSchreiben`). `bereichSetzen` in `zugang.ts` ist die eine Regel für das Feld `bereich` (Entwurf, neue Seite,
+  Online-Fassung) – die Prüfsumme hängt an der Reihenfolge der Felder.
+- Regel für den Bau-Dienst (W5) in `docs/betrieb/WEBSITE.md`: Steht eine Seite in mehreren Veröffentlicht-Kategorien, gilt nur die
+  jüngste Kopie.
+
+### Doku (Dienstplaner)
+
+- Stand-Zeile in `docs/betrieb/DIENSTPLANER.md` auf v1.1.1 (Termin ohne Recht).
+
+### Neu (Website)
+
+- **Bereich je Seite (W3b-4b):** Jede Seite gehört der Website oder einer eingerichteten Untergruppe. Die Leitung der Website wählt
+  das in **Seite einstellen → Bereich**; eine neue Seite erbt den Bereich dessen, der sie anlegt (wer in mehreren Untergruppen ist,
+  wählt im Fenster „Neue Seite“).
+- **Untergruppen sehen nur ihre Seiten:** Seitenliste, „Im Menü“, „Freigaben“ und der Zähler am Reiter zeigen Mitgliedern einer
+  Untergruppe nur die Seiten ihres Bereichs. Die Vorschau zeigt trotzdem Menü und Aussehen der ganzen Website. Wer an der Website
+  mitarbeiten darf, aber in keiner ihrer Gruppen ist, bekommt einen Hinweis statt einer leeren Liste.
+- **Die Leitung einer Untergruppe gibt ihre Seiten frei** – in die Kategorie ihres Bereichs, auch mit „Alles freigeben“. Aussehen,
+  Einstellungen, Menü, eigenes HTML, Startseite und Bereich bleiben bei der Leitung der Website.
+- **Seite verschieben beim Freigeben:** Steht eine Seite online noch in einer anderen Kategorie als der ihres Bereichs, schreibt Freigeben
+  sie in die richtige, liest nach und entfernt sie erst dann aus der alten. Klappt das Entfernen nicht, steht sie online im neuen Bereich und die
+  Meldung sagt, dass sie zusätzlich noch im alten steht; unter „Freigaben“ bleibt sie als „Geändert“.
+
+### Geändert (Website)
+
+- **Online-Stand je Bereich:** Eine Seite wird mit der Veröffentlicht-Kategorie ihres Bereichs verglichen; liegt sie (auch) in einer
+  anderen, gilt sie als „Geändert“. Löschen und offline nehmen entfernt eine Seite aus jeder Veröffentlicht-Kategorie, in der sie steht.
+- **Adressen sind über alle Bereiche eindeutig** – auch gegenüber Seiten, die man selbst nicht sieht.
+- **„Startseite anlegen“** hat nur noch die Leitung der Website; Redakteure lesen, wer es tut.
+- **Wer darf was:** Die Auswahlfelder nennen die Gruppe („Stufe von Leiter in „Website – Jugend““), und der Knopf „Wer darf was“ im
+  Hinweis beim Start springt direkt zu diesem Abschnitt.
+
+### Intern (Website)
+
+- `Zugang` ist jetzt `{ sieht, leitet }` (je „alle“ oder Untergruppen) statt `'admin' | 'leitung' | 'redakteur'`; alle Regeln in
+  `shared/website/zugang.ts`. Neu `onlineSicht`/`OnlineKategorie` in `shared/website/freigabe.ts`, `bereicheAus` in `einrichten.ts`.
+- Demo: `?demo=jugend-redakteur`, `?demo=jugend-leitung`, `?demo=bereiche` (dort gelten die Rechte auch an den Werten).
+- Mails je Bereich folgen mit W3b-4c; bis dahin findet ein Redakteur, der nur in einer Untergruppe ist, keine Leitung (keine Mail).
+
+### Behoben (Dienstplaner)
+
+- **Termin ohne Recht zeigt keine Planer-Meldung mehr:** Wer einen Termin öffnet, den ChurchTools ihm nicht zeigt (z. B.
+  über einen geteilten Link), las bisher „Dienste planen darf, wer die Dienstgruppe bearbeiten darf …“. Jetzt steht dort
+  „Diesen Termin zeigt dir ChurchTools nicht. Wenn du ihn sehen musst, frag die Leitung deiner Dienstgruppe.“ – auch
+  wenn der Ablauf zuerst scheitert. Andere fehlende Rechte ohne eigenen Text sagen allgemein, wen man fragt; das
+  Einteilen behält seinen eigenen Hinweis.
+
+### Doku (Dienstplaner)
+
+- Anleitung `docs/betrieb/DIENSTPLANER.md` auf den Stand v1.1.0 gebracht (Live-Ansicht 2; Rechte an den Ablagen „Live-Verlauf“ und „Einstellungen“), README-Abschnitt und Demo-GIF mit der Live-Ansicht.
+
+### Doku (Protokolle)
+
+- Stand in `docs/betrieb/PROTOKOLLE.md` und `CLAUDE.md` auf v1.6.0 (W16, W15-1/-2, Rückgängig nach KI); im Eintrag zu W15-1 steht jetzt, dass „Ressourcen“ mit W15-2 schon dabei ist.
+
+### Neu (Dienstplaner)
+
+- **„Meine Anzeige“** (Live-Ansicht 2, L4-5): Im Reiter „Einstellungen“ stellt jede Person für sich ein, was sie sehen will – **„−1 / +1 Min“ in der Live-Ansicht**, **Durchschnitt beim Ablauf bearbeiten**, **Rückblick im Termin** (mit den Spalten „Ø bisher“ und „±“) und **Infos meiner Dienstgruppen in der Live-Ansicht**. Alles ist zunächst an. Es gilt für dich auf allen deinen Geräten (gespeichert in einer Datei an deinem ChurchTools-Konto); die Betriebsart oben ändern weiterhin nur Planer. Antwortet ChurchTools nicht, bleibt deine Auswahl auf dem Gerät und wird nachgeholt – es geht nichts verloren.
+- **Knopf „Live“ auf der Startseite:** In „Als Nächstes“ führt er am Tag des Termins (ab 0 Uhr bis zum Ende) direkt in die Live-Ansicht. Läuft die Live-Agenda gerade, trägt er den roten Punkt; am Handy steht das Wort „Live“ neben „Ablauf & Dienste“.
+
+### Intern (Dienstplaner + Protokolle)
+
+- Der Abgleich der Einstellungen je Person (Gerät ↔ Personen-Datei in ChurchTools, nie mit Standardwerten überschreiben) liegt jetzt in `ui/ct/useAblageSpiegel.ts`; die To-Do-Einstellungen der Protokolle nutzen denselben Baustein statt einer eigenen Kopie.
+
+### Neu (Dienstplaner)
+
+- **Rückblick im Termin** (Live-Ansicht 2, L4-4): Ist „Live“ zu Ende, steht unter dem Ablauf die Karte „Rückblick · Live am TT.MM.“ – Beginn und Ende gegen den Plan, „Am meisten eingeholt“ und „Am meisten überzogen“, dazu je Punkt Plan, Gelaufen, ± und „Ø bisher“, nach den Abschnitten des Ablaufs. Für alle, die den Ablauf sehen; am Handy rutschen die Zahlen unter den Titel.
+- **Ø bisher:** der Durchschnitt gleichnamiger Punkte aus allen Terminen mit Rückblick (alle Lieder zählen zusammen als „Lied“) – beim Anzeigen gerechnet, kein zweiter Speicher. Dasselbe leise „Ø m:ss“ steht beim Ablauf bearbeiten unter der Dauer.
+- **Aus dem Schnitt nehmen:** Planer nehmen über „⋯“ einen Punkt oder den ganzen Termin aus dem Schnitt (und wieder hinein), wenn jemand das Weiterklicken vergessen hat. Die Markierung wird zusammengeführt gespeichert – zwei Geräte schreiben sie sich nicht weg.
+- Demo (`?demo`): drei vergangene Gottesdienste mit Live-Verlauf (`#/termin/108` zeigt den Rückblick).
+
+### Intern (Dienstplaner)
+
+- `shared/ct/liveRueckblick.ts` (Rückblick und Schnitt), `gelaufenJePunkt` als eine Rechnung für ± und Rückblick, Lied-Merkmal am Wechsel; die Ablage „Live-Verlauf“ trägt zusätzlich die Markierungen (`x`); alle Verläufe werden einmal je Seitenaufruf gelesen. Die Schalter für „Meine Anzeige“ (L4-5) sind vorbereitet (`meineAnzeige.ts`, Standard alles an).
+
+### Neu (Protokolle)
+
+- **Mitlesen von selbst (W16):** Wer einen Entwurf offen hat und nicht selbst schreibt – in der Lese-Ansicht oder im Editor, während jemand anderes
+  schreibt –, sieht neuen Text nach wenigen Sekunden, ohne etwas anzuklicken (alle 10 Sekunden statt bisher 30, und jetzt auch in der Lese-Ansicht).
+  Pause, solange das Fenster verdeckt ist; freigegebene Protokolle werden nicht nachgeladen; die Seite springt dabei nicht.
+- **Anwesenheit für alle lesbar (W16):** Das Protokoll merkt sich die Anwesenheit (wer, Name, anwesend/abwesend/offen) – beim Schreiben nach jedem Tipp
+  und beim Freigeben. Wer die Anwesenheit in ChurchTools nicht sehen darf, sieht beim Lesen und im PDF diesen Stand statt „ChurchTools erlaubt dir das
+  nicht“; wer sie sehen darf, sieht sie weiter live. Auch bei einem kurzen Aussetzer von ChurchTools gilt der gemerkte Stand, ohne Fehlermeldung.
+- **Neue Stufe „Schreibt mit“ (W16):** In „Gruppe einrichten“ gibt es zwischen „Lesen + eigene To-Dos“ und „Leitung“ die Stufe **„Schreibt mit“** – für
+  „schreib du bitte mit“. Sie schreibt Entwürfe (Editor, Anwesenheit, Mit KI füllen, Bausteine), beginnt Protokolle (auch nachtragen und „Neues
+  Protokoll“) und übernimmt Vorschläge oder schiebt sie aufs nächste Mal. Freigeben, Löschen, Sitzungen festlegen oder bearbeiten, Vorschläge ablehnen
+  und die Leitungsrechte bei To-Dos bleiben bei der Leitung. Beim Einrichten bekommt die Stufe das Schreibrecht auf die Protokolle und „Gruppentreffen
+  durchführen“ (für die Anwesenheit). Der Vorschlag beim Einrichten bleibt wie bisher; jede Gemeinde stellt die Stufe je Gruppe selbst ein.
+
+### Behoben (Protokolle)
+
+- „Mit KI füllen“ fehlte im Editor, wenn es im Kopf sonst keinen Knopf gab (kein „Bearbeiten“, kein „Teilen“) – fiel mit „Schreibt mit“ auf.
+- Mitlesen im Editor übernahm einen neuen Stand auch dann, wenn dessen Text gerade nicht vollständig lesbar war; jetzt wartet es auf den nächsten Abruf.
+
+### Intern (Protokolle)
+
+- „Darf schreiben“ und „ist Leitung“ sind getrennt: `shared/protokolle/zugang.ts` (`darfSchreibenIn`, `istLeitungIn`) ist die eine Stelle für Sitzungen,
+  Editor, To-Dos, Startseite und Suche; die Einstellung einer Gruppe speichert je Rolle die Rolle an der Mitgliedschaft (`typ`). Mitlesen:
+  `protokolle/src/useMitlesen.ts`; Anwesenheit: `schnappschussWert`/`zumLesen`/`nurSchnappschussAnders` in `shared/protokolle/anwesenheit.ts`.
+  Demo: `?demo=mitschreiben`, `?demo=mitglied` liest die Anwesenheit aus dem Schnappschuss.
+
+### Neu (Protokolle)
+
+- **Ressourcen buchen beim Eintragen in den Kalender (W15-2).** Im Fenster „In Kalender eintragen“ gibt es jetzt – wie im ChurchTools-Dialog „Termin erstellen“ – den Reiter
+  **„Ressourcen“** neben „Kalender“ (nur, wenn du in ChurchTools mindestens eine Ressource buchen darfst). Oben **Vorlauf** und **Nachlauf** (Minuten, frei tippbar oder aus den Vorschlägen
+  0 bis 240; Vorgabe 15/15, bei ganztägigen Terminen 0/0 wie in ChurchTools) mit der errechneten Uhrzeit daneben („23.11.2026 13:45“). Darunter **Ressource** wählen („Saal · Raum“, nach Typ gruppiert, nur die, die du buchen darfst) – sie
+  landet mit dem aktuellen Vorlauf/Nachlauf in der Tabelle **„Vorhandene Buchungen“**: je Zeile eigener Vorlauf und Nachlauf, **Status** („Wartet auf Bestätigung“, „Bestätigt“, „Abgelehnt“ –
+  wählbar nur bei Ressourcen, die du in ChurchTools verwalten darfst, sonst steht fest „Wartet auf Bestätigung“), ✕ zum Entfernen und bei Ressourcen mit mehreren Stück (Stühle) die **Anzahl**.
+  Am Handy wird jede Zeile zur Karte.
+- **Termin-Vorlagen mit Buchungen** füllen die Tabelle (nur Ressourcen, die du buchen darfst; Status ohne Verwalten-Recht „Wartet“); **„Als Vorlage speichern“** schreibt die Buchungen mit.
+- **Ehrlich nachgelesen:** ChurchTools meldet das Anlegen auch dann als erfolgreich, wenn eine Buchung nicht entsteht. Nach dem Speichern liest die Erweiterung die Buchungen nach. Fehlt eine, bleibt
+  der Termin stehen, der Vermerk im Protokoll entsteht trotzdem, und das Fenster sagt, welche Ressource du in ChurchTools nachbuchen musst („Fertig“ schließt es). Ließ sich das Nachlesen nicht
+  erledigen, steht das ausdrücklich da – nicht als „nicht gebucht“.
+- Bei **„Nur verknüpfen“** wird nichts gebucht – der Reiter sagt es und ist gesperrt; „Trotzdem neu anlegen“ schaltet ihn wieder frei.
+
+### Intern (Protokolle)
+
+- Regeln ohne Oberfläche: `shared/protokolle/terminRessourcen.ts` (Status, Grenzen, `ressourcenAus`, `buchungHinzu`, `buchungenAufRechte`, `buchungRumpf`, `buchungsHinweis`),
+  `terminRessourcenZeit.ts` (errechnete Uhrzeit), Rechte `shared/ct/ressourcenRechte.ts` (`churchresource` „create bookings“ / „administer bookings“, über `start.ts` bis ins Fenster).
+  `Eintrag` trägt `vorlauf`, `nachlauf`, `buchungen`; `terminRumpf` schreibt `bookings`; Vorlagen lesen/schreiben das Altformat `{resource_id, minpre, minpost, status_id}`. Lesen und
+  Nachlesen: `protokolle/src/buchungenLesen.ts` (`ladeRessourcen`, `buchungenNachlesen` – je Ressource einzeln, ein Lesefehler ist „unklar“), `terminLegen` liefert `buchungen`. Oberfläche
+  `TerminRessourcen.tsx`. Der Testnachbau und `?demo` kennen Ressourcen, Typen und Buchungen.
+
+### Neu (Anmeldungen)
+
+- **Eigene Ansichten (U3):** Ein Filter lässt sich mit „Als Ansicht speichern“ (Name, Filter, Spalten, Sortierung)
+  als eigener Reiter mit blauem Punkt fürs ganze Team ablegen; „＋ Ansicht“ legt eine leere an. In einer eigenen
+  Ansicht erscheinen nach einer Änderung „Änderungen speichern“ und „Verwerfen“. Über „⋯ → Diese Ansicht“ lässt sie
+  sich umbenennen, ihre Spalten wählen, nach links/rechts schieben und löschen – mit „Rückgängig“ direkt unter den
+  Reitern. Höchstens 12 je Veranstaltung; bei „wie eine frühere Veranstaltung“ kommen sie mit. Anlegen, ändern und
+  löschen darf, wer die Anmeldungen bearbeitet; alle anderen nutzen sie.
+
+### Neu (Dienstplaner)
+
+- **Live-Ansicht: Plus/Minus je Punkt, „Ende voraussichtlich“ und „Warum“** (Live-Ansicht 2, L4-3): Jeder erledigte Punkt zeigt in der
+  Live-Liste sein **±** (geplante minus gelaufene Dauer, grün/rot). Unter Kreis und Zeitkonto steht **„Ende voraussichtlich hh:mm“**
+  (Plan-Ende minus Zeitkonto, „wenn der Rest nach Plan läuft“) und **„Warum“** mit den drei Punkten, die am meisten abweichen.
+  Grundlage ist der neue **Live-Verlauf**: Die Erweiterung hält die Wechsel der Live-Agenda je Termin in der Ablage **„Live-Verlauf“**
+  fest (das klickende Gerät schreibt; ein offenes Gerät mit Steuer-Recht trägt Wechsel nach, die jemand in der ChurchTools-App oder
+  im Web gemacht hat – gleicher Zeitpunkt = kein Doppel). Ohne Recht an der Ablage fehlen ± und „Warum“ leise, alles andere läuft weiter.
+  **Einmalig in ChurchTools:** Ablage „Live-Verlauf“ – sehen: alle, die den Ablauf sehen, ändern: alle, die die Live-Agenda steuern dürfen, und die Planer (für „aus dem Schnitt nehmen“).
+- **Fehlklick zählt nicht:** Kommt man auf einen Punkt zurück und war alles dazwischen kürzer als 30 Sekunden dran, läuft der Punkt mit
+  seiner alten Zeit weiter; die kurzen Stopps zählen nicht als gelaufen. Unten steht etwa 5 Sekunden „Zeit läuft weiter – Fehlklick nicht
+  gezählt · Neu starten“ (Neu starten = normaler Wechsel, der Punkt beginnt von vorn). Die Restzeit in der ChurchTools-Live-Agenda wird
+  über die Zusatzzeit ausgeglichen.
+
+### Neu (Anmeldungen)
+
+- **Filter in der Tabelle (R2):** Neben jeder Spaltenüberschrift steht ein Trichter. Er öffnet das Filterfenster direkt
+  an der Spalte: bei Auswahlfragen die Antworten mit ihrer Anzahl (mehrere angehakt = eine davon reicht), bei Zahlen
+  „ab / bis“, bei Text „ist ausgefüllt / ist leer / enthält …“. Gesetzte Filter stehen als Chips über der Tabelle
+  (antippen = ändern, × = entfernen, dazu „Alle Filter entfernen“). Mehrere Filter gelten zusammen; über der Tabelle
+  steht „2 von 10 Anmeldungen“, und die Summen zählen nur, was gefiltert zu sehen ist. Filter wirken auch in
+  „Je Person“: Fragen je Person filtern dort einzelne Personen; „Je Anmeldung“ zeigt eine Anmeldung, wenn eine ihrer
+  Personen passt. Ein Filter gilt nur für jetzt und nur im gewählten Reiter.
+- **Rundmail und Druckliste nehmen das Gefilterte:** Mit Filtern heißt der Eintrag im ⋯-Menü „Rundmail an diese 4“
+  bzw. „Druckliste (nur diese 4)“, und das Fenster nennt die Filter. Die Druckliste zeigt bei Filtern auf Fragen je
+  Person nur die passenden Personen (z. B. nur die Kinder mit Allergie).
+
+### Neu (Protokolle)
+
+- **„In Kalender eintragen“ kann jetzt, was der ChurchTools-Kalender beim Anlegen kann (W15-1).** Das Fenster baut den Reiter „Kalender“ des ChurchTools-Dialogs „Termin erstellen“
+  nach – Aufbau, Wortlaut und Verhalten wie dort: links **„Termin-Vorlagen <Kalender>“** (am Handy eine Auswahl oben), rechts Kalender, Titel, Untertitel, „Nur für eingeloggte Personen
+  sichtbar“, **Ganztägig**, **Beginn** und **Ende** mit Datum, Stunde und Minute (auch mehrtägig), **Wiederholungen** (Täglich, Wöchentlich, Monatlich nach Datum, Monatlich nach
+  Wochentag mit „Erster … Letzter <Wochentag> im Monat“, Jährlich, Manuell) mit **Bis**, **Alle x Tage/Woche(n)/Monat(e)/Jahr(e)**, **Weitere Termine** und **Ausnahmen**, Beschreibung,
+  Link, Ort (Name, Straße, PLZ, Ort, Zusatz) und Tags. Unten **„Ersteller über Änderungen informieren“** (vorgehakt wie in ChurchTools), „Abbrechen“ und **„Speichern“** – nur dieser
+  Knopf ist gefüllt.
+- **Termin-Vorlagen:** Eine Vorlage des gewählten Kalenders füllt das Formular (Titel, Uhrzeit, Dauer, Wiederholung samt „Bis“, Ort, Tags …; das Datum bleibt). „Ohne Vorlage“ stellt den
+  Vorschlag aus dem Protokoll wieder her. **„Als Vorlage speichern“** (leiser Knopf links unten, nur mit dem ChurchTools-Recht „Termin-Vorlagen bearbeiten“ im Kalender) speichert nur die
+  Vorlage, legt keinen Termin an und gilt erst als gespeichert, wenn sie in der neu gelesenen Liste steht.
+- **Neue Tags** lassen sich nur anlegen, wenn du in ChurchTools Termin-Tags verwalten darfst; sonst wählst du vorhandene.
+- Bleibt wie bisher: Vorbelegung aus dem Termin-Baustein, „Nur verknüpfen“ bei einem ähnlichen Termin am selben Tag, Nachlesen nach unklarer Antwort, Vermerk im Reiter und
+  „Nochmal vermerken“. Es werden weiterhin keine Einladungen verschickt; ist „Ersteller informieren“ an, steht dazu ein Satz. Noch nicht dabei: „Im Auftrag von“ und „Bild“ sowie die
+  weiteren Reiter von ChurchTools (Besprechungsanfragen, Anmeldung, Events) – sie folgen in eigenen Schritten; „Ressourcen“ ist mit W15-2 schon dabei.
+
+### Geändert (Protokolle)
+
+- Der Knopf im Fenster „In Kalender eintragen“ heißt jetzt **„Speichern“** (wie in ChurchTools; bei „Nur verknüpfen“ weiter „Verknüpfen“).
+- Der Ort geht als `address.name` an ChurchTools (statt dem veralteten `meetingAt`).
+
+### Intern (Protokolle)
+
+- Regeln des Reiters „Kalender“ ohne Oberfläche und getestet: `shared/protokolle/terminWiederholung.ts` (Arten, „Bis“-Vorgabe = Beginn + `repeatId` Tage, Ordinal „nach Wochentag“),
+  `terminFelder.ts` (Fenster → Zusatzfelder der Anfrage, Adresse), `terminVorlagen.ts` (Vorlagen lesen, anwenden, als Vorlage speichern); `Eintrag` in `termine.ts` trägt alle Felder,
+  `beginnTagWechseln`. Lesen/Speichern mit Nachlesen: `protokolle/src/terminVorlagenLesen.ts`; Rumpf: `terminRumpf` in `terminAnlegen.ts`. Rechte: `vorlagenKalender` und
+  `darfTagsVerwalten` in `shared/ct/kalenderRechte.ts` (Start liefert `vorlagenSchreiben`, `tagsVerwalten`). Der Testnachbau kennt Vorlagen, Tags und den gesendeten Rumpf.
+
+### Neu (Website)
+
+- **Untergruppen einrichten (W3b-4a):** Jede **direkte** Untergruppe der Gruppe „Website“ erscheint unter Einstellungen → **Wer darf was** mit
+  eigenem Abschnitt (Enkel nicht). Ist sie noch nicht eingerichtet, steht das dort mit der Vorbelegung (Leiter = Leitung, sonst Redakteur);
+  **Rechte setzen** legt ihre Kategorie „Website: Veröffentlicht · …“ an (eine schon vorhandene wird wiederverwendet), vergibt die Rechte ihrer
+  Rollen und zieht **danach** die Rollen der Website nach – mit den Stufen, die sie schon haben. Eingerichtete Untergruppen zeigen ihre Stufen
+  aus ChurchTools und „Weicht ab“ wie die Website.
+- **Rechte der Untergruppen:** Rollen einer Untergruppe schreiben in „Entwürfe“ (eine gemeinsame Kategorie), **lesen „Veröffentlicht“ der
+  Website** und ihre eigene Kategorie; ihre Leitung schreibt **nur** in die eigene Kategorie. Die Leitung der Website schreibt in alle,
+  Redakteure der Website lesen alle. „Rechte setzen“ bei der Website entzieht die Rechte an den Untergruppen nicht.
+- **Hinweis beim Start** (nur Admins mit „Personen administrieren“): auch, wenn eine Untergruppe noch nicht eingerichtet ist oder ihre Rechte
+  abweichen.
+- **Bis W3b-4b** arbeiten Mitglieder einer Untergruppe in der Oberfläche noch als Redakteur der ganzen Website (Bereich je Seite, gefilterte
+  Listen und Freigeben je Bereich folgen).
+
+### Geändert (Website)
+
+- **Welche Website man sieht, bestimmt nur noch die Kategorie `entwuerfe-g<ID>`:** Eine Veröffentlicht-Kategorie einer Untergruppe wird nie als
+  Website erkannt – auch nicht, wenn ihre ID kleiner ist. Wer nur eine Veröffentlicht-Kategorie sieht, sieht keine Website.
+
+### Intern (Website)
+
+- `website-leitung` wird je Gruppe geführt: Der Wert der Website bleibt **ohne** `gruppe` (abwärtskompatibel), Untergruppen tragen `gruppe`.
+- Die direkten Untergruppen kommen aus der Hierarchie-Auswertung des Organigramms (`kinderVon` neben `elternAus` in
+  `shared/organigramm/gruppen.ts`), nicht aus einem Nachbau.
+
+### Behoben (Protokolle)
+
+- **Rückgängig nach „Mit KI füllen“ geht wieder.** Kam ein To-Do mit Wer oder Bis aus der KI-Antwort, ließ sich danach gar nichts mehr
+  rückgängig machen – auch nicht, was vorher getippt war. Der Editor nahm die übernommene Wahl aus dem Block und legte das als eigenen
+  Schritt in den Rückgängig-Verlauf; Strg+Z holte sie zurück, der Editor nahm sie sofort wieder heraus. Jetzt geht das am Verlauf vorbei
+  (wie schon beim Vergeben der To-Do-Kennungen): Ein Strg+Z nimmt die ganze Übernahme zurück, ein weiteres das Getippte davor.
+- **„In ChurchTools öffnen“ im Reiter „Termine“ führt zur Kalender-Seite** statt auf eine 404-Seite.
+
+### Neu (Website)
+
+- **Mails im Freigabe-Weg (W3b-3):** Wer **eine Seite zur Prüfung einreicht** oder **das Löschen anfragt**, benachrichtigt damit die **Leitung** der
+  Website-Gruppe per Mail; wer **zurückgibt** (mit Anmerkung) oder **freigibt**, benachrichtigt die Person, die **eingereicht** hatte. Bei „Alles
+  freigeben“ bekommt jede Person **eine** Mail mit allen ihren Seiten. **Nie an sich selbst**; ist niemand übrig, gibt es weder Mail noch Fehler.
+  Der Text ist kurz mit Link (wer, welche Seite, beim Zurückgeben die Anmerkung).
+- **Die Mail kommt erst, wenn die Handlung nachgelesen ist, und ändert nie ihr Ergebnis:** Scheitert die Handlung, geht keine Mail; scheitert die
+  Mail, gilt die Handlung trotzdem. Ein kurzer Hinweis sagt, was geschah – **gesendet**, **nicht verschickt** (mit Grund) oder **unklar** (dann
+  nicht noch einmal einreichen; nichts wird automatisch wiederholt).
+- **Schalter „Mails im Freigabe-Weg“** im Fenster „Einstellungen“ (Leitung und Admin): wirkt **sofort**, als eigener Wert – nicht in den
+  Einstellungen, die erst über „Freigeben“ online gehen. Ohne Wert sind die Mails an.
+- **Wer die Leitung ist,** hält der Admin fest, wenn er die Stufen setzt („Wer darf was“ und beim Einrichten): Ein Redakteur kann die Rechte
+  nicht lesen, muss aber wissen, wen er benachrichtigt. Bestehende Einrichtungen nutzen die Vorbelegung (Rollen mit Leiter-Kennzeichen), bis
+  „Rechte setzen“ einmal gedrückt wurde.
+
+### Intern (Anmeldungen + Website)
+
+- **Ein gemeinsamer Sende-Baustein für Mails über ChurchTools** (`ui/ct/mailSenden.ts`): Das Senden (`sendEMailToPersonIds`), das Nachlesen im
+  Protokoll und „unklar, ob verschickt“ stand im Anmelde-Tool (`rundmail.ts`) und wird nun auch von der Website genutzt. Das Anmelde-Tool
+  verhält sich unverändert (gleiche Meldungen, gleiche Zweige). Die Adresse des Empfängers ist freiwillig; ohne jede Adresse lässt sich nichts
+  im Protokoll nachprüfen.
+
+### Neu (Dienstplaner)
+
+- **Neuer Reiter „Einstellungen“** (ganz rechts, am Handy unten rechts). Darin **„Live-Ansicht – für alle“** mit drei Betriebsarten: **bis Beginn nach der Uhr, ab Beginn klicken** (Standard), **immer nach der Uhr** (wie bisher) und **von Anfang an klicken**. Alle sehen die Wahl, **ändern dürfen nur Planer**; sie gilt für alle Geräte (offene „Live“-Ansichten folgen nach höchstens 30 Sekunden). Ohne gespeicherten Wert oder bei einem Lesefehler gilt der Standard; ein vorübergehender Fehler ändert nichts. In ChurchTools braucht die Ablage „Einstellungen“ des Dienstplaners dafür Rechte (siehe `docs/betrieb/DIENSTPLANER.md`).
+- **„Live“ wartet ab Beginn auf „Weiter“** (Standard-Betriebsart): Bis zum Beginn des Termins läuft „Jetzt“ nach der Uhr durch den Vorlauf. Ab Beginn bleibt die Ansicht am letzten Punkt stehen, das Etikett heißt **„Wartet auf „Weiter““**, die Restzeit läuft rot ins Minus. „Weiter“ startet dann den Punkt **nach** dem gezeigten; unten stehen schon vor dem Start ‹ Zurück / Weiter ›. Bei „von Anfang an klicken“ läuft nichts von selbst („Wartet auf „Starten““).
+- **Zeitkonto statt „Gesamt“:** Rechts unter dem Kreis steht jetzt das Zeitkonto – **sekundengenau und laufend**, „+0:20“ grün = gespart, „−2:10“ rot = Rückstand. Ein überzogener Punkt verbraucht das Konto sofort, nicht erst beim Klick. Es gilt gegen den **ursprünglichen** Plan; „− 1 / + 1 Min“ ändert nur den Kreis. Nach dem Ende zeigt es den Endstand. Bei „immer nach der Uhr“ ist vor dem Start kein Konto zu sehen.
+
+### Geändert (Dienstplaner)
+
+- **Die alte Anzeige „Gesamt … Min. früher/später“ entfällt** (sie rechnete in ganzen Minuten und zeigte bei einem Termin in der Zukunft Unsinn wie „5689 Min. früher“). Auch „Fertig um …“ nennt die Abweichung nicht mehr in Worten, sondern das Zeitkonto zeigt den Endstand.
+- **Standard-Verhalten von „Live“ vor dem Start:** Ohne gespeicherte Einstellung gilt jetzt „bis Beginn nach der Uhr, ab Beginn klicken“ (vorher lief „Jetzt“ immer nach der Uhr durch den ganzen Ablauf – das ist die Betriebsart „Immer nach der Uhr“).
+- Die Demo (`?demo`) hat den Termin „Gottesdienst (Live-Probe)“, der immer 2–3 Minuten nach dem Laden beginnt (mit Vorlauf), damit Betriebsarten und Zeitkonto zu sehen sind.
+
+### Intern (Dienstplaner)
+
+- Eine Rechnung für Betriebsart und Zeitkonto in `shared/ct/liveAgenda.ts` (`liveLage` mit `betriebsart`, `konto`, `kontoSek`, `kontoText`); die Einstellung liegt als Dokument mit Version in der Kategorie `dienstplaner-einstellungen` (`shared/dienstplan/liveEinstellungen.ts`, dieselbe Mechanik wie „Was das Organigramm zeigt“).
+
+### Behoben (Dienstplaner)
+
+- **„Live“: Texte überlagern sich nicht mehr.** Im schmalen Fenster und am Handy drückten lange Namen den Titel eines Punkts auf fast nichts zusammen (Gottesdienst 22.11.). Jetzt hat der Titel Vorrang, die Namen brechen rechtsbündig um und stehen am Handy unter dem Titel; nichts läuft mehr aus dem Bild.
+
+### Neu (Dienstplaner)
+
+- **„Live“ zeigt die Überschriften des Ablaufs und den Beginn.** Die Überschriften stehen als leise Bänder in der Liste, an der Grenze zwischen Vorlauf und Beginn eine blaue Linie „Beginn 10:00“. Die Stelle zählt weiter genau wie in der Live-Agenda von ChurchTools.
+- **„Live“: Zurück und Weiter stehen unten.** Eine Leiste über die ganze Breite wie „Davor / Danach“ in der Punkt-Ansicht: links „Zurück“ mit dem Titel des vorigen Punkts, in der Mitte „− 1 Min / + 1 Min“, rechts „Weiter“ (blau) mit dem Titel des nächsten Punkts. Wer nicht steuern darf, sieht keine Leiste. Rechts neben der Liste bleiben Kreis und Zeitkonto.
+- **„Live“: Infos der eigenen Dienstgruppen.** Wer an dem Termin eingeteilt ist, sieht die Infos seiner Dienstgruppen groß unter „Jetzt“ und klein unter jedem Punkt in der Liste (auch beim laufenden, nicht bei erledigten) – so kann z. B. die Technik den nächsten Punkt vorbereiten. Ist man nirgends eingeteilt, gilt wie bisher die Auswahl unter „Spalten“.
+
+### Geändert (Dienstplaner)
+
+- **„Live“: Die Restzeit zeigt „−0:45“ statt „+0:45“**, wenn die Zeit um ist – dasselbe Vorzeichen wie später beim Zeitkonto (Minus = Rückstand).
+
+### Intern (Dienstplaner + Musik-App)
+
+- „Davor / Danach“ der Punkt-Ansicht ist jetzt ein gemeinsamer Baustein (`ui/ablauf/NachbarKnopf.tsx`), den auch die Steuerleiste der Live-Ansicht nutzt.
+
+### Geändert (Musik-App + Dienstplaner)
+
+- **Ein Ablaufpunkt öffnet überall eine Seite – auch am iPad und Mac.** Vorher ging am iPad und Rechner ein kleines Fenster in der Mitte auf; jetzt ist es wie am Handy und in der ChurchTools-App: oben **‹ Ablauf** und **Position 3/10**, darunter der Titel groß und die Infos des Punkts, unten **Davor / Danach**. Auf breiten Bildschirmen steht der Inhalt in **Lesebreite** in der Mitte, die Leiste unten geht über die ganze Breite. Am Rechner blättern **← →** durch die Punkte (nicht, solange man in ein Textfeld tippt), **Esc** geht zurück. Die ‹ › oben im Fenster entfallen.
+
+### Intern (Musik-App + Dienstplaner)
+
+- `PunktAnsichtFenster` ist entfernt; `usePunktAnsicht` zeigt immer `PunktSeite` (kein Wechsel mehr nach Breite). Neuer Wächter `ui/design/punktSeite.test.ts` hält Lesebreite und Handy-Beschriftung in der Stildatei fest.
+
+### Doku (Protokolle)
+
+- Stand in `docs/betrieb/PROTOKOLLE.md` und `CLAUDE.md` auf v1.5.1 (Aufklapp-Felder am Protokollende).
+
+### Behoben (Protokolle)
+
+- **Aufklapp-Felder am Protokollende abgeschnitten:** Stand ein To-Do ganz unten im Protokoll, schnitt der Kasten das Feld
+  „Wer kümmert sich?“ ab (ebenso „Bis“ und das Datum eines Termins) – die meisten Namen waren nicht erreichbar. Der
+  Protokoll-Kasten schneidet jetzt nichts mehr ab.
+
+### Doku (Dienstplaner)
+
+- Anleitung `docs/betrieb/DIENSTPLANER.md` auf den Stand v1.0.0 gebracht (Vertretung suchen, Rechte einrichten – was, warum, wie).
+
+### Doku (Protokolle)
+
+- Anleitung `docs/betrieb/PROTOKOLLE.md` auf den Stand v1.5.0 gebracht: Tabellen (Zellfarbe, Aufzählung in Zellen,
+  Unterzeilen, „Nur zur Info“), Aufzählungszeichen, „Mit KI füllen“ ohne Doppeltes, ruhige Bausteine, Reiter „Termine“.
+
+### Intern
+
+- README-Bilder der Protokolle neu aufgenommen (Reiter „Termine“).
+
+### Neu (Protokolle)
+
+- **Unterzeile und „nur zur Info“ in Tabellen (W13).** Im Zeilenmenü der Tabelle (Griff links an der Zeile) stehen jetzt **„Nur zur Info“** und **„Als Unterzeile“**, jeweils
+  mit Haken, wenn gesetzt – beide lassen sich verbinden. **Tab** am Anfang der ersten Zelle einer Zeile macht sie zur Unterzeile, **Umschalt+Tab** dort nimmt es wieder weg; überall
+  sonst springt Tab wie bisher in die nächste Zelle (auch in einer leeren ersten Zelle, damit man durch eine neue Zeile kommt). Eine **Unterzeile** ist eingerückt, trägt „↳“ und eine
+  gestrichelte Linie darüber – sie gehört zur Zeile darüber. Eine **Info-Zeile** trägt ein kleines ⓘ-Zeichen; unter der Tabelle steht dazu die Legende „nur zur Info – nicht Thema dieses
+  Treffens“. Die Kennzeichen sind Text am Anfang der ersten Zelle („↳ “, „ⓘ “), darum bleiben sie beim Verschieben und Einfügen von Zeilen erhalten und brauchen kein neues
+  Speicherformat. Die Regel steht in `shared/protokolle/tabellenZeile.ts`.
+- **„Nur Themen dieses Treffens“ in der Lese-Ansicht (W13).** Enthält das Protokoll irgendwo eine Info-Zeile, steht über dem Protokoll ein Schalter, der alle Info-Zeilen samt ihren Unterzeilen ausblendet
+  („2 Info-Zeilen ausgeblendet“ am Ende der Tabelle, die Legende fällt dann weg). Er gilt nur für die Anzeige – es wird nichts gespeichert, und das **PDF** zeigt immer alle Zeilen:
+  Unterzeile eingerückt mit „↳“, Info mit ⓘ-Kreis, Legende darunter (beide Zeichen hat die PDF-Schrift nicht, sie werden gezeichnet). „Mit KI füllen“ ist nicht betroffen (Tabellen
+  gehen nicht in den Auftrag).
+
+### Neu (Protokolle)
+
+- **Neuer Reiter „Termine“ (W14): Termine aus den Protokollen in den ChurchTools-Kalender eintragen.** Zwischen „To-Dos“ und „Einstellungen“ (am Handy in der Leiste unten)
+  sammelt er die **Termin-Bausteine aller Sitzungen** deiner Gruppen – Entwürfe und freigegebene –, nach Datum. Oben **„Noch nicht im Kalender“**; darunter einklappbar
+  **„Im Kalender“** (mit Kalender, Zeit und Link nach ChurchTools) und **„Nicht eintragen“**. An jedem Termin: **Eintragen**, im ⋯-Menü **„Im Protokoll zeigen“** (springt
+  in die Sitzung zum Punkt) und **„Nicht eintragen“** (blendet ihn aus; „Wieder anzeigen“ holt ihn zurück). Mehrere Gruppen: Filter „Gruppe“. Im Protokoll selbst ändert sich nichts.
+- **„Eintragen“ öffnet ein Fenster:** Kalender (nur Kalender, in denen du Termine anlegen darfst; vorausgewählt der Kalender der Gruppe), Titel **ohne** Uhrzeit, Datum,
+  **Ganztägig** oder Von–Bis (die Uhrzeit liest es aus dem Text: „16 Uhr“, „19:30 Uhr“, „um 10.30 Uhr“; Ende = eine Stunde später) und Ort. Es werden **keine Einladungen verschickt**.
+  Ganztägig geht als Tag an ChurchTools. Steht am selben Tag im gewählten Kalender schon ein Termin mit ähnlichem Namen, ist **„Nur verknüpfen – nichts Neues anlegen“**
+  vorgewählt (Alternative „Trotzdem neu anlegen“).
+- **Wer in keinem Kalender Termine anlegen darf** (meist Mitglieder), sieht die Liste ohne „Eintragen“ und ohne „Nicht eintragen“, dazu einen Satz, wer eintragen kann.
+- **Sicher bei Aussetzern:** Ein Termin gilt erst als „im Kalender“, wenn er in ChurchTools nachgelesen wurde. Antwortet ChurchTools unklar, wird im Kalender nachgesehen –
+  gefunden: verknüpft; nicht gefunden: „bitte nachsehen“, nichts wird vermerkt. Scheitert nur der Vermerk, bleibt das Fenster mit **„Nochmal vermerken“** offen (legt nichts doppelt an).
+  Das Lesen des Kalenders scheitert → „Eintragen“ bleibt gesperrt, statt doppelt anzulegen. Was aus einem Termin wurde, steht in „Mitarbeit“ der Gruppe (nie im Protokoll,
+  nie hart gelöscht); ein Eintrag im Kalender wird von „Nicht eintragen“ nicht überschrieben.
+
+### Intern (Protokolle)
+
+- „Termin anlegen“ (inklusive Nachsehen nach unklarer Antwort) liegt jetzt **einmal** in `protokolle/src/terminAnlegen.ts` – für „Nächste Sitzung festlegen“ (mit Besprechungsanfrage) und
+  für den Reiter „Termine“ (ohne); die Regel „in welchen Kalendern darf man anlegen“ steht in `shared/ct/kalenderRechte.ts` und gilt auch in den Anmeldungen.
+  Regeln des Reiters: `shared/protokolle/termine.ts` (Sammeln, Uhrzeit, Doppelt, Zeitraum), `shared/protokolle/terminStand.ts` (Stand je Baustein).
+
+### Neu (Dienstplaner)
+
+- **Vertretung suchen** (E5c-6). Wer seinen zugesagten Dienst nicht machen kann, fragt mit einem Klick das Team – ohne Planer. Am zugesagten Dienst steht neben
+  „Tauschen“ der leise Knopf **„Vertretung suchen“** (Start, Dienste, Termin-Ansicht; nicht an einer offenen Anfrage).
+  - **Das Fenster:** Wer im Team den Dienst an genau diesem Termin machen kann – **Hat Ja gesagt**, **Vielleicht** (mit Kommentar) und **Ohne Antwort** –, mit einem
+    Haken je Person („Ja“ vorab) und einer freiwilligen Nachricht. Wer am Tag schon eingeteilt ist, Nein gesagt hat oder abwesend ist, steht nicht da. Ein gefüllter
+    Knopf: **„Absagen und fragen“** (ohne Haken nur **„Absagen“**).
+  - **Der Ablauf:** erst die Markierung „Vertretung gesucht“ speichern, dann den Dienst absagen, dann je gefragter Person eine eigene Mail (mit Knopf zum Dienstplaner,
+    die Leitung bekommt eine Kopie). Scheitert eine der ersten beiden Stufen, ist nichts abgesagt und nichts verschickt. Scheitern nur Mails, ist abgesagt – das Fenster
+    sagt, an wen nicht, und „Erneut senden“ schickt nur an diese, nur auf Klick.
+  - **„Für dich offen“:** Jeder aus dem Team sieht auf Start „Anna sucht eine Vertretung“ mit **„Übernehmen“** – solange **der abgesagte Platz** frei ist (die Markierung merkt sich dessen `index`; ein anderer, schon vorher freier Platz zählt nicht, und „Übernehmen“ nimmt nie einen anderen). Wer in dem Dienst schon eingeteilt ist, sieht die Zeile nicht.
+    Wer zuerst drückt, hat den Dienst; zu spät heißt „Schon übernommen – danke!“; ohne das ChurchTools-Recht „freie Plätze selbst eintragen“ steht „frag die Leitung“.
+  - **Planen:** Der freie Platz trägt das Schild **„Vertretung gesucht“** („Anna hat abgesagt · gefragt: Ben, Finn“), bis jemand übernimmt – nur an dem Platz, den sie abgesagt hat.
+  - **Voraussetzung in ChurchTools:** Für „Übernehmen“ braucht das Team das Gruppenrecht `+entry free` (siehe `docs/betrieb/DIENSTPLANER.md`).
+
+### Geändert (Dienstplaner)
+
+- Der Hinweis am Notizfeld in „Wann kann ich?“ stimmte nicht („Kann deine Dienstgruppe sehen“): Die App zeigt die Antworten nur den **Planern** der Dienstgruppe – und
+  jedem, der am Termin eine Vertretung sucht. Der Text sagt es jetzt.
+
+### Intern (Dienstplaner)
+
+- Neuer optionaler Teil im eigenen Wert der Ablage „Antworten <Dienstgruppe>“ (`vertretungen`, `fassung` bleibt 1; alte Werte gelten weiter). **„Wann kann ich?“ erhält
+  ihn beim Speichern** (`eigeneAntwortenSchreiben` ohne Angabe = was frisch gelesen dasteht); vergangene Termine fallen heraus. Neu in `shared/dienstplan/`:
+  `vertretung.ts` (Vorschläge, „gilt nur bei freiem Platz“, Mail-Texte, `uebernehmen`), `absagenNachZusage` (`antworten.ts`), `vertretungMarkieren` (`verfuegbarkeit.ts`),
+  `TerminZeile.freiePlaetze` (Dienst + `index` je freiem Platz). `ladePersonen` kann auf Wunsch die Leitung je Gruppe liefern (`rollen`). Neues Flaggen-Symbol (`flag`).
+
+### Neu (Protokolle)
+
+- **„Mit KI füllen“ macht nichts mehr doppelt (W12).** Hat jemand in der Sitzung schon Text geschrieben, bekommt die KI diese Zeilen im Auftrag mit einer Kennung (`Z1`, `Z2` …;
+  Namen darin werden wie im Transkript durch Platzhalter ersetzt). Sie wiederholt sie nicht mehr als Stichpunkt und nennt bei einem Beschluss, To-Do oder Termin, **welche Zeile er
+  ersetzt** (`ersetzt`) oder unter welche er gehört (`nach`). In der Vorschau steht dazu „ersetzt „…““ mit **eigenem Haken** (Haken weg: Die Zeile bleibt, der Baustein kommt
+  darunter), „kommt unter „…““, und ein Stichpunkt, der schon dasteht, ist **durchgestrichen, mit „steht schon da“ und von Anfang an abgewählt**. „Ausgewählte übernehmen“
+  setzt den Baustein **an die Stelle der Zeile**, ersetzte Zeilen fallen weg – eine Zeile mit eingerückten Unterzeilen, eine inzwischen geänderte oder gelöschte Zeile bleibt
+  unangetastet. Alles geschieht in **einem** Schritt: ein „Rückgängig“ macht die ganze Übernahme zurück. Ohne vorhandenen Text ist der Auftrag wie bisher. Regeln:
+  `shared/protokolle/ki.ts` (`vorhandeneZeilen`, `namenSuchtext`, `antwortLesen`, `uebernahmePlanen`) und `shared/protokolle/doppelt.ts` (Wortvergleich).
+
+### Geändert (Protokolle)
+
+- **Beschluss, To-Do und Termin sind ruhiger (W12, „Stil A“).** Keine getönten Kästen mehr, sondern ein schmaler Farbrand links (Beschluss grün, Termin blau, To-Do grau) mit
+  kleinem Etikett „BESCHLUSS“, blauem fettem Datum beim Termin und einem Kreis beim To-Do; Wer und Frist stehen leise ohne Rahmen. Im **Editor, in der Lese-Ansicht
+  (hell und dunkel) und im PDF** sieht es gleich aus; Bausteine hintereinander rücken enger zusammen.
+
+### Neu (Musik-App + Dienstplaner)
+
+- **Infos der Dienstgruppen direkt in der Zelle bearbeiten.** Im Bearbeiten-Modus bleiben die gewählten Info-Spalten (z. B. Technik) am Rechner und iPad **stehen wie in der Ansicht** – statt einer Zeile unter dem Eintrag. Eine Zelle anklicken öffnet ein Textfeld in der Zelle; **gespeichert wird beim Verlassen** (nur bei Änderung), **Esc verwirft**. Schlägt das Speichern fehl, geht die Zelle mit dem eingegebenen Text wieder auf und nennt den Fehler; hat inzwischen jemand anderes dieselbe Info geändert, speichert das nächste Verlassen trotzdem (wie „Trotzdem speichern“ im Punkt-Fenster). Ist der Ablauf abgeschlossen, zeigt ein Klick den Sperr-Hinweis. Am Handy und in der Matrix bleibt es, wie es war (Zeile unter dem Punkt bzw. keine Infos; geändert wird im Punkt-Fenster). Gilt auch für Ablaufvorlagen. Die Einführung des Bearbeitens (Musik-App) hat dafür einen Schritt „Infos je Gruppe“ und startet einmal neu (`setlist-edit-v9`).
+
+### Intern (Musik-App + Dienstplaner)
+
+- Die Info-Tabelle (Raster, Kopfzeile, Spaltenbreiten, waagerechtes Scrollen) ist ein gemeinsamer Baustein (`ui/ablauf/InfoTabelle.tsx` + `infoTabellenRegeln.ts`) für Ansicht und Bearbeiten-Liste; vorher stand die Rechnung nur in `AblaufListe`. Das Bearbeiten spiegelt geänderte Infos jetzt sofort in der Liste (`infosErsetzt`) – das nützt auch dem Punkt-Fenster.
+
+### Neu (Protokolle)
+
+- **Tabellenzellen farbig füllen (W11).** Im Menü an Zelle, Zeile und Spalte der Tabelle steht jetzt **„Farben“** (nur der Hintergrund, die neun Farben des Editors).
+  Lese-Ansicht und PDF zeigen die Farbe, die Ansicht auch im Dunkelmodus. Die Schriftfarbe je Zelle gibt es bewusst nicht (das PDF kennt sie nicht; markierter
+  Text hat seine eigene Farbe).
+- **Aufzählungen in Tabellenzellen (W11).** Eine Zelle nimmt nur Text, keine Listenblöcke – darum ist die Aufzählung dort Text: „- “ oder „\* “ am Zeilenanfang
+  (Zellanfang oder nach einem Zeilenumbruch) wird „• “, „1. “ bleibt „1. “. **Enter** auf so einer Zeile setzt die Aufzählung in **derselben Zelle** fort („• “ bzw. die
+  nächste Nummer), **Enter auf einer leeren Aufzählungszeile** nimmt das Zeichen weg und beendet sie. Wo keine Aufzählung steht, springt Enter weiter wie bisher in die
+  Zelle darunter; Umschalt+Enter macht wie bisher nur einen Zeilenumbruch. Die Regel steht in `shared/protokolle/zellenListe.ts`.
+
+### Geändert (Protokolle)
+
+- **Aufzählungszeichen überall gleich (W11): • ◦ –.** Ebene 1 „•“, Ebene 2 „◦“, Ebene 3 und tiefer „–“ – im Editor, in der Lese-Ansicht und im PDF. Vorher
+  zeigte der Editor • ◦ ▪, die Lese-Ansicht Scheibe/Kreis/Quadrat und das PDF auf jeder Ebene „•“. Eine Quelle (`aufzaehlungsZeichen`), das PDF kennt jetzt die Ebene einer
+  Aufzählung; ein Wächter-Test vergleicht die Zeichen in den beiden Stilen. Die Schrift der PDFs hat „◦“ nicht – es wird als kleiner Kreis gezeichnet.
+- **Zeilenumbrüche in der Lese-Ansicht:** Ein Zeilenumbruch im Text (Umschalt+Enter, Zeilen einer Aufzählung in der Zelle) erschien dort bisher als Leerzeichen und
+  steht jetzt als Umbruch. Im PDF war er schon immer einer; eine am Ende leere Zeile in einer Zelle (nach beendeter Aufzählung) erzeugt dort keine Leerzeile mehr.
+
+### Neu (Website)
+
+- **Maße ziehen in der Vorschau:** Die **Spaltenbreite** lässt sich am Griff in der Lücke zwischen zwei Spalten ziehen – er rastet auf die
+  Aufteilungen ein, die es für die Spaltenzahl gibt (bei zwei Spalten 1 : 1, 2 : 1, 1 : 2), gestrichelte Rastlinien und ein Chip „Aufteilung 2 : 1“
+  zeigen es, die Seite folgt live. Bei drei und vier Spalten gibt es nur eine Aufteilung: Der Griff ist gedämpft und sagt, wo man die Spaltenzahl ändert.
+- Der **Abstand** lässt sich an der Pille unten mittig ziehen („Abstand oben & unten: Normal“): senkrecht ziehen rastet auf Kein, Klein, Normal, Groß ein;
+  gestreifte Bänder oben und unten zeigen die Höhe (auch auf dunklen Flächen sichtbar), der Chip nennt die Stufe. Es ist **ein** Wert für oben und unten.
+  Ein Klick ohne Ziehen öffnet wie bisher „Gestalten“.
+- **Esc** bricht beide Züge ab; mit Pfeil links/rechts am Spalten-Griff und Pfeil hoch/runter an der Pille geht es auch mit der Tastatur. Beide Änderungen
+  sind Schritte für **Rückgängig/Wiederholen**. Redakteure dürfen beides, am Handy bleibt alles beim Fenster „Gestalten“.
+
+### Intern (Website)
+
+- Neue Nachrichten `aufteilung` (Abschnitt + Name aus `AUFTEILUNGEN`, nur mit der Spaltenzahl des Abschnitts) und `abstand` (Abschnitt + Stufe aus dem
+  Schema), beide streng geprüft. Regeln an **einer** Stelle in `shared/website/bearbeiten.ts`: `aufteilungGleicheSpalten`, `aufteilungZiehen`,
+  `gestaltungAendern` (nutzt auch das Fenster „Gestalten“). Die Rastung rechnet im Kern der Ebene (`ebene.kern.txt`) aus den Namen der Aufteilungen
+  und den **am echten Stylesheet gemessenen** Pixelhöhen der Stufen (Probe-Abschnitte) – keine feste Liste im Skript.
+
+### Neu (Website)
+
+- **Ziehen in der Vorschau:** Abschnitte und Bausteine lassen sich am Griff ziehen – auch in eine andere Spalte, in einen anderen Abschnitt und in eine leere
+  Spalte. Eine Linie zeigt die Stelle, die Zielspalte ist gestrichelt, am Rand scrollt die Seite von selbst, **Esc** bricht ab. Die Pfeiltasten am Griff
+  verschieben weiter. Die Knöpfe „nach oben/unten“ fallen am Computer weg (am Handy bleiben sie).
+- **Rückgängig und Wiederholen** für Änderungen an der Seite (Verschieben, Einfügen, Kopieren, Löschen, getippter Text, „Fertig“ im Fenster): zwei stille Knöpfe in
+  der Kopfzeile und Strg/Cmd+Z, Umschalt+Strg/Cmd+Z, solange kein Textfeld offen ist. Der Verlauf gilt für die offene Seite in dieser Sitzung; hat jemand anderes
+  inzwischen gespeichert, wird nicht darüber geschrieben.
+
+### Intern (Website)
+
+- Das Verschieben rechnet an **einer** Stelle (`abschnittVerschiebenNach`, `bausteinVerschieben` in `shared/website/bearbeiten.ts`); `abschnittVerschieben` (hoch/runter)
+  rechnet darüber. Neue Nachricht `verschieben` (nur Zahlen), `hoch`/`runter` entfallen; `rueckgaengig`/`wiederholen` für Tasten im `iframe`.
+
+### Neu (Website)
+
+- **Neue Bedien-Schicht in der Vorschau (W3c-1, am Computer).** Fährt man über einen Abschnitt, steht seine **Leiste auf der Oberkante**
+  (Griff · nach oben · nach unten · Gestalten · kopieren · löschen), über einem Baustein **eine** helle Leiste mit dem Stift (öffnet das bisherige
+  Fenster), unten mittig die **Abstand-Pille** (öffnet „Gestalten“), an der Grenze zweier Abschnitte **Abschnitt einfügen**, in einer Lücke zwischen
+  Bausteinen ein **+**. Alles hell mit Rand und Schatten – auf weißem, sanftem und dunklem Hintergrund gleich gut zu lesen. **Nie über Text und nie
+  übereinander:** Eine Kollisionsregel (Rangordnung, Ausweichen, Ausblenden; `ebene.kern.txt`, mit Tests) sucht jedem Element einen freien Platz. Der Griff
+  verschiebt vorerst mit den Pfeiltasten; das Ziehen kommt mit W3c-2. Am Handy bleibt alles wie bisher: Fenster.
+- **Text direkt tippen.** Überschrift, Akzentzeile, Text (auch in Bild+Text) und die Beschriftung eines Knopfes lassen sich in der Vorschau anklicken und
+  an Ort und Stelle schreiben. Beim Markieren erscheint eine kleine Leiste: **fett, kursiv, Link, Liste, Zwischenüberschrift**. Esc bricht ab; Klick daneben
+  (bei Überschrift, Akzentzeile und Knopf auch die Eingabetaste) übernimmt – erst dann wird gespeichert, **während des Tippens wird nicht neu gezeichnet**.
+  Eingefügtes ist immer reiner Text. Rückgängig/Wiederholen (Strg/Cmd+Z, Umschalt+Strg/Cmd+Z) gelten im Text. Geschrieben wird ohne den veralteten
+  `execCommand`: Der Text wird als Blöcke gelesen und gezeichnet, Fett/Kursiv/Link/Liste rechnet der Kern.
+- **Links prüft der Rahmen:** Die Adresse im Link-Feld geht an die Erweiterung und wird mit der echten Regel (dieselbe wie beim Rendern) geprüft;
+  nicht erlaubt (zum Beispiel `javascript:`) → ruhiger Hinweis, kein Link.
+- **Escape im Markdown:** Ein Backslash macht das folgende Zeichen zum Zeichen – `\*`, `\_`, `\[`, `\]`, `\(`, `\)`, `\\`, `\#`, am Zeilenanfang auch
+  `\-` und `1\.`. **Getippter Text erscheint so exakt, wie er getippt wurde** (ein `*` oder ein `- ` am Zeilenanfang wird nicht mehr zur Formatierung);
+  der Rückweg setzt die Backslashes selbst. Vorhandene Texte ohne Backslash rendern unverändert. Zusätzlich: `***text***` ist fett **und** kursiv.
+- **Sicher:** Der getippte Text kommt nur an, wenn dasselbe Feld vorher als „wird getippt“ gemeldet wurde; „Eigenes HTML“ ist nie tippbar; Links mit
+  ungültiger Adresse machen die ganze Nachricht ungültig; eine Formatierung, die sich nicht genau speichern lässt (zum Beispiel kursiv direkt neben
+  fett ohne Leerzeichen), wird **nicht** übernommen – mit Hinweis, der Text bleibt. Ist die Seite von jemand anderem gesperrt, gibt es nur das Ansehen.
+
+### Geändert (Website)
+
+- Das Fenster „Baustein bearbeiten“ nennt unter dem Text den Backslash („Ein \ davor macht ein Sonderzeichen zum normalen Zeichen“).
+- `?demo=seiten` (nur Entwickeln): „Unsere Gruppen“ hat jetzt Beispiel-Inhalt zum Ausprobieren (Text mit Fett, Link und Liste, dunkler Abschnitt, Eigenes HTML).
+
+### Doku (Protokolle)
+
+- Anleitung `docs/betrieb/PROTOKOLLE.md` auf den Stand v1.4.0 gebracht: „Jeder für sich“ aus Sicht eines Mitarbeiters, Verlauf
+  nur für die Leitung, klappbare Abschnitte im To-Do-Fenster.
+
+### Geändert (Protokolle)
+
+- **„Jeder für sich“ – ein Mitarbeiter sieht nur seinen Teil (W10).** Für ihn ist es einfach **seine** Aufgabe: kein Zähler („0/14“), keine anderen
+  Zuständigen (weder Namen noch Gesichter), kein „Wer ist fertig?“. Im Fenster steht ein großer Haken **„Ich habe es erledigt“** (erledigt: „Erledigt · am …“,
+  nochmal tippen nimmt zurück). **Sein Teil ist sein Stand:** Ist er fertig, steht das To-Do bei ihm unter „Erledigt“ – im Board, in Liste und Tabelle, in den
+  Zahlen der Startseite, im Filter „länger erledigt“ und in der Suche; die Karte ist durchgestrichen mit „Von dir erledigt am …“. Sonst steht es unter „Offen“,
+  auch wenn der Gesamtstand „in Arbeit“ ist. Im Board setzt das Ziehen nach „Erledigt“ oder „Offen“ nur den eigenen Teil. Eine Regel (`standFuer`, `sichtFuer`,
+  `toDoRechte.teile`) statt vieler Kopien.
+- **Verlauf nur für die Leitung.** Ein Mitarbeiter sieht den Verlauf eines To-Dos nie (in keinem Fall); die **Notizen** sieht er alle, als Liste über dem Notizfeld
+  (Text, wer, wann).
+- **Fenster der Leitung aufgeräumt:** **Zuständig**, **Wer ist fertig?** und **Verlauf** sind zugeklappt und sagen in einer Kurzzeile, was darunter steht
+  („Alle (14) · Jeder für sich“, „2 von 14 fertig“ mit Balken, „5 Einträge · zuletzt Do, 19.11.“). Aufgeklappt stehen die Personen in zwei Spalten (am Handy
+  in einer); „Außerhalb der Gruppe“ und der Umschalter Gemeinsam / Jeder für sich gehören zu „Zuständig“. Bei einem neuen To-Do steht „Zuständig“ offen.
+- **Startseite, Gruppe „Deine Gruppen“:** Die Zahl der offenen To-Dos zählt jedes To-Do so, wie es für mich steht.
+
+### Behoben (alle Apps)
+
+- **Datumsfelder in Safari:** Das Datum klebte im Feld oben statt mittig (zuerst im To-Do-Fenster bei „Bis“ aufgefallen). Der gemeinsame Baustein
+  `datumsfeld` zentriert es jetzt bei jeder Feldhöhe; die Höhen bleiben gleich. Das gilt für alle Datumsfelder in allen Apps.
+
+### Doku (Dienstplaner)
+
+- Anleitung `docs/betrieb/DIENSTPLANER.md` auf den Stand v0.13.0 gebracht.
+
+### Neu (Website)
+
+- **Freigabe (W3b-2):** Ein **Redakteur** sieht an jeder Seite, wo sie steht (**Entwurf · Eingereicht · Zurück · Online · Geändert**) und
+  **reicht sie zur Prüfung ein**; ändern darf er danach weiter, die Leitung sieht immer den neuesten Entwurf. Statt „Seite löschen“ gibt es für
+  Redakteure **„Löschen anfragen“** – die Seite bleibt, bis die Leitung entscheidet. Der Status liegt als eigener Wert je Seite in „Entwürfe“
+  (er streitet nicht mit dem Speichern der Seite).
+- **Reiter „Freigaben“:** Die Leitung sieht alles, was vom Online-Stand abweicht – eingereichte Seiten zuerst, dann „Löschen angefragt“,
+  Zurückgegebenes, Änderungen, Menü, Einstellungen und Aussehen, zuletzt Seiten, die nur noch online stehen –, mit Vorschau (echter Renderer),
+  **Freigeben**, **Mit Anmerkung zurück**, **Löschen und offline nehmen** / **Ablehnen**, **Offline nehmen** und **Alles freigeben**
+  (die eingereichten Seiten, das Menü und die Einstellungen – nacheinander, es bricht beim ersten Fehler ab; nicht eingereichte Entwürfe gehören
+  nicht dazu). Redakteure sehen dort nur ihre eigenen Seiten, zum Ansehen. Ein **Zähler am Reiter** zeigt, was wartet.
+- **Freigeben schreibt zum ersten Mal in „Veröffentlicht“:** der Entwurf unverändert, danach wird nachgelesen, dass dort derselbe Stand steht –
+  erst dann verschwindet der Status. Scheitert etwas (Netz, kein Recht), gilt nichts als online, der Status bleibt, und die Meldung sagt, was
+  nicht geschah. Die Leitung kann auch direkt aus dem Reiter „Seiten“ veröffentlichen („⋯“ → „Veröffentlichen“).
+- **Online-Stand:** Alle Rollen lesen „Veröffentlicht“ und vergleichen die Prüfsumme je Seite, Menü und Einstellungen mit dem Entwurf („nie
+  veröffentlicht“, „online, unverändert“, „geändert seit der Freigabe“, „online, aber Entwurf gelöscht“). Dasselbe noch einmal zu speichern macht
+  eine Seite nicht „geändert“.
+
+### Geändert (Website)
+
+- „Seite löschen“ nimmt eine Seite, die schon online steht, nicht von der Website – sie wird danach unter „Freigaben“ offline genommen (der
+  Hinweis im Fenster sagt es).
+
+### Neu (Dienstplaner)
+
+- **Pause wirkt** (Scheibe PL-3). Wer in der Personenliste einer Dienstgruppe pausiert („bis“ einschließlich, ohne Datum unbefristet), wird für
+  **diese Dienstgruppe** nicht mehr erinnert und vom Zauberstab nicht mehr vorgeschlagen; in „Wer kann?“ stand sie schon unter „Kann nicht“.
+  - **Erinnern:** Ein Termin gilt für eine pausierte Person nicht als offen. Ist dadurch nichts mehr offen, bekommt sie keine Mail; die Mail
+    nennt nur die nicht pausierten Termine. Im Fenster steht ruhig „N Personen werden wegen Pause nicht erinnert.“ (nur wenn N größer als 0).
+  - **Zauberstab:** Wer an dem Termin pausiert, wird nie vorgeschlagen – wie ein Abwesender. In der Auswahl steht die Person unter „Passt eher nicht“
+    mit „Pause bis …“; von Hand wählen lässt sie sich weiterhin.
+  - **Bleibt, wie es ist:** Selbst antworten und eingeteilt werden geht weiter. Eine Pause einer anderen Dienstgruppe wirkt nicht; eine Pause, die vor
+    dem Termin endet, auch nicht.
+
+### Intern (Dienstplaner)
+
+- Die Regel steht nur in `pauseAm` (`personenliste.ts`): `fehlendeInGruppe` (neu: `personenlisten`, Ergebnis `pausiert`, dazu `pausiertAusgelassen`)
+  und `bewerte` im Zauberstab (neu: `ZauberPlatz.personenliste`, `Bewertet.pause`, über `pauseDerPerson` – dieselbe Funktion wie „Wer kann?“).
+  Die Liste kommt aus `EntwuerfeDaten.personenlisten` in `ErinnernFenster` und `ZauberstabFach`. Die Demo hat Pausen, an denen man beides sieht.
+
 ## [2.41.0] – 2026-11-20
 
 ### Geändert (alle Apps)

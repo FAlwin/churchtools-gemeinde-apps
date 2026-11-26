@@ -7,7 +7,9 @@
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: var(--r-ctrl);
-  background: var(--surface3);
+  // `--bg`, nicht `--surface3`: Hell sind beide gleich, im Dunkeln ist `--surface3` genau die Farbe der Knöpfe
+  // „Anwesend/Abwesend“ (`--seg-track`) – sie waren dort nur noch Text (TF-PROT-33 Schritt 10, 27.11.2026).
+  background: var(--bg);
   font-size: 14.5px;
 }
 

@@ -161,6 +161,31 @@ describe('vorschlaege – wen Anna fragen kann', () => {
         { personId: BEN, name: 'Ben Test', a: null, notiz: null },
         { personId: CLARA, name: 'Clara Test', a: null, notiz: null },
       ],
+      grund: 'nichtLesbar',
+    });
+  });
+
+  it('„Nur abwesend“ (V-5): gespeicherte Ja/Vielleicht ordnen nicht – das Team steht da, ohne den Hinweis „nicht lesbar“; Abwesende fehlen', async () => {
+    const antworten: PersonenAntworten = {
+      ...(await gelesen([
+        { person: BEN, antworten: a('ja') },
+        { person: CLARA, antworten: a('vielleicht') },
+      ])),
+      nurAbwesend: new Set([GRUPPE]),
+    };
+    const r = vorschlaege({
+      ...basis,
+      mitglieder: [person(BEN, 'Ben Test'), person(CLARA, 'Clara Test'), person(53, 'Hanna Test')],
+      antworten,
+      abwesend: new Set([53]),
+    });
+    expect(r).toEqual({
+      art: 'ohneAntworten',
+      team: [
+        { personId: BEN, name: 'Ben Test', a: null, notiz: null },
+        { personId: CLARA, name: 'Clara Test', a: null, notiz: null },
+      ],
+      grund: 'nurAbwesend',
     });
   });
 });

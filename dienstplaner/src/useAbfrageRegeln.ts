@@ -2,7 +2,10 @@ import { mapLimit } from '@shared/ct/mapLimit';
 import { useLaden } from '@ui/ct/useLaden';
 import { abfrageRegelAus, type AbfrageRegel } from '@shared/dienstplan/erinnern';
 import type { AbfragenStand } from '@shared/dienstplan/abfragenSpeicher';
-import { GLEICHZEITIG } from './ladeAntworten';
+import type { Dienstgruppe } from '@shared/ct/dienstgruppen';
+import type { PersonenAntworten } from '@shared/dienstplan/personenAntworten';
+import { GLEICHZEITIG, ladeAntworten } from './ladeAntworten';
+import { ladeAbfragen } from './ladeAbfragen';
 
 /** Liest das Dokument der Abfragen einer Dienstgruppe (`ladeAbfragen`, im Fenster `AbfrageAnschluss.lesen`). */
 export type AbfragenLader = (dienstgruppeId: number) => Promise<AbfragenStand>;
@@ -70,4 +73,29 @@ export function nurAbwesendAus(regeln: ReadonlyMap<number, RegelStand>): Set<num
   return new Set(
     [...regeln].flatMap(([id, r]) => (r !== 'unbekannt' && r.art === 'abwesend' ? [id] : [])),
   );
+}
+
+/**
+ * **Die Antworten der Dienstgruppen samt ihrer Art** (V-5): `ladeAntworten` und die Regeln (`ladeRegeln`) nebeneinander, dazu
+ * `nurAbwesend` – die EINE Stelle dafür. Planen (`antwortenLaden` in `App.tsx`) und „Vertretung suchen“ (`ladeLage`) laden so;
+ * wer Antworten zeigt oder einordnet, soll „Nur abwesend“ kennen. Wirft wie `ladeAntworten` (401, vorübergehend); ein nicht lesbares
+ * Abfragen-Dokument zählt wie vor V-5 als Zusagen (`nurAbwesendAus`).
+ */
+export async function ladeAntwortenMitArt(
+  gruppen: readonly Dienstgruppe[],
+  heute: string,
+  lesen: {
+    antworten: (g: readonly Dienstgruppe[]) => Promise<PersonenAntworten>;
+    abfragen: AbfragenLader;
+  } = { antworten: ladeAntworten, abfragen: ladeAbfragen },
+): Promise<PersonenAntworten> {
+  const [antworten, regeln] = await Promise.all([
+    lesen.antworten(gruppen),
+    ladeRegeln(
+      lesen.abfragen,
+      gruppen.map((g) => g.id),
+      heute,
+    ),
+  ]);
+  return { ...antworten, nurAbwesend: nurAbwesendAus(regeln) };
 }

@@ -30,6 +30,7 @@ import {
 import { htmlText, mailKnopf, vorname } from './erinnern';
 import {
   antwortFuer,
+  antwortenGelten,
   antwortenSichtbar,
   antwortStufe,
   type PersonenAntworten,
@@ -63,7 +64,15 @@ export interface Vorschlag {
  */
 export type Vorschlaege =
   | { art: 'liste'; ja: Vorschlag[]; vielleicht: Vorschlag[]; ohne: Vorschlag[] }
-  | { art: 'ohneAntworten'; team: Vorschlag[] };
+  | {
+      art: 'ohneAntworten';
+      team: Vorschlag[];
+      /**
+       * Warum ohne Einordnung: `nichtLesbar` = die Antworten der Dienstgruppe sind nicht lesbar (der Hinweis sagt es);
+       * `nurAbwesend` = die Gruppe fragt „Nur abwesend“ (V-5) – Ja/Vielleicht gelten nicht, nur die Abwesenheit schließt aus.
+       */
+      grund: 'nichtLesbar' | 'nurAbwesend';
+    };
 
 const nachName = (a: Vorschlag, b: Vorschlag) =>
   a.name.localeCompare(b.name, 'de') || a.personId - b.personId;
@@ -87,7 +96,8 @@ export function vorschlaege(o: {
   eingeteilt: ReadonlySet<number>;
   abwesend: ReadonlySet<number>;
 }): Vorschlaege {
-  const sichtbar = antwortenSichtbar(o.antworten, o.gruppeId);
+  // Eingeordnet wird nur, wenn die Antworten gelten (`antwortenGelten`: lesbar und nicht „Nur abwesend“ – dieselbe Regel wie Planen).
+  const sichtbar = antwortenGelten(o.antworten, o.gruppeId);
   const ja: Vorschlag[] = [];
   const vielleicht: Vorschlag[] = [];
   const ohne: Vorschlag[] = [];
@@ -112,7 +122,12 @@ export function vorschlaege(o: {
     };
     (stufe === 'ja' ? ja : stufe === 'vielleicht' ? vielleicht : ohne).push(v);
   }
-  if (!sichtbar) return { art: 'ohneAntworten', team: ohne.sort(nachName) };
+  if (!sichtbar)
+    return {
+      art: 'ohneAntworten',
+      team: ohne.sort(nachName),
+      grund: antwortenSichtbar(o.antworten, o.gruppeId) ? 'nurAbwesend' : 'nichtLesbar',
+    };
   return {
     art: 'liste',
     ja: ja.sort(nachName),

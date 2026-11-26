@@ -97,6 +97,12 @@ export interface CtAgenda {
   eventStartPosition?: number;
   /** Pflichtfeld beim Schreiben des Ablaufs (`PUT …/agenda`). */
   calendarId?: number;
+  /**
+   * Die „Predigtserie“ (seit dem App-Update vom 26.11.2026 in der ChurchTools-App setzbar). Die App liest sie nicht.
+   * Gemessen am 26.11.2026 (`server/scripts/probe-agenda-series.ts`): Ein `PUT …/agenda` OHNE das Feld lässt sie stehen –
+   * Umsortieren (`{ items }`) und Grenze verschieben (`{ calendarId, eventStartPosition }`) löschen sie also nicht.
+   */
+  series?: string | null;
   /** In ChurchTools abgeschlossen (`…/agenda/lock`) – dann verweigert ChurchTools jedes Ändern. */
   isLocked?: boolean;
 }

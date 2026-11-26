@@ -185,27 +185,29 @@ export function AbfrageFenster({
   });
 
   // ── Vorwahl: Hat eine planbare Dienstgruppe eine laufende Abfrage, ist die erste davon gewählt (sonst bleibt es die erste) ──
-  // Geladen über `useLaden` (späte Antworten zählen nicht) – nur beim Öffnen, ein Lesen je Dienstgruppe.
-  const { stand: vorwahl } = useLaden<number | null>(
-    () =>
-      gruppen.length < 2
-        ? null
-        : Promise.all(
-            gruppen.map(async (g): Promise<number | null> => {
-              const id = g.gruppe?.id ?? null;
-              if (id === null) return null;
-              try {
-                const s = await lesen(id);
-                return s.fehler === null && !s.unlesbar && laufendeAbfrage(s.inhalt, heute)
-                  ? id
-                  : null;
-              } catch {
-                return null;
-              }
-            }),
-          ).then((ids) => ids.find((i) => i !== null) ?? null),
-    [],
-  );
+  // Geladen über `useLaden` (späte Antworten zählen nicht) – ein Lesen je Dienstgruppe. Abhängig von den Nummern als Text,
+  // nicht von `gruppen` selbst: Die Liste ist bei jedem Zeichnen neu und löste sonst immer wieder ein Lesen aus.
+  const gruppenNummern = gruppen
+    .map((g) => g.gruppe?.id)
+    .filter((id): id is number => id !== undefined && id !== null)
+    .join(',');
+  const { stand: vorwahl } = useLaden<number | null>(() => {
+    const ids = gruppenNummern === '' ? [] : gruppenNummern.split(',').map(Number);
+    return ids.length < 2
+      ? null
+      : Promise.all(
+          ids.map(async (id): Promise<number | null> => {
+            try {
+              const s = await lesen(id);
+              return s.fehler === null && !s.unlesbar && laufendeAbfrage(s.inhalt, heute)
+                ? id
+                : null;
+            } catch {
+              return null;
+            }
+          }),
+        ).then((treffer) => treffer.find((i) => i !== null) ?? null);
+  }, [gruppenNummern, lesen, heute]);
   useEffect(() => {
     if (vorwahl.art === 'fertig' && vorwahl.daten !== null && !selbstGewaehlt.current)
       setGewaehlt(vorwahl.daten);

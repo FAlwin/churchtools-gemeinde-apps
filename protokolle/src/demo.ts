@@ -1235,6 +1235,14 @@ function antwort(
     return { status: 204 };
   }
   if (neuerTermin) return { status: 200, data: { appointment: neuerTermin } };
+  // Reiter „Termine“ prüft eingetragene Termine auf 404 (gelöscht): die festen Beispieltermine gibt es also – Einzelabruf 200.
+  const fester =
+    termin && methode === 'GET' && KALENDER_AM_TAG.find((t) => t.id === Number(termin[1]));
+  if (fester)
+    return {
+      status: 200,
+      data: { appointment: { id: fester.id, title: fester.titel, startDate: fester.beginn } },
+    };
   const anfragen = /^\/api\/calendars\/\d+\/appointments\/(\d+)\/meetingrequests$/.exec(pfad);
   if (anfragen)
     return {

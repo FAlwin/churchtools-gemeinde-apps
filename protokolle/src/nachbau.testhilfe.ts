@@ -515,10 +515,13 @@ export function nachbauStarten(): Nachbau {
               startDate: x.startDate,
               eventTemplateId: x.eventTemplateId,
             });
-      // ChurchTools mailt beim Anlegen jeder eingeladenen Person außer mir sofort „Neue Besprechungsanfrage“ (K2b).
+      // ChurchTools mailt beim Anlegen jeder eingeladenen Person außer dem Einlader sofort „Neue Besprechungsanfrage“ (K2b).
+      // Einlader ist „Im Auftrag von“ (`onBehalfOfPid`), sonst ich (1) – gemessen 26.11.2026: mit `onBehalfOfPid: 49` steht
+      // meine eigene Anfrage auf `pending`, `inviter` ist 49.
+      const einlader = typeof body.onBehalfOfPid === 'number' ? body.onBehalfOfPid : 1;
       if (!f || f.angelegt)
         for (const a of (body.meetingrequests as { inviteeId: number }[] | undefined) ?? [])
-          if (a.inviteeId !== 1 && !s.anfrageVerschluckt.has(a.inviteeId))
+          if (a.inviteeId !== einlader && !s.anfrageVerschluckt.has(a.inviteeId))
             s.mails.push({ person: a.inviteeId, art: 'neu' });
       const signup = body.signup as Record<string, number> | undefined;
       if (!f || f.angelegt) {
@@ -532,7 +535,7 @@ export function nachbauStarten(): Nachbau {
             .filter((a) => !s.anfrageVerschluckt.has(a.inviteeId))
             .map((a) => ({
               person: a.inviteeId,
-              state: a.inviteeId === 1 ? 'accepted' : 'pending',
+              state: a.inviteeId === einlader ? 'accepted' : 'pending',
             })),
           // Wöchentliche Serien (W15-5) und die gespeicherte Anmeldung – GET zeigt sie so wie ChurchTools.
           ...(body.repeatId === 7

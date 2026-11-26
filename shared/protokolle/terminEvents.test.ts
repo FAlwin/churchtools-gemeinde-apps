@@ -121,7 +121,14 @@ describe('Termin-Vorlage mit Events', () => {
   });
   const eine = (extra: Record<string, unknown> = {}) => vorlagenAus([roh(extra)])[0];
 
-  it('erkennbar eine eventTemplateId: gelesen (Zahl oder Text), 0 bleibt 0', () => {
+  it('so wie ChurchTools sie schreibt: `eventTemplate` als Text (gemessen 26.11.2026), 0 bleibt 0', () => {
+    // Wörtlich aus einer im ChurchTools-Dialog gespeicherten Vorlage (Test-Instanz, Vorlage 4).
+    expect(eine({ events: [{ eventTemplate: '0' }] }).eventVorlage).toBe(0);
+    expect(eine({ events: [{ eventTemplate: '12' }] }).eventVorlage).toBe(12);
+    expect(eine({ events: [{ eventTemplate: 5 }] }).eventVorlage).toBe(5);
+  });
+
+  it('auch der vor der Messung vermutete Name `eventTemplateId` (Zahl oder Text), 0 bleibt 0', () => {
     expect(eine({ events: [{ eventTemplateId: 4 }] }).eventVorlage).toBe(4);
     expect(eine({ events: [{ eventTemplateId: '6' }] }).eventVorlage).toBe(6);
     expect(eine({ events: [{ eventTemplateId: 0 }] }).eventVorlage).toBe(0);
@@ -136,6 +143,8 @@ describe('Termin-Vorlage mit Events', () => {
       'x',
       [{ foo: 1 }],
       [{ eventTemplateId: 'abc' }],
+      [{ eventTemplate: '' }],
+      [{ eventTemplate: '-1' }],
       [3],
     ])
       expect(eine({ events }).eventVorlage).toBeNull();
@@ -143,7 +152,7 @@ describe('Termin-Vorlage mit Events', () => {
 
   it('Anwenden setzt die Vorlage in alle Zeilen der neuen Reihe (auch 0); ohne Events bleiben die Zeilen leer', () => {
     const start = { ...wochen(), events: { '2027-02-02': 9 } };
-    expect(vorlageAnwenden(start, eine({ events: [{ eventTemplateId: 0 }] })).events).toEqual({
+    expect(vorlageAnwenden(start, eine({ events: [{ eventTemplate: '0' }] })).events).toEqual({
       '2027-02-02': 0,
       '2027-02-09': 0,
       '2027-02-16': 0,

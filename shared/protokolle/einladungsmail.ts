@@ -5,7 +5,11 @@
  * Bearbeiten, Serie, Löschen, Absagen).
  */
 
-/** Wie viele der Personen eine Mail bekommen: alle außer mir, jede Person einmal. */
-export function mailsAnAndere(personen: readonly number[], ich: number): number {
-  return new Set(personen.filter((p) => p !== ich)).size;
+/**
+ * Wie viele der Personen eine Mail bekommen: alle außer dem Einlader, jede Person einmal. Einlader bin ich – außer der Termin
+ * wird „Im Auftrag von“ jemandem angelegt (`onBehalfOfPid`): Dann ist diese Person der Einlader, und auch ich bekomme eine
+ * Mail (gemessen 26.11.2026). Wer ruft, gibt deshalb `imAuftrag ?? ich` mit.
+ */
+export function mailsAnAndere(personen: readonly number[], einlader: number): number {
+  return new Set(personen.filter((p) => p !== einlader)).size;
 }

@@ -266,8 +266,9 @@ export function TerminFenster({
     !laeuft &&
     anfrageBereit &&
     (!unklarGesperrt || !!verknuepfen);
-  // „Nur verknüpfen“ legt nichts an – dann geht auch keine Einladung raus.
-  const mails = verknuepfen ? 0 : mailsAnAndere(eingeladen, ich);
+  // „Nur verknüpfen“ legt nichts an – dann geht auch keine Einladung raus. Einlader ist „Im Auftrag von“, sonst ich (gemessen
+  // 26.11.2026: mit `onBehalfOfPid` steht auch meine eigene Anfrage auf „offen“ und ich bekomme eine Mail).
+  const mails = verknuepfen ? 0 : mailsAnAndere(eingeladen, eintrag.imAuftrag ?? ich);
   // „Nur verknüpfen“ legt auch keine Gruppen an – dieselbe Rechnung wie die Vorschau im Reiter und das Nachlesen.
   const gruppenAnzahl = verknuepfen ? 0 : anmeldungTermine(eintrag, anmeldungAktiv, heute).length;
   const personName = (id: number) =>

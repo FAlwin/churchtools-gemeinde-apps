@@ -11,9 +11,9 @@
  * **Buchungen** (W15-2) stehen im Altformat `bookings: [{resource_id: "3", minpre: "150", minpost: "60", status_id: 1}]`
  * (Zahlen als Text, gemessen 23.11.2026): Beim Anwenden kommen sie in die Tabelle des Reiters „Ressourcen“ – nur Ressourcen,
  * die die Person buchen darf, der Status ohne Verwalten-Recht als „Wartet auf Bestätigung“ –, beim Speichern gehen sie im
- * selben Format wieder hinaus. **Events** (W15-3): Die Vorlage trägt „Stored service-planning event template selections“ in
- * `events` – das Format ist **nicht gemessen**; erkennbar ist nur eine `eventTemplateId` (`eventVorlageAus`), die dann beim
- * Anwenden in alle Zeilen des Reiters „Events“ kommt. Beim Speichern schreiben wir nichts dazu. **Anmeldung** (W15-5): Die
+ * selben Format wieder hinaus. **Events** (W15-3): Die Vorlage trägt `events: [{eventTemplate: "0"}]` – die Nummer der
+ * Eventvorlage **als Text** (gemessen 26.11.2026 an einer im ChurchTools-Dialog gespeicherten Vorlage); beim Anwenden kommt
+ * sie in alle Zeilen des Reiters „Events“, beim Speichern geht sie im selben Format hinaus. **Anmeldung** (W15-5): Die
  * Vorlage trägt `grouptypeId`, `daysForwardNo`, `daysArchiveGroupNo` und `templateGroupId` (Zahlen oder `null`, laut
  * Schnittstelle) – beim Anwenden kommen sie in den Reiter „Anmeldung“ und schalten ihn an, **wenn** der Gruppentyp gesetzt und
  * erlaubt ist; „Als Vorlage speichern“ schreibt dieselben Felder, wenn der Schalter an ist.
@@ -112,16 +112,23 @@ function buchungenAus(roh: unknown): Buchung[] {
 }
 
 /**
- * Die Eventvorlage einer Termin-Vorlage: Das Format von `events` ist ungemessen – tolerant gelesen wird eine Liste, deren
- * erster Eintrag mit einer ganzzahligen `eventTemplateId` (Zahl oder Text) sie nennt. Sonst `null` (ignoriert). Die Nummer
- * 0 ist gültig und bleibt 0.
+ * Die Eventvorlage einer Termin-Vorlage: ChurchTools schreibt `events: [{eventTemplate: "0"}]` (Nummer als Text, gemessen
+ * 26.11.2026). Gelesen wird der erste Eintrag mit einer ganzzahligen Nummer – auch als Zahl und unter dem Namen
+ * `eventTemplateId`, den wir vor der Messung vermutet hatten. Sonst `null` (ignoriert). Die Nummer 0 ist gültig und bleibt 0.
  */
 function eventVorlageAus(roh: unknown): number | null {
   for (const x of Array.isArray(roh) ? roh : []) {
-    const n = zahl(objekt(x)?.eventTemplateId);
+    const o = objekt(x);
+    const n = zahl(o?.eventTemplate ?? o?.eventTemplateId);
     if (n !== null && Number.isInteger(n) && n >= 0) return n;
   }
   return null;
+}
+
+/** Die Eventvorlage der frühesten Zeile, die eine hat – `null`, wenn keine Zeile eine Vorlage trägt. */
+function ersteEventVorlage(events: Readonly<Record<string, number>>): number | null {
+  const tage = Object.keys(events).sort();
+  return tage.length ? events[tage[0]] : null;
 }
 
 /** Eine Nummer der Anmeldung: ganzzahlig und größer als 0 – sonst `null` (auch eine 0 heißt hier „keine“). */
@@ -328,6 +335,11 @@ export function vorlageRumpf(e: Eintrag & { kalender: number }): Record<string, 
           ...(e.anmeldung.beenden !== null ? { daysArchiveGroupNo: e.anmeldung.beenden } : {}),
           ...(e.anmeldung.vorlage !== null ? { templateGroupId: e.anmeldung.vorlage } : {}),
         }
+      : {}),
+    // Events (gemessen 26.11.2026): eine Eventvorlage, Nummer als Text – die der ersten Zeile, die eine hat. Eine Vorlage
+    // kennt kein Datum, beim Anwenden gilt sie wieder für alle Zeilen (`vorlageAnwenden`).
+    ...(ersteEventVorlage(e.events) !== null
+      ? { events: [{ eventTemplate: String(ersteEventVorlage(e.events)) }] }
       : {}),
     // Buchungen im Altformat von ChurchTools (Zahlen als Text) – so liest `buchungenAus` sie wieder.
     ...(e.buchungen.length

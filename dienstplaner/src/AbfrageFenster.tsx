@@ -185,31 +185,31 @@ export function AbfrageFenster({
   });
 
   // ── Vorwahl: Hat eine planbare Dienstgruppe eine laufende Abfrage, ist die erste davon gewählt (sonst bleibt es die erste) ──
+  // Geladen über `useLaden` (späte Antworten zählen nicht) – nur beim Öffnen, ein Lesen je Dienstgruppe.
+  const { stand: vorwahl } = useLaden<number | null>(
+    () =>
+      gruppen.length < 2
+        ? null
+        : Promise.all(
+            gruppen.map(async (g): Promise<number | null> => {
+              const id = g.gruppe?.id ?? null;
+              if (id === null) return null;
+              try {
+                const s = await lesen(id);
+                return s.fehler === null && !s.unlesbar && laufendeAbfrage(s.inhalt, heute)
+                  ? id
+                  : null;
+              } catch {
+                return null;
+              }
+            }),
+          ).then((ids) => ids.find((i) => i !== null) ?? null),
+    [],
+  );
   useEffect(() => {
-    if (gruppen.length < 2) return;
-    let aktiv = true;
-    void Promise.all(
-      gruppen.map(async (g): Promise<number | null> => {
-        const id = g.gruppe?.id ?? null;
-        if (id === null) return null;
-        try {
-          const s = await lesen(id);
-          return s.fehler === null && !s.unlesbar && laufendeAbfrage(s.inhalt, heute) ? id : null;
-        } catch {
-          return null;
-        }
-      }),
-    ).then((ids) => {
-      const erste = ids.find((i) => i !== null);
-      if (aktiv && !selbstGewaehlt.current && erste !== undefined && erste !== null)
-        setGewaehlt(erste);
-    });
-    return () => {
-      aktiv = false;
-    };
-    // Nur beim Öffnen: ein Lesen je Dienstgruppe.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (vorwahl.art === 'fertig' && vorwahl.daten !== null && !selbstGewaehlt.current)
+      setGewaehlt(vorwahl.daten);
+  }, [vorwahl]);
 
   const wechsleGruppe = (id: number) => {
     selbstGewaehlt.current = true;

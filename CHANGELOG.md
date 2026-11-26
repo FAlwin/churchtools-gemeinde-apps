@@ -7,6 +7,35 @@ Versionierung nach [SemVer](https://semver.org/lang/de/):
 
 ## [Unreleased]
 
+## [2.42.1] – 2026-11-27
+
+### Doku (Protokolle)
+
+- Stand in `docs/betrieb/PROTOKOLLE.md` und `CLAUDE.md` auf v1.8.1 (leere Datumsfelder unter iOS, #1182).
+
+### Intern
+
+- Gemessen: Seit dem App-Update vom 26.11.2026 kann man in der ChurchTools-App eine „Predigtserie“ setzen. Der
+  Dienstplaner und die Musik-App löschen sie beim Speichern nicht – weder am Termin (Umsortieren, „Eventstart“
+  verschieben) noch an Vorlagen (zusätzlich Umbenennen und Ersetzen). Sonde `server/scripts/probe-agenda-series.ts`
+  (nur Test-Instanz), Feld `series` in `CtAgenda` beschrieben.
+
+### Behoben (alle Apps)
+
+- **Leere Datumsfelder am iPad und iPhone wieder normal hoch.** Ohne Datum klappten manche Felder zu einem flachen Strich zusammen – in der Musik-App „Von“ und „Bis“ im Liederheft, im Dienstplaner die Datumsfelder in den Fenstern „Abfrage“ und bei einer Person. Jetzt hat jedes leere Datumsfeld die Höhe einer Zeile; am Rechner ändert sich nichts.
+
+### Geändert (Dienstplaner)
+
+- **Mailtext passt zur Art der Abfrage:** In den Einstellungen zeigt „Erinnerungen → Text ändern“ bei einer Gruppe mit „Nur abwesend“ jetzt den passenden Standardtext („… an welchen Terminen du nicht kannst, und tippe auf „Fertig“.“) – auch gleich nach dem Umstellen der Art, noch vor dem Speichern. Wer den Text nie angefasst hat, behält so immer den Standard der gerade gewählten Art; nur die Art zählt als Änderung.
+
+### Neu (Dienstplaner)
+
+- **Einstellungen als eigene Seite:** Der Reiter „Einstellungen“ öffnet jetzt eine Seite statt eines Fensters. Oben stehen „Meine Anzeige“ (wirkt sofort) und „Live-Ansicht – für alle“, darunter für Planer „Verfügbarkeit & Erinnerungen“. Wer etwas ändert, sieht unten eine Leiste „1 Änderung nicht gespeichert“ mit „Verwerfen“ und „Speichern“; nach dem Speichern bleibt die Seite offen. Wer die Seite mit ungespeicherten Änderungen verlassen will – über einen anderen Reiter oder mit „Zurück“ im Browser –, wird vorher gefragt; auch beim Neuladen warnt der Browser.
+
+### Neu (Dienstplaner)
+
+- **Planen bei „Nur abwesend“ ohne Ja/Vielleicht:** Fragt eine Dienstgruppe nur nach Abwesenheiten, zeigt **Planen → Personen** in ihren Blöcken nur noch, wer abwesend ist – keine Ja/Vielleicht mehr und kein „Antworten nicht sichtbar“. Im Spaltenkopf zählt sie nicht mit; „Wer kann?“ und der Zauberstab zeigen die eine Liste wie früher. Früher gespeicherte Ja/Vielleicht sind nur ausgeblendet: Stellt man die Gruppe zurück auf „Ja · Vielleicht · Nein“, sind sie wieder da.
+
 ## [2.42.0] – 2026-11-26
 
 ### Behoben (Musik-App)

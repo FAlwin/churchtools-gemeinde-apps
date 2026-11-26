@@ -44,6 +44,14 @@ export const STANDARD_TEXT_ABWESEND = [
 export const standardText = (art: VerfuegbarkeitArt): string =>
   art === 'abwesend' ? STANDARD_TEXT_ABWESEND : STANDARD_TEXT;
 
+/**
+ * **Ist das „der Standardtext“?** Leer oder wörtlich einer der Standardtexte – **gleich welcher Art**. Die Art kann man umstellen
+ * (auch ungespeichert auf derselben Seite); wer den Text nie angefasst hat, soll danach den Text der neuen Art bekommen, nicht den
+ * alten als „eigenen“. Fragen: der Editor (`abfragePlan.ts`) und `mailFuer`.
+ */
+export const istStandardText = (t: string): boolean =>
+  t.trim() === '' || t === STANDARD_TEXT || t === STANDARD_TEXT_ABWESEND;
+
 /** ChurchTools' Platzhalter für den Vornamen in einer Routinen-Mail. */
 export const CT_VORNAME = '{{{person.firstName}}}';
 
@@ -77,7 +85,11 @@ export function mailFuer(
   link: string,
   art: VerfuegbarkeitArt,
 ): { betreff: string; html: string } {
-  const mail = plan.mail ?? { betreff: STANDARD_BETREFF, text: standardText(art) };
+  // Ein gespeicherter Text, der wörtlich ein Standardtext ist (z. B. eigener Betreff, Text nie angefasst), folgt der Art.
+  const gespeichert = plan.mail ?? { betreff: STANDARD_BETREFF, text: standardText(art) };
+  const mail = istStandardText(gespeichert.text)
+    ? { ...gespeichert, text: standardText(art) }
+    : gespeichert;
   const zeitraum = monateText(abfrage.von, abfrage.bis);
   const frist = tagLang(abfrage.frist);
 

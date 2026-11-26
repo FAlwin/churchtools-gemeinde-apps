@@ -11,7 +11,11 @@ import {
   type AbfragenInhalt,
   type Erinnerungsplan,
 } from '@shared/dienstplan/abfragen';
-import { STANDARD_BETREFF } from '@shared/dienstplan/abfrageMail';
+import {
+  STANDARD_BETREFF,
+  STANDARD_TEXT,
+  STANDARD_TEXT_ABWESEND,
+} from '@shared/dienstplan/abfrageMail';
 import { standardInhalt, type AbfragenStand } from '@shared/dienstplan/abfragenSpeicher';
 import type { AbfrageAnschluss } from './AbfrageFenster';
 import { EinstellungenSeite } from './EinstellungenSeite';
@@ -124,6 +128,13 @@ const hinzufuegenTippen = (wort: RegExp | string) => {
   fireEvent.click(screen.getByRole('button', { name: 'Erinnerung hinzufügen' }));
   fireEvent.click(screen.getByRole('button', { name: wort }));
 };
+
+/** Ein Dokument mit dieser Art (V-2) – für die Art-Tests und den Standardtext je Art. */
+const mitArt = (verfuegbarkeit: 'zusagen' | 'abwesend', teil: Partial<AbfragenInhalt> = {}) => ({
+  ...standardInhalt(),
+  ...teil,
+  verfuegbarkeit,
+});
 
 afterEach(cleanup);
 
@@ -752,12 +763,6 @@ describe('Gruppenwechsel', () => {
 });
 
 describe('Verfügbarkeit fragen (V-2)', () => {
-  const mitArt = (verfuegbarkeit: 'zusagen' | 'abwesend', teil: Partial<AbfragenInhalt> = {}) => ({
-    ...standardInhalt(),
-    ...teil,
-    verfuegbarkeit,
-  });
-
   it('Planer sehen oben im Abschnitt die Auswahl mit beiden Erklärzeilen; Startwert „Ja · Vielleicht · Nein“', async () => {
     zeige();
     await geladen();
@@ -923,5 +928,59 @@ describe('Verfügbarkeit fragen (V-2)', () => {
     await waitFor(() => expect(lesen).toHaveBeenLastCalledWith(5));
     await waitFor(() => expect(art(ZUSAGEN).checked).toBe(true));
     expect(speichern).not.toHaveBeenCalled();
+  });
+});
+
+describe('Standardtext der Mail je Art (nach V-6)', () => {
+  const text = () => screen.getByLabelText<HTMLTextAreaElement>('Mail – Text');
+
+  it('bei „Nur abwesend“ steht der passende Standardtext im Feld und als Platzhalter', async () => {
+    zeige({ lesen: () => Promise.resolve(stand(mitArt('abwesend'), 3)) });
+    await geladen();
+    fireEvent.click(screen.getByRole('button', { name: 'Text ändern' }));
+    expect(text().value).toBe(STANDARD_TEXT_ABWESEND);
+    expect(text().getAttribute('placeholder')).toBe(STANDARD_TEXT_ABWESEND);
+    expect(screen.queryByRole('button', { name: 'Auf Standard zurücksetzen' })).toBeNull();
+  });
+
+  it('Art umstellen (ungespeichert): der Text folgt; es zählt nur die Art, gespeichert wird kein Text', async () => {
+    const inhalt = mitArt('zusagen');
+    const { speichern } = zeige({ lesen: () => Promise.resolve(stand(inhalt, 3)) });
+    await geladen();
+    fireEvent.click(screen.getByRole('button', { name: 'Text ändern' }));
+    expect(text().value).toBe(STANDARD_TEXT);
+    fireEvent.click(art(ABWESEND));
+    expect(text().value).toBe(STANDARD_TEXT_ABWESEND);
+    expect(screen.queryByRole('button', { name: 'Auf Standard zurücksetzen' })).toBeNull();
+    expect(leiste()?.textContent).toContain('1 Änderung nicht gespeichert');
+    fireEvent.click(speichernKnopf());
+    await gespeichert();
+    expect(speichern.mock.calls[0][1]).toEqual({ ...inhalt, verfuegbarkeit: 'abwesend' });
+  });
+
+  it('eigener Betreff, dann Art umstellen: der Text bleibt Standard der neuen Art', async () => {
+    const { speichern } = zeige({ lesen: () => Promise.resolve(stand(mitArt('zusagen'), 3)) });
+    await geladen();
+    fireEvent.change(screen.getByLabelText('Mail – Betreff'), {
+      target: { value: 'Mein Betreff' },
+    });
+    fireEvent.click(art(ABWESEND));
+    fireEvent.click(screen.getByRole('button', { name: 'Text ändern' }));
+    expect(text().value).toBe(STANDARD_TEXT_ABWESEND);
+    fireEvent.click(speichernKnopf());
+    await gespeichert();
+    expect(speichern.mock.calls[0][1].plan?.mail).toEqual({
+      betreff: 'Mein Betreff',
+      text: STANDARD_TEXT_ABWESEND,
+    });
+  });
+
+  it('„Auf Standard zurücksetzen“ nimmt den Text der gewählten Art', async () => {
+    zeige({ lesen: () => Promise.resolve(stand(mitArt('abwesend'), 3)) });
+    await geladen();
+    fireEvent.click(screen.getByRole('button', { name: 'Text ändern' }));
+    fireEvent.change(text(), { target: { value: 'Eigener Text' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Auf Standard zurücksetzen' }));
+    expect(text().value).toBe(STANDARD_TEXT_ABWESEND);
   });
 });

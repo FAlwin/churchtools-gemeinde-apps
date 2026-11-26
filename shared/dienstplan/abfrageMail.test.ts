@@ -8,6 +8,8 @@ import {
   PLATZHALTER_TEXT,
   STANDARD_BETREFF,
   STANDARD_TEXT,
+  STANDARD_TEXT_ABWESEND,
+  istStandardText,
   mailFuer,
   unbekannteStellen,
 } from './abfrageMail';
@@ -102,6 +104,42 @@ describe('mailFuer', () => {
     );
     expect(m.betreff).toBe('{zeitrum}');
     expect(m.html).toContain('x {zeitrum}');
+  });
+});
+
+describe('Standardtext je Art (istStandardText)', () => {
+  it('leer oder wörtlich einer der beiden Standardtexte = Standard; alles andere nicht', () => {
+    expect(istStandardText('')).toBe(true);
+    expect(istStandardText('   ')).toBe(true);
+    expect(istStandardText(STANDARD_TEXT)).toBe(true);
+    expect(istStandardText(STANDARD_TEXT_ABWESEND)).toBe(true);
+    expect(istStandardText(STANDARD_TEXT + ' ')).toBe(false);
+    expect(istStandardText('Hallo {vorname}')).toBe(false);
+  });
+
+  it('mailFuer: eigener Betreff mit wörtlichem Zusagen-Standardtext folgt bei „Nur abwesend“ der Art', () => {
+    const m = mailFuer(
+      { mail: { betreff: 'Eigener Betreff', text: STANDARD_TEXT } },
+      A,
+      'Technik',
+      LINK,
+      'abwesend',
+    );
+    expect(m.betreff).toBe('Eigener Betreff');
+    expect(m.html).toContain('an welchen Terminen du nicht kannst');
+    expect(m.html).not.toContain('Ja, Vielleicht oder Nein');
+  });
+
+  it('mailFuer: ein eigener Text bleibt, wie er ist', () => {
+    const m = mailFuer(
+      { mail: { betreff: 'B', text: 'Nur das hier.' } },
+      A,
+      'Technik',
+      LINK,
+      'abwesend',
+    );
+    expect(m.html).toContain('Nur das hier.');
+    expect(m.html).not.toContain('nicht kannst');
   });
 });
 

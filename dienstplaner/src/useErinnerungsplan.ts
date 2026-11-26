@@ -15,6 +15,7 @@ import {
   planFuerSpeicher,
   type PlanEntwurf,
 } from '@shared/dienstplan/abfragePlan';
+import { istStandardText, standardText } from '@shared/dienstplan/abfrageMail';
 import { standardInhalt, type AbfragenStand } from '@shared/dienstplan/abfragenSpeicher';
 import type { AbfrageAnschluss } from './AbfrageFenster';
 import type { EinrichtenAnschluss } from './einrichtenAbfragen';
@@ -79,16 +80,6 @@ export function useErinnerungsplan(a: ErinnerungenAnschluss | undefined) {
   const unlesbar = lese?.unlesbar === true;
   const schreibbar = lese !== null && lese.fehler === null && !lese.unlesbar;
 
-  const entwurf: PlanEntwurf | null = lese
-    ? bearb?.fuer === lese
-      ? bearb.wert
-      : entwurfVon(lese.inhalt)
-    : null;
-  const setEntwurf = (wert: PlanEntwurf) => {
-    if (lese) setBearb({ fuer: lese, wert });
-  };
-  const planGeaendert = schreibbar && entwurf !== null && entwurfGeaendert(entwurf, lese.inhalt);
-
   // Die Art der Verfügbarkeits-Abfrage (V-2): wie der Plan ein Entwurf zum gelesenen Stand, gilt aber nach dem Speichern sofort.
   const art: VerfuegbarkeitArt | null = lese
     ? bearbArt?.fuer === lese
@@ -98,6 +89,25 @@ export function useErinnerungsplan(a: ErinnerungenAnschluss | undefined) {
   const setArt = (wert: VerfuegbarkeitArt) => {
     if (lese) setBearbArt({ fuer: lese, wert });
   };
+
+  // Der Plan-Entwurf – die Standard-Mail in der Art, die gerade gewählt ist (auch ungespeichert): Wer die Art umstellt und den
+  // Text nie angefasst hat, sieht den Standardtext der neuen Art (`istStandardText`, die eine Regel dazu).
+  const roh: PlanEntwurf | null =
+    lese && art !== null
+      ? bearb?.fuer === lese
+        ? bearb.wert
+        : entwurfVon(lese.inhalt, art)
+      : null;
+  const entwurf: PlanEntwurf | null =
+    roh && art !== null && roh.text.trim() !== '' && istStandardText(roh.text)
+      ? { ...roh, text: standardText(art) }
+      : roh;
+  const setEntwurf = (wert: PlanEntwurf) => {
+    if (lese) setBearb({ fuer: lese, wert });
+  };
+  const planGeaendert =
+    schreibbar && entwurf !== null && art !== null && entwurfGeaendert(entwurf, lese.inhalt, art);
+
   const artGeaendert = schreibbar && art !== null && art !== lese.inhalt.verfuegbarkeit;
   const geaendert = planGeaendert || artGeaendert;
   /** Alle Änderungen zurück auf den gelesenen Stand („Verwerfen“ in der Leiste der Einstellungen-Seite). */
@@ -127,7 +137,7 @@ export function useErinnerungsplan(a: ErinnerungenAnschluss | undefined) {
       // (sonst bliebe ein ausdrücklich gespeicherter Standard-Plan nicht erhalten, wie er ist).
       const wunsch: AbfragenInhalt = {
         ...lese.inhalt,
-        plan: planGeaendert ? planFuerSpeicher(entwurf) : lese.inhalt.plan,
+        plan: planGeaendert ? planFuerSpeicher(entwurf, art) : lese.inhalt.plan,
         verfuegbarkeit: art,
       };
       const r = await a.anschluss.speichern(
@@ -153,7 +163,7 @@ export function useErinnerungsplan(a: ErinnerungenAnschluss | undefined) {
         if (
           jetzt &&
           inhalt &&
-          entwuerfeGleich(entwurfVon(inhalt), entwurf) &&
+          entwuerfeGleich(entwurfVon(inhalt, art), entwurf, art) &&
           inhalt.verfuegbarkeit === art
         ) {
           setze({ inhalt, gespeichert: { ...jetzt, inhalt }, unlesbar: false, fehler: null });

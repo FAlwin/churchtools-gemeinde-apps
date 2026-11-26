@@ -1,6 +1,8 @@
+import { mapLimit } from '@shared/ct/mapLimit';
 import { useLaden } from '@ui/ct/useLaden';
 import { abfrageRegelAus, type AbfrageRegel } from '@shared/dienstplan/erinnern';
 import type { AbfragenStand } from '@shared/dienstplan/abfragenSpeicher';
+import { GLEICHZEITIG } from './ladeAntworten';
 
 /** Liest das Dokument der Abfragen einer Dienstgruppe (`ladeAbfragen`, im Fenster `AbfrageAnschluss.lesen`). */
 export type AbfragenLader = (dienstgruppeId: number) => Promise<AbfragenStand>;
@@ -19,18 +21,21 @@ export async function ladeRegeln(
   dienstgruppenIds: readonly number[],
   heute: string,
 ): Promise<Map<number, RegelStand>> {
-  const je = await Promise.all(
-    dienstgruppenIds.map(async (id): Promise<[number, RegelStand]> => {
-      try {
-        const s = await lader(id);
-        if (s.fehler !== null) return [id, 'unbekannt'];
-        return [id, abfrageRegelAus(s.unlesbar ? null : s.inhalt, heute)];
-      } catch {
-        return [id, 'unbekannt'];
-      }
-    }),
-  );
-  return new Map(je);
+  // Gedrosselt wie die Antworten (`GLEICHZEITIG`): Der Lader der App liest die Regeln seit V-5 bei jedem Laden mit – ChurchTools
+  // bremst sonst (HTTP 429).
+  const regeln = new Map<number, RegelStand>();
+  await mapLimit([...dienstgruppenIds], GLEICHZEITIG, async (id) => {
+    try {
+      const s = await lader(id);
+      regeln.set(
+        id,
+        s.fehler !== null ? 'unbekannt' : abfrageRegelAus(s.unlesbar ? null : s.inhalt, heute),
+      );
+    } catch {
+      regeln.set(id, 'unbekannt');
+    }
+  });
+  return regeln;
 }
 
 const LEER: ReadonlyMap<number, RegelStand> = new Map();
@@ -54,4 +59,15 @@ export function useAbfrageRegeln(
     regeln: stand.art === 'fertig' ? stand.daten : LEER,
     neuLaden: neu,
   };
+}
+
+/**
+ * **Welche Dienstgruppen „Nur abwesend“ fragen** (V-5, für `PersonenAntworten.nurAbwesend`): aus den Regeln (`ladeRegeln`). Eine
+ * Gruppe, deren Dokument gerade nicht lesbar war (`unbekannt`), zählt **nicht** dazu – dann zeigt Planen ihre Ja/Vielleicht wie vor
+ * V-5. Das ist nur Anzeige: ausgeblendet, nicht gelöscht; ein Aussetzer zerstört nichts.
+ */
+export function nurAbwesendAus(regeln: ReadonlyMap<number, RegelStand>): Set<number> {
+  return new Set(
+    [...regeln].flatMap(([id, r]) => (r !== 'unbekannt' && r.art === 'abwesend' ? [id] : [])),
+  );
 }

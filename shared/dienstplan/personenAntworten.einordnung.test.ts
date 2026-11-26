@@ -3,6 +3,8 @@ import {
   antwortenFuerPlatz,
   antwortenSichtbar,
   antwortFuer,
+  antwortenGelten,
+  fragtNurAbwesend,
   antwortStufe,
   antwortZeile,
   KEINE_ANTWORTEN,
@@ -85,6 +87,31 @@ describe('antwortFuer / antwortenFuerPlatz: Sichtbarkeit', () => {
     });
     expect([...(m?.keys() ?? [])].sort()).toEqual([1, 2, 3]);
     expect(m?.get(3)).toEqual(zellenAntwort(DATEN.jePerson.get(3)?.[TERMIN], TON, namen));
+  });
+});
+
+describe('„Nur abwesend“ (V-5): Ja/Vielleicht gelten nicht', () => {
+  const NUR_ABWESEND: PersonenAntworten = { ...DATEN, nurAbwesend: new Set([MUSIK]) };
+  const o = { gruppeId: MUSIK, terminId: TERMIN, dienstId: TON, dienstName: namen };
+
+  it('antwortFuer und antwortenFuerPlatz geben nichts – wie vor E5c, nur die Abwesenheit zählt', () => {
+    expect(antwortFuer(NUR_ABWESEND, { ...o, personId: 1 })).toBeNull();
+    expect(antwortenFuerPlatz(NUR_ABWESEND, o)).toBeNull();
+    expect(antwortenGelten(NUR_ABWESEND, MUSIK)).toBe(false);
+    expect(fragtNurAbwesend(NUR_ABWESEND, MUSIK)).toBe(true);
+  });
+
+  it('nur ausgeblendet: die Antworten bleiben geladen, die Gruppe bleibt sichtbar', () => {
+    expect(antwortenSichtbar(NUR_ABWESEND, MUSIK)).toBe(true);
+    expect(NUR_ABWESEND.jePerson.get(1)?.[TERMIN]?.a).toBe('ja');
+  });
+
+  it('andere Gruppen und „fehlt“ (= keine) bleiben bei Zusagen', () => {
+    expect(fragtNurAbwesend(DATEN, MUSIK)).toBe(false);
+    expect(antwortenGelten(DATEN, MUSIK)).toBe(true);
+    expect(fragtNurAbwesend({ nurAbwesend: new Set([3]) }, MUSIK)).toBe(false);
+    expect(fragtNurAbwesend(NUR_ABWESEND, null)).toBe(false);
+    expect(antwortFuer(DATEN, { ...o, personId: 1 })?.a).toBe('ja');
   });
 });
 

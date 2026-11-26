@@ -251,6 +251,41 @@ describe('Spaltenkopf: verschiedene Personen mit Ja / Vielleicht', () => {
   });
 });
 
+describe('„Nur abwesend“ (V-5)', () => {
+  const ant = (): PersonenAntworten => ({
+    ...antworten([
+      [ANNA.id, { [T1]: a('ja', '2026-12-06'), [T2]: a('vielleicht', '2026-12-13') }],
+      [BEN.id, { [T1]: a('ja', '2026-12-06') }],
+    ]),
+    nurAbwesend: new Set([MUSIK]),
+  });
+
+  it('die Blöcke der Gruppe zeigen kein Ja/Vielleicht und keinen Hinweis – andere Gruppen wie bisher', () => {
+    const r = raster(ant());
+    expect(r.blocks.find((b) => b.dienst.id === GESANG)!.antworten).toBe('nurAbwesend');
+    expect(r.blocks.find((b) => b.dienst.id === GITARRE)!.antworten).toBe('nurAbwesend');
+    expect(zelle(r, GESANG, ANNA.id, 0).antwort).toBeNull();
+    expect(zelle(r, GESANG, ANNA.id, 0).flaeche).toBeNull();
+    expect(zelle(r, GESANG, ANNA.id, 1).flaeche).toBeNull();
+    expect(r.blocks.find((b) => b.dienst.id === TON)!.antworten).toBe('ok');
+    expect(zelle(r, TON, BEN.id, 0).flaeche).toBe('ja');
+  });
+
+  it('die Abwesenheit zeigt sie weiter („nein“)', () => {
+    const daten = new Map(DATEN).set(
+      90,
+      da([ANNA, DANIEL, CLARA], abwesenheitenAus([urlaub(1, ANNA.id, '2026-12-13')])),
+    );
+    expect(zelle(raster(ant(), daten), GESANG, ANNA.id, 1).flaeche).toBe('nein');
+  });
+
+  it('im Spaltenkopf zählt sie nicht; fragen alle gezeigten Gruppen „Nur abwesend“, gibt es keinen Kopf', () => {
+    expect(raster(ant()).antwortZahlen[0]).toEqual({ ja: 1, vielleicht: 0 }); // nur Ben (Technik)
+    const alle = { ...ant(), nurAbwesend: new Set([MUSIK, TECHNIK]) };
+    expect(raster(alle).antwortZahlen).toEqual([null, null, null]);
+  });
+});
+
 describe('Bausteine', () => {
   const name = (id: number) => ({ [GESANG]: 'Gesang', [TON]: 'Ton' })[id];
   it('zellenAntwort: unbekannte Dienst-IDs fallen aus der Namensliste, bleiben aber „nur für bestimmte Dienste“', () => {

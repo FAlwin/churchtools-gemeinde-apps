@@ -23,6 +23,7 @@ import { ladePersonen } from './ladePersonen';
 import { ladeAntworten } from './ladeAntworten';
 import { ERINNERN } from './ladeErinnern';
 import { ladeAbfragen, speichereAbfragen } from './ladeAbfragen';
+import { ladeRegeln, nurAbwesendAus } from './useAbfrageRegeln';
 import { antwortenAblageStand, richteAntwortenEin } from './ladeVerfuegbarkeit';
 import { ctAutomatikAnschluss, ctEinrichtenAnschluss } from './einrichtenAbfragen';
 import { gruppenIdsDerDienste } from '@shared/dienstplan/abfrageAutomatik';
@@ -197,11 +198,21 @@ export function App() {
   // Die Antworten aus „Verfügbarkeit“ für „Personen“ (E5c-3) – nur die Dienstgruppen, die man planen darf: Fremde Antworten
   // zeigt die App sonst nur Planern. Mitglieder lesen nur die Markierungen „Vertretung gesucht“ ihrer eigenen Dienstgruppen
   // (E5c-6, `useVertretung`). Stabil, solange der Start gleich bleibt.
+  // Mit den Antworten kommt je Dienstgruppe die Art der Abfrage (V-5): Bei „Nur abwesend“ zeigt Planen keine Ja/Vielleicht.
   const antwortenLaden = useCallback(
-    (ids: readonly number[]) =>
-      start
-        ? ladeAntworten(planbareDienstgruppen(start).filter((g) => ids.includes(g.id)))
-        : Promise.reject(new Error('kein Start')),
+    async (ids: readonly number[]) => {
+      if (!start) throw new Error('kein Start');
+      const gruppen = planbareDienstgruppen(start).filter((g) => ids.includes(g.id));
+      const [antworten, regeln] = await Promise.all([
+        ladeAntworten(gruppen),
+        ladeRegeln(
+          ladeAbfragen,
+          gruppen.map((g) => g.id),
+          heuteImKalender(),
+        ),
+      ]);
+      return { ...antworten, nurAbwesend: nurAbwesendAus(regeln) };
+    },
     [start],
   );
 

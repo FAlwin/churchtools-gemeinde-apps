@@ -160,6 +160,9 @@ describe('Texte', () => {
     expect(
       abfrageBandText({ gruppe: 'Musik', abfrage: ABFRAGE, stand: { offen: 7, gesamt: 9 } }),
     ).toBe('Abfrage Musik · 01.02.–31.03. · noch 7 von 9 offen');
+    expect(
+      abfrageBandText({ gruppe: 'Musik', abfrage: ABFRAGE, stand: { offen: 0, gesamt: 4 } }),
+    ).toBe('Abfrage Musik · 01.02.–31.03. · alles eingetragen');
     expect(abfrageBandText({ gruppe: 'Musik', abfrage: ABFRAGE, stand: null })).toBe(
       'Abfrage Musik · 01.02.–31.03.',
     );

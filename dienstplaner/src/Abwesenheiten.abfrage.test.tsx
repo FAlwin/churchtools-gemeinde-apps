@@ -43,7 +43,9 @@ const dienst = {
 vi.mock('@ui/abwesenheiten/ctDienst', () => ({ abwesenheitenDienst: () => dienst }));
 // Die Hilfsgruppe in ChurchTools (R-5b): Der echte Anschluss ginge ins Netz – die Tests geben eine nachgebaute.
 const anschluss = vi.hoisted(() => ({ aktuell: null as AutomatikAnschluss | null }));
-vi.mock('./einrichtenAbfragen', () => ({
+vi.mock('./einrichtenAbfragen', async (orig) => ({
+  // Die Pfade zur Hilfsgruppe (`mitgliederPfad`, `routinenPfad`) bleiben die echten – sie stehen nur dort.
+  ...(await orig<typeof import('./einrichtenAbfragen')>()),
   ctAutomatikAnschluss: () => ({
     port: {
       holen: (p: string) => anschluss.aktuell!.port.holen(p),
@@ -343,7 +345,7 @@ describe('Austritt beim Antworten (R-5b)', () => {
     mitEinrichtung();
     stand = bereit(ALLES);
     zeige();
-    await screen.findByText(/noch 0 von 6 offen/);
+    await screen.findByText(/alles eingetragen/);
     await speichereEine();
     await waitFor(() => expect(w.log).toContain(`DELETE /groups/50/members/${START.ichId}`));
     expect(w.mitglieder.map((m) => m.person)).toEqual([99]);
@@ -371,7 +373,7 @@ describe('Austritt beim Antworten (R-5b)', () => {
     mitEinrichtung();
     stand = bereit(ALLES);
     zeige();
-    await screen.findByText(/noch 0 von 6 offen/);
+    await screen.findByText(/alles eingetragen/);
     await speichereEine();
     // Zweites Speichern (Vielleicht statt Ja), solange die erste Prüfung noch hängt.
     await klick(
@@ -408,7 +410,7 @@ describe('Austritt beim Antworten (R-5b)', () => {
     stand = bereit(ALLES);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     zeige();
-    await screen.findByText(/noch 0 von 6 offen/);
+    await screen.findByText(/alles eingetragen/);
     await speichereEine();
     await new Promise((r) => setTimeout(r, 30));
     expect(w.mitglieder).toHaveLength(1);

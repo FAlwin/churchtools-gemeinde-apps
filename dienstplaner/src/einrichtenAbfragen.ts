@@ -196,8 +196,9 @@ export type LageErgebnis = Lage | { art: 'gestoppt'; text: string; nochmal: bool
 
 const ist404 = (e: unknown) => e instanceof ApiError && e.status === 404;
 const gruppenPfad = (id: number) => `/groups/${id}`;
-const mitgliederPfad = (id: number) => `/groups/${id}/members`;
-const routinenPfad = (id: number) => `/groups/${id}/members/routines`;
+/** Die Wege der Hilfsgruppe – der EINE Ort (`abfrageAutomatikLauf.ts` nimmt sie von hier). */
+export const mitgliederPfad = (id: number) => `/groups/${id}/members`;
+export const routinenPfad = (id: number) => `/groups/${id}/members/routines`;
 const personenRechtePfad = (id: number) => `/permissions/person/${id}`;
 const rechtName = (k: GruppenRecht) => PLANER_GRUPPENRECHTE.find((r) => r.schluessel === k)!.name;
 

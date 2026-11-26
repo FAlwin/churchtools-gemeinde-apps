@@ -26,7 +26,7 @@ import {
   type VersionPort,
   type Versioniert,
 } from '../ct/versionierterWert';
-import { abfragenAus, type AbfragenInhalt } from './abfragen';
+import { abfragenAus, STANDARD_VERFUEGBARKEIT, type AbfragenInhalt } from './abfragen';
 import { EINSTELLUNGEN_KATEGORIE } from './liveEinstellungen';
 
 export const ABFRAGEN_FASSUNG = 1;
@@ -40,11 +40,12 @@ export const abfragenArt = (dienstgruppeId: number): Dokumentart => ({
 export const ABFRAGEN_VERWEIGERT =
   'Die Abfragen dürfen nur Planer ändern – und wer in ChurchTools die Kategorie „Einstellungen“ des Dienstplaners bearbeiten darf.';
 
-/** Der Inhalt, wenn nichts Lesbares dasteht: kein eigener Plan (= Standard), keine Abfrage, nicht eingerichtet. */
+/** Der Inhalt, wenn nichts Lesbares dasteht: kein eigener Plan (= Standard), keine Abfrage, nicht eingerichtet, Zusagen. */
 export const standardInhalt = (): AbfragenInhalt => ({
   plan: null,
   abfragen: [],
   einrichtung: null,
+  verfuegbarkeit: STANDARD_VERFUEGBARKEIT,
 });
 
 /** Was beim Lesen herauskommt. `inhalt` gilt **immer** (Standard, wenn nichts Lesbares dasteht). */

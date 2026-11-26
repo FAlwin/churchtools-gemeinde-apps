@@ -28,7 +28,12 @@ const ABFRAGE: Abfrage = {
   gestartet: { personId: 1, name: 'Alex', zeit: '2026-12-01T10:00:00.000Z' },
   beendet: null,
 };
-const INHALT: AbfragenInhalt = { plan: STANDARD_PLAN, abfragen: [ABFRAGE], einrichtung: null };
+const INHALT: AbfragenInhalt = {
+  plan: STANDARD_PLAN,
+  abfragen: [ABFRAGE],
+  einrichtung: null,
+  verfuegbarkeit: 'zusagen' as const,
+};
 
 /** Wie bei `liveEinstellungen.test.ts`: nachgebauter Speicher samt Kategorien-Liste (`aufbau`). */
 function aufbau(mitKategorie = true) {
@@ -211,6 +216,7 @@ describe('abfragenSpeichern', () => {
       plan: null,
       abfragen: [{ ...ABFRAGE, frist: '2027-02-01' }],
       einrichtung: null,
+      verfuegbarkeit: 'zusagen' as const,
     };
     await expect(speichern(p, null, kaputt)).rejects.toThrow();
     expect(s.schreibvorgaenge).toEqual([]);
@@ -300,14 +306,26 @@ describe('fremde Werte in derselben Kategorie bleiben unberührt', () => {
 
   it('Abfragen einer anderen Dienstgruppe: unberührt, eigene Version, eigener Konflikt', async () => {
     const { s, p, wert } = aufbau();
-    const technik: AbfragenInhalt = { plan: null, abfragen: [], einrichtung: null };
+    const technik: AbfragenInhalt = {
+      plan: null,
+      abfragen: [],
+      einrichtung: null,
+      verfuegbarkeit: 'zusagen' as const,
+    };
     s.werte.push({ id: 900, dataCategoryId: KAT, value: wert(TECHNIK, technik, 7, BEA) });
     expect(await speichern(p, null)).toMatchObject({ ok: true, daten: { version: 1 } });
     expect(s.werte[0].value).toBe(wert(TECHNIK, technik, 7, BEA));
     expect((await lesen(p, TECHNIK)).gespeichert).toMatchObject({ version: 7, von: BEA });
     expect((await lesen(p, MUSIK)).gespeichert).toMatchObject({ version: 1, von: ALEX });
     // Die Version der anderen Gruppe ist kein Konflikt für diese.
-    expect(await speichern(p, 1, { plan: null, abfragen: [], einrichtung: null })).toMatchObject({
+    expect(
+      await speichern(p, 1, {
+        plan: null,
+        abfragen: [],
+        einrichtung: null,
+        verfuegbarkeit: 'zusagen' as const,
+      }),
+    ).toMatchObject({
       ok: true,
       daten: { version: 2 },
     });

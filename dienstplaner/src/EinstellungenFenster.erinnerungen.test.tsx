@@ -18,7 +18,7 @@ import { EinstellungenFenster } from './EinstellungenFenster';
 import { ABFRAGE_UNLESBAR } from './abfragenTexte';
 
 /**
- * **Abschnitt „Abfragen – Erinnerungen“ in den Einstellungen** (R-4). Die Regeln dahinter prüfen `abfragePlan.test.ts` und
+ * **Abschnitt „Verfügbarkeit & Erinnerungen“ in den Einstellungen** (R-4). Die Regeln dahinter prüfen `abfragePlan.test.ts` und
  * `abfrageMail.test.ts`; hier geht es um das Fenster: wer den Abschnitt sieht, was „Speichern“ schreibt (genau ein Aufruf je
  * geändertem Teil), und die Fehlerzweige – jeder einzeln.
  */
@@ -102,7 +102,7 @@ function zeige(
   return { lesen, speichern, betriebsart, onSchliessen };
 }
 
-const abschnitt = () => screen.findByRole('region', { name: 'Abfragen – Erinnerungen' });
+const abschnitt = () => screen.findByRole('region', { name: 'Verfügbarkeit & Erinnerungen' });
 const geladen = async () => {
   await abschnitt();
   await screen.findByRole('list', { name: 'Erinnerungen' });
@@ -124,21 +124,25 @@ describe('Wer den Abschnitt sieht', () => {
     zeige();
     const a = await abschnitt();
     const titel = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
-    expect(titel).toEqual(['Live-Ansicht – für alle', 'Abfragen – Erinnerungen', 'Meine Anzeige']);
+    expect(titel).toEqual([
+      'Live-Ansicht – für alle',
+      'Verfügbarkeit & Erinnerungen',
+      'Meine Anzeige',
+    ]);
     expect(a).toBeTruthy();
   });
 
   it('Nicht-Planer sehen ihn nicht – und es wird nichts gelesen', async () => {
     const { lesen } = zeige({ darfAendern: false });
     await screen.findByRole('radiogroup');
-    expect(screen.queryByRole('region', { name: 'Abfragen – Erinnerungen' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Verfügbarkeit & Erinnerungen' })).toBeNull();
     expect(lesen).not.toHaveBeenCalled();
   });
 
   it('ohne planbare Dienstgruppe gibt es ihn nicht', async () => {
     const { lesen } = zeige({ gruppen: [] });
     await screen.findByRole('radiogroup');
-    expect(screen.queryByRole('region', { name: 'Abfragen – Erinnerungen' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Verfügbarkeit & Erinnerungen' })).toBeNull();
     expect(lesen).not.toHaveBeenCalled();
   });
 
@@ -181,7 +185,12 @@ describe('Liste', () => {
 
   it('ein eigener Plan wird gezeigt', async () => {
     const plan: Erinnerungsplan = { punkte: [{ art: 'frist' }], mail: null };
-    zeige({ lesen: () => Promise.resolve(stand({ plan, abfragen: [], einrichtung: null }, 3)) });
+    zeige({
+      lesen: () =>
+        Promise.resolve(
+          stand({ plan, abfragen: [], einrichtung: null, verfuegbarkeit: 'zusagen' as const }, 3),
+        ),
+    });
     await geladen();
     expect(zeilen()).toHaveLength(1);
   });
@@ -231,7 +240,15 @@ describe('Liste', () => {
     zeige({
       lesen: () =>
         Promise.resolve(
-          stand({ plan: { punkte: [], mail: null }, abfragen: [], einrichtung: null }, 2),
+          stand(
+            {
+              plan: { punkte: [], mail: null },
+              abfragen: [],
+              einrichtung: null,
+              verfuegbarkeit: 'zusagen' as const,
+            },
+            2,
+          ),
         ),
     });
     await screen.findByText(/Keine Erinnerung – die Abfrage erscheint nur auf der Startseite/);
@@ -302,7 +319,17 @@ describe('Mail und Vorschau', () => {
   it('Vorschau: läuft eine Abfrage der Gruppe, zählen deren echte Tage', async () => {
     zeige({
       lesen: () =>
-        Promise.resolve(stand({ plan: null, abfragen: [abfrage], einrichtung: null }, 2)),
+        Promise.resolve(
+          stand(
+            {
+              plan: null,
+              abfragen: [abfrage],
+              einrichtung: null,
+              verfuegbarkeit: 'zusagen' as const,
+            },
+            2,
+          ),
+        ),
     });
     await geladen();
     expect(screen.getByLabelText('Vorschau').textContent).toContain(
@@ -317,7 +344,17 @@ describe('Plan während einer laufenden Abfrage (R-5b)', () => {
   it('läuft eine Abfrage der Gruppe, sagt ein leiser Satz: Änderungen gelten erst für die nächste', async () => {
     zeige({
       lesen: () =>
-        Promise.resolve(stand({ plan: null, abfragen: [abfrage], einrichtung: null }, 2)),
+        Promise.resolve(
+          stand(
+            {
+              plan: null,
+              abfragen: [abfrage],
+              einrichtung: null,
+              verfuegbarkeit: 'zusagen' as const,
+            },
+            2,
+          ),
+        ),
     });
     await geladen();
     expect(screen.getByText(SATZ)).toBeTruthy();
@@ -325,7 +362,13 @@ describe('Plan während einer laufenden Abfrage (R-5b)', () => {
 
   it('läuft keine, steht er nicht da', async () => {
     zeige({
-      lesen: () => Promise.resolve(stand({ plan: null, abfragen: [], einrichtung: null }, 2)),
+      lesen: () =>
+        Promise.resolve(
+          stand(
+            { plan: null, abfragen: [], einrichtung: null, verfuegbarkeit: 'zusagen' as const },
+            2,
+          ),
+        ),
     });
     await geladen();
     expect(screen.queryByText(SATZ)).toBeNull();
@@ -338,6 +381,7 @@ describe('Speichern – nur, was sich geändert hat', () => {
       plan: null,
       abfragen: [],
       einrichtung: { gruppeId: 5, routineId: 6 },
+      verfuegbarkeit: 'zusagen',
     };
     const { speichern, onSchliessen } = zeige({ lesen: () => Promise.resolve(stand(inhalt, 3)) });
     await geladen();
@@ -350,7 +394,12 @@ describe('Speichern – nur, was sich geändert hat', () => {
   });
 
   it('nur der Plan: genau ein Aufruf für den Plan mit der gelesenen Version, die Abfragen unverändert, keiner für die Betriebsart', async () => {
-    const inhalt: AbfragenInhalt = { plan: null, abfragen: [abfrage], einrichtung: null };
+    const inhalt: AbfragenInhalt = {
+      plan: null,
+      abfragen: [abfrage],
+      einrichtung: null,
+      verfuegbarkeit: 'zusagen' as const,
+    };
     const { speichern, betriebsart, onSchliessen } = zeige({
       lesen: () => Promise.resolve(stand(inhalt, 7)),
     });
@@ -372,6 +421,7 @@ describe('Speichern – nur, was sich geändert hat', () => {
         },
         abfragen: [abfrage],
         einrichtung: null,
+        verfuegbarkeit: 'zusagen' as const,
       },
       ICH,
       7,
@@ -425,7 +475,13 @@ describe('Speichern – nur, was sich geändert hat', () => {
       mail: null,
     };
     const { speichern, onSchliessen } = zeige({
-      lesen: () => Promise.resolve(stand({ plan: eigener, abfragen: [], einrichtung: null }, 4)),
+      lesen: () =>
+        Promise.resolve(
+          stand(
+            { plan: eigener, abfragen: [], einrichtung: null, verfuegbarkeit: 'zusagen' as const },
+            4,
+          ),
+        ),
     });
     await geladen();
     hinzufuegenTippen(/Nach der Frist, wiederholt/);
@@ -505,6 +561,7 @@ describe('Fehlerzweige – jeder einzeln', () => {
       plan: { punkte: [{ art: 'frist' }], mail: null },
       abfragen: [],
       einrichtung: null,
+      verfuegbarkeit: 'zusagen' as const,
     };
     const { onSchliessen } = zeige({
       speichern: () => Promise.resolve({ ok: false, grund: 'konflikt', jetzt: version(fremd, 5) }),
@@ -525,6 +582,7 @@ describe('Fehlerzweige – jeder einzeln', () => {
       },
       abfragen: [],
       einrichtung: null,
+      verfuegbarkeit: 'zusagen' as const,
     };
     const { onSchliessen } = zeige({
       speichern: () =>
@@ -642,6 +700,180 @@ describe('Gruppenwechsel', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Verwerfen und wechseln' }));
     await waitFor(() => expect(lesen).toHaveBeenLastCalledWith(5));
     await waitFor(() => expect(zeilen()).toHaveLength(4));
+    expect(speichern).not.toHaveBeenCalled();
+  });
+});
+
+describe('Verfügbarkeit fragen (V-2)', () => {
+  const art = (name: RegExp) => screen.getByRole<HTMLInputElement>('radio', { name });
+  const ZUSAGEN = /Ja · Vielleicht · Nein/;
+  const ABWESEND = /Nur abwesend/;
+  const mitArt = (verfuegbarkeit: 'zusagen' | 'abwesend', teil: Partial<AbfragenInhalt> = {}) => ({
+    ...standardInhalt(),
+    ...teil,
+    verfuegbarkeit,
+  });
+
+  it('Planer sehen oben im Abschnitt die Auswahl mit beiden Erklärzeilen; Startwert „Ja · Vielleicht · Nein“', async () => {
+    zeige();
+    await geladen();
+    const gruppe = screen.getByRole('radiogroup', { name: 'Verfügbarkeit fragen' });
+    expect(within(gruppe).getAllByRole('radio')).toHaveLength(2);
+    expect(art(ZUSAGEN).checked).toBe(true);
+    expect(art(ABWESEND).checked).toBe(false);
+    expect(gruppe.textContent).toContain(
+      'Jede Person sagt je Termin zu, vielleicht oder ab. Die Planer sehen „Ja“ und „Vielleicht“ beim Einteilen.',
+    );
+    expect(gruppe.textContent).toContain(
+      'Jede Person hakt nur an, wann sie nicht kann. Alle anderen Termine gelten als „kann“.',
+    );
+    // oben: vor der Liste der Erinnerungen
+    const liste = screen.getByRole('list', { name: 'Erinnerungen' });
+    expect(gruppe.compareDocumentPosition(liste) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('Nicht-Planer sehen sie nicht (nur die Live-Ansicht-Wahl bleibt) – und es wird nichts gelesen', async () => {
+    const { lesen } = zeige({ darfAendern: false });
+    await screen.findByRole('radiogroup', { name: 'Live-Ansicht – für alle' });
+    expect(screen.queryByRole('radiogroup', { name: 'Verfügbarkeit fragen' })).toBeNull();
+    expect(screen.queryByRole('radio', { name: ABWESEND })).toBeNull();
+    expect(lesen).not.toHaveBeenCalled();
+  });
+
+  it('eine gespeicherte Art „Nur abwesend“ wird gezeigt', async () => {
+    zeige({ lesen: () => Promise.resolve(stand(mitArt('abwesend'), 3)) });
+    await geladen();
+    expect(art(ABWESEND).checked).toBe(true);
+    expect(art(ZUSAGEN).checked).toBe(false);
+  });
+
+  it('wählen und „Speichern“: ein Schreiben mit der neuen Art; Plan, Abfragen und Einrichtung bleiben, mit der gelesenen Version', async () => {
+    const inhalt = mitArt('zusagen', {
+      abfragen: [abfrage],
+      einrichtung: { gruppeId: 5, routineId: 6 },
+    });
+    const { speichern, onSchliessen } = zeige({ lesen: () => Promise.resolve(stand(inhalt, 3)) });
+    await geladen();
+    fireEvent.click(art(ABWESEND));
+    fireEvent.click(speichernKnopf());
+    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    expect(speichern).toHaveBeenCalledTimes(1);
+    const [gruppeId, wunsch, , lesVersion] = speichern.mock.calls[0];
+    expect(gruppeId).toBe(4);
+    expect(lesVersion).toBe(3);
+    expect(wunsch).toEqual({ ...inhalt, verfuegbarkeit: 'abwesend' });
+  });
+
+  it('nur die Art geändert: ein ausdrücklich gespeicherter Plan bleibt, wie er ist (wird nicht zu „null“ umgerechnet)', async () => {
+    const inhalt = mitArt('zusagen', { plan: STANDARD_PLAN });
+    const { speichern, onSchliessen } = zeige({ lesen: () => Promise.resolve(stand(inhalt, 3)) });
+    await geladen();
+    fireEvent.click(art(ABWESEND));
+    fireEvent.click(speichernKnopf());
+    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    expect(speichern.mock.calls[0][1].plan).toEqual(STANDARD_PLAN);
+  });
+
+  it('nur der Plan geändert: die Art bleibt, wie gelesen', async () => {
+    const { speichern, onSchliessen } = zeige({
+      lesen: () => Promise.resolve(stand(mitArt('abwesend'), 3)),
+    });
+    await geladen();
+    entfernen(0);
+    fireEvent.click(speichernKnopf());
+    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    expect(speichern.mock.calls[0][1].verfuegbarkeit).toBe('abwesend');
+    expect(speichern.mock.calls[0][1].plan).not.toBeNull();
+  });
+
+  it('Plan und Art zusammen: genau ein Schreiben', async () => {
+    const { speichern, onSchliessen } = zeige();
+    await geladen();
+    fireEvent.click(art(ABWESEND));
+    entfernen(0);
+    fireEvent.click(speichernKnopf());
+    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    expect(speichern).toHaveBeenCalledTimes(1);
+    expect(speichern.mock.calls[0][1].verfuegbarkeit).toBe('abwesend');
+    expect(speichern.mock.calls[0][1].plan?.punkte).toHaveLength(3);
+  });
+
+  it('nichts geändert: „Speichern“ schreibt nichts und schließt – auch nach Hin- und Zurückwählen', async () => {
+    const { speichern, betriebsart, onSchliessen } = zeige();
+    await geladen();
+    fireEvent.click(art(ABWESEND));
+    fireEvent.click(art(ZUSAGEN));
+    fireEvent.click(speichernKnopf());
+    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    expect(speichern).not.toHaveBeenCalled();
+    expect(betriebsart).not.toHaveBeenCalled();
+  });
+
+  it('Konflikt: hat ein anderer inzwischen geschrieben, wird nichts überschrieben und sein Stand erscheint', async () => {
+    const fremd = version(
+      mitArt('zusagen', { plan: { punkte: [{ art: 'frist' }], mail: null } }),
+      4,
+    );
+    const { onSchliessen } = zeige({
+      speichern: () => Promise.resolve({ ok: false, grund: 'konflikt', jetzt: fremd }),
+    });
+    await geladen();
+    fireEvent.click(art(ABWESEND));
+    fireEvent.click(speichernKnopf());
+    const meldung = await screen.findByRole('alert');
+    expect(meldung.textContent).toContain('Bea hat das inzwischen geändert – nichts überschrieben');
+    expect(onSchliessen).not.toHaveBeenCalled();
+    await waitFor(() => expect(art(ZUSAGEN).checked).toBe(true));
+    expect(zeilen()).toHaveLength(1);
+  });
+
+  it('Konflikt, aber es steht schon genau das da (früherer Versuch kam an): fertig', async () => {
+    const schon = version(mitArt('abwesend'), 4);
+    const { onSchliessen } = zeige({
+      speichern: () => Promise.resolve({ ok: false, grund: 'konflikt', jetzt: schon }),
+    });
+    await geladen();
+    fireEvent.click(art(ABWESEND));
+    fireEvent.click(speichernKnopf());
+    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+  });
+
+  it('Konflikt mit gleichem Plan, aber anderer Art: nicht „fertig“ – der fremde Stand erscheint', async () => {
+    const fremd = version(mitArt('zusagen'), 4);
+    const { onSchliessen } = zeige({
+      speichern: () => Promise.resolve({ ok: false, grund: 'konflikt', jetzt: fremd }),
+    });
+    await geladen();
+    fireEvent.click(art(ABWESEND));
+    fireEvent.click(speichernKnopf());
+    await screen.findByRole('alert');
+    expect(onSchliessen).not.toHaveBeenCalled();
+  });
+
+  it('ein unlesbares Dokument sperrt die Auswahl (nie überschreiben)', async () => {
+    zeige({
+      lesen: () =>
+        Promise.resolve({
+          inhalt: standardInhalt(),
+          gespeichert: version(standardInhalt(), 2),
+          unlesbar: true,
+          fehler: null,
+        }),
+    });
+    await screen.findByText(ABFRAGE_UNLESBAR);
+    expect(screen.queryByRole('radiogroup', { name: 'Verfügbarkeit fragen' })).toBeNull();
+  });
+
+  it('Gruppenwechsel mit nur geänderter Art: Rückfrage, „Verwerfen und wechseln“ liest die andere Gruppe', async () => {
+    const { lesen, speichern } = zeige();
+    await geladen();
+    fireEvent.click(art(ABWESEND));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Dienstgruppe' }), {
+      target: { value: '5' },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Verwerfen und wechseln' }));
+    await waitFor(() => expect(lesen).toHaveBeenLastCalledWith(5));
+    await waitFor(() => expect(art(ZUSAGEN).checked).toBe(true));
     expect(speichern).not.toHaveBeenCalled();
   });
 });

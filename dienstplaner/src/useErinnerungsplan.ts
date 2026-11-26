@@ -2,7 +2,12 @@ import { useState } from 'react';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { useLaden } from '@ui/ct/useLaden';
 import type { Dienstgruppe } from '@shared/ct/dienstgruppen';
-import { abfragenAus, laufendeAbfrage, type AbfragenInhalt } from '@shared/dienstplan/abfragen';
+import {
+  abfragenAus,
+  laufendeAbfrage,
+  type AbfragenInhalt,
+  type VerfuegbarkeitArt,
+} from '@shared/dienstplan/abfragen';
 import {
   entwuerfeGleich,
   entwurfGeaendert,
@@ -15,7 +20,7 @@ import type { AbfrageAnschluss } from './AbfrageFenster';
 import type { EinrichtenAnschluss } from './einrichtenAbfragen';
 import { ABFRAGE_UNLESBAR, abfragenFehlerText } from './abfragenTexte';
 
-/** Was der Abschnitt „Abfragen – Erinnerungen“ von außen braucht. */
+/** Was der Abschnitt „Verfügbarkeit & Erinnerungen“ von außen braucht. */
 export interface ErinnerungenAnschluss {
   anschluss: AbfrageAnschluss;
   /** Die Dienstgruppen, die man planen darf (`planbareDienstgruppen`, wie Startseite und „Abfrage starten“). */
@@ -43,8 +48,8 @@ export type TeilErgebnis = { art: 'nichts' } | { art: 'ok' } | { art: 'fehler'; 
  * ein **unlesbarer** Wert wird nie überschrieben (kann aus einer neueren Fassung stammen), bei einem Konflikt wird nichts
  * überschrieben und der neue Stand erscheint, nichts wird automatisch wiederholt.
  *
- * Gespeichert wird nur der Plan der gewählten Gruppe; `abfragen` und `einrichtung` des Dokuments bleiben, wie gelesen, mit der
- * gelesenen Version. **Gruppenwechsel mit ungespeicherten Änderungen:** erst Rückfrage (`wechselFrage`), dann verwerfen – schlichter
+ * Gespeichert werden nur Plan und Art der Verfügbarkeits-Abfrage (V-2) der gewählten Gruppe – ein Dokument, ein Schreiben;
+ * `abfragen` und `einrichtung` des Dokuments bleiben, wie gelesen, mit der gelesenen Version. **Gruppenwechsel mit ungespeicherten Änderungen:** erst Rückfrage (`wechselFrage`), dann verwerfen – schlichter
  * als Entwürfe je Gruppe zu merken, die einzeln scheitern könnten.
  */
 export function useErinnerungsplan(a: ErinnerungenAnschluss | undefined) {
@@ -53,6 +58,9 @@ export function useErinnerungsplan(a: ErinnerungenAnschluss | undefined) {
   const [wechselFrage, setWechselFrage] = useState<number | null>(null);
   const [einrichtenOffen, setEinrichtenOffen] = useState(false);
   const [bearb, setBearb] = useState<{ fuer: AbfragenStand; wert: PlanEntwurf } | null>(null);
+  const [bearbArt, setBearbArt] = useState<{ fuer: AbfragenStand; wert: VerfuegbarkeitArt } | null>(
+    null,
+  );
 
   const lesen = a?.anschluss.lesen;
   const gruppe = gruppen.find((g) => g.id === gewaehlt) ?? null;
@@ -79,7 +87,19 @@ export function useErinnerungsplan(a: ErinnerungenAnschluss | undefined) {
   const setEntwurf = (wert: PlanEntwurf) => {
     if (lese) setBearb({ fuer: lese, wert });
   };
-  const geaendert = schreibbar && entwurf !== null && entwurfGeaendert(entwurf, lese.inhalt);
+  const planGeaendert = schreibbar && entwurf !== null && entwurfGeaendert(entwurf, lese.inhalt);
+
+  // Die Art der Verfügbarkeits-Abfrage (V-2): wie der Plan ein Entwurf zum gelesenen Stand, gilt aber nach dem Speichern sofort.
+  const art: VerfuegbarkeitArt | null = lese
+    ? bearbArt?.fuer === lese
+      ? bearbArt.wert
+      : lese.inhalt.verfuegbarkeit
+    : null;
+  const setArt = (wert: VerfuegbarkeitArt) => {
+    if (lese) setBearbArt({ fuer: lese, wert });
+  };
+  const artGeaendert = schreibbar && art !== null && art !== lese.inhalt.verfuegbarkeit;
+  const geaendert = planGeaendert || artGeaendert;
 
   const waehle = (id: number) => {
     if (id === gewaehlt) return;
@@ -93,13 +113,18 @@ export function useErinnerungsplan(a: ErinnerungenAnschluss | undefined) {
 
   const laufend = schreibbar ? laufendeAbfrage(lese.inhalt, a?.heute ?? '') : null;
 
-  /** Speichert den Plan, wenn er sich geändert hat – ein Versuch, nie automatisch wiederholt. */
+  /** Speichert Plan und Art, wenn sich etwas geändert hat – ein Versuch, nie automatisch wiederholt. */
   const speichern = async (): Promise<TeilErgebnis> => {
-    if (!a || !gruppe || !lese || !schreibbar || entwurf === null || !geaendert)
+    if (!a || !gruppe || !lese || !schreibbar || entwurf === null || art === null || !geaendert)
       return { art: 'nichts' };
     try {
-      // Gespreizt: `abfragen` und `einrichtung` bleiben, wie gelesen – nur der Plan ändert sich.
-      const wunsch: AbfragenInhalt = { ...lese.inhalt, plan: planFuerSpeicher(entwurf) };
+      // Gespreizt: `abfragen` und `einrichtung` bleiben, wie gelesen. Der Plan wird nur neu gerechnet, wenn er geändert ist
+      // (sonst bliebe ein ausdrücklich gespeicherter Standard-Plan nicht erhalten, wie er ist).
+      const wunsch: AbfragenInhalt = {
+        ...lese.inhalt,
+        plan: planGeaendert ? planFuerSpeicher(entwurf) : lese.inhalt.plan,
+        verfuegbarkeit: art,
+      };
       const r = await a.anschluss.speichern(
         gruppe.id,
         wunsch,
@@ -120,7 +145,12 @@ export function useErinnerungsplan(a: ErinnerungenAnschluss | undefined) {
         const jetzt = r.jetzt;
         const inhalt = jetzt ? abfragenAus(jetzt.inhalt) : null;
         // Steht schon genau das da, was gewünscht war (ein früherer Versuch kam doch an): fertig.
-        if (jetzt && inhalt && entwuerfeGleich(entwurfVon(inhalt), entwurf)) {
+        if (
+          jetzt &&
+          inhalt &&
+          entwuerfeGleich(entwurfVon(inhalt), entwurf) &&
+          inhalt.verfuegbarkeit === art
+        ) {
           setze({ inhalt, gespeichert: { ...jetzt, inhalt }, unlesbar: false, fehler: null });
           return { art: 'ok' };
         }
@@ -162,6 +192,8 @@ export function useErinnerungsplan(a: ErinnerungenAnschluss | undefined) {
     schreibbar,
     entwurf,
     setEntwurf,
+    art,
+    setArt,
     geaendert,
     laufend,
     heute: a?.heute ?? '',

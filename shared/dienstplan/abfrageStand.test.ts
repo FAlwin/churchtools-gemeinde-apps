@@ -186,7 +186,12 @@ describe('Texte', () => {
     expect(abfrageKartenEtikett(ABFRAGE, '2027-02-01')).toBeNull();
   });
   it('nächste Erinnerung = der erste Tag aus erinnerungsTage; keiner mehr → null', () => {
-    const inhalt = { plan: null, abfragen: [ABFRAGE], einrichtung: null };
+    const inhalt = {
+      plan: null,
+      abfragen: [ABFRAGE],
+      einrichtung: null,
+      verfuegbarkeit: 'zusagen' as const,
+    };
     const erster = erinnerungsTage(STANDARD_PLAN, ABFRAGE, HEUTE)[0];
     expect(naechsteErinnerungText(inhalt, ABFRAGE, HEUTE)).toBe(
       `nächste Erinnerung ${tagKurz(erster)}`,
@@ -196,7 +201,12 @@ describe('Texte', () => {
     expect(naechsteErinnerungText(inhalt, { ...ABFRAGE, beendet: HEUTE }, HEUTE)).toBeNull();
   });
   it('bei laufender Abfrage erst ab MORGEN: die Erinnerung von heute ist um 0:15 bzw. beim Start schon raus', () => {
-    const inhalt = { plan: null, abfragen: [ABFRAGE], einrichtung: null };
+    const inhalt = {
+      plan: null,
+      abfragen: [ABFRAGE],
+      einrichtung: null,
+      verfuegbarkeit: 'zusagen' as const,
+    };
     // 15.11. ist selbst ein Erinnerungstag (2 Tage vor der Frist) – „nächste“ ist dann der 17.11.
     expect(erinnerungsTage(STANDARD_PLAN, ABFRAGE, '2026-11-15')[0]).toBe('2026-11-15');
     expect(naechsteErinnerungText(inhalt, ABFRAGE, '2026-11-15')).toBe(

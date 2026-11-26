@@ -658,10 +658,10 @@ Dienstkategorien bearbeiten“ und/oder Leitung der Team-Gruppe). Nach dem Test 
 **Das muss passieren:** Der Admin richtet die Erinnerungen einer Dienstgruppe ein – nachdem das Fenster vorher gesagt hat, was
 angelegt wird. Danach stehen in ChurchTools Gruppe, Routine und je Planer die zwei globalen Rechte „Gruppe inkl. ihrer Gruppenmitglieder sehen“ und „Gruppenmitgliedschaften einer Gruppe bearbeiten“ – nur für diese Gruppe, kein Leiter –, und der Dienstplaner zeigt „eingerichtet“.
 
-1. Als **Planer ohne Admin-Recht**: **Einstellungen → Abfragen – Erinnerungen**. Im Kasten **„In ChurchTools“** steht, warum es das
+1. Als **Planer ohne Admin-Recht**: **Einstellungen → Verfügbarkeit & Erinnerungen**. Im Kasten **„In ChurchTools“** steht, warum es das
    braucht, und „Bitte einen Admin, die Erinnerungen einzurichten.“ – **kein** Knopf „Einrichten …“.
 2. Als **Admin**: derselbe Kasten mit dem Knopf **„Einrichten …“**. Hat der Plan ungespeicherte Änderungen, ist er gesperrt
-   („Erst den Plan speichern, dann einrichten.“).
+   („Erst speichern, dann einrichten.“).
 3. **„Einrichten …“** öffnet „Erinnerungen für <Dienstgruppe> einrichten“. **Vor** dem Klick steht dort: die Gruppe „Dienstplaner:
    Antwort fehlt – <Dienstgruppe>“ (Gruppentyp „Dienstplaner“, ohne Obergruppe), die Routine „Dienstplaner: Erinnerungen
    <Dienstgruppe>“, **die Namen der Planer, die die zwei Rechte (genau so benannt, „nur für die Gruppe …“) bekommen**, dazu „Mitarbeitende sehen die Gruppe unter ‚Meine
@@ -716,7 +716,7 @@ selbst. Wer antwortet, steht danach nicht mehr in der Gruppe.
    sie; am **Starttag** trägt **„Fehlende nachtragen“** nur sie ein; an einem späteren Tag fehlt der Knopf (Hinweis: per „Erinnern“).
 7. **Beenden:** „Abfrage beenden“ → alle Teilnehmer sind aus der Gruppe ausgetragen, dann steht die Abfrage als beendet da. Lässt sich jemand nicht
    austragen, bleibt die Abfrage **offen** und die Meldung nennt sie.
-8. **Plan ändern während einer Abfrage:** Einstellungen → Abfragen – Erinnerungen zeigt leise „Eine Abfrage läuft gerade – Änderungen am Plan gelten
+8. **Plan ändern während einer Abfrage:** Einstellungen → Verfügbarkeit & Erinnerungen zeigt leise „Eine Abfrage läuft gerade – Änderungen am Plan gelten
    erst für die nächste.“; die laufende Routine ändert sich nicht.
 9. **Ohne Recht an der Hilfsgruppe** (Planer-Konto ohne die zwei Rechte): Die Abfrage startet trotzdem, mit Hinweis „ohne automatische Erinnerungen“;
    nichts wird eingetragen.
@@ -727,5 +727,35 @@ selbst. Wer antwortet, steht danach nicht mehr in der Gruppe.
 - **Betrifft:** `shared/dienstplan/abfrageAutomatik.ts`, `shared/ct/routinen.ts`, `dienstplaner/src/abfrageAutomatikLauf.ts`, `dienstplaner/src/AbfrageFenster.tsx`, `dienstplaner/src/AbfrageStand.tsx`, `dienstplaner/src/useAbfragen.ts`, `dienstplaner/src/Abwesenheiten.tsx`, `dienstplaner/src/abfragenTexte.ts`, `shared/dienstplan/abfrageStand.ts`
 - **Automatisiert:** weitgehend – `shared/dienstplan/abfrageAutomatik.test.ts` (Routine-Schritte aus `erinnerungsTage`), `dienstplaner/src/abfrageAutomatikLauf.test.ts` (Start-Stufen, Eintragen/Nachlesen, Leeren, Abgleich, Austritt, Fehlerzweige einzeln), `dienstplaner/src/Planen.abfrage.test.tsx` (Reihenfolge Schritte → Dokument → Eintragen, Beenden, Abgleich im Fenster), `dienstplaner/src/Startseite.abfrage.test.tsx` und `Abwesenheiten.abfrage.test.tsx` (Austritt nur bei sicherem „nichts mehr offen“); **nur von Hand:** dass ChurchTools die Schritte der Routine übernimmt und ausführt, die Mail wirklich kommt, Austragen den Lauf beendet und `skipIfEmailAddressMissing` greift
 - **Historie:** Dienstplaner R-5b (25.11.2026), Bauplan „Abfragen mit Frist + Erinnerungsplan“; Messung `messung-runden.md`
+
+</details>
+
+### TF-VERF-22 · Verfügbarkeit fragen: „Ja · Vielleicht · Nein“ oder „Nur abwesend“ je Dienstgruppe
+
+**Das brauchst du:** Den Dienstplaner in der **Test-Instanz**, ein **Planer-Konto** für mindestens eine Dienstgruppe (besser zwei, eine davon ohne Planer-Recht für
+dieses Konto), ein Konto **ohne** Planer-Recht, und Zugriff auf ChurchTools zum Nachsehen (Ablage „Einstellungen“ des Dienstplaners).
+
+**Das muss passieren:** Planer stellen je Dienstgruppe ein, wie die Verfügbarkeit gefragt wird; die Wahl wird mit dem „Speichern“ des Fensters gespeichert und gilt
+sofort. Wer nicht plant, sieht die Wahl nicht. (Dass Oberfläche, Abfrage und Planen sich danach richten, kommt erst mit V-3 bis V-5 – hier prüfst du nur die Einstellung.)
+
+1. Als Planer **Einstellungen** öffnen: Der Abschnitt **„Verfügbarkeit & Erinnerungen“** beginnt mit **„Verfügbarkeit fragen“** und zwei Wahlpunkten mit je einer Erklärzeile
+   („Jede Person sagt je Termin zu, vielleicht oder ab. …“ / „Jede Person hakt nur an, wann sie nicht kann. …“). Vorgewählt ist **Ja · Vielleicht · Nein**.
+2. **Nur abwesend** wählen, **Speichern** → das Fenster schließt. Wieder öffnen: **Nur abwesend** ist gewählt. (ChurchTools: Das Dokument der Dienstgruppe enthält `verfuegbarkeit: abwesend`;
+   Erinnerungsplan und eingerichtete Erinnerungen sind unverändert.)
+3. Zurück auf **Ja · Vielleicht · Nein** → Speichern → bleibt so. **Nichts ändern** und Speichern → das Fenster schließt, es wird nichts geschrieben (die Version in ChurchTools
+   bleibt gleich).
+4. Mehrere Dienstgruppen: In Gruppe A **Nur abwesend** wählen, noch nicht speichern, die Gruppe wechseln → Rückfrage „Änderungen verwerfen?“; „Abbrechen“ behält die Wahl.
+   Gruppe B hat ihre **eigene** Wahl (Startwert, wenn nie gesetzt).
+5. **Konflikt:** In zwei Fenstern (zwei Planer, dieselbe Gruppe) in beiden eine andere Wahl treffen, im ersten Speichern, dann im zweiten → „… hat das inzwischen geändert – nichts
+   überschrieben“, es steht der Stand des ersten da.
+6. Als Konto **ohne** Planer-Recht: In den Einstellungen gibt es **keine** Wahl „Verfügbarkeit fragen“ (nur die Live-Ansicht und „Meine Anzeige“).
+7. Ein Planer ohne Recht an der Ablage „Einstellungen“: Speichern scheitert mit dem Hinweis auf die fehlenden Rechte, nichts wird verändert.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/dienstplan/abfragen.ts`, `shared/dienstplan/abfragenSpeicher.ts`, `dienstplaner/src/useErinnerungsplan.ts`, `dienstplaner/src/ErinnerungsplanAbschnitt.tsx`, `dienstplaner/src/abfragenTexte.ts`, `dienstplaner/src/EinstellungenFenster.tsx`
+- **Automatisiert:** weitgehend – `shared/dienstplan/abfragen.test.ts` (Schema: Altbestand ohne Feld → „zusagen“, ungültiger Wert → unlesbar; `fragtZusagen`), `dienstplaner/src/EinstellungenFenster.erinnerungen.test.tsx` (nur für Planer sichtbar, Speichern schreibt das Feld und lässt Plan/Einrichtung unberührt, nichts geändert → kein Schreiben, Konflikt, Gruppenwechsel). Von Hand bleibt der Durchklick mit echtem ChurchTools.
+- **Historie:** Dienstplaner V-2 (26.11.2026), Bauplan „Zuschnitt V“, Entwurf `verfuegbarkeit-einstellungen-v4.html`
 
 </details>

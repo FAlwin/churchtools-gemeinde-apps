@@ -1,0 +1,74 @@
+// „Im Auftrag von“ im Formular „In Kalender eintragen“ – ein Feld mit Vorschlägen beim Tippen (wie ChurchTools).
+@use '@ui/design/mixins' as m;
+
+.hulle {
+  position: relative;
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+// Gewählt: der Name im Feld (nur lesbar) und daneben das Kreuz zum Leeren.
+.gewaehlt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.liste {
+  // Rahmen, Fläche und Schatten wie das Aufklapp-Menü (`OptionWaehlen`).
+  @include m.card-list;
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border-radius: var(--r-ctrl);
+  box-shadow: 0 10px 30px rgba(15, 23, 43, 0.18);
+}
+
+.vorschlag {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 4px 8px;
+  border-radius: var(--r-ctrl);
+  color: var(--text);
+  font-size: 14.5px;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+
+  &[aria-disabled='true'] {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  @media (hover: hover) {
+    &:not([aria-disabled='true']):hover {
+      background: var(--surface3);
+    }
+  }
+}
+
+.aktiv {
+  background: var(--surface3);
+}
+
+.leer {
+  padding: 10px 8px;
+  color: var(--text2);
+  font-size: 13.5px;
+}
+
+.fehler {
+  margin: 6px 0 0;
+  color: var(--red);
+  font-size: 13px;
+}

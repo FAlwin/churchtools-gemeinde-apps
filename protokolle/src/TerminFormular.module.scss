@@ -269,3 +269,30 @@
     color: var(--text2);
   }
 }
+
+// ── Bild ─────────────────────────────────────────────────────────────────────────────────────────
+
+.bild {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.vorschau {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface3);
+}
+
+.dateiname {
+  min-width: 0;
+  color: var(--text);
+  font-size: 13.5px;
+  overflow-wrap: anywhere;
+}

@@ -101,6 +101,8 @@ export const TERMIN_FELDER = [
 /** Der gelesene Termin (`GET …/appointments/{id}` → `data.appointment`). */
 export type TerminRoh = Partial<Record<(typeof TERMIN_FELDER)[number], unknown>> & {
   signup?: unknown;
+  /** Das Bild des Termins (Feld „Bild“): Objekt mit `id`, `imageUrl`, `name`, sonst `null` – wird nie zurückgeschrieben. */
+  image?: unknown;
 };
 
 /**

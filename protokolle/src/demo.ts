@@ -718,6 +718,8 @@ interface Speicher {
     anfragen: { person: { domainIdentifier: string }; state: string }[];
     /** Anmeldung (W15-5) – wie ChurchTools am Termin zeigt; fehlt = `null`. */
     signup?: Record<string, number | null> | null;
+    /** Das Bild am Termin (Feld „Bild“) – wie ChurchTools es als `appointment.image` zeigt; fehlt = `null`. */
+    image?: { id: number; name: string; imageUrl: string } | null;
   }[];
   treffen: { id: number; startDate: string; isCanceled: boolean }[];
   /** Anwesenheit je Gruppentreffen (S5-3) – Person → `present` / `absent`; fehlt = `unsure`. */
@@ -1225,6 +1227,25 @@ function antwort(
       });
     return { status: 201, data: { id } };
   }
+  // Bild eines Termins (gemessen 26.11.2026): `POST /files/appointment_image/{id}` – die Demo nimmt es an (der Dateiname
+  // steht nur im Rumpf des echten Uploads, hier „bild“) und zeigt es danach am Termin.
+  const bildZiel = /^\/api\/files\/appointment_image\/(\d+)$/.exec(pfad);
+  if (bildZiel && methode === 'POST') {
+    const t = s.termine.find((x) => x.id === Number(bildZiel[1]));
+    if (!t) return { status: 404, data: { message: 'weg' } };
+    t.image = { id: s.naechste++, name: 'bild', imageUrl: '' };
+    return { status: 200, data: [t.image] };
+  }
+  // Personen suchen („Im Auftrag von“): wie `GET /search?query=…&domain_types[]=person`.
+  if (pfad === '/api/search') {
+    const q = (abfrage.get('query') ?? '').toLowerCase();
+    return {
+      status: 200,
+      data: [...LEITUNGSTEAM, ...DEMO_PERSONEN]
+        .filter(([, vor, nach]) => `${vor} ${nach}`.toLowerCase().includes(q))
+        .map(([id]) => ({ domainType: 'person', domainIdentifier: String(id) })),
+    };
+  }
   const termin = /^\/api\/calendars\/\d+\/appointments\/(\d+)$/.exec(pfad);
   const neuerTermin = termin && s.termine.find((t) => t.id === Number(termin[1]));
   // Termin löschen (W6): in der Demo nur die hier festgelegten – die festen Beispieltermine kennt der Einzelabruf nicht.
@@ -1470,6 +1491,34 @@ export function demoStarten(fall: string): void {
   // das `body`, sonst hätte die App die Höhe 0.
   document.body.style.cssText = 'margin: 0; height: 100vh;';
   const speicher = speicherAnlegen(fall);
+  // Dateien (Feld „Bild“) lädt `ctHochladen` per `XMLHttpRequest` hoch – nicht über `fetch`. Die Demo nimmt sie an.
+  class DemoUpload {
+    status = 0;
+    responseText = '';
+    withCredentials = false;
+    upload = { onprogress: null as unknown, onload: null as (() => void) | null };
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    private pfad = '';
+    open(_methode: string, adresse: string): void {
+      this.pfad = new URL(adresse, window.location.href).pathname;
+    }
+    setRequestHeader(): void {}
+    abort(): void {}
+    getAllResponseHeaders(): string {
+      return 'content-type: application/json';
+    }
+    send(): void {
+      setTimeout(() => {
+        const a = antwort(fall, speicher, 'POST', this.pfad, {});
+        this.status = a?.status ?? 404;
+        this.responseText = JSON.stringify({ data: a?.data ?? null });
+        this.upload.onload?.();
+        this.onload?.();
+      }, 40);
+    }
+  }
+  window.XMLHttpRequest = DemoUpload as unknown as typeof XMLHttpRequest;
   window.fetch = async (input, init) => {
     const url = new URL(
       typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,

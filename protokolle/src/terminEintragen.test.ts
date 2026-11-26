@@ -68,6 +68,56 @@ describe('terminLegen', () => {
     expect(ct.termine).toEqual([]);
   });
 
+  describe('Bild', () => {
+    const BILD = () => new File(['x'], 'plakat.png', { type: 'image/png' });
+    const bildPosts = () =>
+      ct.aufrufe.filter((a) => a.startsWith('POST /files/appointment_image/'));
+
+    it('nach dem Anlegen hochgeladen (an die Nummer des Termins) und nachgelesen: nichts fehlt', async () => {
+      const r = await terminLegen({ eintrag: MIT_UHR, zeitzone: ZONE, bild: BILD() });
+      expect(r.bild).toEqual({ fehlt: false, unklar: false });
+      expect(bildPosts()).toEqual([`POST /files/appointment_image/${r.id}`]);
+      expect(ct.termine[0].bild?.name).toBe('plakat.png');
+    });
+
+    it('ohne Bild kein Upload und kein `bild` im Ergebnis', async () => {
+      const r = await terminLegen({ eintrag: MIT_UHR, zeitzone: ZONE, bild: null });
+      expect(r).not.toHaveProperty('bild');
+      expect(bildPosts()).toEqual([]);
+    });
+
+    it('„Nur verknüpfen“: kein Upload', async () => {
+      const r = await terminLegen({
+        eintrag: MIT_UHR,
+        zeitzone: ZONE,
+        bild: BILD(),
+        verknuepfen: { id: 161, titel: 'Heiligabend', beginn: '2027-12-24T15:00:00Z' },
+      });
+      expect(r).toEqual({ art: 'verknuepft', id: 161 });
+      expect(bildPosts()).toEqual([]);
+    });
+
+    it('Upload scheitert (5xx), nichts gespeichert: `fehlt` – der Termin steht', async () => {
+      ct.bildFehler = { status: 503, angelegt: false };
+      const r = await terminLegen({ eintrag: MIT_UHR, zeitzone: ZONE, bild: BILD() });
+      expect(r.bild).toEqual({ fehlt: true, unklar: false });
+      expect(ct.termine).toHaveLength(1);
+    });
+
+    it('Upload sagt 200 und speichert nichts: `fehlt` (ein 200 ist kein Beleg)', async () => {
+      ct.bildSchlucken = true;
+      const r = await terminLegen({ eintrag: MIT_UHR, zeitzone: ZONE, bild: BILD() });
+      expect(r.bild).toEqual({ fehlt: true, unklar: false });
+      expect(bildPosts()).toHaveLength(1);
+    });
+
+    it('Upload meldet 5xx, hat aber gespeichert: das Nachlesen belegt es', async () => {
+      ct.bildFehler = { status: 504, angelegt: true };
+      const r = await terminLegen({ eintrag: MIT_UHR, zeitzone: ZONE, bild: BILD() });
+      expect(r.bild).toEqual({ fehlt: false, unklar: false });
+    });
+  });
+
   it('kein Recht: Fehler mit Text, nichts angelegt', async () => {
     ct.terminFehler = { status: 403, angelegt: false, ctVerbot: true };
     await expect(terminLegen({ eintrag: MIT_UHR, zeitzone: ZONE })).rejects.toThrow(

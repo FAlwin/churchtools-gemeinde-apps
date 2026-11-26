@@ -21,7 +21,8 @@ export interface CtTermin {
   startDate: string;
   endDate: string;
   allDay?: boolean;
-  address?: { name?: string | null; city?: string | null } | null;
+  /** `meetingAt` ist der veraltete Name für `name` – wird nur noch gelesen (#1161). */
+  address?: { name?: string | null; meetingAt?: string | null; city?: string | null } | null;
 }
 
 /** Ein ChurchTools-Termin als Kopie für unsere Einstellungen. Ganztägig: von 0:00 bis 23:59. */
@@ -33,7 +34,7 @@ export function terminAusCt(
   const nurTag = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
   const beginn = nurTag(t.startDate) ? `${t.startDate}T00:00` : ortszeitAus(t.startDate, zeitzone);
   const ende = nurTag(t.endDate) ? `${t.endDate}T23:59` : ortszeitAus(t.endDate, zeitzone);
-  const ort = [t.address?.name, t.address?.city]
+  const ort = [t.address?.name || t.address?.meetingAt, t.address?.city]
     .map((x) => (x ?? '').trim())
     .filter(Boolean)
     .join(', ');

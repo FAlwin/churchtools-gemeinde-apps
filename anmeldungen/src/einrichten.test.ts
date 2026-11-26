@@ -401,7 +401,9 @@ function ct() {
       const t = termine.get(Number(r[2]));
       if (!t) return json(404, { message: `appointment [${r[2]}] not found.` });
       const { address, calendarId, ...rest } = t;
-      const ort = (address as { meetingAt?: string } | null | undefined)?.meetingAt ?? null;
+      // ChurchTools nimmt beim Anlegen noch den veralteten Alias `meetingAt` an, liefert aber `name`.
+      const a = address as { name?: string; meetingAt?: string } | null | undefined;
+      const ort = a?.name ?? a?.meetingAt ?? null;
       return json(200, {
         data: {
           appointment: {
@@ -631,9 +633,10 @@ describe('Rechte und Kalender', () => {
     expect(t.startDate).toBe('2026-11-15T11:00:00Z');
     expect(termine.get(t.id)).toMatchObject({
       link: 'https://anmeldung.beispiel.de/#ct.test/91',
-      address: { meetingAt: 'Saal' },
+      address: { name: 'Saal' },
       isInternal: false,
     });
+    expect(JSON.stringify(termine.get(t.id))).not.toContain('meetingAt');
   });
   it('Termine im Zeitraum: Kalender und Tage gehen als calendar_ids[]/from/to an ChurchTools', async () => {
     const t = await legeTerminAn({
@@ -1708,7 +1711,7 @@ describe('Termin aus dem Kalender nachziehen (K1, gemessen 05.11.2026)', () => {
     imKalender(terminId, {
       startDate: '2026-11-21T14:00:00Z',
       endDate: '2026-11-21T16:00:00Z',
-      address: { meetingAt: 'Saal B' },
+      address: { name: 'Saal B' },
     });
     const r = await terminNachziehen(id, ZONE);
     expect(r?.vergleich).toMatchObject({ art: 'geaendert', sichtbar: true });

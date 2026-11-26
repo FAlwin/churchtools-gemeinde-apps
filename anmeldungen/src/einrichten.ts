@@ -1119,7 +1119,8 @@ export async function legeTerminAn(t: {
       endDate: utcAus(t.ende, t.zeitzone),
       isInternal: false,
       ...(t.link ? { link: t.link } : {}),
-      address: t.ort ? { meetingAt: t.ort } : null,
+      // Der Ort heißt in ChurchTools `address.name` – `meetingAt` ist ein veralteter Alias (gemessen 23.11.2026, #1161).
+      address: t.ort ? { name: t.ort } : null,
     }),
   });
   const id = neu?.data?.id;

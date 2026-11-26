@@ -1337,7 +1337,9 @@ export function demoStarten(fall: string): void {
       return antwort({ data: TERMINE.map((t) => ({ base: t })) });
     r = /^\/calendars\/(\d+)\/appointments$/.exec(pfad);
     if (r && m === 'POST') {
-      const ort = (body.address as { meetingAt?: string } | null)?.meetingAt ?? null;
+      // Wie ChurchTools: `name`, der veraltete Alias `meetingAt` wird noch angenommen.
+      const a = body.address as { name?: string; meetingAt?: string } | null;
+      const ort = a?.name ?? a?.meetingAt ?? null;
       const t = { ...body, id: naechste++, address: { name: ort } };
       TERMINE.push(t);
       return antwort({ data: { id: t.id } }, 201);

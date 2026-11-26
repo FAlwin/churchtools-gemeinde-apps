@@ -66,6 +66,13 @@ describe('terminAusCt', () => {
       ),
     ).toEqual({ beginn: '2026-11-15T12:00', ende: null, ort: '', terminId: 1 });
   });
+  it('Ort auch aus dem veralteten Alias `meetingAt`; `name` hat Vorrang (#1161)', () => {
+    const roh = { id: 3, startDate: '2026-11-15T11:00:00Z', endDate: '2026-11-15T13:00:00Z' };
+    expect(terminAusCt({ ...roh, address: { meetingAt: 'Altbau' } }, B).ort).toBe('Altbau');
+    expect(terminAusCt({ ...roh, address: { name: 'Saal', meetingAt: 'Altbau' } }, B).ort).toBe(
+      'Saal',
+    );
+  });
   it('ganztägig (nur Datum): von 0:00 bis 23:59', () => {
     expect(
       terminAusCt({ id: 2, startDate: '2026-12-28', endDate: '2027-01-02', allDay: true }, B),

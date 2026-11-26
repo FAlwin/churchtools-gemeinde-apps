@@ -44,8 +44,8 @@ export async function meinName(): Promise<string> {
     .trim();
 }
 
-// Die Suche liegt seit O6 (23.10.2026) in `ui/ct/personen` – das Organigramm nimmt Personen genauso auf.
-export { personenSuchen, TREFFER_MAX, type Gefunden } from '@ui/ct/personen';
+// Die Suche liegt seit O6 (23.10.2026) in `ui/ct/personen`, die Oberfläche dazu in `ui/bedienung/PersonenSuche`.
+export type { Gefunden } from '@ui/ct/personen';
 
 const gleich = (x: string, y: string) => x.trim().toLowerCase() === y.trim().toLowerCase();
 

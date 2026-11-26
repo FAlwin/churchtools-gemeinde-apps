@@ -51,13 +51,14 @@ import {
   GibtEsSchon,
   gleichNamige,
   meinName,
-  personenSuchen,
   vonHandAnmelden,
   type Gefunden,
   type NeuePerson,
 } from './vonHand';
 import { gruppenfelderLaden } from './mitglieder';
 import { PlatzWahl } from './PlatzWahl';
+import { PersonenSuche } from '@ui/bedienung/PersonenSuche';
+import { usePersonenSuche } from '@ui/bedienung/usePersonenSuche';
 import { fehlerMeldung } from './zustand';
 import type { Aenderung } from './Rueckgaengig';
 import f from './Formular.module.scss';
@@ -98,6 +99,19 @@ type Wahl = { art: 'da'; p: Gefunden } | { art: 'neu'; neu: NeuePerson; trotzdem
 type Schritt = 'suchen' | 'neu' | 'doppelt' | 'antworten';
 
 const ganz = (p: { vor: string; nach: string }) => `${p.vor} ${p.nach}`.trim();
+
+/** Name, darunter Geburtstag und E-Mail – in der Suche und bei „Gibt es schon“ gleich. */
+function PersonText({ p }: { p: Gefunden }) {
+  return (
+    <span>
+      <b>{ganz(p)}</b>
+      <small>
+        {[p.geburtstag && `geb. ${tagPunkt(p.geburtstag)}`, p.email].filter(Boolean).join(' · ') ||
+          'ohne Geburtsdatum und E-Mail'}
+      </small>
+    </span>
+  );
+}
 const nameAus = (w: Antwort) => {
   const n = (w ?? {}) as { vor?: string; nach?: string };
   return `${n.vor ?? ''} ${n.nach ?? ''}`.trim();
@@ -157,8 +171,8 @@ export function VonHandFenster({
   mitBestaetigung?: boolean;
 }) {
   const [schritt, setSchritt] = useState<Schritt>('suchen');
-  const [suche, setSuche] = useState('');
-  const [treffer, setTreffer] = useState<Gefunden[] | null>(null);
+  // Im Fenster gehalten: „‹“ zurück zur Suche zeigt Suchtext und Treffer wieder.
+  const suche = usePersonenSuche();
   const [neu, setNeu] = useState<NeuePerson>({
     vor: '',
     nach: '',
@@ -298,11 +312,6 @@ export function VonHandFenster({
     abgesagt.has(p.personId) && onZurueckholen
       ? onZurueckholen(p.personId)
       : waehlen({ art: 'da', p });
-
-  const suchen = () =>
-    laufen(async () => {
-      setTreffer(await personenSuchen(suche));
-    });
 
   const neuWeiter = () => {
     if (!neu.vor.trim() || !neu.nach.trim()) return setFehler('Bitte Vor- und Nachname eintragen.');
@@ -454,67 +463,40 @@ export function VonHandFenster({
           {dazu ? `Anmeldung von ${dazu.wer} · Nr. ${nr}. ` : ''}Wen meldest du an? Erst in
           ChurchTools suchen.
         </p>
-        <form
-          className={a.handSuche}
-          onSubmit={(ev) => {
-            ev.preventDefault();
-            void suchen();
+        <PersonenSuche
+          klassen={{
+            form: a.handSuche,
+            feld: f.eingabe,
+            liste: f.optionen,
+            zeile: f.aktion,
+            leer: a.leise,
+            fehler: f.fehler,
           }}
-        >
-          <input
-            type="search"
-            className={f.eingabe}
-            aria-label="Name"
-            placeholder="Name"
-            autoFocus
-            value={suche}
-            onChange={(ev) => setSuche(ev.target.value)}
-          />
-          <FensterKnopf type="submit" disabled={arbeitet || suche.trim().length < 2}>
-            {arbeitet ? 'Sucht …' : 'Suchen'}
-          </FensterKnopf>
-        </form>
-        {fehlerZeile}
-        {treffer && (
-          <ul className={f.optionen} aria-label="Gefunden">
-            {treffer.length === 0 && <li className={a.leise}>Niemand gefunden.</li>}
-            {treffer.map((p) => {
-              const ist = dabei.has(p.personId);
-              return (
-                <li key={p.personId}>
-                  <button
-                    type="button"
-                    className={f.aktion}
-                    disabled={ist}
-                    onClick={() => nehmen(p)}
-                  >
-                    <span>
-                      <b>{ganz(p)}</b>
-                      <small>
-                        {[p.geburtstag && `geb. ${tagPunkt(p.geburtstag)}`, p.email]
-                          .filter(Boolean)
-                          .join(' · ') || 'ohne Geburtsdatum und E-Mail'}
-                      </small>
-                    </span>
-                    {ist ? (
-                      <Etikett ton="gruen">schon dabei</Etikett>
-                    ) : (
-                      abgesagt.has(p.personId) && (
-                        <Etikett ton="blau">
-                          {onZurueckholen ? 'hat abgesagt – zurückholen' : 'hat abgesagt'}
-                        </Etikett>
-                      )
-                    )}
-                  </button>
-                </li>
-              );
-            })}
+          zustand={suche}
+          autoFocus
+          gesperrt={(p) => dabei.has(p.personId)}
+          onWahl={nehmen}
+          zeile={(p) => (
+            <>
+              <PersonText p={p} />
+              {dabei.has(p.personId) ? (
+                <Etikett ton="gruen">schon dabei</Etikett>
+              ) : (
+                abgesagt.has(p.personId) && (
+                  <Etikett ton="blau">
+                    {onZurueckholen ? 'hat abgesagt – zurückholen' : 'hat abgesagt'}
+                  </Etikett>
+                )
+              )}
+            </>
+          )}
+          danach={(text) => (
             <li>
               <button
                 type="button"
                 className={f.aktion}
                 onClick={() => {
-                  const [vor = '', ...rest] = suche.trim().split(/\s+/);
+                  const [vor = '', ...rest] = text.trim().split(/\s+/);
                   setNeu((x) => ({ ...x, vor, nach: rest.join(' ') }));
                   setFehler(null);
                   setSchritt('neu');
@@ -525,8 +507,9 @@ export function VonHandFenster({
                 </span>
               </button>
             </li>
-          </ul>
-        )}
+          )}
+        />
+        {fehlerZeile}
       </Sheet>
     );
 
@@ -637,14 +620,7 @@ export function VonHandFenster({
                 disabled={dabei.has(p.personId)}
                 onClick={() => nehmen(p)}
               >
-                <span>
-                  <b>{ganz(p)}</b>
-                  <small>
-                    {[p.geburtstag && `geb. ${tagPunkt(p.geburtstag)}`, p.email]
-                      .filter(Boolean)
-                      .join(' · ') || 'ohne Geburtsdatum und E-Mail'}
-                  </small>
-                </span>
+                <PersonText p={p} />
                 {dabei.has(p.personId) ? (
                   <Etikett ton="gruen">schon dabei</Etikett>
                 ) : (

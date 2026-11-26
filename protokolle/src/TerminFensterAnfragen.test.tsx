@@ -216,6 +216,36 @@ describe('Mails – das Mail-Protokoll des Nachbaus', () => {
     expect(ct.mails).toEqual([]);
   });
 
+  it('Vorlage mit „Im Auftrag von“: dann bin auch ich eingeladen – der Fuß sagt „sofort … an 1 Person“, und genau diese Mail geht raus', async () => {
+    // Gemessen 26.11.2026: mit `onBehalfOfPid` ist diese Person der Einlader; meine eigene Anfrage steht auf „offen“ (Mail).
+    ct.vorlagen = [
+      {
+        id: 8,
+        calendarId: 4,
+        title: 'Mit Auftrag',
+        startTime: '16:00',
+        duration: 3600,
+        allDay: false,
+        isInternal: false,
+        repeatId: 0,
+        onBehalfOfPid: 49,
+      },
+    ];
+    zeigen();
+    const f = await fenster();
+    fireEvent.click(await within(f).findByLabelText('Mit Auftrag'));
+    await anschalten(f);
+    expect(
+      within(f)
+        .getByText(/sofort/)
+        .closest('p')?.textContent,
+    ).toBe('Die Einladung geht sofort per Mail an 1 Person.');
+    await speichern(f);
+    await waitFor(() => expect(onFertig).toHaveBeenCalled());
+    expect(ct.terminRumpf?.onBehalfOfPid).toBe(49);
+    expect(ct.mails).toEqual([{ person: 1, art: 'neu' }]);
+  });
+
   it('Personen gewählt, dann Wechsel des Kalenders 4 → Gottesdienst: 0 Mails', async () => {
     zeigen();
     const f = await fenster();

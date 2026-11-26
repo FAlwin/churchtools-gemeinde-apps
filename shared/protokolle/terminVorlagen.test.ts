@@ -440,3 +440,24 @@ describe('Vorlage und Anmeldung', () => {
     expect(vorlageAnwenden(eintrag(), v, ERLAUBT).anmeldung).toEqual(anmeldung);
   });
 });
+
+describe('Vorlage und Events', () => {
+  it('Speichern schreibt die Eventvorlage wie ChurchTools: `events: [{eventTemplate: "3"}]` – die der frühesten Zeile', () => {
+    expect(vorlageRumpf(eintrag())).not.toHaveProperty('events');
+    expect(
+      vorlageRumpf({ ...eintrag(), events: { '2026-12-13': 5, '2026-12-06': 3 } }).events,
+    ).toEqual([{ eventTemplate: '3' }]);
+    // 0 („Standard“) ist eine echte Vorlage.
+    expect(vorlageRumpf({ ...eintrag(), events: { '2026-12-06': 0 } }).events).toEqual([
+      { eventTemplate: '0' },
+    ]);
+  });
+
+  it('Rundreise: speichern (Erzeuger) → lesen → anwenden setzt die Vorlage in alle Zeilen', () => {
+    const e = { ...eintrag(), art: WIEDERHOLUNG.woechentlich, wiederBis: '2026-12-20' };
+    const rumpf = vorlageRumpf({ ...e, events: { '2026-12-06': 0 } });
+    const v = vorlagenAus([{ id: 9, ...rumpf }])[0];
+    expect(v.eventVorlage).toBe(0);
+    expect(Object.values(vorlageAnwenden(e, v).events)).toEqual([0, 0, 0]);
+  });
+});

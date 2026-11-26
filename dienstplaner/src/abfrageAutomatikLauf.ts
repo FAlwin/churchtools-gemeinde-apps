@@ -28,7 +28,7 @@ import {
   rollenAus,
   type RohMitglied,
 } from '@shared/organigramm/mitglieder';
-import type { EinrichtenAnschluss } from './einrichtenAbfragen';
+import { mitgliederPfad, routinenPfad, type EinrichtenAnschluss } from './einrichtenAbfragen';
 
 /** Was die Automatik von ChurchTools braucht – dieselben Wege wie das Einrichten (`ui/ct/mitglieder.ts` ist der EINE Weg). */
 export type AutomatikAnschluss = Pick<
@@ -40,9 +40,6 @@ export interface PersonNr {
   id: number;
   name: string;
 }
-
-const routinenPfad = (g: number) => `/groups/${g}/members/routines`;
-const mitgliederPfad = (g: number) => `/groups/${g}/members`;
 
 const ist403 = (e: unknown) => e instanceof ApiError && e.status === 403;
 const ist404 = (e: unknown) => e instanceof ApiError && e.status === 404;

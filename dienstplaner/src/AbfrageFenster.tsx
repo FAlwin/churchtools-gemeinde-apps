@@ -142,6 +142,8 @@ export function AbfrageFenster({
   /** Zählt hoch, wenn `FEHLENDE` sich ändert – sonst zeichnet sich das Fenster nicht neu. */
   const [, setFehlendeStand] = useState(0);
   const abgeglichenFuer = useRef<string | null>(null);
+  /** Die Person hat die Dienstgruppe selbst gewählt – dann springt die Vorwahl nicht mehr dazwischen. */
+  const selbstGewaehlt = useRef(false);
 
   const gruppe = gruppen.find((g) => g.gruppe?.id === gewaehlt) ?? null;
   const dienstgruppeId = gruppe?.gruppe?.id ?? null;
@@ -182,7 +184,39 @@ export function AbfrageFenster({
     heute,
   });
 
+  // ── Vorwahl: Hat eine planbare Dienstgruppe eine laufende Abfrage, ist die erste davon gewählt (sonst bleibt es die erste) ──
+  // Geladen über `useLaden` (späte Antworten zählen nicht) – ein Lesen je Dienstgruppe. Abhängig von den Nummern als Text,
+  // nicht von `gruppen` selbst: Die Liste ist bei jedem Zeichnen neu und löste sonst immer wieder ein Lesen aus.
+  const gruppenNummern = gruppen
+    .map((g) => g.gruppe?.id)
+    .filter((id): id is number => id !== undefined && id !== null)
+    .join(',');
+  const { stand: vorwahl } = useLaden<number | null>(() => {
+    const ids = gruppenNummern === '' ? [] : gruppenNummern.split(',').map(Number);
+    return ids.length < 2
+      ? null
+      : Promise.all(
+          ids.map(async (id): Promise<number | null> => {
+            try {
+              const s = await lesen(id);
+              return s.fehler === null && !s.unlesbar && laufendeAbfrage(s.inhalt, heute)
+                ? id
+                : null;
+            } catch {
+              return null;
+            }
+          }),
+        ).then((treffer) => treffer.find((i) => i !== null) ?? null);
+  }, [gruppenNummern, lesen, heute]);
+  useEffect(() => {
+    if (vorwahl.art === 'fertig' && vorwahl.daten !== null && !selbstGewaehlt.current)
+      setGewaehlt(vorwahl.daten);
+  }, [vorwahl]);
+
   const wechsleGruppe = (id: number) => {
+    selbstGewaehlt.current = true;
+    // Dieselbe Gruppe noch einmal gewählt: nichts ändert sich – Meldungen und Abgleich bleiben stehen.
+    if (id === gewaehlt) return;
     setGewaehlt(id);
     setProblem(null);
     setMeldung(null);
@@ -337,8 +371,13 @@ export function AbfrageFenster({
         );
       return;
     }
-    // (c) die Abfrage ins Dokument (Version wie gelesen)
+    // (c) die Abfrage ins Dokument (Version wie gelesen). Der Abgleich beim Öffnen darf NICHT dazwischenfunken: Sobald die
+    // Abfrage läuft, würde er die Hilfsgruppe halb gefüllt lesen, während (d) noch einträgt (Zähler stimmte dann nicht).
+    // Der Schlüssel gilt darum schon jetzt als erledigt; die Zahl kommt aus dem Nachlesen von (d).
+    const startSchluessel = dienstgruppeId !== null ? `${dienstgruppeId}:${abfrage.id}` : null;
+    abgeglichenFuer.current = startSchluessel;
     if (!(await schreiben(neuerInhalt))) {
+      abgeglichenFuer.current = null;
       setProblem((p) =>
         `${p ?? ''} Die Schritte der Routine stehen schon in ChurchTools; ohne Mitglieder in der Hilfsgruppe wird aber nichts verschickt.`.trim(),
       );
@@ -353,6 +392,8 @@ export function AbfrageFenster({
       FEHLENDE.set(schluessel, r.fehlen);
       setFehlendeStand((n) => n + 1);
     }
+    // Wer nachgelesen als Teilnehmer drinsteht – dieselbe Zahl wie in der Meldung (nichts war vorher drin: Start nur bei leerer Gruppe).
+    if (!r.unklar) setAbgleich({ drin: r.eingetragen.length, ausgetragen: 0 });
     setMeldung(`Die Abfrage läuft. ${eintragenText(r, startPersonen.length) ?? ''}`.trim());
   };
   const gruppeLeerenKlick = async () => {

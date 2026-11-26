@@ -257,7 +257,11 @@ export function abfrageRoutinenSchritte(o: {
   heute: string;
   dienstgruppe: string;
   link: string;
-  /** Der Absender: wer die Abfrage startet. */
+  /**
+   * Wer die Abfrage startet – kommt als `senderId` in den Schritt. **ChurchTools übernimmt das Feld nicht** (gemessen
+   * 26.11.2026: gespeichert wird `senderId: null`); die Mails kommen vom Standard-Absender der Instanz („<Gemeinde>“
+   * <noreply@churchtools.de>), nicht von der startenden Person. Das Feld bleibt, falls ChurchTools es einmal beachtet.
+   */
   senderId: number;
 }): RoutinenSchritt[] {
   const { abfrage: a, heute } = o;

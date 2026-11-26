@@ -136,7 +136,7 @@ mit einem eigenen Server.
 **Abfragen mit Automatik (R-5b, 25.11.2026):** Ist eine Dienstgruppe eingerichtet (Schritt 13), erinnert **ChurchTools** selbst – die Routine
 „Dienstplaner: Erinnerungen <Dienstgruppe>“ läuft je Mitgliedschaft der Hilfsgruppe. **Ablauf einer Abfrage:** _Start_ (Planer): die Hilfsgruppe muss
 **leer** sein (sonst Stopp, „Gruppe leeren“) → die Schritte der Routine werden aus dem Erinnerungsplan ersetzt und nachgelesen (je Erinnerungstag
-„warten bis“ → Mail, am Ende „warten bis Beginn des Zeitraums“ → austragen; Mail mit Absender = wer startet, ohne Abmelde-Link, Personen ohne
+„warten bis“ → Mail, am Ende „warten bis Beginn des Zeitraums“ → austragen; Mail ohne Abmelde-Link, Absender ist der Standard-Absender von ChurchTools (`noreply@churchtools.de`, nicht die startende Person – `senderId` wird dort nicht übernommen, gemessen 26.11.2026), Personen ohne
 E-Mail-Adresse werden übersprungen) → die Abfrage kommt ins Dokument → alle, die dann offen sind (auch Planer im Team, nicht Pausierte), werden als
 **Teilnehmer** eingetragen und nachgelesen. _Beim Antworten_ (Mitarbeitende): Ist nichts mehr offen, trägt sich die Person selbst aus der Hilfsgruppe
 aus (Austragen beendet ihren Lauf sofort). _Beim Öffnen des Stands_ (Planer): Wer nicht mehr offen ist, wird ausgetragen – **nie eingetragen**

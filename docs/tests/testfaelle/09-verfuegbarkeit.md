@@ -703,7 +703,7 @@ selbst. Wer antwortet, steht danach nicht mehr in der Gruppe.
 2. Nach dem Start steht dort „Die Abfrage läuft. N Personen bekommen Erinnerungen.“ In ChurchTools: Die Hilfsgruppe enthält genau die
    Offenen als **Teilnehmer** (Pausierte nicht, Planer im Team ja); an der Routine stehen die Schritte (Mail, „warten bis …“, …, „warten bis
    Beginn des Zeitraums“, austragen); die **erste Mail kommt sofort** (nicht für Personen ohne Adresse – sie bleiben trotzdem in der Gruppe). Der
-   Absender ist der Planer, der gestartet hat; der Knopf in der Mail öffnet „Verfügbarkeit“ mit der Abfrage (**mit Band**).
+   Absender ist der Standard-Absender von ChurchTools („<Gemeinde>“ <noreply@churchtools.de>), **nicht** der Planer, der gestartet hat (ChurchTools übernimmt `senderId` nicht); der Knopf in der Mail öffnet „Verfügbarkeit“ mit der Abfrage (**mit Band**).
 3. **Neu starten, solange jemand in der Gruppe steht:** Eine zweite Abfrage lässt sich nicht starten – das Fenster nennt die Namen („Reste einer
    früheren Abfrage“), nichts wurde geändert; **„Gruppe leeren“** trägt sie aus, danach geht der Start.
 4. Als **Mitarbeitende/r**: Startseite zeigt die Karte. Alle Termine beantworten und **Speichern** (oder die Startseite neu laden): Die Person ist

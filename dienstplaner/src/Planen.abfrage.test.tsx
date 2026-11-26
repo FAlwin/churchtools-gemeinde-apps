@@ -672,6 +672,56 @@ describe('Hausregeln des Speichers', () => {
   });
 });
 
+describe('Vorwahl der Dienstgruppe (R-5c)', () => {
+  const LAUF: AbfragenInhalt = { plan: EIGENER_PLAN, abfragen: [LAUFEND], einrichtung: null };
+  const nurGruppe = (laufendeId: number): AbfrageAnschluss['lesen'] =>
+    vi.fn((id: number) => Promise.resolve(stand(id === laufendeId ? LAUF : null)));
+  async function oeffneOhneWahl(lesen: AbfrageAnschluss['lesen']) {
+    zeige({ lesen });
+    mehrEintrag('Abfrage …');
+    const f = await screen.findByRole('dialog', { name: /^Abfrage/ });
+    return within(f).getByLabelText<HTMLSelectElement>('Dienstgruppe');
+  }
+
+  it('hat nur EINE andere als die erste Dienstgruppe eine laufende Abfrage, ist genau sie vorgewählt – und das Fenster zeigt deren Stand', async () => {
+    const erste = await oeffneOhneWahl(nurGruppe(0));
+    const alle = [...erste.options].map((o) => o.value);
+    // Die Gegenprobe trägt nur, wenn die Gruppe mit der Abfrage NICHT die erste im Fenster ist.
+    const andere = alle.find((v) => v !== alle[0])!;
+    cleanup();
+    const wahl = await oeffneOhneWahl(nurGruppe(Number(andere)));
+    await waitFor(() => expect(wahl.value).toBe(andere));
+    expect(await screen.findByRole('dialog', { name: /^Abfrage/ })).toBeTruthy();
+  });
+
+  it('keine laufende Abfrage: wie bisher die erste Dienstgruppe', async () => {
+    const wahl = await oeffneOhneWahl(nurGruppe(0));
+    const ersteWert = wahl.options[0].value;
+    await new Promise((r) => setTimeout(r, 40));
+    expect(wahl.value).toBe(ersteWert);
+  });
+
+  it('wer selbst eine Dienstgruppe wählt, wird nicht mehr umgestellt', async () => {
+    let frei: () => void = () => {};
+    const sperre = new Promise<void>((r) => (frei = r));
+    const wahl0 = await oeffneOhneWahl(nurGruppe(0));
+    const alle = [...wahl0.options].map((o) => o.value);
+    cleanup();
+    const lesen: AbfrageAnschluss['lesen'] = vi.fn(async (id: number) => {
+      if (id !== Number(alle[0])) {
+        await sperre;
+        return stand(LAUF);
+      }
+      return stand(null);
+    });
+    const wahl = await oeffneOhneWahl(lesen);
+    fireEvent.change(wahl, { target: { value: alle[0] } });
+    frei();
+    await new Promise((r) => setTimeout(r, 60));
+    expect(wahl.value).toBe(alle[0]);
+  });
+});
+
 describe('Automatik in ChurchTools (R-5b)', () => {
   const MIT_EINR: AbfragenInhalt = { ...standardInhalt(), einrichtung: EINR };
   const laufendMitEinr = (x: Partial<Abfrage> = {}): AbfragenInhalt => ({
@@ -949,6 +999,45 @@ describe('Automatik in ChurchTools (R-5b)', () => {
     // Einmal je Öffnen – kein zweiter Durchgang.
     await new Promise((r) => setTimeout(r, 30));
     expect(w.log.filter((z) => z.startsWith('DELETE'))).toHaveLength(2);
+  });
+
+  it('direkt nach dem Start läuft KEIN Abgleich neben dem Eintragen: unten steht dieselbe Zahl wie oben (R-5c)', async () => {
+    const { w, a } = hilfsgruppe();
+    // Das Eintragen hängt am ersten PUT, bis der Test es freigibt – der Abgleich liefe sonst vor dem Ende von (d).
+    let frei: () => void = () => {};
+    const sperre = new Promise<void>((r) => (frei = r));
+    const echt = a.mitgliedAnlegen;
+    let beimHaengen = -1;
+    const gelesen = vi.spyOn(a.port, 'liste');
+    a.mitgliedAnlegen = vi.fn(async (...args: Parameters<typeof echt>) => {
+      if (beimHaengen < 0) beimHaengen = gelesen.mock.calls.length;
+      await sperre;
+      return echt(...args);
+    });
+    const { fenster } = await oeffnen({
+      lesen: nurMusik(MIT_EINR),
+      automatik: a,
+      jetzt: '2026-10-14T08:00:00Z',
+    });
+    await starte(fenster);
+    await waitFor(() => expect(beimHaengen).toBeGreaterThanOrEqual(0));
+    // Zeit für Rendern und Effekte – mit dem Fehler ist der Abgleich spätestens jetzt gestartet und hat die Gruppe gelesen.
+    await new Promise((r) => setTimeout(r, 60));
+    expect(gelesen.mock.calls.length).toBe(beimHaengen);
+    frei();
+    expect(await within(fenster).findByText(/2 Personen bekommen Erinnerungen/)).toBeTruthy();
+    // Unten die Zahl aus dem Nachlesen von (d) – ohne Abgleich, der sie sonst setzen würde.
+    expect(await within(fenster).findByText('2 Personen bekommen noch Erinnerungen.')).toBeTruthy();
+    await new Promise((r) => setTimeout(r, 60));
+    expect(within(fenster).queryByText(/1 Person bekommt noch Erinnerungen/)).toBeNull();
+    expect(w.mitglieder.map((m) => m.person)).toEqual([5, 11]);
+    // Beim erneuten Öffnen gleicht der Stand weiter ab (anderes Fenster, frischer Zustand).
+    cleanup();
+    const { fenster: neuFenster } = await oeffnen(
+      { lesen: nurMusik(laufendMitEinr()), automatik: a },
+      /^Abfrage Musik/,
+    );
+    expect(await within(neuFenster).findByText(/bekommen? noch Erinnerungen/)).toBeTruthy();
   });
 
   it('Abgleich: ist das Ergebnis nicht vollständig (Mitglieder nicht lesbar), wird NICHTS ausgetragen', async () => {

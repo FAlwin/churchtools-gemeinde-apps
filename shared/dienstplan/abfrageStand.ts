@@ -144,14 +144,22 @@ export const abfrageKartenText = (o: {
 }): string =>
   `${o.gruppe} fragt für ${termineText(o.stand.gesamt)} (${tagMonat(o.abfrage.von)}–${tagMonat(o.abfrage.bis)}). Noch ${o.stand.offen} offen.`;
 
-/** „Abfrage Musik · 01.02.–31.03. · noch 7 von 9 offen“ – das Band in „Wann kann ich?“ (`stand` fehlt, solange es lädt). */
+/**
+ * „Abfrage Musik · 01.02.–31.03. · noch 7 von 9 offen“ – das Band in „Wann kann ich?“ (`stand` fehlt, solange es lädt).
+ * Ist nichts mehr offen: „· alles eingetragen“ statt „noch 0 von 9 offen“. Nur der Text ändert sich – die Karte auf der Startseite
+ * hat für den fertigen Zustand keine eigene Farbe oder Regel, das Band auch nicht.
+ */
 export const abfrageBandText = (o: {
   gruppe: string;
   abfrage: Pick<Abfrage, 'von' | 'bis'>;
   stand: { offen: number; gesamt: number } | null;
 }): string =>
   `Abfrage ${o.gruppe} · ${tagMonat(o.abfrage.von)}–${tagMonat(o.abfrage.bis)}${
-    o.stand ? ` · noch ${o.stand.offen} von ${o.stand.gesamt} offen` : ''
+    o.stand
+      ? o.stand.offen === 0
+        ? ' · alles eingetragen'
+        : ` · noch ${o.stand.offen} von ${o.stand.gesamt} offen`
+      : ''
   }`;
 
 /** „Abfrage Musik · Feb–Mär“ – die Zeile des Planers. */

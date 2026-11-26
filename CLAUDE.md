@@ -955,6 +955,11 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **`protokolle-v1.8.0` (26.11.2026):** Termin-Fenster komplett wie der CT-Dialog „Termin erstellen“: **„Im Auftrag von“**
+  (Vorschläge beim Tippen, `PersonenSuche` mit `beimTippen`, #1165/#1170) und **„Bild“** (Upload nach dem Anlegen über
+  `appointment_image`, nachgelesen, #1170). Mail-Regel: Einlader = `imAuftrag ?? ich` (`mailsAnAndere`, gemessen 26.11.2026,
+  #1167); Vorlagen-Events im CT-Format `events: [{eventTemplate: "0"}]` (#1167); Reiter „Termine“ zeigt in CT gelöschte Termine
+  als gelöscht (nur 404, #1168).
 - **`protokolle-v1.7.1` (25.11.2026):** Reiter „Termine“ (und Start, To-Dos, Suche) fragt jede Adresse nur einmal je Ladevorgang
   (`einmalLesen()` in `protokolle/src/lesen.ts` auf `merkeVersprechen`; live vorher 95 Abrufe, 52 doppelt, #1158).
 - **`protokolle-v1.7.0` (25.11.2026):** W15 komplett – das Fenster „In Kalender eintragen“ hat jetzt alle Reiter des

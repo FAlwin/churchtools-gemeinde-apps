@@ -189,7 +189,7 @@ describe('Kasten „In ChurchTools“', () => {
 
   it('Lesefehler: weder „nicht eingerichtet“ noch „Einrichten …“ – sonst droht eine doppelte Einrichtung', async () => {
     zeige({ stand: stand(standardInhalt(), { fehler: 'voruebergehend' }) });
-    await screen.findByRole('region', { name: 'Abfragen – Erinnerungen' });
+    await screen.findByRole('region', { name: 'Verfügbarkeit & Erinnerungen' });
     await screen.findByText(/lassen sich so nicht ändern/);
     expect(screen.queryByRole('group', { name: 'In ChurchTools' })).toBeNull();
     expect(screen.queryByRole('button', { name: /Einrichten/ })).toBeNull();
@@ -208,7 +208,7 @@ describe('Kasten „In ChurchTools“', () => {
     expect(
       within(k).getByRole<HTMLButtonElement>('button', { name: 'Einrichten …' }).disabled,
     ).toBe(true);
-    expect(within(k).getByText('Erst den Plan speichern, dann einrichten.')).toBeTruthy();
+    expect(within(k).getByText('Erst speichern, dann einrichten.')).toBeTruthy();
   });
 });
 

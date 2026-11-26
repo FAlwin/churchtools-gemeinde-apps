@@ -377,6 +377,7 @@ describe('Zeile für Planer in der Karte „Planen“', () => {
                 plan: { punkte: [], mail: null },
                 abfragen: [{ ...ABFRAGE, frist: '2026-11-10', oeffnen: '2026-11-10' }],
                 einrichtung: null,
+                verfuegbarkeit: 'zusagen' as const,
               },
             }
           : stand(null),

@@ -297,7 +297,10 @@ describe('Formular und Starten', () => {
   });
 
   it('„Abfrage starten“ schreibt die Abfrage: Termine aus termineFuerAbfrage, Tage, ich, Version wie gelesen', async () => {
-    const gelesen = stand({ plan: EIGENER_PLAN, abfragen: [], einrichtung: null }, 3);
+    const gelesen = stand(
+      { plan: EIGENER_PLAN, abfragen: [], einrichtung: null, verfuegbarkeit: 'zusagen' as const },
+      3,
+    );
     const { fenster, speichern } = await oeffnen({ lesen: () => Promise.resolve(gelesen) });
     await waitFor(() =>
       expect(knopf(fenster, 'Abfrage starten')).toHaveProperty('disabled', false),
@@ -394,7 +397,12 @@ describe('Was passiert wann', () => {
   });
 
   it('die Tage kommen aus erinnerungsTage mit dem EIGENEN Plan der Dienstgruppe', async () => {
-    const inhalt: AbfragenInhalt = { plan: EIGENER_PLAN, abfragen: [], einrichtung: null };
+    const inhalt: AbfragenInhalt = {
+      plan: EIGENER_PLAN,
+      abfragen: [],
+      einrichtung: null,
+      verfuegbarkeit: 'zusagen' as const,
+    };
     const { fenster } = await oeffnen({ lesen: nurMusik(inhalt) });
     setze(fenster, 'Zeitraum von', '2026-10-30');
     setze(fenster, /^Frist/, '2026-10-25');
@@ -473,6 +481,7 @@ describe('Der Stand einer laufenden Abfrage', () => {
     plan: EIGENER_PLAN,
     abfragen: [{ ...LAUFEND, ...x }],
     einrichtung: null,
+    verfuegbarkeit: 'zusagen' as const,
   });
 
   it('zeigt Etikett, „gestartet am … von …“ und die drei Abschnitte', async () => {
@@ -607,7 +616,12 @@ describe('Hausregeln des Speichers', () => {
       version: 4,
       zeit: ZEIT,
       von: { personId: 2, name: 'Jonas Test' },
-      inhalt: { plan: null, abfragen: [LAUFEND], einrichtung: null },
+      inhalt: {
+        plan: null,
+        abfragen: [LAUFEND],
+        einrichtung: null,
+        verfuegbarkeit: 'zusagen' as const,
+      },
     };
     const speichern = vi.fn(() =>
       Promise.resolve({
@@ -659,7 +673,15 @@ describe('Hausregeln des Speichers', () => {
       frist: '2026-09-05',
       oeffnen: '2026-09-01',
     };
-    const gelesen = stand({ plan: EIGENER_PLAN, abfragen: [beendet], einrichtung: null }, 5);
+    const gelesen = stand(
+      {
+        plan: EIGENER_PLAN,
+        abfragen: [beendet],
+        einrichtung: null,
+        verfuegbarkeit: 'zusagen' as const,
+      },
+      5,
+    );
     const { fenster, speichern } = await oeffnen({ lesen: () => Promise.resolve(gelesen) });
     await waitFor(() =>
       expect(knopf(fenster, 'Abfrage starten')).toHaveProperty('disabled', false),
@@ -673,7 +695,12 @@ describe('Hausregeln des Speichers', () => {
 });
 
 describe('Vorwahl der Dienstgruppe (R-5c)', () => {
-  const LAUF: AbfragenInhalt = { plan: EIGENER_PLAN, abfragen: [LAUFEND], einrichtung: null };
+  const LAUF: AbfragenInhalt = {
+    plan: EIGENER_PLAN,
+    abfragen: [LAUFEND],
+    einrichtung: null,
+    verfuegbarkeit: 'zusagen' as const,
+  };
   const nurGruppe = (laufendeId: number): AbfrageAnschluss['lesen'] =>
     vi.fn((id: number) => Promise.resolve(stand(id === laufendeId ? LAUF : null)));
   async function oeffneOhneWahl(lesen: AbfrageAnschluss['lesen']) {
@@ -728,6 +755,7 @@ describe('Automatik in ChurchTools (R-5b)', () => {
     plan: EIGENER_PLAN,
     abfragen: [{ ...LAUFEND, ...x }],
     einrichtung: EINR,
+    verfuegbarkeit: 'zusagen',
   });
   const tn = (person: number) => ({ person, rolle: R_TEILNEHMER });
   /** Ein Speicher, der seinen Aufruf ins Protokoll der Hilfsgruppe schreibt – so ist die Reihenfolge prüfbar. */

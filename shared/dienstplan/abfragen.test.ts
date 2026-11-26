@@ -3,6 +3,7 @@ import {
   abfrageZustand,
   abfragenAus,
   erinnerungsTage,
+  fragtZusagen,
   geltenderPlan,
   laufendeAbfrage,
   STANDARD_PLAN,
@@ -162,6 +163,7 @@ describe('laufendeAbfrage', () => {
     plan: null,
     abfragen,
     einrichtung: null,
+    verfuegbarkeit: 'zusagen',
   });
   it('keine Abfrage → null', () => {
     expect(laufendeAbfrage(inhalt(), '2026-12-25')).toBeNull();
@@ -205,11 +207,13 @@ describe('abfragenAus – streng, nie halb', () => {
       plan: STANDARD_PLAN,
       abfragen: [ABFRAGE],
       einrichtung: null,
+      verfuegbarkeit: 'zusagen',
     });
     expect(abfragenAus({ plan: null, abfragen: [], einrichtung: null })).toEqual({
       plan: null,
       abfragen: [],
       einrichtung: null,
+      verfuegbarkeit: 'zusagen',
     });
     expect(
       abfragenAus({
@@ -225,7 +229,12 @@ describe('abfragenAus – streng, nie halb', () => {
       // Kein `einrichtung` im Rohwert – so sahen die Dokumente vor R-5a aus.
       const roh: Record<string, unknown> = { plan: null, abfragen: [] };
       expect('einrichtung' in roh).toBe(false);
-      expect(abfragenAus(roh)).toEqual({ plan: null, abfragen: [], einrichtung: null });
+      expect(abfragenAus(roh)).toEqual({
+        plan: null,
+        abfragen: [],
+        einrichtung: null,
+        verfuegbarkeit: 'zusagen',
+      });
     });
 
     it('gelesen wie geschrieben', () => {
@@ -248,6 +257,31 @@ describe('abfragenAus – streng, nie halb', () => {
       ['keine Einrichtung, sondern eine Zahl', { plan: null, abfragen: [], einrichtung: 5 }],
     ])('weiter streng: %s → unlesbar', (_n, roh) => {
       expect(abfragenAus(roh)).toBeNull();
+    });
+  });
+
+  describe('verfuegbarkeit (V-2) – das zweite Feld, das beim Lesen fehlen darf', () => {
+    it('fehlt sie (Dokument von vor V-2), gilt „zusagen“ – nicht „unlesbar“', () => {
+      const roh: Record<string, unknown> = { plan: null, abfragen: [], einrichtung: null };
+      expect('verfuegbarkeit' in roh).toBe(false);
+      expect(abfragenAus(roh)?.verfuegbarkeit).toBe('zusagen');
+    });
+
+    it.each(['zusagen', 'abwesend'] as const)('gelesen wie geschrieben: %s', (art) => {
+      const roh = { plan: null, abfragen: [], einrichtung: null, verfuegbarkeit: art };
+      expect(abfragenAus(JSON.parse(JSON.stringify(roh)))?.verfuegbarkeit).toBe(art);
+    });
+
+    it.each([
+      ['unbekannter Wert', 'vielleicht'],
+      ['leer', ''],
+      ['Wahrheitswert', true],
+      ['null', null],
+      ['Groß geschrieben', 'Zusagen'],
+    ])('ungültig: %s → unlesbar (wie jedes andere Feld)', (_n, wert) => {
+      expect(
+        abfragenAus({ plan: null, abfragen: [], einrichtung: null, verfuegbarkeit: wert }),
+      ).toBeNull();
     });
   });
 
@@ -368,5 +402,23 @@ describe('abfragenAus – streng, nie halb', () => {
 
   it('doppelte IDs sind ungültig', () => {
     expect(abfragenAus({ plan: null, abfragen: [ABFRAGE, ABFRAGE], einrichtung: null })).toBeNull();
+  });
+});
+
+describe('fragtZusagen (V-2) – die eine Regel für Oberfläche, Abfrage und Planen', () => {
+  it('„zusagen“ → ja, „abwesend“ → nein', () => {
+    expect(fragtZusagen({ verfuegbarkeit: 'zusagen' })).toBe(true);
+    expect(fragtZusagen({ verfuegbarkeit: 'abwesend' })).toBe(false);
+  });
+
+  it('ohne Dokument (null) gilt der Startwert: ja', () => {
+    expect(fragtZusagen(null)).toBe(true);
+  });
+
+  it('ein altes Dokument ohne Feld liest sich über das Schema als „ja“ (Schema und Regel zusammen)', () => {
+    expect(fragtZusagen(abfragenAus({ plan: null, abfragen: [] }))).toBe(true);
+    expect(
+      fragtZusagen(abfragenAus({ plan: null, abfragen: [], verfuegbarkeit: 'abwesend' })),
+    ).toBe(false);
   });
 });

@@ -1,5 +1,6 @@
 import type { SpeicherGrund } from '@shared/ct/versionierterWert';
 import { PLANER_GRUPPENRECHTE } from '@shared/dienstplan/abfrageAutomatik';
+import type { VerfuegbarkeitArt } from '@shared/dienstplan/abfragen';
 
 /** Hinweis, wenn der gespeicherte Wert nicht lesbar ist – er stammt dann womöglich aus einer neueren Fassung: nie überschreiben. */
 export const ABFRAGE_UNLESBAR =
@@ -47,6 +48,27 @@ export const abgleichText = (n: number): string =>
   n === 1
     ? '1 Person ausgetragen, die inzwischen geantwortet hat.'
     : `${n} Personen ausgetragen, die inzwischen geantwortet haben.`;
+
+/**
+ * Die zwei Arten, die Verfügbarkeit zu fragen (V-2) – Wortlaut aus dem abgenommenen Entwurf
+ * `verfuegbarkeit-einstellungen-v4.html`. Anders als der Plan gilt die Art sofort.
+ */
+export const VERFUEGBARKEIT_TITEL = 'Verfügbarkeit fragen';
+export const VERFUEGBARKEIT_WAHL: { wert: VerfuegbarkeitArt; label: string; erklaerung: string }[] =
+  [
+    {
+      wert: 'zusagen',
+      label: 'Ja · Vielleicht · Nein',
+      erklaerung:
+        'Jede Person sagt je Termin zu, vielleicht oder ab. Die Planer sehen „Ja“ und „Vielleicht“ beim Einteilen.',
+    },
+    {
+      wert: 'abwesend',
+      label: 'Nur abwesend',
+      erklaerung:
+        'Jede Person hakt nur an, wann sie nicht kann. Alle anderen Termine gelten als „kann“.',
+    },
+  ];
 
 /** Im Einstellungen-Abschnitt, solange für die Gruppe eine Abfrage läuft. */
 export const PLAN_GILT_AB_NAECHSTER =

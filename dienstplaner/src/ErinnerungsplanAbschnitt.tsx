@@ -28,6 +28,7 @@ import {
   type Punktart,
 } from '@shared/dienstplan/abfragePlan';
 import { EinrichtenFenster } from './EinrichtenFenster';
+import fenster from './EinstellungenFenster.module.scss';
 import {
   automatikHinweis,
   PLAN_GILT_AB_NAECHSTER,
@@ -35,6 +36,8 @@ import {
   EINRICHTEN_RECHTE,
   EINRICHTEN_ROUTINE,
   EINRICHTEN_WARUM,
+  VERFUEGBARKEIT_TITEL,
+  VERFUEGBARKEIT_WAHL,
 } from './abfragenTexte';
 import type { ErinnerungsplanZustand } from './useErinnerungsplan';
 import styles from './ErinnerungsplanAbschnitt.module.scss';
@@ -50,8 +53,8 @@ const HINZUFUEGEN: Record<Punktart, string> = {
 };
 
 /**
- * **Abschnitt „Abfragen – Erinnerungen“** im Fenster „Einstellungen“ (R-4, Entwurf `runden-entwurf.html` Schritt 1): je
- * Dienstgruppe frei einstellbar, wann erinnert wird, dazu Betreff und Text der Mail und eine kleine Vorschau. Das Rechnen
+ * **Abschnitt „Verfügbarkeit & Erinnerungen“** im Fenster „Einstellungen“ (R-4, Entwurf `runden-entwurf.html` Schritt 1; seit V-2
+ * mit der Art der Verfügbarkeits-Abfrage oben): je Dienstgruppe frei einstellbar, wann erinnert wird, dazu Betreff und Text der Mail und eine kleine Vorschau. Das Rechnen
  * steht in `shared/dienstplan/abfragePlan.ts`, Lesen und Speichern im Hook `useErinnerungsplan`; gespeichert wird mit dem
  * einen „Speichern“ des Fensters.
  */
@@ -88,7 +91,7 @@ export function ErinnerungsplanAbschnitt({
   return (
     <section aria-labelledby="erinnerungen-titel" className={styles.abschnitt}>
       <div className={styles.kopf}>
-        <h3 id="erinnerungen-titel">Abfragen – Erinnerungen</h3>
+        <h3 id="erinnerungen-titel">Verfügbarkeit &amp; Erinnerungen</h3>
         {z.gruppen.length > 1 && (
           <select
             className={styles.wahl}
@@ -131,6 +134,28 @@ export function ErinnerungsplanAbschnitt({
 
       {e && z.schreibbar && (
         <>
+          {/* V-2: dieselbe Radio-Optik wie die Live-Ansicht im selben Fenster; die Art gilt sofort, nicht erst ab der nächsten Abfrage. */}
+          <p id="verfuegbarkeit-titel" className={styles.feldName}>
+            {VERFUEGBARKEIT_TITEL}
+          </p>
+          <div className={fenster.wahl} role="radiogroup" aria-labelledby="verfuegbarkeit-titel">
+            {VERFUEGBARKEIT_WAHL.map((w) => (
+              <label key={w.wert}>
+                <input
+                  type="radio"
+                  name="verfuegbarkeit-art"
+                  checked={z.art === w.wert}
+                  disabled={aus}
+                  onChange={() => z.setArt(w.wert)}
+                />
+                <span>
+                  {w.label}
+                  <small>{w.erklaerung}</small>
+                </span>
+              </label>
+            ))}
+          </div>
+          <p className={styles.feldName}>Erinnerungen</p>
           {e.punkte.length === 0 ? (
             <p className={styles.leise}>
               Keine Erinnerung – die Abfrage erscheint nur auf der Startseite.
@@ -396,9 +421,7 @@ function InChurchTools({ z }: { z: ErinnerungsplanZustand }) {
           </TextKnopf>
         )}
       </div>
-      {darf && z.geaendert && (
-        <p className={styles.leise}>Erst den Plan speichern, dann einrichten.</p>
-      )}
+      {darf && z.geaendert && <p className={styles.leise}>Erst speichern, dann einrichten.</p>}
       {!z.eingerichtet && !darf && (
         <p className={styles.leise}>Bitte einen Admin, die Erinnerungen einzurichten.</p>
       )}

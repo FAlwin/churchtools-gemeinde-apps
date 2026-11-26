@@ -79,7 +79,25 @@ export interface AbfragenInhalt {
   plan: Erinnerungsplan | null;
   abfragen: Abfrage[];
   einrichtung: Einrichtung | null;
+  /** Wie die Dienstgruppe die Verfügbarkeit abfragt (V-2): `fragtZusagen` ist die eine Regel dazu. */
+  verfuegbarkeit: VerfuegbarkeitArt;
 }
+
+/**
+ * Die zwei Arten, die Verfügbarkeit abzufragen (Entwurf `verfuegbarkeit-einstellungen-v4.html`): **`zusagen`** = Ja · Vielleicht · Nein
+ * (wie bisher), **`abwesend`** = jede Person hakt nur an, wann sie nicht kann; alle anderen Termine gelten als „kann“.
+ */
+export type VerfuegbarkeitArt = 'zusagen' | 'abwesend';
+
+/** Startwert für jede Dienstgruppe – und was ein altes Dokument ohne das Feld bedeutet. */
+export const STANDARD_VERFUEGBARKEIT: VerfuegbarkeitArt = 'zusagen';
+
+/**
+ * **Die eine Regel „fragt diese Dienstgruppe Zusagen ab?“** (V-2) – Oberfläche, Abfrage und Planen nutzen genau sie.
+ * Ohne Dokument (`null`, noch nicht gelesen oder nicht lesbar) gilt der Startwert: ja.
+ */
+export const fragtZusagen = (inhalt: Pick<AbfragenInhalt, 'verfuegbarkeit'> | null): boolean =>
+  (inhalt?.verfuegbarkeit ?? STANDARD_VERFUEGBARKEIT) === 'zusagen';
 
 /** Der Plan, der gilt: der eigene oder der Standard. */
 export const geltenderPlan = (inhalt: Pick<AbfragenInhalt, 'plan'>): Erinnerungsplan =>
@@ -167,6 +185,9 @@ const inhaltSchema = z
     // nichts davon ist veröffentlicht) kennen es nicht und gelten als „nicht eingerichtet“. Fassung 1 bleibt; alles andere
     // – auch ein unbekanntes Feld, auch eines in `einrichtung` – macht den Wert weiter unlesbar. Geschrieben wird es immer.
     einrichtung: einrichtungSchema.nullable().default(null),
+    // **Das zweite Feld, das beim Lesen fehlen darf** (V-2, 26.11.2026): ältere Dokumente kennen die Art nicht und gelten als
+    // „zusagen“ (wie bisher). Ein anderer Wert als die zwei bekannten macht den Inhalt wie jedes andere Feld unlesbar.
+    verfuegbarkeit: z.enum(['zusagen', 'abwesend']).default(STANDARD_VERFUEGBARKEIT),
   })
   // Die ID macht eine Abfrage kenntlich (später je Abfrage eine Hilfsgruppe): doppelte gibt es nicht.
   .refine((i) => new Set(i.abfragen.map((a) => a.id)).size === i.abfragen.length);

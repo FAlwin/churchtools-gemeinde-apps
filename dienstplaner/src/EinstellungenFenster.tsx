@@ -16,7 +16,7 @@ interface Props {
   darfAendern: boolean;
   ich: { personId: number; name: string };
   /**
-   * Der Abschnitt „Abfragen – Erinnerungen“ (R-4): die Dienstgruppen, die man planen darf, und der Anschluss zu den Abfragen.
+   * Der Abschnitt „Verfügbarkeit & Erinnerungen“ (R-4): die Dienstgruppen, die man planen darf, und der Anschluss zu den Abfragen.
    * Ohne ihn (oder ohne Planer-Recht) gibt es den Abschnitt nicht.
    */
   abfragen?: ErinnerungenAnschluss;

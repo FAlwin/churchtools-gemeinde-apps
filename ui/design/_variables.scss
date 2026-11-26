@@ -115,9 +115,6 @@ html[data-theme='dark'] {
 
 // ── Abstand oben: Leisten und Inhalt ohne Leiste ────────────────────
 :root {
-  // Safe-Area oben, mindestens 20px – nur noch Grundlage für den iPad-Wert von `--inhalt-pad-top` unten. Kein Kopf liest
-  // ihn selbst (seit 29.10.2026, zuletzt der Lied-Editor; `obenBand.test.ts`).
-  --bar-pad-top: max(20px, var(--sat, env(safe-area-inset-top, 0px)));
   // Bildschirme OHNE Leiste (große Überschrift im Inhalt): Abstand der Überschrift nach oben.
   // Im Safari-Tab reicht wenig (kein Band, keine Safe-Area).
   --inhalt-pad-top: 12px;
@@ -209,24 +206,11 @@ html[data-theme='dark'] {
   }
 }
 
-/**
- * **iPad: oben so schmal wie vor dem Umbau** (Alwin, 03.10.2026: „Der Bereich oben soll nicht größer
- * werden … am iPad gibt es dieses Milchige nicht"). Der Abstand unter das Band ist also nur auf dem
- * iPhone nötig; auf dem iPad genügt die Safe-Area wie bei der früheren Leiste (`--bar-pad-top`) plus
- * ein paar Pixel. Erkannt an BEIDEN Kanten ≥ 744 px – das kleinste iPad (mini) ist 744 breit, ein
- * gedrehtes iPhone ist nur ~430 hoch und bleibt draußen.
- *
- * ⚠️ **Überholt seit iPadOS 26** (Alwin am iPad, 12.11.2026): Das iPad hat das milchige Band inzwischen auch – die
- * Reiter oben lagen darin und waren weich. Die Reiter rechnen deshalb mit `--band-unten`. Ob Köpfe ohne Reiter
- * (Liedblatt, Editor) mit diesem Wert noch im Band stehen, ist am Gerät nicht geprüft.
- */
-@media (display-mode: standalone) and (min-width: 744px) and (min-height: 744px) {
-  @supports (-webkit-touch-callout: none) {
-    :root {
-      --inhalt-pad-top: calc(var(--bar-pad-top) + 4px);
-    }
-  }
-}
+// **Keine iPad-Ausnahme mehr** (Alwin am iPad, 26.11.2026): Bis dahin stand hier ein Block, der am iPad
+// `--inhalt-pad-top` auf Safe-Area + 4 px setzte („am iPad gibt es dieses Milchige nicht“, 03.10.2026). Seit iPadOS 26
+// legt auch das iPad das Unschärfe-Band über die installierte App – die Reiter rechnen deshalb seit #932 mit
+// `--band-unten`, die Köpfe ohne Reiter (Ablauf, Liedblatt, Editor) standen aber weiter im Band und waren weich.
+// Jetzt gilt für alle Geräte die eine Unterkante oben. `reiterObenRand.test.ts` hält fest, dass keine zweite kommt.
 
 // SCHRIFTEN
 // UI ist Lato wie in ChurchTools (`--ui`). $font-sans = Spiegelung als SCSS-Konstante.

@@ -33,6 +33,15 @@ describe('Reiter oben am Rand', () => {
     expect(standalone).toMatch(/--inhalt-pad-top:\s*var\(--band-unten\);/);
   });
 
+  it('keine Geräte-Ausnahme: --inhalt-pad-top steht in der installierten App genau einmal (Alwin am iPad, 26.11.2026)', () => {
+    // Bis zum 26.11.2026 setzte ein eigener iPad-Block den Wert auf Safe-Area + 4 px – die Köpfe ohne Reiter (Ablauf,
+    // Liedblatt) lagen dadurch im Unschärfe-Band von iPadOS 26 und waren weich.
+    const v = lies('ui/design/_variables.scss');
+    const standalone = v.slice(v.indexOf('@media (display-mode: standalone) {'));
+    expect(standalone.match(/--inhalt-pad-top:/g)).toHaveLength(1);
+    expect(v).not.toMatch(/@media \(display-mode: standalone\) and/);
+  });
+
   it('die Musik-App setzt ihre oberen Reiter an den Rand', () => {
     expect(lies('client/src/components/TabBar.tsx')).toMatch(/amRand=\{oben\}/);
   });

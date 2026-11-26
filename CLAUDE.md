@@ -955,6 +955,12 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **v2.42.0 (26.11.2026) = iPad-Kopf scharf, Ablaufpunkt als Seite, Infos in der Zelle.** Am iPad (installierte App,
+  iPadOS 26) steht der Kopf ohne Reiter jetzt unter dem Unschärfe-Band – die iPad-Ausnahme für `--inhalt-pad-top` ist weg
+  (#1174, Wächter in `reiterObenRand.test.ts`). Dazu seit v2.41.0: Ablaufpunkt öffnet überall eine Seite (`PunktSeite`),
+  Infos der Dienstgruppen direkt in der Zelle bearbeiten (Tour `setlist-edit-v9`), Datumsfelder in Safari mittig. Auf
+  Alwins Wunsch ohne eigene Abnahme in der Test-Instanz veröffentlicht. Dienstplaner, Protokolle, Website, Anmeldungen
+  bleiben bei ihren eigenen Tags.
 - **`protokolle-v1.8.0` (26.11.2026):** Termin-Fenster komplett wie der CT-Dialog „Termin erstellen“: **„Im Auftrag von“**
   (Vorschläge beim Tippen, `PersonenSuche` mit `beimTippen`, #1165/#1170) und **„Bild“** (Upload nach dem Anlegen über
   `appointment_image`, nachgelesen, #1170). Mail-Regel: Einlader = `imAuftrag ?? ich` (`mailsAnAndere`, gemessen 26.11.2026,

@@ -9,13 +9,14 @@ import {
   type Erinnerungspunkt,
   type Erinnerungsplan,
 } from './abfragen';
-import { STANDARD_BETREFF, STANDARD_TEXT } from './abfrageMail';
+import { STANDARD_BETREFF, STANDARD_TEXT, STANDARD_TEXT_ABWESEND } from './abfrageMail';
 import {
   artenZumHinzufuegen,
   belegteVorFristTage,
   entwurfAus,
   entwurfGeaendert,
   entwurfVon,
+  mailIstStandard,
   mitGeaendertemPunkt,
   mitNeuemPunkt,
   ohnePunkt,
@@ -25,6 +26,8 @@ import {
   wirksamerPlan,
 } from './abfragePlan';
 
+/** Die Art der Abfrage in den bisherigen Fällen – „Ja · Vielleicht · Nein“ (V-2: der Startwert). */
+const Z = 'zusagen' as const;
 const HEUTE = '2026-12-01';
 const ABFRAGE: Abfrage = {
   id: 'x',
@@ -39,7 +42,7 @@ const ABFRAGE: Abfrage = {
 
 describe('Liste aus dem geltenden Plan', () => {
   it('ohne eigenen Plan der Standard in fester Reihenfolge, Mail mit den Standardtexten', () => {
-    const e = entwurfVon({ plan: null });
+    const e = entwurfVon({ plan: null }, Z);
     expect(e.punkte).toEqual(STANDARD_PLAN.punkte);
     expect(e.betreff).toBe(STANDARD_BETREFF);
     expect(e.text).toBe(STANDARD_TEXT);
@@ -50,7 +53,7 @@ describe('Liste aus dem geltenden Plan', () => {
       punkte: [{ art: 'frist' }, { art: 'oeffnen' }],
       mail: { betreff: 'B', text: 'T' },
     };
-    const e = entwurfVon({ plan });
+    const e = entwurfVon({ plan }, Z);
     expect(e.punkte).toEqual([{ art: 'oeffnen' }, { art: 'frist' }]);
     expect(e.betreff).toBe('B');
   });
@@ -150,23 +153,23 @@ describe('hinzufügen, entfernen, ändern', () => {
 
 describe('„geändert?“ und was gespeichert wird', () => {
   it('ohne Änderung: nicht geändert, Plan wie Standard wird als null gespeichert', () => {
-    const e = entwurfVon({ plan: null });
-    expect(entwurfGeaendert(e, { plan: null })).toBe(false);
-    expect(planFuerSpeicher(e)).toBeNull();
+    const e = entwurfVon({ plan: null }, Z);
+    expect(entwurfGeaendert(e, { plan: null }, Z)).toBe(false);
+    expect(planFuerSpeicher(e, Z)).toBeNull();
   });
 
   it('entfernen und wieder hinzufügen ist gleich dem Standard (feste Reihenfolge)', () => {
-    const e = entwurfVon({ plan: null });
+    const e = entwurfVon({ plan: null }, Z);
     const wieder = { ...e, punkte: mitNeuemPunkt(ohnePunkt(e.punkte, 2), 'frist') };
-    expect(entwurfGeaendert(wieder, { plan: null })).toBe(false);
-    expect(planFuerSpeicher(wieder)).toBeNull();
+    expect(entwurfGeaendert(wieder, { plan: null }, Z)).toBe(false);
+    expect(planFuerSpeicher(wieder, Z)).toBeNull();
   });
 
   it('geänderte Punkte: eigener Plan, Mail bleibt null (Standardtext)', () => {
-    const e = entwurfVon({ plan: null });
+    const e = entwurfVon({ plan: null }, Z);
     const neu = { ...e, punkte: ohnePunkt(e.punkte, 1) };
-    expect(entwurfGeaendert(neu, { plan: null })).toBe(true);
-    expect(planFuerSpeicher(neu)).toEqual({
+    expect(entwurfGeaendert(neu, { plan: null }, Z)).toBe(true);
+    expect(planFuerSpeicher(neu, Z)).toEqual({
       punkte: [
         { art: 'oeffnen' },
         { art: 'frist' },
@@ -177,29 +180,29 @@ describe('„geändert?“ und was gespeichert wird', () => {
   });
 
   it('eigener Betreff: gespeichert mit Standardtext darunter; leer = Standard; getrimmt', () => {
-    const e = entwurfVon({ plan: null });
-    expect(planFuerSpeicher({ ...e, betreff: '  Hallo  ' })?.mail).toEqual({
+    const e = entwurfVon({ plan: null }, Z);
+    expect(planFuerSpeicher({ ...e, betreff: '  Hallo  ' }, Z)?.mail).toEqual({
       betreff: 'Hallo',
       text: STANDARD_TEXT,
     });
-    expect(planFuerSpeicher({ ...e, betreff: '   ' })).toBeNull();
-    expect(planFuerSpeicher({ ...e, text: '' })).toBeNull();
+    expect(planFuerSpeicher({ ...e, betreff: '   ' }, Z)).toBeNull();
+    expect(planFuerSpeicher({ ...e, text: '' }, Z)).toBeNull();
   });
 
   it('gespeicherter, aber dem Standard gleicher Plan gilt nicht als geändert', () => {
     const plan = { punkte: [...STANDARD_PLAN.punkte].reverse(), mail: null };
-    expect(entwurfGeaendert(entwurfAus(plan), { plan })).toBe(false);
+    expect(entwurfGeaendert(entwurfAus(plan, Z), { plan }, Z)).toBe(false);
   });
 
   it('alles, was gespeichert würde, nimmt das Schema wieder an (sonst wäre es später „unlesbar“)', () => {
-    const e = entwurfVon({ plan: null });
+    const e = entwurfVon({ plan: null }, Z);
     for (const neu of [
       { ...e, punkte: [] },
       { ...e, betreff: 'B', text: 'T' },
       { ...e, punkte: mitNeuemPunkt(e.punkte, 'vorFrist') },
     ]) {
       const inhalt = {
-        plan: planFuerSpeicher(neu),
+        plan: planFuerSpeicher(neu, Z),
         abfragen: [],
         einrichtung: null,
         verfuegbarkeit: 'zusagen' as const,
@@ -209,10 +212,58 @@ describe('„geändert?“ und was gespeichert wird', () => {
   });
 
   it('wirksamerPlan schreibt die Mail aus (für Vorschau und Vergleich)', () => {
-    expect(wirksamerPlan(entwurfVon({ plan: null })).mail).toEqual({
+    expect(wirksamerPlan(entwurfVon({ plan: null }, Z), Z).mail).toEqual({
       betreff: STANDARD_BETREFF,
       text: STANDARD_TEXT,
     });
+  });
+});
+
+describe('Standard-Mail je Art („Nur abwesend“)', () => {
+  it('ohne eigene Mail zeigt der Entwurf den Standardtext der Art', () => {
+    expect(entwurfVon({ plan: null }, 'abwesend').text).toBe(STANDARD_TEXT_ABWESEND);
+    expect(entwurfVon({ plan: null }, 'zusagen').text).toBe(STANDARD_TEXT);
+    expect(wirksamerPlan(entwurfVon({ plan: null }, 'abwesend'), 'abwesend').mail?.text).toBe(
+      STANDARD_TEXT_ABWESEND,
+    );
+  });
+
+  it('nur die Art umgestellt (Text nie angefasst): kein geänderter Plan, gespeichert wird null – kein „eigener“ alter Standardtext', () => {
+    const alt = entwurfVon({ plan: null }, 'zusagen'); // Entwurf noch mit dem Zusagen-Text
+    expect(entwurfGeaendert(alt, { plan: null }, 'abwesend')).toBe(false);
+    expect(planFuerSpeicher(alt, 'abwesend')).toBeNull();
+    expect(wirksamerPlan(alt, 'abwesend').mail?.text).toBe(STANDARD_TEXT_ABWESEND);
+    expect(mailIstStandard(alt)).toBe(true);
+  });
+
+  it('eigener Betreff, Text nie angefasst: gespeichert wird ohne Text-Festlegung (mail: null nur bei Standard-Betreff)', () => {
+    const e = { ...entwurfVon({ plan: null }, 'abwesend'), betreff: 'Bitte bis {frist}' };
+    expect(mailIstStandard(e)).toBe(false);
+    expect(planFuerSpeicher(e, 'abwesend')?.mail).toEqual({
+      betreff: 'Bitte bis {frist}',
+      text: STANDARD_TEXT_ABWESEND,
+    });
+  });
+
+  it('ein eigener Text bleibt in jeder Art eigener Text', () => {
+    const e = {
+      ...entwurfVon({ plan: null }, 'zusagen'),
+      text: 'Hallo {vorname}, bitte eintragen.',
+    };
+    expect(entwurfGeaendert(e, { plan: null }, 'abwesend')).toBe(true);
+    expect(planFuerSpeicher(e, 'abwesend')?.mail?.text).toBe('Hallo {vorname}, bitte eintragen.');
+    expect(entwurfAus(planFuerSpeicher(e, 'abwesend')!, 'zusagen').text).toBe(
+      'Hallo {vorname}, bitte eintragen.',
+    );
+  });
+
+  it('ein gespeicherter Text, der wörtlich ein Standardtext ist, zeigt den der Art', () => {
+    const plan: Erinnerungsplan = {
+      punkte: STANDARD_PLAN.punkte,
+      mail: { betreff: 'Eigener Betreff', text: STANDARD_TEXT },
+    };
+    expect(entwurfAus(plan, 'abwesend').text).toBe(STANDARD_TEXT_ABWESEND);
+    expect(entwurfAus(plan, 'abwesend').betreff).toBe('Eigener Betreff');
   });
 });
 

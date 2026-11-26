@@ -13,7 +13,7 @@ import {
   PLATZHALTER_BETREFF,
   PLATZHALTER_TEXT,
   STANDARD_BETREFF,
-  STANDARD_TEXT,
+  standardText,
   unbekannteStellen,
 } from '@shared/dienstplan/abfrageMail';
 import {
@@ -22,6 +22,7 @@ import {
   belegteVorFristTage,
   mitGeaendertemPunkt,
   mitNeuemPunkt,
+  mailIstStandard,
   ohnePunkt,
   vorschau,
   wirksamerPlan,
@@ -81,12 +82,15 @@ export function ErinnerungsplanAbschnitt({
           ...unbekannteStellen(e.betreff, PLATZHALTER_BETREFF).map((s) => `${s} im Betreff`),
           ...unbekannteStellen(e.text, PLATZHALTER_TEXT).map((s) => `${s} im Text`),
         ];
-  const mailStandard =
-    e !== null &&
-    wirksamerPlan(e).mail?.betreff === STANDARD_BETREFF &&
-    wirksamerPlan(e).mail?.text === STANDARD_TEXT;
+  // Standard = Betreff und Text wie vorgegeben; der Text gleich welcher Art (`mailIstStandard`) – der Entwurf zeigt ihn schon in
+  // der gewählten Art (`useErinnerungsplan`).
+  const mailStandard = e !== null && mailIstStandard(e);
+  const standard = standardText(z.art ?? 'zusagen');
 
-  const v = e && z.schreibbar ? vorschau(wirksamerPlan(e), z.laufend, z.heute) : null;
+  const v =
+    e && z.schreibbar && z.art !== null
+      ? vorschau(wirksamerPlan(e, z.art), z.laufend, z.heute)
+      : null;
 
   return (
     <section aria-labelledby="erinnerungen-titel" className={styles.abschnitt}>
@@ -286,9 +290,7 @@ export function ErinnerungsplanAbschnitt({
             {!mailStandard && (
               <TextKnopf
                 disabled={aus}
-                onClick={() =>
-                  z.setEntwurf({ ...e, betreff: STANDARD_BETREFF, text: STANDARD_TEXT })
-                }
+                onClick={() => z.setEntwurf({ ...e, betreff: STANDARD_BETREFF, text: standard })}
               >
                 Auf Standard zurücksetzen
               </TextKnopf>
@@ -303,7 +305,7 @@ export function ErinnerungsplanAbschnitt({
                 id="erinnerung-text"
                 className={`${styles.feld} ${styles.text}`}
                 value={e.text}
-                placeholder={STANDARD_TEXT}
+                placeholder={standard}
                 maxLength={GRENZEN.mailText}
                 disabled={aus}
                 onChange={(ev) => z.setEntwurf({ ...e, text: ev.target.value })}

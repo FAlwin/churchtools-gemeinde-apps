@@ -184,8 +184,11 @@ einer „Nur abwesend“-Gruppe nicht.
   kannst, und tippe dann auf „Fertig““. Ohne **laufende Abfrage** ist eine solche Gruppe gesperrt („Erinnern geht in einer laufenden Abfrage“) – ohne Abfrage gäbe es kein „Fertig“. Lässt
   sich das Dokument der Gruppe nicht lesen (Netz), ist sie gesperrt („Art der Abfrage nicht geladen“, „Erneut versuchen“); ein unlesbares Dokument gilt wie überall als „Zusagen“.
 - **Mail der Abfrage:** `mailFuer(…, art)` – bei „Nur abwesend“ ist der Standardtext „… Bitte trag bis <Frist> im Dienstplaner ein, an welchen Terminen du nicht kannst, und tippe auf „Fertig“.“
-  (`standardText`); ein eigener Text im Erinnerungsplan gilt für beide Arten. **Offen:** Der Editor in Einstellungen füllt das Textfeld weiter mit dem Zusagen-Standard; bleibt er unverändert, wird
-  beim Speichern kein eigener Text gespeichert und die Mail nimmt den passenden Standard. Der Editor folgt in einem eigenen kleinen Schritt nach V-6.
+  (`standardText`); ein eigener Text im Erinnerungsplan gilt für beide Arten. **Editor (nach V-6, 27.11.2026):** Die Einstellungen zeigen den Standardtext **der gewählten Art** – auch, wenn die Art
+  gerade erst (ungespeichert) umgestellt wurde; „Auf Standard zurücksetzen“ nimmt ihn ebenso. Als Standard gilt ein leerer Text oder
+  wörtlich **einer der beiden** Standardtexte (`istStandardText` in `abfrageMail.ts`) – so wird nach dem Umstellen der Art der alte
+  Standard nie als „eigener Text“ gespeichert, und nur die Art zählt als Änderung. Auch `mailFuer` wendet die Regel an: Ein
+  gespeicherter Plan mit eigenem Betreff, dessen Text wörtlich ein Standardtext ist, verschickt den Text der aktuellen Art.
 
 **Einstellungen für alle** (Live-Ansicht 2, L4-2, seit Alwin 23.11.2026): Der letzte Reiter **„Einstellungen“** öffnet die **Seite `#/einstellungen`**
 (seit V-6, 26.11.2026; vorher ein Fenster) mit der **Betriebsart der Live-Ansicht** (bis Beginn nach der Uhr, ab Beginn klicken = Standard · immer nach der Uhr · von Anfang an klicken).

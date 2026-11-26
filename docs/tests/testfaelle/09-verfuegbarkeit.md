@@ -751,12 +751,13 @@ sofort. Wer nicht plant, sieht die Wahl nicht. (Dass die Oberfläche sich danach
    überschrieben“, es steht der Stand des ersten da.
 6. Als Konto **ohne** Planer-Recht: In den Einstellungen gibt es **keine** Wahl „Verfügbarkeit fragen“ (nur die Live-Ansicht und „Meine Anzeige“).
 7. Ein Planer ohne Recht an der Ablage „Einstellungen“: Speichern scheitert mit dem Hinweis auf die fehlenden Rechte, nichts wird verändert.
+8. **Mailtext je Art:** Bei einer Gruppe mit **Ja · Vielleicht · Nein** unter „Erinnerungen“ **Text ändern** öffnen: Der Standardtext sagt „… an welchen Terminen du kannst (Ja, Vielleicht oder Nein).“ Auf **Nur abwesend** umstellen (noch nicht speichern): Der Text wechselt sofort zu „… an welchen Terminen du nicht kannst, und tippe auf „Fertig“.“, **kein** „Auf Standard zurücksetzen“, die Leiste zählt **1 Änderung** (nur die Art). Speichern → im Dokument steht nur `verfuegbarkeit: abwesend`, kein Mailtext. Einen eigenen Text eintippen und „Auf Standard zurücksetzen“ → wieder der Text von „Nur abwesend“.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `shared/dienstplan/abfragen.ts`, `shared/dienstplan/abfragenSpeicher.ts`, `dienstplaner/src/useErinnerungsplan.ts`, `dienstplaner/src/ErinnerungsplanAbschnitt.tsx`, `dienstplaner/src/abfragenTexte.ts`, `dienstplaner/src/EinstellungenSeite.tsx`
-- **Automatisiert:** weitgehend – `shared/dienstplan/abfragen.test.ts` (Schema: Altbestand ohne Feld → „zusagen“, ungültiger Wert → unlesbar; `fragtZusagen`), `dienstplaner/src/EinstellungenSeite.erinnerungen.test.tsx` (nur für Planer sichtbar, Speichern schreibt das Feld und lässt Plan/Einrichtung unberührt, nichts geändert → kein Schreiben, Konflikt, Gruppenwechsel). Von Hand bleibt der Durchklick mit echtem ChurchTools.
+- **Betrifft:** `shared/dienstplan/abfragen.ts`, `shared/dienstplan/abfragenSpeicher.ts`, `shared/dienstplan/abfragePlan.ts`, `shared/dienstplan/abfrageMail.ts`, `dienstplaner/src/useErinnerungsplan.ts`, `dienstplaner/src/ErinnerungsplanAbschnitt.tsx`, `dienstplaner/src/abfragenTexte.ts`, `dienstplaner/src/EinstellungenSeite.tsx`
+- **Automatisiert:** weitgehend – `shared/dienstplan/abfragen.test.ts` (Schema: Altbestand ohne Feld → „zusagen“, ungültiger Wert → unlesbar; `fragtZusagen`), `dienstplaner/src/EinstellungenSeite.erinnerungen.test.tsx` (nur für Planer sichtbar, Speichern schreibt das Feld und lässt Plan/Einrichtung unberührt, nichts geändert → kein Schreiben, Konflikt, Gruppenwechsel, Standardtext folgt der Art), `shared/dienstplan/abfragePlan.test.ts` und `shared/dienstplan/abfrageMail.test.ts` (Standardtext je Art, `istStandardText`). Von Hand bleibt der Durchklick mit echtem ChurchTools.
 - **Historie:** Dienstplaner V-2 (26.11.2026), Bauplan „Zuschnitt V“, Entwurf `verfuegbarkeit-einstellungen-v4.html`
 
 </details>

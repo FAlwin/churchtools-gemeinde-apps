@@ -23,7 +23,8 @@ import {
   type Erinnerungspunkt,
   type Erinnerungsplan,
 } from './abfragen';
-import { STANDARD_BETREFF, STANDARD_TEXT } from './abfrageMail';
+import { istStandardText, STANDARD_BETREFF, standardText } from './abfrageMail';
+import type { VerfuegbarkeitArt } from './abfragen';
 
 /** Was im Fenster bearbeitet wird: die Punkte und die beiden Mail-Felder (immer gefüllt, sonst die Standardtexte). */
 export interface PlanEntwurf {
@@ -52,34 +53,46 @@ const punktGleich = (a: Erinnerungspunkt, b: Erinnerungspunkt): boolean => {
   return true;
 };
 
-/** Der Entwurf zu einem Plan; ohne eigene Mail stehen die Standardtexte da. */
-export function entwurfAus(plan: Erinnerungsplan): PlanEntwurf {
+/**
+ * Der Entwurf zu einem Plan; ohne eigene Mail stehen die Standardtexte **der Art** da (`standardText`). Ein gespeicherter Text,
+ * der wörtlich ein Standardtext ist, zeigt ebenfalls den der Art (`istStandardText`).
+ */
+export function entwurfAus(plan: Erinnerungsplan, art: VerfuegbarkeitArt): PlanEntwurf {
+  const text = plan.mail?.text;
   return {
     punkte: ordne(plan.punkte),
     betreff: plan.mail?.betreff ?? STANDARD_BETREFF,
-    text: plan.mail?.text ?? STANDARD_TEXT,
+    text: text === undefined || istStandardText(text) ? standardText(art) : text,
   };
 }
 
-/** Der Entwurf eines Dokuments: der geltende Plan (eigener oder Standard). */
-export const entwurfVon = (inhalt: Pick<AbfragenInhalt, 'plan'>): PlanEntwurf =>
-  entwurfAus(geltenderPlan(inhalt));
+/** Der Entwurf eines Dokuments: der geltende Plan (eigener oder Standard) mit den Texten der Art. */
+export const entwurfVon = (
+  inhalt: Pick<AbfragenInhalt, 'plan'>,
+  art: VerfuegbarkeitArt,
+): PlanEntwurf => entwurfAus(geltenderPlan(inhalt), art);
 
 /** Leer = Standard, sonst getrimmt (so liest es auch das Schema). */
 const feld = (s: string, standard: string): string => s.trim() || standard;
 
-/** Der Plan, der gelten würde – immer mit ausgeschriebener Mail. Für Vorschau und Vergleich. */
-export function wirksamerPlan(e: PlanEntwurf): Erinnerungsplan {
+/**
+ * Der Plan, der gelten würde – immer mit ausgeschriebener Mail. Für Vorschau und Vergleich. Ein Standardtext gleich welcher Art
+ * wird zum Standardtext von `art` – so ist nach dem Umstellen der Art „nie angefasst“ weiter der Standard, kein eigener Text.
+ */
+export function wirksamerPlan(e: PlanEntwurf, art: VerfuegbarkeitArt): Erinnerungsplan {
   return {
     punkte: ordne(e.punkte),
-    mail: { betreff: feld(e.betreff, STANDARD_BETREFF), text: feld(e.text, STANDARD_TEXT) },
+    mail: {
+      betreff: feld(e.betreff, STANDARD_BETREFF),
+      text: istStandardText(e.text) ? standardText(art) : e.text.trim(),
+    },
   };
 }
 
-/** Sind zwei Entwürfe in dem gleich, was gelten würde? */
-export function entwuerfeGleich(a: PlanEntwurf, b: PlanEntwurf): boolean {
-  const x = wirksamerPlan(a);
-  const y = wirksamerPlan(b);
+/** Sind zwei Entwürfe in dem gleich, was gelten würde (bei dieser Art)? */
+export function entwuerfeGleich(a: PlanEntwurf, b: PlanEntwurf, art: VerfuegbarkeitArt): boolean {
+  const x = wirksamerPlan(a, art);
+  const y = wirksamerPlan(b, art);
   return (
     x.punkte.length === y.punkte.length &&
     x.punkte.every((p, i) => punktGleich(p, y.punkte[i])) &&
@@ -88,14 +101,24 @@ export function entwuerfeGleich(a: PlanEntwurf, b: PlanEntwurf): boolean {
   );
 }
 
-/** Der Entwurf weicht vom gelesenen Stand ab. */
-export const entwurfGeaendert = (e: PlanEntwurf, inhalt: Pick<AbfragenInhalt, 'plan'>): boolean =>
-  !entwuerfeGleich(e, entwurfVon(inhalt));
+/** Der Entwurf weicht vom gelesenen Stand ab (bei dieser Art – ein Wechsel der Art allein ändert den Plan nicht). */
+export const entwurfGeaendert = (
+  e: PlanEntwurf,
+  inhalt: Pick<AbfragenInhalt, 'plan'>,
+  art: VerfuegbarkeitArt,
+): boolean => !entwuerfeGleich(e, entwurfVon(inhalt, art), art);
 
-/** Was in `abfragen.plan` gespeichert wird: `null`, wenn alles dem Standard entspricht. */
-export function planFuerSpeicher(e: PlanEntwurf): Erinnerungsplan | null {
-  const w = wirksamerPlan(e);
-  const mailStandard = w.mail?.betreff === STANDARD_BETREFF && w.mail?.text === STANDARD_TEXT;
+/** Ist die Mail des Entwurfs der Standard (Betreff und Text, Text gleich welcher Art)? */
+export const mailIstStandard = (e: Pick<PlanEntwurf, 'betreff' | 'text'>): boolean =>
+  feld(e.betreff, STANDARD_BETREFF) === STANDARD_BETREFF && istStandardText(e.text);
+
+/**
+ * Was in `abfragen.plan` gespeichert wird: `null`, wenn alles dem Standard entspricht. Eine Standard-Mail wird nie
+ * ausgeschrieben gespeichert (`mail: null`) – so bekommt sie `mailFuer` immer in der Art, die gerade gilt.
+ */
+export function planFuerSpeicher(e: PlanEntwurf, art: VerfuegbarkeitArt): Erinnerungsplan | null {
+  const w = wirksamerPlan(e, art);
+  const mailStandard = mailIstStandard(e);
   const standardPunkte =
     w.punkte.length === STANDARD_PLAN.punkte.length &&
     w.punkte.every((p, i) => punktGleich(p, ordne(STANDARD_PLAN.punkte)[i]));

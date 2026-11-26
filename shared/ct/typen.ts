@@ -101,6 +101,9 @@ export interface CtAgenda {
    * Die „Predigtserie“ (seit dem App-Update vom 26.11.2026 in der ChurchTools-App setzbar). Die App liest sie nicht.
    * Gemessen am 26.11.2026 (`server/scripts/probe-agenda-series.ts`): Ein `PUT …/agenda` OHNE das Feld lässt sie stehen –
    * Umsortieren (`{ items }`) und Grenze verschieben (`{ calendarId, eventStartPosition }`) löschen sie also nicht.
+   * Ebenso bei Vorlagen (`PUT /agendatemplates/{id}`, gemessen 27.11.2026): Umsortieren, Grenze, Umbenennen
+   * (`{ name, calendarId }`) und Ersetzen lassen sie stehen. Nur „Neue Vorlage“/„Als Vorlage“ (`POST`) schreiben `null` –
+   * eine neue Vorlage übernimmt die Serie eines Termins bewusst nicht.
    */
   series?: string | null;
   /** In ChurchTools abgeschlossen (`…/agenda/lock`) – dann verweigert ChurchTools jedes Ändern. */

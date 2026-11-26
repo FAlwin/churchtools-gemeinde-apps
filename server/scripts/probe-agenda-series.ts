@@ -22,6 +22,10 @@
  *   npx tsx server/scripts/probe-agenda-series.ts                      # Termine mit Ablauf auflisten
  *   TEST_EVENT_ID=123 npx tsx server/scripts/probe-agenda-series.ts    # Ablauf lesend zeigen
  *   TEST_EVENT_ID=123 npx tsx server/scripts/probe-agenda-series.ts --ja-ich-will
+ *   TEST_VORLAGE_ID=28 npx tsx server/scripts/probe-agenda-series.ts --ja-ich-will   # dasselbe für eine Vorlage
+ *
+ * Bei einer **Vorlage** sind es die Rümpfe von `ablaufUmsortieren`/Grenze (mit `ablaufKopf` = Name + Kalender),
+ * `vorlageUmbenennen` (`{ name, calendarId }`) und `vorlageErsetzen` (`{ name, calendarId, eventStartPosition, items }`).
  */
 import { config } from 'dotenv';
 import { agendaItemWritePayload } from '../../shared/ct/agendaPayload';
@@ -34,6 +38,7 @@ const LIVE = (process.env.CHURCHTOOLS_BASE_URL ?? '').replace(/\/$/, '');
 const BASE = (process.env.CHURCHTOOLS_TEST_BASE_URL ?? '').replace(/\/$/, '');
 const TOKEN = process.env.CHURCHTOOLS_TEST_LOGIN_TOKEN ?? '';
 const EVENT_ID = Number(process.env.TEST_EVENT_ID ?? '');
+const VORLAGE_ID = Number(process.env.TEST_VORLAGE_ID ?? '');
 const SCHREIBEN = process.argv.includes('--ja-ich-will');
 
 if (!BASE || !TOKEN) {
@@ -111,7 +116,45 @@ async function auflisten(): Promise<void> {
   }
 }
 
+async function vorlageLesen(id: number): Promise<Ablauf> {
+  const r = await ruf('GET', `/agendatemplates/${id}`);
+  if (r.status !== 200) throw new Error(`Vorlage lesen: ${r.status} ${JSON.stringify(r.json)}`);
+  return (r.json as { data: Ablauf }).data;
+}
+
+async function vorlageMessen(id: number): Promise<void> {
+  const v0 = await vorlageLesen(id);
+  const name = typeof v0.name === 'string' ? v0.name : '';
+  console.log('0 vorher:        ', stand(v0), `· name=${JSON.stringify(name)}`);
+  if (!SCHREIBEN) return;
+  const csrf = ((await ruf('GET', '/csrftoken')).json as { data?: string }).data ?? '';
+  const punkte = () =>
+    v0.items.map((it, i) => ({ id: it.id, ...agendaItemWritePayload(it, { position: i }) }));
+  const kopf = { name, calendarId: v0.calendarId };
+  const pfad = `/agendatemplates/${id}`;
+  const schritte: [string, Record<string, unknown>][] = [
+    [
+      '1 Serie setzen: ',
+      { ...kopf, series: `Probe-Serie ${new Date().toISOString().slice(11, 19)}`, items: punkte() },
+    ],
+    ['2 Umsortieren:  ', { ...kopf, items: punkte() }],
+    ['3 Grenze:       ', { ...kopf, eventStartPosition: v0.eventStartPosition ?? 0 }],
+    ['4 Umbenennen:   ', { ...kopf }],
+    [
+      '5 Ersetzen:     ',
+      { ...kopf, eventStartPosition: v0.eventStartPosition ?? 0, items: punkte() },
+    ],
+    ['6 Zurücksetzen: ', { ...kopf, series: v0.series ?? null, items: punkte() }],
+  ];
+  for (const [text, rumpf] of schritte) {
+    const r = await ruf('PUT', pfad, csrf, rumpf);
+    const nach = await vorlageLesen(id);
+    console.log(`${text} PUT ${r.status}`, stand(nach), `· name=${JSON.stringify(nach.name)}`);
+  }
+}
+
 async function main(): Promise<void> {
+  if (VORLAGE_ID) return vorlageMessen(VORLAGE_ID);
   if (!EVENT_ID) return auflisten();
 
   const a0 = await ablaufLesen(EVENT_ID);

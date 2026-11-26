@@ -25,6 +25,11 @@ interface AbsenceSheetProps {
    */
   nurLesen?: boolean;
   onClose: () => void;
+  /**
+   * Das Fenster liegt über einem anderen („Alle Einträge …“ im Dienstplaner): „‹“ und „Abbrechen“ führen dorthin zurück, das X
+   * (`onClose`) schließt beide – die Fensterregel (`docs/entwicklung/design-system.md`). Ohne: wie bisher.
+   */
+  zurueck?: () => void;
   onSubmit: (neu: NeueAbsence) => void;
   onDelete: (a: Absence) => void;
 }
@@ -46,6 +51,7 @@ export function AbsenceSheet({
   standardGrund = null,
   nurLesen = false,
   onClose,
+  zurueck,
   onSubmit,
   onDelete,
 }: AbsenceSheetProps) {
@@ -86,6 +92,8 @@ export function AbsenceSheet({
             : 'Abwesenheit ändern'
       }
       onClose={onClose}
+      zurueck={zurueck}
+      onAbbrechen={zurueck}
       cancelLabel={nurLesen ? 'Schließen' : 'Abbrechen'}
       knoepfe={
         nurLesen ? null : (

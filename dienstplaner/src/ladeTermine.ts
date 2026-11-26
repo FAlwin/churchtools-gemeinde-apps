@@ -55,6 +55,23 @@ export function ladeZeitraum(
   return ladeVonBis(start, von, plusTage(bis, 1), zeitzone);
 }
 
+/**
+ * Die rohen Termine von `von` (eingeschlossen) bis `bisAusschliesslich` (nicht, wie ChurchTools' `to`) mit ihren Plätzen.
+ * **Wirft**, wenn sie nicht als Liste kommen – eine Stelle für Liste, Matrix und „Verfügbarkeit → Zusagen“.
+ */
+export async function ladeRohTermine(
+  von: string,
+  bisAusschliesslich: string,
+): Promise<RohTermin[]> {
+  const termine = await ctDaten<unknown>(
+    `/events?from=${von}&to=${bisAusschliesslich}&include=eventServices`,
+  );
+  if (!Array.isArray(termine)) {
+    throw new ApiError(502, 'ChurchTools hat die Termine nicht vollständig geliefert.');
+  }
+  return termine as RohTermin[];
+}
+
 /** `von` eingeschlossen, `bisAusschliesslich` nicht (wie ChurchTools' `to`). */
 async function ladeVonBis(
   start: Start,
@@ -62,13 +79,7 @@ async function ladeVonBis(
   bisAusschliesslich: string,
   zeitzone: string,
 ): Promise<TermineDaten> {
-  const termine = await ctDaten<unknown>(
-    `/events?from=${von}&to=${bisAusschliesslich}&include=eventServices`,
-  );
-  if (!Array.isArray(termine)) {
-    throw new ApiError(502, 'ChurchTools hat die Termine nicht vollständig geliefert.');
-  }
-  return datenAus(start, termine as RohTermin[], zeitzone, true);
+  return datenAus(start, await ladeRohTermine(von, bisAusschliesslich), zeitzone, true);
 }
 
 /**

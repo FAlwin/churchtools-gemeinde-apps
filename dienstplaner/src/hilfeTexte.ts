@@ -122,3 +122,27 @@ export const HILFE_TERMIN: readonly HilfeAbschnitt[] = [
     ],
   },
 ];
+
+export const HILFE_VERFUEGBARKEIT: readonly HilfeAbschnitt[] = [
+  {
+    titel: 'Abwesenheiten und Zusagen',
+    punkte: [
+      'Links wählst du „Abwesenheiten“ oder „Zusagen“. Den Umschalter gibt es nur, wenn eine deiner Dienstgruppen nach Zusagen fragt.',
+      '„Abwesenheiten“: Haken bei den Terminen, an denen du nicht kannst – das trägt eine Abwesenheit in ChurchTools ein.',
+      '„Zusagen“: Ja, Vielleicht oder Nein, nur an Terminen, an denen deine Dienstgruppe Dienste hat. „Nein“ ist dieselbe Abwesenheit.',
+    ],
+  },
+  {
+    titel: 'Deine Zeiträume',
+    punkte: [
+      'Urlaub und ganze Tage stehen oben in „Deine Zeiträume“ – ein Tipp ändert oder löscht den Eintrag.',
+      'Alle Einträge, auch frühere, findest du im Menü „Mehr“ unter „Alle Einträge …“.',
+    ],
+  },
+  {
+    titel: 'Speichern',
+    punkte: [
+      'Haken und Antworten sind erst vorgemerkt – unten übernimmst du alles mit „Speichern“.',
+    ],
+  },
+];

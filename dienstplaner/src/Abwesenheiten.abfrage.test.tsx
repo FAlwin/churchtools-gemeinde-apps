@@ -18,7 +18,7 @@ import type { AutomatikAnschluss } from './abfrageAutomatikLauf';
 import { EINR, hilfsgruppe, R_TEILNEHMER } from './abfrageAutomatik.testutil';
 import { ladeAbfragen } from './ladeAbfragen';
 import { ladeAbwesenheiten, ladeMeineDienste } from './ladeBeiwerk';
-import { ladeZeitraum } from './ladeTermine';
+import { ladeRohTermine, ladeZeitraum } from './ladeTermine';
 import {
   ladeVerfuegbarkeit,
   speichereVerfuegbarkeit,
@@ -59,7 +59,7 @@ vi.mock('./einrichtenAbfragen', async (orig) => ({
 }));
 vi.mock('./ladeAbfragen', () => ({ ladeAbfragen: vi.fn(), speichereAbfragen: vi.fn() }));
 vi.mock('./ladeBeiwerk', () => ({ ladeMeineDienste: vi.fn(), ladeAbwesenheiten: vi.fn() }));
-vi.mock('./ladeTermine', () => ({ ladeZeitraum: vi.fn() }));
+vi.mock('./ladeTermine', () => ({ ladeZeitraum: vi.fn(), ladeRohTermine: vi.fn() }));
 vi.mock('./ladeVerfuegbarkeit', async (orig) => ({
   ...(await orig<typeof import('./ladeVerfuegbarkeit')>()),
   ladeVerfuegbarkeit: vi.fn(),
@@ -68,6 +68,7 @@ vi.mock('./ladeVerfuegbarkeit', async (orig) => ({
 const abfragen = vi.mocked(ladeAbfragen);
 const abwesenheiten = vi.mocked(ladeAbwesenheiten);
 const zeitraum = vi.mocked(ladeZeitraum);
+const rohe = vi.mocked(ladeRohTermine);
 const laden = vi.mocked(ladeVerfuegbarkeit);
 const speichern = vi.mocked(speichereVerfuegbarkeit);
 
@@ -163,6 +164,10 @@ beforeEach(() => {
   abwesenheiten.mockResolvedValue([ABW_CT]);
   abfragen.mockImplementation((id) => Promise.resolve(abfrageStand(id === 4 ? ABFRAGE : null)));
   zeitraum.mockResolvedValue({ zeilen: ZEILEN, plan: LEERER_PLAN });
+  // Unter „Zusagen“: an allen sechs Terminen hat Musik (Dienst 9, Gesang) Dienste.
+  rohe.mockResolvedValue(
+    Object.keys(TAGE).map((id) => ({ id: Number(id), eventServices: [{ serviceId: 9 }] })) as never,
+  );
   laden.mockImplementation(() => Promise.resolve(stand));
   speichern.mockImplementation((_v, _p, antworten) => {
     stand = { ...stand, antworten };
@@ -170,7 +175,13 @@ beforeEach(() => {
   });
 });
 
-const zeige = (extra: { abfrageGruppe?: number | null; start?: Start | undefined } = {}) =>
+const zeige = (
+  extra: {
+    abfrageGruppe?: number | null;
+    start?: Start | undefined;
+    dienstgruppen?: Dienstgruppe[];
+  } = {},
+) =>
   render(
     <Abwesenheiten
       ichId={1}
@@ -238,11 +249,13 @@ describe('Band', () => {
   });
 
   it('wartet auf die Abfrage, statt kurz „ab heute“ zu zeigen und dann zu springen (Fund im Browser, 25.11.2026)', async () => {
-    let freigeben: (s: AbfragenStand) => void = () => undefined;
+    // Zwei Leser warten auf dasselbe Dokument: „fragt die Gruppe Zusagen?“ (V-3) und das Band – beide werden freigegeben.
+    const wartende: ((s: AbfragenStand) => void)[] = [];
+    const freigeben = (s: AbfragenStand) => wartende.forEach((r) => r(s));
     abfragen.mockImplementation(
       () =>
         new Promise<AbfragenStand>((r) => {
-          freigeben = r;
+          wartende.push(r);
         }),
     );
     zeige();
@@ -274,6 +287,79 @@ describe('Band', () => {
   });
 });
 
+describe('Start-Ansicht (V-3): über eine Abfrage mit Zusagen öffnet „Zusagen“', () => {
+  const z = async () => screen.getByRole('toolbar', { name: 'Werkzeuge' });
+  const TECHNIK: Dienstgruppe = { id: 3, name: 'Technik', fuerAlle: false };
+  /** Wie `START`, aber mit Mitgliedschaft in Technik (Gruppe 7) – dann ist Technik eine eigene Dienstgruppe. */
+  const START_BEIDE: Start = startFuer({
+    gruppen: [
+      { id: 7, name: 'Technikteam', leitung: false },
+      { id: 9, name: 'Musikteam', leitung: false },
+    ],
+    dienste: START.dienste,
+  });
+  const abfrageDerGruppe = (nr: number, art: 'zusagen' | 'abwesend') =>
+    abfragen.mockImplementation((id) =>
+      Promise.resolve({
+        ...abfrageStand(id === nr ? ABFRAGE : null),
+        inhalt: {
+          ...standardInhalt(),
+          abfragen: id === nr ? [ABFRAGE] : [],
+          // Die andere Gruppe fragt anders als die der Abfrage.
+          verfuegbarkeit: id === nr ? art : art === 'zusagen' ? 'abwesend' : 'zusagen',
+        },
+      }),
+    );
+
+  it('Abfrage einer Zusagen-Gruppe: „Zusagen“ ist gewählt, Ja · Vielleicht · Nein stehen da, das Band auch', async () => {
+    zeige();
+    const band = await screen.findByRole('note', { name: 'Abfrage' });
+    expect(band).toBeTruthy();
+    const zeile = await z();
+    expect(
+      within(zeile).getByRole('button', { name: 'Zusagen' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(
+      screen.getByRole('button', { name: `Ja – Gottesdienst, ${datumText(TAGE[101])}` }),
+    ).toBeTruthy();
+  });
+
+  it('Abfrage einer Gruppe, die nur Abwesenheiten fragt: „Abwesenheiten“ ist gewählt (der Umschalter bleibt, Musik fragt Zusagen)', async () => {
+    abfrageDerGruppe(3, 'abwesend');
+    window.location.hash = '#/abwesenheiten?abfrage=3';
+    zeige({ abfrageGruppe: 3, start: START_BEIDE, dienstgruppen: [TECHNIK, MUSIK] });
+    // Zeitraum der Abfrage steht da; das Band zeigt „wie heute“.
+    await screen.findByText(/Abfrage Technik/);
+    const zeile = await z();
+    expect(
+      within(zeile).getByRole('button', { name: 'Abwesenheiten' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(screen.queryByRole('button', { name: /^Ja – / })).toBeNull();
+    expect(
+      screen.getAllByRole('button', { name: /^Abwesend – Gottesdienst/ }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('ohne Abfrage: „Abwesenheiten“, auch wenn Zusagen-Gruppen da sind', async () => {
+    zeige({ abfrageGruppe: null });
+    await screen.findByText('Vorabend');
+    const zeile = await z();
+    expect(
+      within(zeile).getByRole('button', { name: 'Abwesenheiten' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+  });
+
+  it('Abfrage einer Gruppe, die nach Zusagen fragt, während eine andere nur Abwesenheiten fragt: „Zusagen“', async () => {
+    abfrageDerGruppe(4, 'zusagen');
+    zeige({ start: START_BEIDE, dienstgruppen: [TECHNIK, MUSIK] });
+    await screen.findByRole('note', { name: 'Abfrage' });
+    const zeile = await z();
+    expect(
+      within(zeile).getByRole('button', { name: 'Zusagen' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+  });
+});
+
 describe('Ohne gültige Abfrage ist die Seite wie heute', () => {
   const wieHeute = async () => {
     await screen.findByText('Vorabend');
@@ -285,7 +371,8 @@ describe('Ohne gültige Abfrage ist die Seite wie heute', () => {
   it('ohne Abfrage in der Adresse', async () => {
     zeige({ abfrageGruppe: null });
     await wieHeute();
-    expect(abfragen).not.toHaveBeenCalled();
+    // Genau einmal gelesen: „fragt die Gruppe Zusagen?“ (V-3) – kein zweiter Leser fürs Band.
+    expect(abfragen).toHaveBeenCalledTimes(1);
   });
   it('ohne `start` (wie vor R-3)', async () => {
     zeige({ start: undefined });

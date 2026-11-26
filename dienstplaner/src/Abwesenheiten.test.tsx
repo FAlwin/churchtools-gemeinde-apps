@@ -77,7 +77,8 @@ describe('Abwesenheiten im Dienstplaner (E7-2c)', () => {
   it('abgehakt an einem Termin mit Dienst → in Rot „bitte auch den Dienst absagen“; Speichern trägt ein', async () => {
     zeige();
     await screen.findByText('Du bist eingeteilt: Ton');
-    fireEvent.click(kasten(/Nein – Gottesdienst, So, 08\.11\./));
+    // Ohne eigene Dienstgruppe fragt niemand nach Zusagen (V-3): Es gibt nur die Abwesenheiten mit dem Haken.
+    fireEvent.click(kasten(/Abwesend – Gottesdienst, So, 08\.11\./));
     expect(
       screen.getByText('Du bist eingeteilt: Ton – bitte auch den Dienst absagen'),
     ).not.toBeNull();

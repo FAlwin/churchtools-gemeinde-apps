@@ -295,22 +295,22 @@ Eintrag; Löschen fragt immer nach.
 kommenden Dienst (eingeteilt) und einer offenen Anfrage (z. B. Spike), Zugriff auf ChurchTools zum Nachsehen.
 
 **Das muss passieren:** Der Reiter **„Verfügbarkeit"** (bis E5c-1c „Abwesenheiten", Adresse `#/abwesenheiten` bleibt) zeigt
-dieselbe Seite wie die Musik-App (Termine | Einträge, Zeitraum, Filter, Speichern-Leiste, Fenster) – für jeden, ohne eigenes
-Recht. Statt des Hakens hat jeder Termin **Ja · Vielleicht · Nein**, „Nein" ist die Abwesenheit (Ja/Vielleicht: TF-VERF-11).
-Unter jedem Termin stehen die eigenen Dienste; wer bei einem Termin mit Dienst „Nein" wählt, sieht in Rot, dass er auch den
-Dienst absagen soll.
+dieselbe Seite wie die Musik-App (Zeitraum, Filter, Speichern-Leiste, Fenster) – für jeden, ohne eigenes
+Recht. Seit V-3 (TF-VERF-23) geht sie mit **„Abwesenheiten“** auf: der Haken „Abwesend“ je Termin, „Nein" ist dieselbe Abwesenheit
+(Ja/Vielleicht unter „Zusagen“: TF-VERF-11). Unter jedem Termin stehen die eigenen Dienste; wer bei einem Termin mit Dienst
+abhakt, sieht in Rot, dass er auch den Dienst absagen soll.
 
 1. Dienstplaner öffnen → Reiter **Verfügbarkeit** (am Handy unten, am Rechner oben). Statt „Hier trägst du bald ein …"
-   steht die Terminliste ab heute, darüber **eine Werkzeugzeile** (seit B4): links **Termine | Einträge** (Merker an „Einträge“),
-   in der Mitte der **Zeitraum** mit ‹ ›, rechts – wenn eine Veranstaltung mehrfach vorkommt – **Filter** und der grüne Knopf
-   **+ Zeitraum eintragen**. Unter „Einträge“ fehlen Zeitraum und Filter, der grüne Knopf bleibt. Eine leere Notiz heißt leise
-   **+ Notiz**, eine vorhandene zeigt nur ihren Text. **Handy:** blauer Knopf **Termine ⌄** (Blatt: Termine · Einträge (n)), rechts
-   der Filter mit Rahmen, darunter der Zeitraum über die ganze Breite, statt des grünen Knopfs das runde Plus.
+   steht die Terminliste ab heute, darüber **eine Werkzeugzeile** (seit B4): in der Mitte der **Zeitraum** mit ‹ ›, rechts – wenn eine
+   Veranstaltung mehrfach vorkommt – **Filter**, **⋯** und der grüne Knopf **+ Zeitraum eintragen**. Links steht der Umschalter
+   **Abwesenheiten | Zusagen** nur, wenn eine Dienstgruppe von dir nach Zusagen fragt (TF-VERF-23). Eine leere Notiz (unter „Zusagen“)
+   heißt leise **+ Notiz**, eine vorhandene zeigt nur ihren Text. **Handy:** rechts der Filter mit Rahmen, darunter der Zeitraum
+   über die ganze Breite, statt des grünen Knopfs das runde Plus.
 2. Unter dem Termin mit Dienst: **„Du bist eingeteilt: …"**, unter dem mit Anfrage **„Angefragt: …"**.
-3. Beim Termin mit Dienst **Nein** wählen → die Zeile darunter wird rot: **„… – bitte auch den Dienst absagen"**.
+3. Beim Termin mit Dienst **Abwesend** abhaken (mit Zusagen-Gruppe: unter „Zusagen“ **Nein** wählen) → die Zeile darunter wird rot: **„… – bitte auch den Dienst absagen"**.
    **Speichern** → in ChurchTools ein Eintrag mit der Uhrzeit des Termins, ohne Kennzeichen. Der Dienst selbst bleibt
    (absagen geht über „Dienste" bzw. die Startseite).
-4. Über **+ Zeitraum eintragen** eine Woche eintragen, unter **Einträge** ändern und löschen (Rückfrage) – wie TF-VERF-04.
+4. Über **+ Zeitraum eintragen** eine Woche eintragen; sie steht oben in **„Deine Zeiträume“**, ein Tipp öffnet das Ändern-Fenster (Löschen mit Rückfrage) – wie TF-VERF-04; die volle Liste unter **⋯ → Alle Einträge …**.
 5. Startseite: die Karte **„Verfügbarkeit"** führt in diesen Reiter.
 6. Aufräumen: Einträge aus 3–4 löschen.
 
@@ -318,7 +318,7 @@ Dienst absagen soll.
 
 - **Priorität:** hoch
 - **Betrifft:** `dienstplaner/src/Abwesenheiten.tsx`, `ui/abwesenheiten/AbwesenheitenSeite.tsx`, `ui/abwesenheiten/ctDienst.ts`, `shared/dienstplan/meineDienste.ts`, `dienstplaner/src/ladeBeiwerk.ts`
-- **Automatisiert:** überwiegend – `dienstplaner/src/Abwesenheiten.test.tsx` (Termine ab heute, Dienst-Hinweis, rote Warnung, Speichern mit Fenster, Neuladen, Filter, Fehler), `dienstplaner/src/Abwesenheiten.werkzeug.test.tsx` (Werkzeugzeile: Reihenfolge, Merker, ‹ ›, Einträge ohne Zeitraum, Handy), `ui/bedienung/ZeitraumLeiste.test.tsx`, `ui/bedienung/AnsichtWahl.test.tsx`, `shared/dienstplan/meineDienste.test.ts`; Kern und Anschluss wie TF-VERF-09; von Hand bleibt, dass ChurchTools den Eintrag so zeigt und die eigenen Dienste stimmen
+- **Automatisiert:** überwiegend – `dienstplaner/src/Abwesenheiten.test.tsx` (Termine ab heute, Dienst-Hinweis, rote Warnung, Speichern mit Fenster, Neuladen, Filter, Fehler), `dienstplaner/src/Abwesenheiten.werkzeug.test.tsx` (Werkzeugzeile ohne Zusagen-Gruppe: Reihenfolge, ‹ ›, Handy), `ui/bedienung/ZeitraumLeiste.test.tsx`, `ui/bedienung/AnsichtWahl.test.tsx`, `shared/dienstplan/meineDienste.test.ts`; Kern und Anschluss wie TF-VERF-09; von Hand bleibt, dass ChurchTools den Eintrag so zeigt und die eigenen Dienste stimmen
 - **Historie:** Dienstplaner E7-2c (04.11.2026), Entwurf `e7-2-abwesenheiten.html`
 
 </details>
@@ -330,12 +330,13 @@ ChurchTools-Gruppe ist, die an einem Dienst hängt (also in einer Dienstgruppe),
 „Antworten …" mit Rechten (sehen, anlegen, ändern, löschen). Dazu ein zweites Konto ohne diesen Speicher – und eine Person
 mit dem Recht, Kategorien anzulegen (Admin) für den Einrichten-Weg. Zugriff auf ChurchTools zum Nachsehen.
 
-**Das muss passieren:** Jeder Termin hat drei Knöpfe **Ja · Vielleicht · Nein**; der gewählte ist gefärbt (Ja grün,
+**Das muss passieren:** (Seit V-3 stehen die drei Knöpfe unter **Verfügbarkeit → Zusagen**, nur an Terminen mit Diensten deiner Zusagen-Gruppe – TF-VERF-23;
+bis dahin „Zusagen“ im Umschalter wählen.) Jeder Termin hat drei Knöpfe **Ja · Vielleicht · Nein**; der gewählte ist gefärbt (Ja grün,
 Vielleicht gelb, Nein rot) und fett. Eine Wahl ist nur **vorgemerkt** (blauer Ring), bis unten **Speichern** gedrückt ist –
 dann steht „Nein" als Abwesenheit mit der Terminzeit in ChurchTools, Ja/Vielleicht im Speicher der Dienstgruppe. Am Handy
 stehen die drei Knöpfe als eigene Zeile unter dem Termin, gleich breit.
 
-1. Reiter **Verfügbarkeit** öffnen. Beim ersten Termin **Ja**, beim zweiten **Vielleicht**, beim dritten **Nein** wählen →
+1. Reiter **Verfügbarkeit** öffnen, im Umschalter **Zusagen** wählen. Beim ersten Termin **Ja**, beim zweiten **Vielleicht**, beim dritten **Nein** wählen →
    unten steht **„3 Änderungen vorgemerkt"**. **Verwerfen** → alles zurück. Nochmal wählen, **Speichern** →
    „3 Änderungen gespeichert". Neu laden (F5): die Wahl steht noch genauso da.
 2. In ChurchTools nachsehen: bei „Nein" eine Abwesenheit mit der Zeit des Termins (Ende eine Minute früher); Ja und
@@ -736,7 +737,7 @@ selbst. Wer antwortet, steht danach nicht mehr in der Gruppe.
 dieses Konto), ein Konto **ohne** Planer-Recht, und Zugriff auf ChurchTools zum Nachsehen (Ablage „Einstellungen“ des Dienstplaners).
 
 **Das muss passieren:** Planer stellen je Dienstgruppe ein, wie die Verfügbarkeit gefragt wird; die Wahl wird mit dem „Speichern“ des Fensters gespeichert und gilt
-sofort. Wer nicht plant, sieht die Wahl nicht. (Dass Oberfläche, Abfrage und Planen sich danach richten, kommt erst mit V-3 bis V-5 – hier prüfst du nur die Einstellung.)
+sofort. Wer nicht plant, sieht die Wahl nicht. (Dass die Oberfläche sich danach richtet, steht in TF-VERF-23; Abfrage und Planen folgen mit V-4 und V-5 – hier prüfst du nur die Einstellung.)
 
 1. Als Planer **Einstellungen** öffnen: Der Abschnitt **„Verfügbarkeit & Erinnerungen“** beginnt mit **„Verfügbarkeit fragen“** und zwei Wahlpunkten mit je einer Erklärzeile
    („Jede Person sagt je Termin zu, vielleicht oder ab. …“ / „Jede Person hakt nur an, wann sie nicht kann. …“). Vorgewählt ist **Ja · Vielleicht · Nein**.
@@ -757,5 +758,41 @@ sofort. Wer nicht plant, sieht die Wahl nicht. (Dass Oberfläche, Abfrage und Pl
 - **Betrifft:** `shared/dienstplan/abfragen.ts`, `shared/dienstplan/abfragenSpeicher.ts`, `dienstplaner/src/useErinnerungsplan.ts`, `dienstplaner/src/ErinnerungsplanAbschnitt.tsx`, `dienstplaner/src/abfragenTexte.ts`, `dienstplaner/src/EinstellungenFenster.tsx`
 - **Automatisiert:** weitgehend – `shared/dienstplan/abfragen.test.ts` (Schema: Altbestand ohne Feld → „zusagen“, ungültiger Wert → unlesbar; `fragtZusagen`), `dienstplaner/src/EinstellungenFenster.erinnerungen.test.tsx` (nur für Planer sichtbar, Speichern schreibt das Feld und lässt Plan/Einrichtung unberührt, nichts geändert → kein Schreiben, Konflikt, Gruppenwechsel). Von Hand bleibt der Durchklick mit echtem ChurchTools.
 - **Historie:** Dienstplaner V-2 (26.11.2026), Bauplan „Zuschnitt V“, Entwurf `verfuegbarkeit-einstellungen-v4.html`
+
+</details>
+
+### TF-VERF-23 · Verfügbarkeit: „Abwesenheiten | Zusagen“, „Deine Zeiträume“, „Alle Einträge …“
+
+**Das brauchst du:** Den Dienstplaner in der **Test-Instanz**, ein Konto in **zwei** Dienstgruppen (z. B. Musik und Technik) mit bereitem Speicher „Antworten …“, ein
+**Planer-Konto**, das für Technik **Nur abwesend** einstellt (TF-VERF-22), eine Abwesenheit **über mehrere Tage** und eine **ganztägige** (in ChurchTools oder über
+„+ Zeitraum eintragen“), eine laufende Abfrage von Musik (TF-VERF-21) und ein Konto, das **nur** in der Gruppe mit „Nur abwesend“ ist.
+
+**Das muss passieren:** Unter den Reitern steht genau **eine** Werkzeugzeile. Links der Umschalter **Abwesenheiten | Zusagen** – nur, wenn mindestens eine **deiner** Dienstgruppen nach
+Zusagen fragt. Beim Öffnen ist **Abwesenheiten** gewählt; über die Abfrage einer Gruppe mit Zusagen (Karte auf dem Start, Mail) **Zusagen**.
+
+1. **Verfügbarkeit** öffnen (Musik fragt Zusagen, Technik „Nur abwesend“): links **Abwesenheiten | Zusagen**, **Abwesenheiten** ist gewählt. Die Liste zeigt **alle** Termine mit dem Haken
+   **Abwesend**. Oben steht die Karte **Deine Zeiträume** mit dem mehrtägigen und dem ganztägigen Eintrag (Grund als Etikett, „· ganztägig“ beim Tag); ein Tipp öffnet **Abwesenheit
+   ändern**. Ein Haken an einem einzelnen Termin (mit Uhrzeit) steht **nicht** in der Karte. Ohne solche Einträge fehlt die Karte. Mit ‹ › im Zeitraum wechseln: Die Karte zeigt nur, was
+   den gezeigten Zeitraum schneidet.
+2. Rechts **⋯ → Alle Einträge …**: ein Fenster mit **Anstehend (n) | Früher (n)** und allen Einträgen; ein Tipp öffnet das Ändern-Fenster darüber, mit **‹** und **Abbrechen** zurück zur Liste (das X schließt beide). Das Fenster mit der Liste hat keine Fußzeile, das X schließt. Im **⋯** steht außerdem **Hilfe**.
+   (Das „+ Zeitraum eintragen“ rechts ist das einzige grüne; am Handy das runde Plus.)
+3. **Zusagen** wählen (als einfaches Mitglied **ohne** Recht an der Dienstgruppe, die nicht „für alle sichtbar“ ist: **alle** Termine, ohne Schild – ChurchTools liefert dort nur die eigenen Plätze, ein Filter ließe die Termine ohne Einteilung weg; mit dem Recht, die Gruppe zu sehen oder zu planen, oder bei „für alle sichtbar“ wie folgt): **Ja · Vielleicht · Nein** je Termin – **nur** an Terminen, an denen Musik Dienste hat (ein Termin nur mit Technik-Diensten oder ohne Dienste fehlt), mit dem Schild
+   **Musik** in der Unterzeile. Es gibt kein **+ Zeitraum eintragen** und kein **⋯**. Der Zeitraum und der Filter bleiben. Am Handy stehen **Ja · Vielleicht · Nein** ausgeschrieben, gleich breit,
+   unter dem Termin (kein „Vl.“).
+4. In **Zusagen** bei einem Termin **Nein** wählen, **nicht** speichern, zu **Abwesenheiten** wechseln: Der Haken **Abwesend** sitzt schon (vorgemerkt), unten steht **eine** Leiste
+   „1 Änderung vorgemerkt“. **Speichern** → in ChurchTools eine Abwesenheit mit der Terminzeit.
+5. **Über die Abfrage:** Aus der Karte der Musik-Abfrage auf dem Start (oder dem Link `#/abwesenheiten?abfrage=<Musik>`) öffnen → **Zusagen** ist gewählt, das Band steht darüber, die Liste zeigt den
+   Zeitraum der Abfrage. Ohne Abfrage in der Adresse öffnet wieder **Abwesenheiten**.
+6. **Konto nur in der „Nur abwesend“-Gruppe:** **kein** Umschalter, nur die Abwesenheiten (Haken, „Deine Zeiträume“, **⋯ → Alle Einträge …**).
+7. Wenn ChurchTools beim Lesen der Einstellung einer Gruppe nicht antwortet: der Umschalter ist trotzdem da (die Gruppe gilt als „Zusagen“, nichts geht verloren).
+8. **Musik-App** (Abwesenheiten in ChurchTools): unverändert – **Termine | Einträge** wie bisher (TF-VERF-09).
+9. Aufräumen: Abwesenheiten und Antworten wieder entfernen.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `ui/abwesenheiten/AbwesenheitenSeite.tsx`, `ui/abwesenheiten/zeitraeume.ts`, `dienstplaner/src/Abwesenheiten.tsx`, `dienstplaner/src/useVerfuegbarkeitAnsichten.ts`, `shared/dienstplan/verfuegbarkeitAnsicht.ts`, `dienstplaner/src/ladeTermine.ts`
+- **Automatisiert:** weitgehend – `shared/dienstplan/verfuegbarkeitAnsicht.test.ts` (welche Gruppen fragen Zusagen, Start-Ansicht, Termine mit Diensten), `ui/abwesenheiten/zeitraeume.test.ts` („Deine Zeiträume“), `dienstplaner/src/Abwesenheiten.ansichten.test.tsx` (Umschalter mit/ohne Zusagen-Gruppe, Lesefehler, Zusagen-Liste gefiltert mit Schild, unvollständige Plätze, „Deine Zeiträume“, „Alle Einträge …“, Hilfe, Fenster über Fenster), `dienstplaner/src/Abwesenheiten.abfrage.test.tsx` (Start-Ansicht über die Abfrage), `dienstplaner/src/Abwesenheiten.werkzeug.test.tsx`. Von Hand bleibt der Durchklick mit echtem ChurchTools (Termine mit Diensten sichtbar für einfache Mitglieder) und das Handy.
+- **Historie:** Dienstplaner V-3 (26.11.2026), Bauplan „Zuschnitt V“, Entwurf `verfuegbarkeit-einstellungen-v4.html`
 
 </details>

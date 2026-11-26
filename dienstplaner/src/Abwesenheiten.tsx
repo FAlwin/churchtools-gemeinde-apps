@@ -5,6 +5,7 @@ import type { Dienstgruppe } from '@shared/ct/dienstgruppen';
 import { veranstaltungsArten, WEITERE } from '@shared/dienstplan/termine';
 import {
   AbwesenheitenSeite,
+  type Ansichten,
   type AbwesenheitenDaten,
   type AbwesenheitenSchreiben,
   type Zusagen,
@@ -20,7 +21,14 @@ import { Icon } from '@ui/icons/icons';
 import { ladeMeineDienste } from './ladeBeiwerk';
 import { AbfrageBand } from './AbfrageBand';
 import { austrittFuerEigene, useBand } from './useAbfragen';
+import { HILFE_VERFUEGBARKEIT } from './hilfeTexte';
 import { adresseFuer } from './reiter';
+import {
+  useZusagenGruppen,
+  useZusagenTermineVon,
+  type ZusagenQuelle,
+} from './useVerfuegbarkeitAnsichten';
+import { ansichtBeimOeffnen } from '@shared/dienstplan/verfuegbarkeitAnsicht';
 import type { Start } from './start';
 import type { Zeitraum } from '@shared/ct/zeitraum';
 import {
@@ -50,8 +58,20 @@ interface Quelle {
   heute: string;
   /** Zählt bei jedem Schreiben hoch – dann lädt der Hook die Einträge neu. */
   stand: number;
+  /** Woher die Termine der Ansicht „Zusagen“ kommen (Start, Zusagen-Gruppen). */
+  zusagen: ZusagenQuelle;
 }
 const QuelleKontext = createContext<Quelle | null>(null);
+
+/**
+ * Die Termine der Ansicht „Zusagen“ (V-3) – derselbe Weg wie `useDienstplanerDaten`: ein Hook, dessen Quelle die Seite über
+ * den Kontext bekommt, weil ihn die gemeinsame Seite ohne Argumente der App aufruft.
+ */
+function useZusagenTermine(bereich: { von: string; bis: string }, aktiv: boolean) {
+  const q = useContext(QuelleKontext);
+  if (!q) throw new Error('Abwesenheiten ohne Quelle');
+  return useZusagenTermineVon(q.zusagen, bereich, aktiv);
+}
 
 /**
  * **Die Daten der Abwesenheiten im Dienstplaner** – direkt aus ChurchTools (`ctDienst`), ohne Zwischenspeicher:
@@ -274,7 +294,16 @@ export function Abwesenheiten({
     loeschen: (id) => dienst.loeschen(id),
     geaendert: () => setStand((n) => n + 1),
   };
-  const quelle = useMemo(() => ({ dienst, heute, stand }), [dienst, heute, stand]);
+  // Welche eigenen Gruppen nach Zusagen fragen (V-3): erst danach steht fest, ob es den Umschalter gibt und womit die Seite aufgeht.
+  const zusagenGruppen = useZusagenGruppen(dienstgruppen);
+  const zusagenQuelle = useMemo(
+    () => ({ start, gruppen: zusagenGruppen.gruppen }),
+    [start, zusagenGruppen.gruppen],
+  );
+  const quelle = useMemo(
+    () => ({ dienst, heute, stand, zusagen: zusagenQuelle }),
+    [dienst, heute, stand, zusagenQuelle],
+  );
   const zusagen = useZusagen(ichId, dienstgruppen, heute, eigeneDienste, stand);
   const { wartet, band } = useBand({
     start,
@@ -308,8 +337,9 @@ export function Abwesenheiten({
     ? { art: 'eigen', von: band.lage.abfrage.von, bis: band.lage.abfrage.bis }
     : undefined;
 
-  // Mit Abfrage in der Adresse erst deren Zeitraum kennen, dann die Seite aufbauen (kein Springen von „ab heute“).
-  if (wartet)
+  // Mit Abfrage in der Adresse erst deren Zeitraum kennen, dann die Seite aufbauen (kein Springen von „ab heute“) – und erst
+  // wissen, ob es Zusagen gibt (die Start-Ansicht hängt daran).
+  if (wartet || !zusagenGruppen.bereit)
     return (
       <div className={styles.seite}>
         <p className={styles.hinweis} role="status">
@@ -317,6 +347,14 @@ export function Abwesenheiten({
         </p>
       </div>
     );
+
+  // Beim Öffnen „Abwesenheiten“; über die Abfrage einer Gruppe mit Zusagen „Zusagen“ (`ansichtBeimOeffnen`).
+  const ansichten: Ansichten = {
+    zusagenMoeglich: zusagenGruppen.gruppen.length > 0,
+    start: ansichtBeimOeffnen(band ? band.lage.gruppe.id : null, zusagenGruppen.gruppen),
+    useZusagenTermine,
+    hilfe: { seite: 'Verfügbarkeit', abschnitte: HILFE_VERFUEGBARKEIT },
+  };
 
   return (
     <QuelleKontext.Provider value={quelle}>
@@ -331,7 +369,8 @@ export function Abwesenheiten({
         schreiben={schreiben}
         arten={artenAus}
         filter={filter}
-        zusagen={zusagen}
+        zusagen={ansichten.zusagenMoeglich ? zusagen : undefined}
+        ansichten={ansichten}
         terminZusatz={(ev, abwesend) => (
           <DienstHinweis dienste={dienste?.get(ev.id)} abwesend={abwesend} />
         )}

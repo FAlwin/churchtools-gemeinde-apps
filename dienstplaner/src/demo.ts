@@ -1086,6 +1086,16 @@ function speicherDemo(fall: string) {
       ],
     },
   };
+  // Technik fragt die Verfügbarkeit nur als „Nur abwesend“ (V-2/V-3): Musik fragt Ja · Vielleicht · Nein – so gibt es in „Verfügbarkeit“
+  // den Umschalter „Abwesenheiten | Zusagen“, und in „Zusagen“ stehen nur Termine mit Gesang-Plätzen (Musik).
+  const abfrageTechnik = {
+    art: 'dienstplaner-abfragen-3',
+    fassung: 1,
+    version: 1,
+    zeit: zeit(-2, '07:30'),
+    von: { personId: 1, name: 'Alwin Friesen' },
+    inhalt: { plan: null, abfragen: [], einrichtung: null, verfuegbarkeit: 'abwesend' },
+  };
   // Technik: Reihenfolge Anna · Alwin · Spike · David · Ben; Tags Einweisung (E) und Springer (S) – Anna ist nur im Ton
   // „Einweisung“; Ben (49) macht Pause ohne Ende und steht unten, blass. Anna pausiert hier bis nach dem 1. Dezember –
   // der Zauberstab schlägt sie für den Ton am 01.12. nicht vor (PL-3), obwohl sie die beste Punktzahl hat.
@@ -1140,8 +1150,9 @@ function speicherDemo(fall: string) {
       43,
       [
         // „Abfrage …“ (R-2): Musik hat eine laufende Abfrage – die Frist ist in 2 Tagen (blaues Etikett), der Zeitraum beginnt in 3.
-        // Das Fenster „Abfrage“ zeigt dafür den Stand; Technik hat keine (dort das Formular zum Starten).
+        // Das Fenster „Abfrage“ zeigt dafür den Stand; Technik hat keine (dort das Formular zum Starten) und fragt „Nur abwesend“.
         { id: 430, dataCategoryId: 43, value: JSON.stringify(abfrageMusik) },
+        { id: 431, dataCategoryId: 43, value: JSON.stringify(abfrageTechnik) },
       ],
     ],
     [

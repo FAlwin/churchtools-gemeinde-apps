@@ -8,9 +8,10 @@ import { ladeMeineDienste } from './ladeBeiwerk';
 import { HANDY_BREITE } from '@ui/bedienung/useMedienAbfrage';
 
 /**
- * **Die Werkzeugzeile von „Verfügbarkeit“** (R5/R12, E24, „Ruhige Bedienung“ B4): wer wo steht, am Rechner und am Handy –
- * links „Termine | Einträge“ mit Merker, in der Mitte der Zeitraum mit ‹ ›, rechts „Filter“ und der grüne Knopf „Zeitraum
- * eintragen“ (am Handy statt seiner das schwebende Plus). Die Wirkung der Dinge selbst (Haken, Speichern, Fenster) prüfen
+ * **Die Werkzeugzeile von „Verfügbarkeit“** (R5/R12, E24, „Ruhige Bedienung“ B4, seit V-3): wer wo steht, am Rechner und am Handy –
+ * hier **ohne Zusagen-Gruppe**, also ohne Umschalter: in der Mitte der Zeitraum mit ‹ ›, rechts „Filter“, „⋯“ und der grüne
+ * Knopf „Zeitraum eintragen“ (am Handy statt seiner das schwebende Plus). Mit Zusagen-Gruppe (Umschalter „Abwesenheiten |
+ * Zusagen“) steht es in `Abwesenheiten.ansichten.test.tsx`. Die Wirkung der Dinge selbst (Haken, Speichern, Fenster) prüfen
  * die übrigen `Abwesenheiten.*.test.tsx`.
  */
 const dienst = {
@@ -89,7 +90,7 @@ const zeitraumText = (z: HTMLElement) =>
     .getAttribute('aria-label');
 
 describe('Verfügbarkeit – Werkzeugzeile am Rechner (B4)', () => {
-  it('eine Zeile über der Karte: Ansicht · Zeitraum mit Pfeilen · Filter · grüner Knopf – in dieser Reihenfolge', async () => {
+  it('eine Zeile über der Karte: Zeitraum mit Pfeilen · Filter · ⋯ · grüner Knopf – in dieser Reihenfolge, ohne Umschalter', async () => {
     zeige();
     const z = await zeile();
     const karte = screen.getByRole('region', { name: 'Verfügbarkeit' });
@@ -99,32 +100,22 @@ describe('Verfügbarkeit – Werkzeugzeile am Rechner (B4)', () => {
         .getAllByRole('button')
         .map((b) => b.getAttribute('aria-label') ?? b.textContent),
     ).toEqual([
-      'Termine',
-      'Einträge, 1',
       'Zeitraum davor',
       expect.stringMatching(/^Zeitraum: /),
       'Zeitraum danach',
       'Filter',
+      'Mehr',
       'Zeitraum eintragen',
     ]);
   });
 
-  it('der Merker an „Einträge“ steht IN der Zeile des Wortes und zählt die anstehenden Einträge', async () => {
+  it('ohne Zusagen-Gruppe gibt es keinen Umschalter und kein „Termine | Einträge“ mehr', async () => {
     zeige();
     const z = await zeile();
-    const eintraege = within(z).getByRole('button', { name: 'Einträge, 1' });
-    const merker = eintraege.querySelector('[data-zaehler]');
-    expect(merker?.textContent).toBe('1');
-    // Blau gefüllt – nicht das Rot der Alarm-Zähler.
-    expect(merker?.className).toMatch(/blau/);
-  });
-
-  it('ohne Eintrag kein Merker – und das Wort bleibt „Einträge“', async () => {
-    dienst.meine.mockResolvedValue([]);
-    zeige();
-    const z = await zeile();
-    const eintraege = within(z).getByRole('button', { name: 'Einträge' });
-    expect(eintraege.querySelector('[data-zaehler]')).toBeNull();
+    expect(within(z).queryByRole('button', { name: /^Zusagen/ })).toBeNull();
+    expect(within(z).queryByRole('button', { name: /^Abwesenheiten/ })).toBeNull();
+    expect(within(z).queryByRole('button', { name: /^Einträge/ })).toBeNull();
+    expect(within(z).queryByRole('button', { name: /^Termine/ })).toBeNull();
   });
 
   it('„Zeitraum eintragen“ ist der einzige gefüllte Knopf und öffnet das Fenster', async () => {
@@ -153,19 +144,6 @@ describe('Verfügbarkeit – Werkzeugzeile am Rechner (B4)', () => {
     expect(zeitraumText(z)).toMatch(/04\.11\. – 01\.12\.2026/);
   });
 
-  it('in „Einträge“ gibt es weder Zeitraum noch Filter – der grüne Knopf bleibt', async () => {
-    zeige();
-    const z = await zeile();
-    fireEvent.click(within(z).getByRole('button', { name: 'Einträge, 1' }));
-    expect(within(z).queryByRole('group', { name: 'Zeitraum' })).toBeNull();
-    expect(within(z).queryByRole('button', { name: /^Filter/ })).toBeNull();
-    expect(within(z).getByRole('button', { name: 'Zeitraum eintragen' })).toBeTruthy();
-    // Zurück: Zeitraum und Filter sind wieder da.
-    fireEvent.click(within(z).getByRole('button', { name: 'Termine' }));
-    expect(within(z).getByRole('group', { name: 'Zeitraum' })).toBeTruthy();
-    expect(within(z).getByRole('button', { name: /^Filter/ })).toBeTruthy();
-  });
-
   it('der Filter hat das Wort „Filter“ und bietet die Veranstaltungen (Gottesdienst kommt zweimal vor)', async () => {
     zeige();
     const z = await zeile();
@@ -180,15 +158,10 @@ describe('Verfügbarkeit – Werkzeugzeile am Rechner (B4)', () => {
 describe('Verfügbarkeit – Werkzeugzeile am Handy (B4, R12)', () => {
   beforeEach(() => setzeHandy(true));
 
-  it('die Ansicht ist ein Knopf mit Blatt; „Einträge“ trägt dort die Zahl in Klammern', async () => {
+  it('ohne Zusagen-Gruppe steht links kein Ansicht-Knopf', async () => {
     zeige();
     const z = await zeile();
-    expect(within(z).queryByRole('group', { name: 'Ansicht' })).toBeNull();
-    fireEvent.click(within(z).getByRole('button', { name: 'Ansicht: Termine' }));
-    const blatt = screen.getByRole('dialog', { name: 'Ansicht' });
-    fireEvent.click(within(blatt).getByRole('button', { name: 'Einträge (1)' }));
-    expect(screen.queryByRole('dialog', { name: 'Ansicht' })).toBeNull();
-    expect(within(z).getByRole('button', { name: 'Ansicht: Einträge' })).toBeTruthy();
+    expect(within(z).queryByRole('button', { name: /^Ansicht/ })).toBeNull();
   });
 
   it('statt des grünen Knopfs das schwebende Plus – es steht nicht in der Zeile; Pfeile erst bei gewähltem Zeitraum', async () => {
@@ -214,7 +187,7 @@ describe('Verfügbarkeit – Werkzeugzeile am Handy (B4, R12)', () => {
     const karte = screen.getByRole('region', { name: 'Verfügbarkeit' });
     expect(karte.contains(screen.getByRole('button', { name: 'Zeitraum eintragen' }))).toBe(false);
     // Etwas vormerken → die Speichern-Leiste erscheint, und auch sie steht außerhalb der Karte.
-    fireEvent.click(screen.getByRole('button', { name: /Nein – Gottesdienst, So, 08\.11\./ }));
+    fireEvent.click(screen.getByRole('button', { name: /Abwesend – Gottesdienst, So, 08\.11\./ }));
     const speichern = await screen.findByRole('button', { name: 'Speichern' });
     expect(karte.contains(speichern)).toBe(false);
   });

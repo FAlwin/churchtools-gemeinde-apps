@@ -41,6 +41,11 @@ export interface PersonenAntworten {
    * Nur Personen mit mindestens einer Bestätigung stehen darin.
    */
   fertig?: ReadonlyMap<number, Fertig>;
+  /**
+   * Die Dienstgruppen, die **„Nur abwesend“** fragen (V-5, `fragtZusagen` = nein); fehlt = keine. Ihre gespeicherten
+   * Ja/Vielleicht sind **nur ausgeblendet** (nicht gelöscht): `antwortenGelten` sagt nein, Planen zeigt dort nur die Abwesenheit.
+   */
+  nurAbwesend?: ReadonlySet<number>;
 }
 
 /**
@@ -137,7 +142,7 @@ export function antwortFuer(
     dienstName: (id: number) => string | undefined;
   },
 ): ZellenAntwort | null {
-  if (!antwortenSichtbar(antworten, o.gruppeId)) return null;
+  if (!antwortenGelten(antworten, o.gruppeId)) return null;
   return zellenAntwort(
     antworten?.jePerson.get(o.personId)?.[String(o.terminId)],
     o.dienstId,
@@ -153,6 +158,26 @@ export function antwortenSichtbar(
   return gruppeId !== null && antworten?.sichtbar.has(gruppeId) === true;
 }
 
+/** Fragt diese Dienstgruppe „Nur abwesend“ (V-5)? Dann gelten ihre Ja/Vielleicht nicht – nur die Abwesenheit zählt. */
+export function fragtNurAbwesend(
+  antworten: Pick<PersonenAntworten, 'nurAbwesend'> | null | undefined,
+  gruppeId: number | null,
+): boolean {
+  return gruppeId !== null && antworten?.nurAbwesend?.has(gruppeId) === true;
+}
+
+/**
+ * **Zeigt Planen die Ja/Vielleicht dieser Dienstgruppe?** Sichtbar (`antwortenSichtbar`) und nicht „Nur abwesend“
+ * (`fragtNurAbwesend`). Die eine Stelle dafür: `antwortFuer` und `antwortenFuerPlatz` fragen sie – Raster, „Wer kann?“ und
+ * Zauberstab zeigen bei „Nur abwesend“ deshalb wie vor E5c nur die Abwesenheit.
+ */
+export function antwortenGelten(
+  antworten: PersonenAntworten | null | undefined,
+  gruppeId: number | null,
+): boolean {
+  return antwortenSichtbar(antworten, gruppeId) && !fragtNurAbwesend(antworten, gruppeId);
+}
+
 /**
  * Die Antworten **aller Personen** auf einen Termin für einen Dienst (nur, wer geantwortet hat). `null`, wenn die
  * Dienstgruppe nicht sichtbar ist – dann zeigen „Wer kann?“ und der Zauberstab keine Antworten, wie vor E5c.
@@ -166,7 +191,7 @@ export function antwortenFuerPlatz(
     dienstName: (id: number) => string | undefined;
   },
 ): Map<number, ZellenAntwort> | null {
-  if (!antwortenSichtbar(antworten, o.gruppeId)) return null;
+  if (!antwortenGelten(antworten, o.gruppeId)) return null;
   const out = new Map<number, ZellenAntwort>();
   for (const personId of antworten?.jePerson.keys() ?? []) {
     const a = antwortFuer(antworten, { ...o, personId });

@@ -260,7 +260,7 @@ Fensters im selben Dokument wie der Erinnerungsplan (`dienstplaner-abfragen-<Die
 ohne das Feld gilt als `zusagen`, ein anderer Wert macht es unlesbar) – mit Version, Konflikt-Schutz und Nachlesen wie der Plan. **Anders als der Plan gilt die Art
 sofort**, auch während einer laufenden Abfrage. Die eine Regel dazu ist `fragtZusagen(inhalt)` in `shared/dienstplan/abfragen.ts` (ohne Dokument: ja). Die
 Oberfläche „Verfügbarkeit“ richtet sich seit V-3 danach (Umschalter „Abwesenheiten | Zusagen“ nur mit einer Zusagen-Gruppe, Termine unter „Zusagen“ nur mit Diensten dieser Gruppen);
-die Abfrage („Nur abwesend“ mit „Fertig“) gilt seit V-4 (nächster Abschnitt), das Planen folgt in V-5.
+die Abfrage („Nur abwesend“ mit „Fertig“) gilt seit V-4 (nächster Abschnitt), das Planen seit V-5 (Abschnitt „Antworten aus ‚Verfügbarkeit‘“ der Ansicht „Personen“).
 
 **Live-Ansicht von der Startseite** (L4-5, Alwin 23.11.2026): In „Als Nächstes“ steht neben „Musik-App“ und „Ablauf & Dienste“ der Knopf
 **„Live“** – **am Tag des Termins ab 0 Uhr (Ortszeit der Gemeinde, `liveFenster.ts`) bis zum Ende des Termins** (`endDate`; ohne eigenes Ende
@@ -527,6 +527,15 @@ nennt je Entwurf „Anfrage an …“ bzw. „Direkt zuteilen: …“ und zählt
     401 und jede vorübergehende Störung (Netz, 5xx, gebremst, Zeitüberschreitung) **werfen** für das Ganze: Beim ersten Laden steht
     ein Hinweis mit „Erneut versuchen“ (ohne Legende und Zahlen), beim Neuladen bleiben die bisherigen Antworten stehen und der
     Hinweis steht daneben. Ein Fehlschlag wird nie als „keine Antwort“ gezeigt.
+  - **„Nur abwesend“ (V-5, 26.11.2026):** Fragt eine Dienstgruppe „Nur abwesend“ (V-2), zeigt Planen ihre gespeicherten Ja/Vielleicht
+    **nicht** – sie sind nur ausgeblendet, nicht gelöscht, und kommen beim Zurückstellen auf „Ja · Vielleicht · Nein“ wieder. Im Raster
+    zeigen ihre Blöcke nur die Abwesenheit (rot schraffiert), keinen Hinweis „Antworten nicht sichtbar“
+    (Blockzustand `nurAbwesend`), und sie zählen im Spaltenkopf nicht; „Wer kann?“ und der Zauberstab zeigen die eine Liste wie vor E5c. Die eine
+    Stelle dafür ist `antwortenGelten` in `personenAntworten.ts` (sichtbar und nicht `PersonenAntworten.nurAbwesend`), die
+    `antwortFuer`/`antwortenFuerPlatz` fragen. Woher die Art kommt: Der Lader der App (`antwortenLaden` in `App.tsx`) liest mit den
+    Antworten die Dokumente der Abfragen (`ladeRegeln`, `nurAbwesendAus` in `useAbfrageRegeln.ts`); ist ein Dokument gerade nicht lesbar,
+    zählt die Gruppe wie vor V-5 als Zusagen (nur Anzeige, nichts geht verloren). „Vertretung suchen“ der Mitglieder ist davon
+    nicht berührt.
 - **Antworten in „Wer kann?“ und im Zauberstab (E5c-4, 19.11.2026, Entwurf `e5c-wann-kann-ich.html` Bereich 3, Variante A):**
   **Eine Regel für Raster, „Wer kann?“ und Zauberstab** in `shared/dienstplan/personenAntworten.ts`: `antwortFuer` (Antwort einer
   Person auf einen Termin im Blick auf einen Dienst, mit Sichtbarkeit der Dienstgruppe) und `antwortStufe` (Ja / Vielleicht / keine /

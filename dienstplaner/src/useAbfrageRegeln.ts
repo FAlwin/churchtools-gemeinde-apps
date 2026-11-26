@@ -55,3 +55,14 @@ export function useAbfrageRegeln(
     neuLaden: neu,
   };
 }
+
+/**
+ * **Welche Dienstgruppen „Nur abwesend“ fragen** (V-5, für `PersonenAntworten.nurAbwesend`): aus den Regeln (`ladeRegeln`). Eine
+ * Gruppe, deren Dokument gerade nicht lesbar war (`unbekannt`), zählt **nicht** dazu – dann zeigt Planen ihre Ja/Vielleicht wie vor
+ * V-5. Das ist nur Anzeige: ausgeblendet, nicht gelöscht; ein Aussetzer zerstört nichts.
+ */
+export function nurAbwesendAus(regeln: ReadonlyMap<number, RegelStand>): Set<number> {
+  return new Set(
+    [...regeln].flatMap(([id, r]) => (r !== 'unbekannt' && r.art === 'abwesend' ? [id] : [])),
+  );
+}

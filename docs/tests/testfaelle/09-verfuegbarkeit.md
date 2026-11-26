@@ -737,7 +737,7 @@ selbst. Wer antwortet, steht danach nicht mehr in der Gruppe.
 dieses Konto), ein Konto **ohne** Planer-Recht, und Zugriff auf ChurchTools zum Nachsehen (Ablage „Einstellungen“ des Dienstplaners).
 
 **Das muss passieren:** Planer stellen je Dienstgruppe ein, wie die Verfügbarkeit gefragt wird; die Wahl wird mit dem „Speichern“ des Fensters gespeichert und gilt
-sofort. Wer nicht plant, sieht die Wahl nicht. (Dass die Oberfläche sich danach richtet, steht in TF-VERF-23, die Abfrage mit „Fertig“ in TF-VERF-24; das Planen folgt mit V-5 – hier prüfst du nur die Einstellung.)
+sofort. Wer nicht plant, sieht die Wahl nicht. (Dass die Oberfläche sich danach richtet, steht in TF-VERF-23, die Abfrage mit „Fertig“ in TF-VERF-24; das Planen in TF-VERF-25 – hier prüfst du nur die Einstellung.)
 
 1. Als Planer **Einstellungen** öffnen: Der Abschnitt **„Verfügbarkeit & Erinnerungen“** beginnt mit **„Verfügbarkeit fragen“** und zwei Wahlpunkten mit je einer Erklärzeile
    („Jede Person sagt je Termin zu, vielleicht oder ab. …“ / „Jede Person hakt nur an, wann sie nicht kann. …“). Vorgewählt ist **Ja · Vielleicht · Nein**.
@@ -835,5 +835,29 @@ mehr in der Hilfsgruppe und bekommt keine Mail mehr. Gespeichert wird nur „hat
 - **Betrifft:** `shared/dienstplan/verfuegbarkeit.ts`, `shared/dienstplan/erinnern.ts`, `shared/dienstplan/abfrageStand.ts`, `shared/dienstplan/abfrageMail.ts`, `shared/dienstplan/personenAntworten.ts`, `dienstplaner/src/ladeVerfuegbarkeit.ts`, `dienstplaner/src/ladeAntworten.ts`, `dienstplaner/src/useAbfragen.ts`, `dienstplaner/src/useAbfrageLage.ts`, `dienstplaner/src/useAbfrageRegeln.ts`, `dienstplaner/src/AbfrageBand.tsx`, `dienstplaner/src/AbfrageKarte.tsx`, `dienstplaner/src/Abwesenheiten.tsx`, `dienstplaner/src/ErinnernFenster.tsx`, `dienstplaner/src/einrichtenAbfragen.ts`, `dienstplaner/src/EinrichtenFenster.tsx`, `ui/abwesenheiten/AbwesenheitenSeite.tsx`
 - **Automatisiert:** weitgehend – `shared/dienstplan/abfrageFertig.test.ts` (die Tabelle bestätigt / alle abwesend / teils / nichts für beide Arten, Planer und Mitarbeitende rechnen gleich, Regel einer Gruppe, Texte), `shared/dienstplan/verfuegbarkeit.test.ts` („Fertig“: alter Wert lesbar, Erhalt, Nachlesen, Konflikt, kaputtes Feld, anderer Fassung unangetastet), `dienstplaner/src/Abwesenheiten.abfrage.test.tsx` (Band, Fertig, grünes Band, „erst speichern“, R1, Fehler, Austritt nach Fertig), `dienstplaner/src/Startseite.abfrage.test.tsx` (Karte, kein Balken, Austritt), `dienstplaner/src/Planen.abfrage.test.tsx` (Stand, Eintragen beim Start, Abgleich), `dienstplaner/src/Planen.erinnern.test.tsx` (Erinnern schließt Bestätigte aus, Sperren, Einleitung), `dienstplaner/src/ladeVerfuegbarkeit.test.ts`, `dienstplaner/src/ladeAntworten.test.ts`, `dienstplaner/src/einrichtenAbfragen.test.ts` und `dienstplaner/src/EinstellungenFenster.einrichten.test.tsx` (Ablage einrichten), `dienstplaner/src/Planen.abfrage.test.tsx` (Start ohne Ablage). Von Hand bleibt der Durchklick mit echtem ChurchTools (Hilfsgruppe, Mails, Rechte an der Antworten-Ablage) und das Handy.
 - **Historie:** Dienstplaner V-4 (26.11.2026), Bauplan „Zuschnitt V“, Entwurf `verfuegbarkeit-einstellungen-v4.html` (Abschnitt „Abfragen“ in v2)
+
+</details>
+
+### TF-VERF-25 · Planen bei „Nur abwesend“: keine Ja/Vielleicht, nur die Abwesenheit
+
+**Das brauchst du:** Die **Test-Instanz** (oder die Demo `?demo`: dort fragt Technik „Nur abwesend“), ein **Planer-Konto**, zwei Dienstgruppen – eine mit **Ja · Vielleicht · Nein**,
+eine mit **Nur abwesend** (TF-VERF-22). In der „Nur abwesend“-Gruppe hat eine Person früher **Ja** oder **Vielleicht** zu einem Termin gesagt, eine andere hat dort eine **Abwesenheit**.
+
+**Das muss passieren:** Bei „Nur abwesend“ zeigt Planen nur die Abwesenheit. Gespeicherte Ja/Vielleicht sind ausgeblendet, nicht gelöscht.
+
+1. **Planen → Personen:** In den Blöcken der „Nur abwesend“-Gruppe steht **kein** Ja/Vielleicht (keine grüne oder gelbe Zelle, kein „Ja“ im Tooltip) und **kein** Hinweis „Antworten nicht sichtbar“.
+   Die Abwesenheit steht wie gewohnt rot schraffiert mit Grund („Urlaub“).
+2. Die Blöcke der Gruppe mit **Ja · Vielleicht · Nein** zeigen Ja/Vielleicht unverändert. Der Spaltenkopf „n ja · m vielleicht“ zählt nur Personen aus diesen Blöcken.
+3. Fragen **alle** gezeigten Gruppen „Nur abwesend“ (Filter auf diese Gruppe): kein Spaltenkopf „n ja · m vielleicht“, keine Farblegende Ja/Vielleicht.
+4. An einem freien Platz der „Nur abwesend“-Gruppe **Wer kann?** öffnen: eine Liste wie früher (ohne Abschnitte „Hat Ja gesagt“ / „Vielleicht“); Abwesende sind als abwesend markiert.
+   Der **Zauberstab** für diesen Dienst schlägt vor, ohne auf Ja/Vielleicht zu achten.
+5. In **Einstellungen** die Gruppe zurück auf **Ja · Vielleicht · Nein** stellen und speichern, Planen neu öffnen: Die früheren Ja/Vielleicht sind wieder da.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/dienstplan/personenAntworten.ts`, `shared/dienstplan/personenRaster.ts`, `dienstplaner/src/useAbfrageRegeln.ts`, `dienstplaner/src/App.tsx`
+- **Automatisiert:** weitgehend – `shared/dienstplan/personenAntworten.einordnung.test.ts` (`antwortFuer`/`antwortenFuerPlatz` bei „Nur abwesend“, nur ausgeblendet), `shared/dienstplan/personenRaster.antworten.test.ts` (Block `nurAbwesend`, Abwesenheit bleibt, Spaltenkopf), `dienstplaner/src/useAbfrageRegeln.test.ts` (`nurAbwesendAus` aus `ladeRegeln`, Lesefehler zählen nicht). Von Hand bleibt der Durchklick mit echtem ChurchTools und das Handy.
+- **Historie:** Dienstplaner V-5 (26.11.2026), Bauplan „Zuschnitt V“, Entwurf `verfuegbarkeit-einstellungen-v4.html`
 
 </details>

@@ -59,6 +59,7 @@ import {
   flaecheAus,
   antwortFuer,
   antwortenSichtbar,
+  fragtNurAbwesend,
   type AntwortZahlen,
   type PersonenAntworten,
   type ZellenAntwort,
@@ -154,8 +155,11 @@ export interface RasterBlock {
   mitgliederVerborgen: boolean;
   /** Ob man die Abwesenheiten dieses Dienstes sieht – ohne Recht sagt der Block es, statt leere Zellen zu zeigen. */
   abwesenheit: 'ok' | 'nichtSichtbar' | 'teilweise';
-  /** Ob man die Antworten aus „Verfügbarkeit“ für diesen Dienst sieht – sonst sagt der Block es, statt weißer Zellen. */
-  antworten: 'ok' | 'nichtSichtbar';
+  /**
+   * Ob man die Antworten aus „Verfügbarkeit“ für diesen Dienst sieht – sonst sagt der Block es, statt weißer Zellen.
+   * `nurAbwesend` (V-5): die Gruppe fragt „Nur abwesend“ – keine Ja/Vielleicht, kein Hinweis, nur die Abwesenheit.
+   */
+  antworten: 'ok' | 'nurAbwesend' | 'nichtSichtbar';
   /** Vorübergehend gescheiterte Gruppen – „Nochmal versuchen“. */
   fehler: { gruppenIds: number[]; text: string; nochmal: boolean } | null;
   /** Wie viele Zeilen unten stehen (`RasterZeile.ruhend`) – sie bilden das Ende von `zeilen`; die Zwischenzeile zählt sie. */
@@ -248,7 +252,12 @@ export function personenRaster(o: {
 }): Raster {
   const { plan, spalten, gruppen, daten } = o;
   const tage = spalten.map((i) => plan.spalten[i].tag);
-  const antwortSicht = (d: Dienst): boolean => antwortenSichtbar(o.antworten, d.dienstgruppeId);
+  const antwortSicht = (d: Dienst): RasterBlock['antworten'] =>
+    !antwortenSichtbar(o.antworten, d.dienstgruppeId)
+      ? 'nichtSichtbar'
+      : fragtNurAbwesend(o.antworten, d.dienstgruppeId)
+        ? 'nurAbwesend'
+        : 'ok';
   const dienstNamen = new Map(
     plan.gruppen.flatMap((g) => g.zeilen.map((z) => [z.dienst.id, z.dienst.name] as const)),
   );
@@ -475,7 +484,7 @@ export function personenRaster(o: {
       ),
       gruppenIds: dienst.gruppenIds,
       mitgliederVerborgen: da.some((s) => s.mitglieder === 'verborgen'),
-      antworten: antwortSicht(dienst) ? 'ok' : 'nichtSichtbar',
+      antworten: antwortSicht(dienst),
       abwesenheit: ohneRecht === 0 ? 'ok' : ohneRecht === da.length ? 'nichtSichtbar' : 'teilweise',
       fehler:
         fehlerStand?.art === 'fehler'

@@ -39,7 +39,7 @@ describe('PersonenSuche', () => {
     suchen.mockResolvedValue([person(1, 'Hanna', 'Handtest'), person(2, 'Otto', 'Ohne')]);
     const onWahl = zeigen();
     tippen('H');
-    expect(screen.getByRole('button', { name: 'Suchen' }).disabled).toBe(true);
+    expect(screen.getByRole('button', { name: 'Suchen' })).toHaveProperty('disabled', true);
     fireEvent.submit(screen.getByRole('searchbox').closest('form')!);
     expect(suchen).not.toHaveBeenCalled();
     tippen('Ha');
@@ -56,7 +56,7 @@ describe('PersonenSuche', () => {
     tippen('Hanna');
     fireEvent.click(screen.getByRole('button', { name: 'Suchen' }));
     const knopf = await screen.findByRole('button', { name: 'Hanna Handtest' });
-    expect((knopf as HTMLButtonElement).disabled).toBe(true);
+    expect(knopf).toHaveProperty('disabled', true);
     suchen.mockResolvedValueOnce([]);
     tippen('Nie');
     fireEvent.click(screen.getByRole('button', { name: 'Suchen' }));

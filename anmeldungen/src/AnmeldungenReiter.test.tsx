@@ -2189,7 +2189,7 @@ describe('Von Hand in Schritten (F2d)', () => {
     await paulWaehlen(inSchritten());
     fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
     // Suchtext und Treffer stehen noch da – man wählt neu, ohne nochmal zu suchen.
-    expect(screen.getByRole('searchbox', { name: 'Name' }).value).not.toBe('');
+    expect(screen.getByRole('searchbox', { name: 'Name' })).toHaveProperty('value', 'Probe');
     expect(
       within(screen.getByRole('list', { name: 'Gefunden' })).getByRole('button', {
         name: /Paul Probe/,

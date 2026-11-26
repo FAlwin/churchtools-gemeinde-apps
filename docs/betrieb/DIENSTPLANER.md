@@ -42,7 +42,8 @@
 > - **Verfügbarkeit** (seit V-3, 26.11.2026): **Eine Werkzeugzeile** (B4/R5) – links der Umschalter **„Abwesenheiten | Zusagen“** (nur, wenn mindestens eine **eigene**
 >   Dienstgruppe nach Zusagen fragt, `fragtZusagen`; sonst gibt es nur Abwesenheiten, ohne Umschalter), in der Mitte der Zeitraum mit ‹ ›, rechts **Filter**, **⋯**
 >   und – nur in „Abwesenheiten“ – der grüne Knopf **+ Zeitraum eintragen** (am Handy das runde Plus). **Beim Öffnen „Abwesenheiten“**; über eine Abfrage
->   (`#/abwesenheiten?abfrage=<Dienstgruppe>`, Karte oder Mail) einer Gruppe mit Zusagen öffnet **„Zusagen“**. **Abwesenheiten:** alle Termine mit dem Haken
+>   (`#/abwesenheiten?abfrage=<Dienstgruppe>`, Karte oder Mail) einer Gruppe mit Zusagen öffnet **„Zusagen“**, über die einer Gruppe **„Nur abwesend“** bleibt es
+>   **„Abwesenheiten“** – dort steht das Band mit dem Knopf **„Fertig“** (V-4, Abschnitt „Abfrage bei ‚Nur abwesend‘“ unten). **Abwesenheiten:** alle Termine mit dem Haken
 >   „Abwesend“ (wie in der Musik-App), oben die Karte **„Deine Zeiträume“** (Abwesenheiten über mehrere Tage oder ganztägig, die den gezeigten Zeitraum schneiden; Tipp =
 >   ändern; ohne solche Einträge keine Karte) und im **⋯ „Alle Einträge …“** (die volle Liste, anstehend und früher, als Fenster). **Zusagen:** je Termin **Ja**, **Vielleicht** oder **Nein**
 >   (Nein = dieselbe Abwesenheit in ChurchTools, nur für die Terminzeit), dazu eine Notiz (leise „+ Notiz“) und „nur bestimmte Dienste“ – aber nur an Terminen, an denen
@@ -149,6 +150,43 @@ aus (Austragen beendet ihren Lauf sofort). _Beim Öffnen des Stands_ (Planer): W
 (Nachzügler bekommen nur die Karte; „Erinnern“ per Hand). _Beenden_: erst alle ausgetragen, dann beendet. Der Plan gilt für laufende Abfragen nicht
 mehr – eine Änderung wirkt ab der nächsten. Nur die Rolle **Teilnehmer** der Hilfsgruppe zählt; Leiter aus früheren Einrichtungen bleiben stehen.
 
+**Abfrage bei „Nur abwesend“ (V-4, 26.11.2026):** Bei einer Dienstgruppe mit „Nur abwesend“ (V-2) ist ein **freier Termin keine Antwort** – man hakt an, wann man
+nicht kann, und bestätigt am Ende mit **„Fertig“**. Ablauf für Mitarbeitende: Die **Karte** auf der Startseite („Wann kannst du im Dezember?“) sagt statt der Zahl offener
+Termine „Trag ein, wann du nicht kannst, und tippe auf „Fertig““ (kein Fortschrittsbalken); „Jetzt eintragen“ und der Link in der **Mail** führen nach „Verfügbarkeit →
+Abwesenheiten“. Dort steht über der Liste das **Band** „bis <Frist> · Abfrage <Gruppe> · <Zeitraum> – Häkchen setzen, wo du nicht kannst, dann:“ mit dem Knopf
+**„Fertig“**; danach ein **grünes Band** „fertig · Danke! An allen anderen Terminen im Zeitraum kannst du. Ändern geht jederzeit.“ Wer danach noch Häkchen setzt, bleibt fertig.
+Bei vorgemerkten Häkchen (Speichern-Leiste offen) steht statt des Knopfs „erst speichern“ – sonst bestätigte „Fertig“ Häkchen, die noch nicht stehen. „Fertig“ ist nur dann
+gefüllt (Hauptaktion, R1), wenn kein anderer gefüllter Knopf in der Ansicht steht; mit dem grünen „+ Zeitraum eintragen“ ist es ein Neben-Knopf. Unter „Zusagen“ steht das Band
+einer „Nur abwesend“-Gruppe nicht.
+
+- **Speicher „hat geantwortet“:** im **eigenen Wert** der Antworten-Ablage der Dienstgruppe (Kategorie „Antworten <Gruppe>“, `dienstplaner-antworten-<ID>`) steht das optionale Feld
+  `fertig` – je Abfrage-ID der Zeitpunkt (ISO): `{ "<Abfrage-ID>": "2026-12-01T09:00:00.000Z" }`. **Kein „Ja“** wird geschrieben, `antworten` bleibt unberührt. Fassung bleibt 1 (ein
+  Wert ohne das Feld gilt als „nichts bestätigt“); es bleiben höchstens die 20 neuesten Bestätigungen (`fertigBereinigt`, die eine Stelle für Lesen und Schreiben). Die Hausregeln sind
+  die der Ablage: frisch lesen, schreiben nie wiederholt, **Erfolg ist erst, was nachgelesen dasteht** (auch das Feld), Wert anderer Fassung wird nie angefasst; „Fertig“ gelingt nur, wenn die
+  Kategorie der **Dienstgruppe der Abfrage** bereit ist (die Planer lesen nur dort), und wird in alle bereiten Kategorien geschrieben (ein zweiter Versuch heilt eine, in die der erste nicht
+  ankam). Speichern der Antworten und „Vertretung suchen“ **erhalten** das Feld (sie schreiben mit `fertig: undefined` = „was frisch dasteht“). Code: `fertigMarkieren` in
+  `shared/dienstplan/verfuegbarkeit.ts`, Browser-Teil `fertigSpeichern` in `dienstplaner/src/ladeVerfuegbarkeit.ts`. Die Planer lesen es mit den Antworten
+  (`PersonenAntworten.fertig`, `fertigZusammen`, derselbe Wert wie `jePerson`). **Voraussetzung:** Die Antworten-Ablage der Gruppe muss eingerichtet sein (auch bei „Nur abwesend“ – sie
+  trägt dort nur diese Bestätigung; „Einrichten …“ legt sie an, s. u.); sonst meldet „Fertig“ das und schreibt nichts.
+- **Die Ablage gehört zum Einrichten (Nachtrag V-4):** „Einrichten …“ (Schritt 13) stellt zusätzlich die Ablage **„Antworten <Gruppe>“** sicher – mit denselben Bausteinen wie das
+  bisherige Einrichten der Antworten-Ablagen (`antwortenSchublade`, `kategorieSicherstellen`; `antwortenAblage`/`antwortenAblageStand`/`richteAntwortenEin` in
+  `dienstplaner/src/ladeVerfuegbarkeit.ts`; wer sie anlegt, bekommt in ChurchTools sofort alle Rechte darauf). Das Fenster nennt sie **vor dem Klick** als eigene Zeile („wird angelegt“, „schon da“
+  oder „steht da, ist aber nicht ganz freigegeben“ – dann nur ein Hinweis, die Rechte setzt man in ChurchTools), danach steht „Ablage „Antworten …“ angelegt“ im Bericht, **nachgelesen** wie die anderen Punkte
+  (steht sie danach nicht da: nicht ok). Angelegt wird nur, was fehlt und was man anlegen darf; ein nicht lesbarer Stand stoppt (nie auf „fehlt“ hin anlegen). Gilt für jede Art. Der **Start** einer Abfrage
+  „Nur abwesend“ verlangt eine bereite Ablage; sonst startet er nicht, schreibt nichts (auch nichts in ChurchTools) und sagt: „Für <Gruppe> fehlt die Ablage „Antworten <Gruppe>“ – erst „Einrichten …“ in den
+  Einstellungen.“ Zusagen-Gruppen werden dort nicht geprüft.
+- **„Offen“ je Art – eine Regel:** `beantwortetNach(art, { antwort, abwesend, bestaetigt })` in `shared/dienstplan/erinnern.ts`. Abwesend (ChurchTools-Abwesenheit) zählt immer; sonst bei
+  Zusagen die Ja/Vielleicht-Antwort, bei „Nur abwesend“ die Bestätigung der Abfrage – gespeicherte Ja/Vielleicht-Antworten zählen dort nicht (sie sind nur ausgeblendet). **Fertig =
+  bestätigt oder an allen Terminen der Abfrage abwesend.** Eingeteilte und Pausierte zählen wie bei Zusagen. Dieselbe Funktion rechnet für **Mitarbeitende** (`meinStandInAbfrage` →
+  Karte, Band, Austritt) und **Planer** (`fehlendeInGruppe` → Stand im Fenster „Abfrage“, Eintragen beim Start, Abgleich beim Öffnen, „Erinnern“), mit `regel` (`AbfrageRegel`: Art und
+  ID der laufenden Abfrage, `abfrageRegelAus`). Nach „Fertig“ trägt sich die Person wie bei Zusagen aus der Hilfsgruppe aus (`austrittFuerEigene`), damit ChurchTools nichts mehr schickt.
+- **Erinnern** (Planen → ⋯): Bei „Nur abwesend“ fehlt, wer nicht bestätigt hat und nicht überall abwesend ist; der Standardtext sagt „… trag ein, an welchen der folgenden Termine du nicht
+  kannst, und tippe dann auf „Fertig““. Ohne **laufende Abfrage** ist eine solche Gruppe gesperrt („Erinnern geht in einer laufenden Abfrage“) – ohne Abfrage gäbe es kein „Fertig“. Lässt
+  sich das Dokument der Gruppe nicht lesen (Netz), ist sie gesperrt („Art der Abfrage nicht geladen“, „Erneut versuchen“); ein unlesbares Dokument gilt wie überall als „Zusagen“.
+- **Mail der Abfrage:** `mailFuer(…, art)` – bei „Nur abwesend“ ist der Standardtext „… Bitte trag bis <Frist> im Dienstplaner ein, an welchen Terminen du nicht kannst, und tippe auf „Fertig“.“
+  (`standardText`); ein eigener Text im Erinnerungsplan gilt für beide Arten. **Offen:** Der Editor in Einstellungen füllt das Textfeld weiter mit dem Zusagen-Standard; bleibt er unverändert, wird
+  beim Speichern kein eigener Text gespeichert und die Mail nimmt den passenden Standard. Der Editor folgt mit der Einstellungs-Seite (V-6).
+
 **Einstellungen für alle** (Live-Ansicht 2, L4-2, seit Alwin 23.11.2026): Der letzte Reiter **„Einstellungen“** öffnet ein Fenster mit
 der **Betriebsart der Live-Ansicht** (bis Beginn nach der Uhr, ab Beginn klicken = Standard · immer nach der Uhr · von Anfang an klicken).
 Gespeichert ist sie als **ein Wert** in der Ablage **„Einstellungen“** (Kürzel `dienstplaner-einstellungen`, Modul Dienstplaner; die
@@ -222,7 +260,7 @@ Fensters im selben Dokument wie der Erinnerungsplan (`dienstplaner-abfragen-<Die
 ohne das Feld gilt als `zusagen`, ein anderer Wert macht es unlesbar) – mit Version, Konflikt-Schutz und Nachlesen wie der Plan. **Anders als der Plan gilt die Art
 sofort**, auch während einer laufenden Abfrage. Die eine Regel dazu ist `fragtZusagen(inhalt)` in `shared/dienstplan/abfragen.ts` (ohne Dokument: ja). Die
 Oberfläche „Verfügbarkeit“ richtet sich seit V-3 danach (Umschalter „Abwesenheiten | Zusagen“ nur mit einer Zusagen-Gruppe, Termine unter „Zusagen“ nur mit Diensten dieser Gruppen);
-die Abfrage („Nur abwesend“ mit „Fertig“) und das Planen folgen in V-4 und V-5 – bis dahin zeigen Abfragen solcher Gruppen nichts Neues.
+die Abfrage („Nur abwesend“ mit „Fertig“) gilt seit V-4 (nächster Abschnitt), das Planen folgt in V-5.
 
 **Live-Ansicht von der Startseite** (L4-5, Alwin 23.11.2026): In „Als Nächstes“ steht neben „Musik-App“ und „Ablauf & Dienste“ der Knopf
 **„Live“** – **am Tag des Termins ab 0 Uhr (Ortszeit der Gemeinde, `liveFenster.ts`) bis zum Ende des Termins** (`endDate`; ohne eigenes Ende
@@ -590,7 +628,7 @@ Eintrag **„Erinnern“** (Umschlag; nur für Planer mit mindestens einer planb
   volle Adresse mit Instanz und Kürzel). ChurchTools hängt je Termin zusätzlich einen eigenen Knopf zum Termin an (nicht abschaltbar).
   **„Eine Kopie an mich“**: genau eine Kopie, nicht je Person.
 - **Wer „fehlt“** (Regel in `shared/dienstplan/erinnern.ts`, gerechnet aus denselben Daten wie die Ansicht „Personen“): Mitglied
-  der Dienstgruppe, das für **mindestens einen** Termin weder Ja/Vielleicht noch Nein hat. Termine: die gezeigten (wie bei „Teilen“),
+  der Dienstgruppe, das für **mindestens einen** Termin weder Ja/Vielleicht noch Nein hat. (Bei „Nur abwesend“ gilt seit V-4 stattdessen „Fertig“ der laufenden Abfrage – `beantwortetNach`, Abschnitt „Abfrage bei ‚Nur abwesend‘“.) Termine: die gezeigten (wie bei „Teilen“),
   **heute oder später**, nicht abgesagt, und nur solche, an denen die Dienstgruppe einen Dienst hat. **Beantwortet** zählt: Ja,
   Vielleicht (auch „nur bestimmte Dienste“, selbst wenn es den eigenen Dienst nicht nennt) und Nein = Abwesenheit in ChurchTools
   (dieselbe Regel `decktTermin` wie überall). Wer an dem Termin **in dieser Gruppe schon eingeteilt** ist (zugesagt oder angefragt),

@@ -28,6 +28,8 @@ import {
   zeitleiste,
 } from '@shared/dienstplan/abfrageFenster';
 import { abfrageRoutinenSchritte } from '@shared/dienstplan/abfrageAutomatik';
+import type { SchubladenStand } from '@shared/dienstplan/entwuerfe';
+import { abfrageRegelAus } from '@shared/dienstplan/erinnern';
 import type { Personenliste } from '@shared/dienstplan/personenliste';
 import { gruppenName, type Plan, type PlanGruppe } from '@shared/dienstplan/plan';
 import {
@@ -42,7 +44,7 @@ import {
 } from './abfrageAutomatikLauf';
 import { AbfrageStand } from './AbfrageStand';
 import { AbfrageStart } from './AbfrageStart';
-import { ABFRAGE_UNLESBAR, abfragenFehlerText } from './abfragenTexte';
+import { ABFRAGE_UNLESBAR, abfrageOhneAblage, abfragenFehlerText } from './abfragenTexte';
 import type { AntwortenLader } from './ladeAntworten';
 import type { PersonenLader } from './ladePersonen';
 import { abfrageLink } from './ladeErinnern';
@@ -59,6 +61,11 @@ export interface AbfrageAnschluss {
     von: { personId: number; name: string },
     erwartet: number | null,
   ) => Promise<SpeicherErgebnis<AbfragenInhalt>>;
+  /**
+   * Der Stand der Ablage „Antworten <Gruppe>“ (V-4): Eine Abfrage „Nur abwesend“ startet nur, wenn sie `bereit` ist – ohne sie gibt es kein
+   * „Fertig“. Ohne Angabe wird nicht geprüft.
+   */
+  ablageStand?: (dienstgruppe: { id: number; name: string }) => Promise<SchubladenStand>;
   /** Wer startet und beendet – kommt in `gestartet`. */
   ich: { personId: number; name: string };
   /**
@@ -171,6 +178,9 @@ export function AbfrageFenster({
   const schreibbar = lese !== null && lese.fehler === null && !lese.unlesbar;
   const laufend = schreibbar ? laufendeAbfrage(lese.inhalt, heute) : null;
 
+  // Nach welcher Regel „offen“ gilt: die Art der Dienstgruppe, bei „Nur abwesend“ mit der laufenden Abfrage (V-4). Beim Starten
+  // (noch keine Abfrage) hat niemand bestätigt.
+  const regel = abfrageRegelAus(schreibbar ? lese.inhalt : null, heute);
   const lage = useAbfrageLage({
     plan,
     ladeZeitraum,
@@ -182,6 +192,7 @@ export function AbfrageFenster({
     bis: schreibbar ? (laufend?.bis ?? formular.bis) : '',
     fest: laufend?.termine ?? null,
     heute,
+    regel,
   });
 
   // ── Vorwahl: Hat eine planbare Dienstgruppe eine laufende Abfrage, ist die erste davon gewählt (sonst bleibt es die erste) ──
@@ -329,6 +340,24 @@ export function AbfrageFenster({
   const starten = async () => {
     if (!schreibbar || laufend || fehler || lage.termine.length === 0 || gruppe === null) return;
     if (auto && startPersonen === null) return;
+    // „Nur abwesend“ ohne bereite Ablage der Antworten: nicht starten – es gäbe kein „Fertig“ (V-4). Zusagen-Gruppen unverändert.
+    if (lese.inhalt.verfuegbarkeit === 'abwesend' && anschluss.ablageStand) {
+      setArbeitet(true);
+      setProblem(null);
+      setMeldung(null);
+      let ablage: SchubladenStand | null = null;
+      try {
+        ablage = await anschluss.ablageStand({ id: gruppe.gruppe?.id ?? 0, name });
+      } catch (e) {
+        setProblem(fehlerMeldung(e).text);
+      }
+      setArbeitet(false);
+      if (ablage === null) return;
+      if (ablage !== 'bereit') {
+        setProblem(abfrageOhneAblage(name));
+        return;
+      }
+    }
     const abfrage = neueAbfrage({
       id: (anschluss.neueId ?? zufallsId)(),
       formular,
@@ -354,6 +383,7 @@ export function AbfrageFenster({
       heute,
       dienstgruppe: name,
       link: (anschluss.link ?? abfrageLink)(gruppe.gruppe?.id ?? 0),
+      art: lese.inhalt.verfuegbarkeit,
       senderId: anschluss.ich.personId,
     });
     const v = await startVorbereiten(auto, einrichtung, schritte);
@@ -588,6 +618,7 @@ export function AbfrageFenster({
             onNochmal={lage.neuLaden}
             zeilen={zeilen}
             eingerichtet={eingerichtet}
+            art={lese.inhalt.verfuegbarkeit}
             automatik={abgleich}
           />
         </Sheet>

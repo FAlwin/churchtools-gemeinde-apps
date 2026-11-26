@@ -7,6 +7,7 @@ import {
   antwortenSchublade,
   eigeneAntwortenLesen,
   eigeneAntwortenSchreiben,
+  fertigMarkieren,
   type Antworten,
 } from '@shared/dienstplan/verfuegbarkeit';
 import { antwortenLesen, GLEICHZEITIG, ladeAntworten } from './ladeAntworten';
@@ -95,6 +96,21 @@ function speicher() {
 
 const A1 = antw({ '1': ['ja', '2026-12-06'] });
 const A2 = antw({ '2': ['vielleicht', '2026-12-13'] });
+
+describe('antwortenLesen – „Fertig“ für die Planer (V-4)', () => {
+  it('die Bestätigungen kommen je Person mit (derselbe Wert wie die Antworten); wer nie bestätigt hat, fehlt in der Liste', async () => {
+    const { port, schreibe } = speicher();
+    const [g1] = GRUPPEN;
+    await schreibe([KAT(g1)], ANNA, A1);
+    await fertigMarkieren(port, MODUL, [KAT(g1)], BERT, 'a1', HEUTE);
+    const r = await antwortenLesen(port, MODUL, sehen([g1]), liste([g1]), [g1]);
+    expect([...(r.fertig ?? new Map()).keys()]).toEqual([BERT]);
+    expect(Object.keys(r.fertig?.get(BERT) ?? {})).toEqual(['a1']);
+    // Bert hat nur bestätigt – kein Ja: seine Antworten sind leer.
+    expect(r.jePerson.get(BERT)).toEqual({});
+    expect(r.jePerson.get(ANNA)).toEqual(A1);
+  });
+});
 
 describe('antwortenLesen – Zweige einzeln', () => {
   it('liest alle Personen einer Dienstgruppe; sichtbar ist genau die gelesene Gruppe', async () => {

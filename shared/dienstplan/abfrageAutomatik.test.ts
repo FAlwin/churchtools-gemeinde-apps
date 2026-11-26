@@ -242,6 +242,7 @@ describe('Routine-Schritte', () => {
       heute,
       dienstgruppe: 'Musik',
       link: LINK,
+      art: 'zusagen',
       senderId: 7,
     });
   const arten = (heute: string, a?: Abfrage, plan?: Erinnerungsplan) =>
@@ -331,7 +332,7 @@ describe('Routine-Schritte', () => {
 
   it('die Mail kommt aus mailFuer – mit dem Link der Dienstgruppe, Absender, ohne Abmelde-Link, Adresse optional', () => {
     const a = abfrage();
-    const m = mailFuer(STANDARD_PLAN, a, 'Musik', LINK);
+    const m = mailFuer(STANDARD_PLAN, a, 'Musik', LINK, 'zusagen');
     const mails = schritte('2027-01-20', a).filter((s) => s.actionKey === 'send-member-email');
     expect(mails.length).toBeGreaterThan(0);
     for (const s of mails)

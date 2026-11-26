@@ -5,8 +5,8 @@
  *
  * **Eine Rechnung für alle:** „Offen“ ist ausschließlich `offeneTermine` (`erinnern.ts`) – dieselbe Regel wie bei „Erinnern“.
  * Hier werden ihr nur die Fragen der eigenen Daten beantwortet:
- * - `beantwortet`: eigene Ja/Vielleicht-Antwort (`antworten`, wie „Verfügbarkeit“) **oder** eigene Abwesenheit, die den
- *   Termin deckt (`decktTermin`, dieselbe Regel wie überall);
+ * - `beantwortet`: `beantwortetNach` (V-4, die Regel je Art) mit der eigenen Ja/Vielleicht-Antwort (`antworten`, wie „Verfügbarkeit“),
+ *   der eigenen Abwesenheit, die den Termin deckt (`decktTermin`, dieselbe Regel wie überall), und dem eigenen „Fertig“ (`fertig`);
  * - `eingeteilt`: eigener Dienst (zugesagt oder angefragt) an dem Termin **in dieser Dienstgruppe**;
  * - `pausiert`: nie – Mitarbeitende können ihre Pause nicht lesen, Pausierte sehen die Karte (Alwin, 25.11.2026).
  */
@@ -19,10 +19,11 @@ import {
   geltenderPlan,
   type Abfrage,
   type AbfragenInhalt,
+  type VerfuegbarkeitArt,
 } from './abfragen';
 import { abfrageEtikett } from './abfrageFenster';
-import { offeneTermine } from './erinnern';
-import type { Antworten } from './verfuegbarkeit';
+import { beantwortetNach, offeneTermine } from './erinnern';
+import { fertigBei, type Antworten, type Fertig } from './verfuegbarkeit';
 
 /** Was von einem Termin gebraucht wird: Tag, Zeitfenster (für Abwesenheiten) und ob er abgesagt ist. */
 export interface StandTermin {
@@ -85,10 +86,14 @@ export interface MeinStand<T> {
  * es zählen nur die IDs in `abfrage.termine`; ein Termin, der nicht (mehr) da ist, zählt nicht als offen).
  */
 export function meinStandInAbfrage<T extends StandTermin>(o: {
-  abfrage: Pick<Abfrage, 'termine'>;
+  abfrage: Pick<Abfrage, 'id' | 'termine'>;
+  /** Wie die Dienstgruppe die Verfügbarkeit abfragt (`fragtZusagen`) – daran hängt, was „beantwortet“ heißt (`beantwortetNach`). */
+  art: VerfuegbarkeitArt;
   termine: readonly T[];
   /** Die eigenen Ja/Vielleicht-Antworten (Termin-ID als Text). */
   antworten: Antworten;
+  /** Die eigenen „Fertig“-Bestätigungen (Abfrage-ID → Zeitpunkt, V-4). */
+  fertig: Fertig;
   abwesenheiten: readonly CtAbsence[];
   /** Termin-IDs, an denen ich in der Dienstgruppe eingeteilt bin (`eingeteilteTermine`). */
   eingeteilt: ReadonlySet<number>;
@@ -99,10 +104,16 @@ export function meinStandInAbfrage<T extends StandTermin>(o: {
     const t = nachId.get(id);
     return t ? [t] : [];
   });
+  const bestaetigt = fertigBei(o.fertig, o.abfrage.id);
   const { offen } = offeneTermine({
     termine: dieseTermine,
     heute: o.heute,
-    beantwortet: (t) => o.antworten[String(t.id)] !== undefined || abwesendAm(o.abwesenheiten, t),
+    beantwortet: (t) =>
+      beantwortetNach(o.art, {
+        antwort: o.antworten[String(t.id)] !== undefined,
+        abwesend: abwesendAm(o.abwesenheiten, t),
+        bestaetigt,
+      }),
     eingeteilt: (t) => o.eingeteilt.has(t.id),
     pausiert: () => false,
   });
@@ -136,13 +147,22 @@ export function monateKurz(a: Pick<Abfrage, 'von' | 'bis'>): string {
 
 const termineText = (n: number) => `${n} ${n === 1 ? 'Termin' : 'Termine'}`;
 
-/** „Musik fragt für 9 Termine (01.02.–31.03.). Noch 7 offen.“ */
+/**
+ * „Musik fragt für 9 Termine (01.02.–31.03.). Noch 7 offen.“ – bei „Nur abwesend“ (V-4) stattdessen die Bitte: „Technik fragt für 9
+ * Termine (01.12.–31.12.). Trag ein, wann du nicht kannst, und tippe auf „Fertig“.“ (ein freier Termin ist dort keine Antwort, eine
+ * Zahl offener Termine sagte nichts).
+ */
 export const abfrageKartenText = (o: {
   gruppe: string;
   abfrage: Pick<Abfrage, 'von' | 'bis'>;
   stand: Pick<MeinStand<unknown>, 'gesamt'> & { offen: number };
-}): string =>
-  `${o.gruppe} fragt für ${termineText(o.stand.gesamt)} (${tagMonat(o.abfrage.von)}–${tagMonat(o.abfrage.bis)}). Noch ${o.stand.offen} offen.`;
+  art: VerfuegbarkeitArt;
+}): string => {
+  const kopf = `${o.gruppe} fragt für ${termineText(o.stand.gesamt)} (${tagMonat(o.abfrage.von)}–${tagMonat(o.abfrage.bis)}).`;
+  return o.art === 'abwesend'
+    ? `${kopf} Trag ein, wann du nicht kannst, und tippe auf „Fertig“.`
+    : `${kopf} Noch ${o.stand.offen} offen.`;
+};
 
 /**
  * „Abfrage Musik · 01.02.–31.03. · noch 7 von 9 offen“ – das Band in „Verfügbarkeit“ (`stand` fehlt, solange es lädt).
@@ -161,6 +181,23 @@ export const abfrageBandText = (o: {
         : ` · noch ${o.stand.offen} von ${o.stand.gesamt} offen`
       : ''
   }`;
+
+/**
+ * Das Band bei „Nur abwesend“ (V-4) vor dem Drücken: „Abfrage Technik · 06.12.–16.12. – Häkchen setzen, wo du nicht kannst, dann:“
+ * (das Etikett „bis Di, 01.12.“ steht davor, der Knopf „Fertig“ dahinter). Keine Zahl offener Termine – ein freier Termin ist dort keine Antwort.
+ */
+export const abfrageBandTextAbwesend = (o: {
+  gruppe: string;
+  abfrage: Pick<Abfrage, 'von' | 'bis'>;
+}): string =>
+  `Abfrage ${o.gruppe} · ${tagMonat(o.abfrage.von)}–${tagMonat(o.abfrage.bis)} – Häkchen setzen, wo du nicht kannst, dann:`;
+
+/** Das grüne Band nach „Fertig“ (V-4, Entwurf `verfuegbarkeit-einstellungen-v2.html`): Etikett „fertig“ und dieser Satz. */
+export const ABFRAGE_FERTIG_TEXT =
+  'Danke! An allen anderen Terminen im Zeitraum kannst du. Ändern geht jederzeit.';
+
+/** Was auf dem Knopf steht, mit dem man die Abfrage „Nur abwesend“ abschließt. */
+export const ABFRAGE_FERTIG_KNOPF = 'Fertig';
 
 /** „Abfrage Musik · Feb–Mär“ – die Zeile des Planers. */
 export const abfrageZeilenTitel = (o: { gruppe: string; abfrage: Pick<Abfrage, 'von' | 'bis'> }) =>

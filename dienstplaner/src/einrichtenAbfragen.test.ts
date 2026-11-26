@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@ui/ct/fehler';
 import type { AbfragenInhalt } from '@shared/dienstplan/abfragen';
 import { standardInhalt, type AbfragenStand } from '@shared/dienstplan/abfragenSpeicher';
+import type { SchubladenStand } from '@shared/dienstplan/entwuerfe';
 import { einrichten, lageLesen, type EinrichtenAnschluss } from './einrichtenAbfragen';
 
 /**
@@ -762,5 +763,133 @@ describe('einrichten', () => {
       );
       expect(w.gespeichert[0].einrichtung?.gruppeId).toBe(w.gruppen[0].id);
     });
+  });
+});
+
+describe('Ablage „Antworten <Gruppe>“ (V-4)', () => {
+  /** Eine nachgebaute Ablage: `stand` ist, was gelesen wird; `anlegen` setzt ihn (außer sie „schluckt“) auf `bereit`. */
+  function ablageMit(start: SchubladenStand, o: { schluckt?: boolean; anlegenWirft?: Error } = {}) {
+    const ab = { stand: start };
+    const lesen = vi.fn(() => Promise.resolve(ab.stand));
+    const anlegen = vi.fn(() => {
+      if (o.anlegenWirft) return Promise.reject(o.anlegenWirft);
+      if (!o.schluckt) ab.stand = 'bereit';
+      return Promise.resolve();
+    });
+    return { ab, lesen, anlegen, ablage: { stand: lesen, anlegen } };
+  }
+
+  it('lageLesen: fehlt sie und darf angelegt werden, ist „anlegen“ gesetzt – und das Einrichten ist NICHT fertig, obwohl alles andere steht', async () => {
+    const { a } = fertigeWelt();
+    const x = ablageMit('einrichtbar');
+    a.ablage = x.ablage;
+    const l = await lageLesen(MUSIK, GRUPPEN_IDS, a);
+    if (l.art !== 'bereit') throw new Error('bereit erwartet');
+    expect(l.ablage).toEqual({ name: 'Antworten Musik', stand: 'einrichtbar', anlegen: true });
+    expect(l.plan.nichtsZuTun).toBe(true);
+    expect(l.fertig).toBe(false);
+    expect(x.anlegen).not.toHaveBeenCalled(); // Lesen schreibt nie
+  });
+
+  it('lageLesen: ist sie bereit, ist alles fertig; steht sie da, aber nicht ganz freigegeben (nur-lesen, fehlt), ist das ein Hinweis und kein Hindernis', async () => {
+    for (const [stand, anlegen] of [
+      ['bereit', false],
+      ['nur-lesen', false],
+      ['fehlt', false],
+    ] as const) {
+      const { a } = fertigeWelt();
+      a.ablage = ablageMit(stand).ablage;
+      const l = await lageLesen(MUSIK, GRUPPEN_IDS, a);
+      if (l.art !== 'bereit') throw new Error('bereit erwartet');
+      expect(l.ablage).toMatchObject({ stand, anlegen });
+      expect(l.fertig).toBe(true);
+    }
+  });
+
+  it('lageLesen: ohne Anschluss zur Ablage bleibt alles wie vor V-4 (ablage null)', async () => {
+    const { a } = fertigeWelt();
+    const l = await lageLesen(MUSIK, GRUPPEN_IDS, a);
+    if (l.art !== 'bereit') throw new Error('bereit erwartet');
+    expect(l.ablage).toBeNull();
+    expect(l.fertig).toBe(true);
+  });
+
+  it('lageLesen: der Stand der Ablage ist nicht lesbar → Stopp, nichts geschrieben (nie auf „fehlt“ hin anlegen)', async () => {
+    const { w, a } = fertigeWelt();
+    const x = ablageMit('einrichtbar');
+    x.lesen.mockRejectedValue(new ApiError(503, 'weg'));
+    a.ablage = x.ablage;
+    const l = await lageLesen(MUSIK, GRUPPEN_IDS, a);
+    expect(l).toMatchObject({ art: 'gestoppt', nochmal: true });
+    expect(x.anlegen).not.toHaveBeenCalled();
+    expect(schreibend(w.log)).toEqual([]);
+  });
+
+  it('einrichten: legt die fehlende Ablage an, liest NACH und meldet sie wie die anderen Punkte', async () => {
+    const { w, a } = fertigeWelt();
+    const x = ablageMit('einrichtbar');
+    a.ablage = x.ablage;
+    const r = await einrichten(MUSIK, GRUPPEN_IDS, a);
+    expect(r).toMatchObject({ art: 'gelaufen', ok: true, fehler: null });
+    expect((r as { angelegt: string[] }).angelegt).toEqual(['Ablage „Antworten Musik“ angelegt']);
+    expect(x.anlegen).toHaveBeenCalledTimes(1);
+    expect(x.anlegen).toHaveBeenCalledWith(MUSIK);
+    // Gelesen: einmal in der Lage (davor) und einmal nach dem Anlegen (Nachlesen).
+    expect(x.lesen).toHaveBeenCalledTimes(2);
+    expect(schreibend(w.log)).toEqual([]); // sonst war schon alles da
+  });
+
+  it('einrichten: „nichts da“ legt Gruppe, Routine, Rechte UND die Ablage an – die Ablage zuletzt', async () => {
+    const { w, a } = welt();
+    const x = ablageMit('einrichtbar');
+    a.ablage = x.ablage;
+    const r = await einrichten(MUSIK, GRUPPEN_IDS, a);
+    expect(r).toMatchObject({ ok: true });
+    const text = (r as { angelegt: string[] }).angelegt;
+    expect(text[text.length - 1]).toBe('Ablage „Antworten Musik“ angelegt');
+    expect(text.join(' | ')).toContain('Routine');
+    expect(w.gespeichert).toHaveLength(1);
+  });
+
+  it('einrichten: ist die Ablage schon bereit, wird nichts angelegt (kein zweiter Versuch, kein Doppel)', async () => {
+    const { a } = fertigeWelt();
+    const x = ablageMit('bereit');
+    a.ablage = x.ablage;
+    const r = await einrichten(MUSIK, GRUPPEN_IDS, a);
+    expect(r).toMatchObject({ ok: true, angelegt: [] });
+    expect(x.anlegen).not.toHaveBeenCalled();
+  });
+
+  it('einrichten: darf man sie nicht anlegen (nur-lesen/fehlt), wird nichts versucht – das Einrichten gelingt trotzdem', async () => {
+    for (const stand of ['nur-lesen', 'fehlt'] as const) {
+      const { a } = fertigeWelt();
+      const x = ablageMit(stand);
+      a.ablage = x.ablage;
+      expect(await einrichten(MUSIK, GRUPPEN_IDS, a)).toMatchObject({ ok: true });
+      expect(x.anlegen).not.toHaveBeenCalled();
+    }
+  });
+
+  it('einrichten: Anlegen scheitert (kein Recht) → ok false mit dem Grund, es wird nicht wiederholt; was vorher angelegt wurde, steht in der Meldung', async () => {
+    const { a } = welt();
+    const x = ablageMit('einrichtbar', {
+      anlegenWirft: new ApiError(403, 'ChurchTools erlaubt dir nicht, Kategorien anzulegen.'),
+    });
+    a.ablage = x.ablage;
+    const r = await einrichten(MUSIK, GRUPPEN_IDS, a);
+    expect(r).toMatchObject({ art: 'gelaufen', ok: false });
+    expect((r as { fehler: { text: string } }).fehler.text).toContain('Kategorien anzulegen');
+    expect((r as { angelegt: string[] }).angelegt.join(' ')).toContain('Routine');
+    expect(x.anlegen).toHaveBeenCalledTimes(1);
+  });
+
+  it('einrichten: ChurchTools meldet OK, die Ablage steht aber nicht da → nicht ok („nicht übernommen“), nicht als angelegt gemeldet', async () => {
+    const { a } = fertigeWelt();
+    const x = ablageMit('einrichtbar', { schluckt: true });
+    a.ablage = x.ablage;
+    const r = await einrichten(MUSIK, GRUPPEN_IDS, a);
+    expect(r).toMatchObject({ art: 'gelaufen', ok: false });
+    expect((r as { fehler: { text: string } }).fehler.text).toContain('Ablage „Antworten Musik“');
+    expect((r as { angelegt: string[] }).angelegt).toEqual([]);
   });
 });

@@ -28,6 +28,7 @@ import {
   alleAntwortenLesen,
   antwortenSchublade,
   antwortenZusammen,
+  fertigZusammen,
   vertretungenZusammen,
   type StandAntworten,
   type VerfuegbarkeitGrund,
@@ -77,6 +78,7 @@ export async function antwortenLesen(
     jePerson: antwortenZusammen(jeKategorie),
     sichtbar,
     vertretungen: vertretungenZusammen(jeKategorie),
+    fertig: fertigZusammen(jeKategorie),
   };
 }
 

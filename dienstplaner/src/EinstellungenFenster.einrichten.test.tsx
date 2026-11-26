@@ -63,6 +63,7 @@ const lage = (teil: Partial<Lage> = {}): Lage => ({
       },
     ],
   })),
+  ablage: null,
   plan: {
     gruppeAnlegen: true,
     routineAnlegen: true,
@@ -321,6 +322,65 @@ describe('Fenster „Erinnerungen für Musik einrichten“', () => {
     const f = await screen.findByRole('dialog', { name: 'Erinnerungen für Musik einrichten' });
     expect(await within(f).findByRole('button', { name: 'Rechte nachtragen' })).toBeTruthy();
     expect(f.textContent).toContain('noch nicht gesetzt bei: Bea Beispiel');
+  });
+
+  it('V-4: nennt VOR dem Klick die Ablage „Antworten Musik“ als eigene Zeile – „wird angelegt“, „schon da“, „nicht ganz freigegeben“', async () => {
+    vi.mocked(schreiben.lageLesen).mockResolvedValue(
+      lage({ ablage: { name: 'Antworten Musik', stand: 'einrichtbar', anlegen: true } }),
+    );
+    zeige();
+    let f = await oeffnen();
+    await within(f).findAllByText(/Ablage „Antworten Musik“/);
+    expect(f.textContent).toMatch(/Ablage „Antworten Musik“ – wird angelegt\./);
+    expect(f.textContent).toContain('Ohne sie geht „Fertig“ nicht');
+    cleanup();
+    vi.mocked(schreiben.lageLesen).mockResolvedValue(
+      lage({ ablage: { name: 'Antworten Musik', stand: 'bereit', anlegen: false } }),
+    );
+    zeige();
+    f = await oeffnen();
+    await within(f).findAllByText(/Ablage „Antworten Musik“/);
+    expect(f.textContent).toMatch(/Ablage „Antworten Musik“ – schon da\./);
+    cleanup();
+    vi.mocked(schreiben.lageLesen).mockResolvedValue(
+      lage({ ablage: { name: 'Antworten Musik', stand: 'nur-lesen', anlegen: false } }),
+    );
+    zeige();
+    f = await oeffnen();
+    await within(f).findAllByText(/Ablage „Antworten Musik“/);
+    expect(f.textContent).toContain('steht da, ist aber nicht ganz freigegeben');
+    expect(f.textContent).toContain('bitte in ChurchTools freigeben');
+  });
+
+  it('V-4: ohne Anschluss an die Ablage (ablage null) gibt es die Zeile nicht', async () => {
+    vi.mocked(schreiben.lageLesen).mockResolvedValue(lage());
+    zeige();
+    const f = await oeffnen();
+    await within(f).findAllByText(/Gruppe „Dienstplaner: Antwort fehlt – Musik“/);
+    expect(f.textContent).not.toContain('Ablage „');
+  });
+
+  it('V-4: fehlt nur die Ablage (alles andere steht), heißt der Knopf „Einrichten“, nicht „Rechte nachtragen“', async () => {
+    vi.mocked(schreiben.lageLesen).mockResolvedValue(
+      lage({
+        gruppeId: 5,
+        routineId: 6,
+        rechteNachtragen: [],
+        ablage: { name: 'Antworten Musik', stand: 'einrichtbar', anlegen: true },
+        plan: {
+          gruppeAnlegen: false,
+          routineAnlegen: false,
+          einrichtungSchreiben: false,
+          rechteNachtragen: [],
+          nichtsZuTun: true,
+        },
+      }),
+    );
+    zeige({ inhalt: EINGERICHTET });
+    fireEvent.click(await screen.findByRole('button', { name: 'Planer prüfen …' }));
+    const f = await screen.findByRole('dialog', { name: 'Erinnerungen für Musik einrichten' });
+    expect(await within(f).findByRole('button', { name: 'Einrichten' })).toBeTruthy();
+    expect(within(f).queryByRole('button', { name: 'Rechte nachtragen' })).toBeNull();
   });
 
   it('Gruppentyp fehlt: der Grund steht da, kein „Einrichten“', async () => {

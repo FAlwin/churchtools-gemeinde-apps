@@ -72,8 +72,10 @@ const ZEILEN = [
 const stand = (o: Partial<Parameters<typeof meinStandInAbfrage>[0]> = {}) =>
   meinStandInAbfrage({
     abfrage: ABFRAGE,
+    art: 'zusagen',
     termine: TERMINE,
     antworten: { '2': { a: 'ja', tag: '2027-02-14' } },
+    fertig: {},
     abwesenheiten: [ABW],
     eingeteilt: eingeteilteTermine(ZEILEN, MUSIK, (s) => dienste[s]),
     heute: HEUTE,
@@ -152,10 +154,20 @@ describe('Texte', () => {
   });
   it('Karten-, Band- und Zeilentext', () => {
     expect(
-      abfrageKartenText({ gruppe: 'Musik', abfrage: ABFRAGE, stand: { gesamt: 9, offen: 7 } }),
+      abfrageKartenText({
+        gruppe: 'Musik',
+        abfrage: ABFRAGE,
+        stand: { gesamt: 9, offen: 7 },
+        art: 'zusagen',
+      }),
     ).toBe('Musik fragt für 9 Termine (01.02.–31.03.). Noch 7 offen.');
     expect(
-      abfrageKartenText({ gruppe: 'Musik', abfrage: ABFRAGE, stand: { gesamt: 1, offen: 1 } }),
+      abfrageKartenText({
+        gruppe: 'Musik',
+        abfrage: ABFRAGE,
+        stand: { gesamt: 1, offen: 1 },
+        art: 'zusagen',
+      }),
     ).toBe('Musik fragt für 1 Termin (01.02.–31.03.). Noch 1 offen.');
     expect(
       abfrageBandText({ gruppe: 'Musik', abfrage: ABFRAGE, stand: { offen: 7, gesamt: 9 } }),

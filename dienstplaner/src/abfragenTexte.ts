@@ -92,6 +92,18 @@ export const EINRICHTEN_ROUTINE =
  */
 export const EINRICHTEN_RECHTE = `Damit Planer die Mitglieder und die Routine der Gruppe ändern dürfen, bekommen sie in ChurchTools zwei Rechte – nur für diese Gruppe: „${PLANER_GRUPPENRECHTE[0].name}“ und „${PLANER_GRUPPENRECHTE[1].name}“. Sie werden dadurch nicht Leiter, sondern bleiben normale Teilnehmer und werden erinnert wie alle.`;
 
+/** Erklärzeile zur Ablage „Antworten <Gruppe>“ (V-4). */
+export const EINRICHTEN_ABLAGE =
+  'Dort speichert der Dienstplaner die Antworten der Mitarbeitenden – bei „Nur abwesend“ nur, dass jemand auf „Fertig“ getippt hat. Ohne sie geht „Fertig“ nicht, und die Planer sehen nicht, wer fertig ist.';
+
+/** Der Hinweis, wenn die Ablage da ist, das Einrichten sie aber nicht ändern kann (nicht zu sehen oder nicht zu ändern). */
+export const EINRICHTEN_ABLAGE_RECHTE =
+  'Die Rechte darauf lassen sich hier nicht setzen – bitte in ChurchTools freigeben (sehen, ändern, löschen für die Mitarbeitenden der Gruppe).';
+
+/** Der Start einer Abfrage „Nur abwesend“ ohne bereite Ablage (V-4). */
+export const abfrageOhneAblage = (gruppe: string): string =>
+  `Für ${gruppe} fehlt die Ablage „Antworten ${gruppe}“ – erst „Einrichten …“ in den Einstellungen.`;
+
 /** Der Schlusssatz: alles ist ansehbar, und was passiert, wenn man es entfernt. */
 export const EINRICHTEN_ANSEHEN =
   'Alles lässt sich in ChurchTools ansehen. Entfernt man die Gruppe dort, gibt es keine automatischen Erinnerungen mehr – Abfragen und „Erinnern“ per Hand gehen trotzdem.';

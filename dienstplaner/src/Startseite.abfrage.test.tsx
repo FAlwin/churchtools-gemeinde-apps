@@ -85,6 +85,7 @@ const bereit = (extra: Partial<Verfuegbarkeit> = {}): Verfuegbarkeit => ({
   bereit: [30],
   antworten: ANTWORTEN,
   vertretungen: {},
+  fertig: {},
   lesefehler: null,
   ...extra,
 });
@@ -502,5 +503,104 @@ describe('Austritt beim Laden (R-5b): nur bei sicherem „nichts mehr offen“',
     expect(austritt).toHaveBeenCalledTimes(1);
     expect(warn).not.toHaveBeenCalled();
     expect(err).not.toHaveBeenCalled();
+  });
+});
+
+describe('Abfrage bei „Nur abwesend“ (V-4): Karte, Fertig-Stand und Austritt', () => {
+  /** Musik fragt hier nur nach Abwesenheiten; Ja-Antworten (ANTWORTEN) zählen dann nicht. */
+  const abwesendDa = (extra: { einrichtung?: { gruppeId: number; routineId: number } } = {}) =>
+    abfragen.mockImplementation((id) =>
+      Promise.resolve(
+        id === 4
+          ? {
+              ...stand(ABFRAGE),
+              inhalt: {
+                ...stand(ABFRAGE).inhalt,
+                verfuegbarkeit: 'abwesend' as const,
+                einrichtung: extra.einrichtung ?? null,
+              },
+            }
+          : stand(null),
+      ),
+    );
+  const ZEIT = '2026-11-10T09:00:00.000Z';
+
+  it('die Karte bittet statt zu zählen: Text mit „Fertig“, kein Fortschrittsbalken, „Jetzt eintragen“ führt in „Verfügbarkeit“ mit der Abfrage', async () => {
+    abwesendDa();
+    zeige();
+    const k = within(
+      await screen.findByRole('region', { name: 'Wann kannst du im Februar und März?' }),
+    );
+    expect(
+      k.getByText(
+        'Musik fragt für 6 Termine (01.02.–31.03.). Trag ein, wann du nicht kannst, und tippe auf „Fertig“.',
+      ),
+    ).toBeTruthy();
+    expect(k.queryByRole('progressbar')).toBeNull();
+    expect(k.queryByText(/Noch \d+ offen/)).toBeNull();
+    fireEvent.click(k.getByRole('button', { name: 'Jetzt eintragen' }));
+    expect(window.location.hash).toBe('#/abwesenheiten?abfrage=4');
+  });
+
+  it('eine Ja-Antwort an jedem Termin macht NICHT fertig – die Karte bleibt (die Ja-Antworten sind nur ausgeblendet)', async () => {
+    abwesendDa();
+    antwortenLader.mockResolvedValue(
+      bereit({
+        antworten: Object.fromEntries(
+          [101, 102, 104, 105].map((id) => [String(id), { a: 'ja' as const, tag: '2027-02-07' }]),
+        ),
+      }),
+    );
+    zeige();
+    expect(await screen.findByRole('region', { name: /^Wann kannst du/ })).toBeTruthy();
+  });
+
+  it('mit „Fertig“ (Bestätigung dieser Abfrage) erscheint keine Karte mehr', async () => {
+    abwesendDa();
+    antwortenLader.mockResolvedValue(bereit({ fertig: { a1: ZEIT } }));
+    zeige();
+    await waitFor(() => expect(antwortenLader).toHaveBeenCalled());
+    await waitFor(() => expect(zeitraum).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 10));
+    expect(karte()).toBeNull();
+  });
+
+  it('die Bestätigung einer anderen Abfrage lässt die Karte stehen', async () => {
+    abwesendDa();
+    antwortenLader.mockResolvedValue(bereit({ fertig: { andere: ZEIT } }));
+    zeige();
+    expect(await screen.findByRole('region', { name: /^Wann kannst du/ })).toBeTruthy();
+  });
+
+  it('Austritt: mit „Fertig“ trage ich mich aus – ohne nicht (auch nicht mit Ja-Antworten an allen Terminen)', async () => {
+    abwesendDa({ einrichtung: { gruppeId: 50, routineId: 60 } });
+    const austritt = vi.fn(() => Promise.resolve('ausgetragen'));
+    antwortenLader.mockResolvedValue(
+      bereit({
+        antworten: Object.fromEntries(
+          [101, 102, 104, 105].map((id) => [String(id), { a: 'ja' as const, tag: '2027-02-07' }]),
+        ),
+      }),
+    );
+    await austrittFuerEigene(MITARBEITER, HEUTE, 'Europe/Berlin', undefined, austritt);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(austritt).not.toHaveBeenCalled();
+    antwortenLader.mockResolvedValue(bereit({ fertig: { a1: ZEIT } }));
+    expect(await ladeKarten(MITARBEITER, HEUTE, 'Europe/Berlin', undefined, austritt)).toEqual([]);
+    await waitFor(() => expect(austritt).toHaveBeenCalledTimes(1));
+    expect(austritt).toHaveBeenCalledWith(
+      expect.objectContaining({ gruppe: expect.objectContaining({ id: 4 }) }),
+      MITARBEITER.ichId,
+    );
+  });
+
+  it('Antworten nicht lesbar: auch hier nie ein Austritt – „fertig“ wäre geraten', async () => {
+    abwesendDa({ einrichtung: { gruppeId: 50, routineId: 60 } });
+    const austritt = vi.fn(() => Promise.resolve('ausgetragen'));
+    antwortenLader.mockResolvedValue(
+      bereit({ fertig: { a1: ZEIT }, lesefehler: 'voruebergehend' }),
+    );
+    await austrittFuerEigene(MITARBEITER, HEUTE, 'Europe/Berlin', undefined, austritt);
+    expect(austritt).not.toHaveBeenCalled();
   });
 });

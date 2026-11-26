@@ -79,6 +79,7 @@ const bereit = (antworten: Antworten = {}): Verfuegbarkeit => ({
   bereit: [30],
   antworten,
   vertretungen: {},
+  fertig: {},
   lesefehler: null,
 });
 

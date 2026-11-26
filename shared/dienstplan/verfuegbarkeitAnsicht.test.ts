@@ -60,6 +60,13 @@ describe('ansichtBeimOeffnen', () => {
   it('ohne Zusagen-Gruppe nie Zusagen', () => {
     expect(ansichtBeimOeffnen(1, [])).toBe('abwesenheiten');
   });
+  it('V-4: fragt die Gruppe der Abfrage „Nur abwesend“, gilt immer Abwesenheiten – auch wenn sie (Lesefehler = Zusagen) in der Liste steht', () => {
+    expect(ansichtBeimOeffnen(2, [TECHNIK], 'abwesend')).toBe('abwesenheiten');
+    // Gegenstück: dieselbe Lage mit Zusagen (oder ohne Angabe) öffnet Zusagen.
+    expect(ansichtBeimOeffnen(2, [TECHNIK], 'zusagen')).toBe('zusagen');
+    expect(ansichtBeimOeffnen(2, [TECHNIK])).toBe('zusagen');
+    expect(ansichtBeimOeffnen(2, [TECHNIK], null)).toBe('zusagen');
+  });
 });
 
 describe('zusagenTermine', () => {

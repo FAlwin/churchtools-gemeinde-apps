@@ -18,7 +18,7 @@
  * das dürfen nur Planer, mehr als ein Nachname kommt dabei nicht heraus.
  */
 import { tagLang } from '../ct/datum';
-import type { Abfrage } from './abfragen';
+import type { Abfrage, VerfuegbarkeitArt } from './abfragen';
 import { monateText } from './abfrageStand';
 import { htmlText, mailKnopf } from './erinnern';
 
@@ -29,6 +29,20 @@ export const STANDARD_TEXT = [
   'die {gruppe} plant {zeitraum}. Bitte trag bis {frist} im Dienstplaner ein, an welchen Terminen du kannst (Ja, Vielleicht oder Nein).',
   'Hast du inzwischen alles eingetragen? Dann ist diese Mail überholt, es kommt keine weitere. Du willst nicht mehr erinnert werden? Sag der Leitung der {gruppe} Bescheid.',
 ].join('\n\n');
+
+/**
+ * Der Standardtext bei „Nur abwesend“ (V-4): dort gibt es kein Ja/Vielleicht – man trägt ein, wann man **nicht** kann, und tippt
+ * auf „Fertig“. Gilt, solange der Plan keinen eigenen Text hat (`standardText`).
+ */
+export const STANDARD_TEXT_ABWESEND = [
+  'Hallo {vorname},',
+  'die {gruppe} plant {zeitraum}. Bitte trag bis {frist} im Dienstplaner ein, an welchen Terminen du nicht kannst, und tippe auf „Fertig“.',
+  'Hast du schon auf „Fertig“ getippt? Dann ist diese Mail überholt, es kommt keine weitere. Du willst nicht mehr erinnert werden? Sag der Leitung der {gruppe} Bescheid.',
+].join('\n\n');
+
+/** Der Standardtext der Mail je Art – die eine Stelle dafür (`mailFuer`). */
+export const standardText = (art: VerfuegbarkeitArt): string =>
+  art === 'abwesend' ? STANDARD_TEXT_ABWESEND : STANDARD_TEXT;
 
 /** ChurchTools' Platzhalter für den Vornamen in einer Routinen-Mail. */
 export const CT_VORNAME = '{{{person.firstName}}}';
@@ -53,7 +67,7 @@ function einsetzen(s: string, werte: Record<string, string>): string {
 const NACHSATZ_STIL = 'font-size:12px;color:#5f6368';
 
 /**
- * **Die Mail für eine Abfrage:** Betreff (Klartext) und HTML. `plan.mail === null` = Standardtext. `link` ist die volle
+ * **Die Mail für eine Abfrage:** Betreff (Klartext) und HTML. `plan.mail === null` = Standardtext der Art (`standardText`, V-4). `link` ist die volle
  * Adresse von „Verfügbarkeit“ mit der Abfrage (Aufrufer baut sie mit `adresseFuerAbwesenheitenAbfrage` + `erweiterungsLink`).
  */
 export function mailFuer(
@@ -61,8 +75,9 @@ export function mailFuer(
   abfrage: Pick<Abfrage, 'von' | 'bis' | 'frist'>,
   gruppe: string,
   link: string,
+  art: VerfuegbarkeitArt,
 ): { betreff: string; html: string } {
-  const mail = plan.mail ?? { betreff: STANDARD_BETREFF, text: STANDARD_TEXT };
+  const mail = plan.mail ?? { betreff: STANDARD_BETREFF, text: standardText(art) };
   const zeitraum = monateText(abfrage.von, abfrage.bis);
   const frist = tagLang(abfrage.frist);
 

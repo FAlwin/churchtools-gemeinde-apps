@@ -24,6 +24,7 @@ export function AbfrageKarte({
   onEintragen: () => void;
 }) {
   const { abfrage, gruppe, stand } = karte;
+  const art = karte.inhalt.verfuegbarkeit;
   const etikett = abfrageKartenEtikett(abfrage, heute);
   const fertig = Math.max(0, stand.gesamt - stand.offen);
   const anteil = stand.gesamt > 0 ? Math.round((fertig / stand.gesamt) * 100) : 0;
@@ -35,17 +36,22 @@ export function AbfrageKarte({
         {etikett && <Etikett ton={etikett.ton}>{etikett.text}</Etikett>}
       </div>
       <div className={styles.rumpf}>
-        <p className={styles.text}>{abfrageKartenText({ gruppe: gruppe.name, abfrage, stand })}</p>
-        <div
-          className={`${styles.balken} ${etikett?.ton === 'rot' ? styles.rot : ''}`}
-          role="progressbar"
-          aria-label="Schon beantwortet"
-          aria-valuemin={0}
-          aria-valuemax={stand.gesamt}
-          aria-valuenow={fertig}
-        >
-          <span style={{ width: `${anteil}%` }} />
-        </div>
+        <p className={styles.text}>
+          {abfrageKartenText({ gruppe: gruppe.name, abfrage, stand, art })}
+        </p>
+        {/* Bei „Nur abwesend“ (V-4) gibt es keinen Fortschritt: Wer nicht abwesend ist, hat nichts getan – fertig ist man erst mit „Fertig“. */}
+        {art === 'zusagen' && (
+          <div
+            className={`${styles.balken} ${etikett?.ton === 'rot' ? styles.rot : ''}`}
+            role="progressbar"
+            aria-label="Schon beantwortet"
+            aria-valuemin={0}
+            aria-valuemax={stand.gesamt}
+            aria-valuenow={fertig}
+          >
+            <span style={{ width: `${anteil}%` }} />
+          </div>
+        )}
         <div className={styles.knoepfe}>
           <KopfKnopf
             onClick={onEintragen}

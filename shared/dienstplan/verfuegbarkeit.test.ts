@@ -9,7 +9,13 @@ import {
   antwortenSchublade,
   eigeneAntwortenLesen,
   eigeneAntwortenSchreiben,
+  fertigBei,
+  fertigBereinigt,
+  fertigMarkieren,
+  fertigZusammen,
   gleicheAntworten,
+  gleichesFertig,
+  MAX_FERTIG,
   gleicheVertretungen,
   MAX_NOTIZ,
   neuesterStand,
@@ -357,6 +363,7 @@ describe('Lesen', () => {
       wert: {
         antworten: antw({ '2': ['vielleicht', '2026-12-13'] }),
         vertretungen: {},
+        fertig: {},
         stand: '2026-11-05T10:00:00.000Z',
       },
     });
@@ -404,7 +411,7 @@ describe('Lesen', () => {
     const { port } = speicher();
     expect(await eigeneAntwortenLesen(port, MODUL, [K1, K2], ANNA)).toEqual({
       ok: true,
-      wert: { antworten: {}, vertretungen: {}, stand: null },
+      wert: { antworten: {}, vertretungen: {}, fertig: {}, stand: null },
     });
   });
 
@@ -1048,3 +1055,297 @@ function wertMitMarkierung(
     }),
   };
 }
+
+describe('„Fertig“ bei „Nur abwesend“ – Bestätigung im eigenen Wert (V-4)', () => {
+  const ABFRAGE = 'abfrage-1';
+  /** Die Bestätigungen, die der Leser der Kategorie `kat` für ANNA sieht. */
+  const bestaetigt = async (port: EntwurfPort, kat: number) => {
+    const r = await alleAntwortenLesen(port, MODUL, kat);
+    return r.ok ? (r.wert.get(ANNA)?.fertig ?? {}) : null;
+  };
+
+  it('wird in alle Kategorien geschrieben und nachgelesen – mit Zeitpunkt, ohne ein „Ja“ (Erzeuger gegen Leser)', async () => {
+    const { port } = speicher();
+    const r = await fertigMarkieren(port, MODUL, [K1, K2], ANNA, ABFRAGE, HEUTE);
+    expect(r).toEqual({
+      ok: true,
+      ergebnisse: [
+        { kategorie: K1, ok: true },
+        { kategorie: K2, ok: true },
+      ],
+    });
+    for (const kat of [K1, K2]) {
+      const f = await bestaetigt(port, kat);
+      expect(Object.keys(f ?? {})).toEqual([ABFRAGE]);
+      expect(f?.[ABFRAGE]).toMatch(/^2026-11-18T20:00:\d\d\.\d{3}Z$/);
+    }
+    // Es steht kein Ja/Vielleicht dort: die Antworten sind leer.
+    expect(await eigeneAntwortenLesen(port, MODUL, [K1, K2], ANNA)).toMatchObject({
+      ok: true,
+      wert: { antworten: {} },
+    });
+  });
+
+  it('die Antworten bleiben, wie sie waren, und fertig kommt dazu', async () => {
+    const { port } = speicher();
+    await eigeneAntwortenSchreiben(port, MODUL, [K1, K2], ANNA, A1, HEUTE);
+    await fertigMarkieren(port, MODUL, [K1, K2], ANNA, ABFRAGE, HEUTE);
+    expect(await eigeneAntwortenLesen(port, MODUL, [K1, K2], ANNA)).toMatchObject({
+      wert: { antworten: A1 },
+    });
+    expect(Object.keys((await bestaetigt(port, K1)) ?? {})).toEqual([ABFRAGE]);
+  });
+
+  it('Erhalt: Speichern in „Verfügbarkeit“ (nur Antworten) löscht die Bestätigung NICHT – in keiner Kategorie', async () => {
+    const { port } = speicher();
+    await eigeneAntwortenSchreiben(port, MODUL, [K1, K2], ANNA, A1, HEUTE);
+    await fertigMarkieren(port, MODUL, [K1, K2], ANNA, ABFRAGE, HEUTE);
+    const vorher = await bestaetigt(port, K1);
+    const r = await eigeneAntwortenSchreiben(
+      port,
+      MODUL,
+      [K1, K2],
+      ANNA,
+      antw({ '1': ['vielleicht', '2026-12-06'] }),
+      HEUTE,
+    );
+    expect(r.every((x) => x.ok)).toBe(true);
+    for (const kat of [K1, K2]) expect(await bestaetigt(port, kat)).toEqual(vorher);
+  });
+
+  it('Erhalt auch bei der Vertretungssuche (schreibt mit `fertig: undefined`)', async () => {
+    const { port } = speicher();
+    await fertigMarkieren(port, MODUL, [K1], ANNA, ABFRAGE, HEUTE);
+    const vorher = await bestaetigt(port, K1);
+    await vertretungMarkieren(
+      port,
+      MODUL,
+      [K1],
+      ANNA,
+      {
+        terminId: 1,
+        vertretung: {
+          dienst: 6,
+          gefragt: [],
+          seit: '2026-11-18T10:00:00.000Z',
+          tag: '2026-12-06',
+          name: 'Anna',
+          gefragtNamen: [],
+        },
+      },
+      HEUTE,
+    );
+    expect(await bestaetigt(port, K1)).toEqual(vorher);
+  });
+
+  it('der Wert bleibt wegen der Bestätigung stehen, auch wenn alle Antworten entfernt werden; ohne alles wird er gelöscht', async () => {
+    const { port, eigene } = speicher();
+    await eigeneAntwortenSchreiben(port, MODUL, [K1], ANNA, A1, HEUTE);
+    await fertigMarkieren(port, MODUL, [K1], ANNA, ABFRAGE, HEUTE);
+    expect(await eigeneAntwortenSchreiben(port, MODUL, [K1], ANNA, {}, HEUTE)).toEqual([
+      { kategorie: K1, ok: true },
+    ]);
+    expect(eigene(K1, ANNA)).toHaveLength(1);
+    expect(Object.keys((await bestaetigt(port, K1)) ?? {})).toEqual([ABFRAGE]);
+    // Ohne Antworten, Vertretung UND Bestätigung: gelöscht (der Erzeuger mit leerem `fertig` – hier direkt über ein Doppel-Wert-Beispiel).
+    const frisch = speicher();
+    await eigeneAntwortenSchreiben(frisch.port, MODUL, [K1], ANNA, A1, HEUTE);
+    await eigeneAntwortenSchreiben(frisch.port, MODUL, [K1], ANNA, {}, HEUTE);
+    expect(frisch.eigene(K1, ANNA)).toHaveLength(0);
+  });
+
+  it('abwärtskompatibel: ein alter Wert ohne das Feld gilt (fertig leer); ohne Bestätigung schreibt der Erzeuger kein Feld', async () => {
+    const { port, s } = speicher();
+    s.werte.push(wertMit(1, K1, ANNA, A1, '2026-11-01T10:00:00.000Z'));
+    expect(await bestaetigt(port, K1)).toEqual({});
+    await eigeneAntwortenSchreiben(port, MODUL, [K1], ANNA, A1, HEUTE);
+    expect(JSON.parse(s.werte[0].value)).not.toHaveProperty('fertig');
+  });
+
+  it('ein kaputtes Feld lässt nur das Feld weg – Antworten und Wert bleiben lesbar; ein Wert anderer Fassung bleibt unangetastet', async () => {
+    const { port, s } = speicher();
+    s.werte.push({
+      id: 1,
+      dataCategoryId: K1,
+      value: JSON.stringify({
+        art: 'dienstplaner-verfuegbarkeit',
+        fassung: 1,
+        person: ANNA,
+        antworten: A1,
+        fertig: 'kaputt',
+        stand: '2026-11-01T10:00:00.000Z',
+      }),
+    });
+    const fremd: Wert = {
+      id: 2,
+      dataCategoryId: K1,
+      value: JSON.stringify({
+        art: 'dienstplaner-verfuegbarkeit',
+        fassung: 2,
+        person: ANNA,
+        antworten: {},
+        fertig: { x: 'y' },
+        stand: '2099-01-01T00:00:00.000Z',
+      }),
+    };
+    s.werte.push(fremd);
+    expect(personenWertAus(s.werte[0])?.fertig).toEqual({});
+    const r = await fertigMarkieren(port, MODUL, [K1], ANNA, ABFRAGE, HEUTE);
+    expect(r).toMatchObject({ ok: true });
+    // Der Wert der neuen Fassung ist unlesbar für uns: nicht überschrieben, nicht gelöscht.
+    expect(s.werte.find((w) => w.id === 2)).toEqual(fremd);
+    expect(Object.keys((await bestaetigt(port, K1)) ?? {})).toEqual([ABFRAGE]);
+  });
+
+  it('fertigBereinigt: eine Stelle – falscher Typ → leer, leere/zu lange IDs und Zeiten fallen weg, nur die neuesten MAX_FERTIG bleiben', () => {
+    expect(fertigBereinigt(null)).toEqual({});
+    expect(fertigBereinigt('x')).toEqual({});
+    expect(fertigBereinigt([1])).toEqual({});
+    expect(
+      fertigBereinigt({
+        a: '2026-11-18T10:00:00.000Z',
+        '': '2026-11-18T10:00:00.000Z',
+        b: '',
+        c: 5,
+        ['x'.repeat(65)]: '2026-11-18T10:00:00.000Z',
+        d: 'z'.repeat(41),
+      }),
+    ).toEqual({ a: '2026-11-18T10:00:00.000Z' });
+    const viele = Object.fromEntries(
+      Array.from({ length: MAX_FERTIG + 5 }, (_, i) => [
+        `id${i}`,
+        `2026-11-${String(i + 1).padStart(2, '0')}T10:00:00.000Z`,
+      ]),
+    );
+    const k = fertigBereinigt(viele);
+    expect(Object.keys(k)).toHaveLength(MAX_FERTIG);
+    expect(k[`id${MAX_FERTIG + 4}`]).toBeDefined(); // die neueste bleibt
+    expect(k.id0).toBeUndefined(); // die älteste fällt heraus
+  });
+
+  it('fertigBei zählt nur eigene Einträge (nie die Prototyp-Kette) und gleichesFertig ignoriert die Reihenfolge', () => {
+    expect(fertigBei({}, 'constructor')).toBe(false);
+    expect(fertigBei({ a: '2026-11-18T10:00:00.000Z' }, 'a')).toBe(true);
+    expect(fertigBei(undefined, 'a')).toBe(false);
+    expect(fertigBei({ a: 'x' }, null)).toBe(false);
+    const z1 = '2026-11-18T10:00:00.000Z';
+    const z2 = '2026-11-19T10:00:00.000Z';
+    expect(gleichesFertig({ a: z1, b: z2 }, { b: z2, a: z1 })).toBe(true);
+    expect(gleichesFertig({ a: z1 }, { a: z2 })).toBe(false);
+    expect(gleichesFertig({ a: z1 }, {})).toBe(false);
+  });
+
+  it('Nachlesen: ChurchTools meldet OK, schreibt aber nichts → nicht-angekommen (kein Erfolg)', async () => {
+    const { port, s } = speicher();
+    s.verschlucken.add(K1);
+    expect(await fertigMarkieren(port, MODUL, [K1], ANNA, ABFRAGE, HEUTE)).toEqual({
+      ok: true,
+      ergebnisse: [{ kategorie: K1, ok: false, grund: 'nicht-angekommen' }],
+    });
+  });
+
+  it('Nachlesen: ChurchTools behält den neuen Stand, verliert aber das Feld „fertig“ → nicht-angekommen (nicht Erfolg)', async () => {
+    const { port, s } = speicher();
+    s.nachSchreiben = () => {
+      s.nachSchreiben = null;
+      s.werte = s.werte.map((w) => {
+        const { fertig: _weg, ...rest } = JSON.parse(w.value) as Record<string, unknown>;
+        return { ...w, value: JSON.stringify(rest) };
+      });
+    };
+    const r = await fertigMarkieren(port, MODUL, [K1], ANNA, ABFRAGE, HEUTE);
+    expect(r).toEqual({
+      ok: true,
+      ergebnisse: [{ kategorie: K1, ok: false, grund: 'nicht-angekommen' }],
+    });
+  });
+
+  it('Nachlesen: ein anderer Schreiber war dazwischen (neuerer Stand) → nicht-angekommen', async () => {
+    const { port, s } = speicher();
+    s.nachSchreiben = () => {
+      s.nachSchreiben = null;
+      s.werte.push(wertMit(900, K1, ANNA, {}, '2030-01-01T00:00:00.000Z'));
+    };
+    const r = await fertigMarkieren(port, MODUL, [K1], ANNA, ABFRAGE, HEUTE);
+    expect(r).toMatchObject({
+      ok: true,
+      ergebnisse: [{ kategorie: K1, ok: false, grund: 'nicht-angekommen' }],
+    });
+  });
+
+  it('vorübergehender Fehler → voruebergehend (nicht kein-recht); doch angekommen → Erfolg; nichts wird wiederholt', async () => {
+    const a = speicher();
+    a.s.schreibenWirft.set(K1, new Fehler(503));
+    expect(await fertigMarkieren(a.port, MODUL, [K1], ANNA, ABFRAGE, HEUTE)).toEqual({
+      ok: true,
+      ergebnisse: [{ kategorie: K1, ok: false, grund: 'voruebergehend' }],
+    });
+    expect(a.s.auftraege.filter((x) => x.kat === K1)).toHaveLength(1);
+    const b = speicher();
+    b.s.schreibenWirft.set(K1, new Fehler(503));
+    b.s.trotzdemSchreiben = true;
+    expect(await fertigMarkieren(b.port, MODUL, [K1], ANNA, ABFRAGE, HEUTE)).toEqual({
+      ok: true,
+      ergebnisse: [{ kategorie: K1, ok: true }],
+    });
+  });
+
+  it('Lesen scheitert: NICHTS wird geschrieben; kein Recht (403) → kein-recht je Kategorie, die andere gelingt', async () => {
+    const a = speicher();
+    a.s.lesenWirft.set(K1, new Fehler(503));
+    expect(await fertigMarkieren(a.port, MODUL, [K1], ANNA, ABFRAGE, HEUTE)).toEqual({
+      ok: false,
+      grund: 'voruebergehend',
+    });
+    expect(a.s.auftraege).toEqual([]);
+    const b = speicher();
+    b.s.schreibenWirft.set(K1, new Fehler(403));
+    expect(await fertigMarkieren(b.port, MODUL, [K1, K2], ANNA, ABFRAGE, HEUTE)).toEqual({
+      ok: true,
+      ergebnisse: [
+        { kategorie: K1, ok: false, grund: 'kein-recht' },
+        { kategorie: K2, ok: true },
+      ],
+    });
+  });
+
+  it('ein zweiter Versuch heilt eine Kategorie, in die der erste nicht ankam – der erste Zeitpunkt bleibt', async () => {
+    const { port, s } = speicher();
+    s.verschlucken.add(K2);
+    await fertigMarkieren(port, MODUL, [K1, K2], ANNA, ABFRAGE, HEUTE);
+    const zeit = (await bestaetigt(port, K1))?.[ABFRAGE];
+    expect(await bestaetigt(port, K2)).toEqual({});
+    s.verschlucken.delete(K2);
+    const r = await fertigMarkieren(port, MODUL, [K1, K2], ANNA, ABFRAGE, HEUTE);
+    expect(r).toMatchObject({ ok: true, ergebnisse: [{ ok: true }, { ok: true }] });
+    expect((await bestaetigt(port, K2))?.[ABFRAGE]).toBe(zeit);
+  });
+
+  it('fertigZusammen: je Person gilt derselbe Wert wie bei den Antworten (neuester stand); ohne Eintrag fehlt die Person', () => {
+    const alt = { antworten: {}, stand: '2026-11-01T10:00:00.000Z', fertig: { a: 'z1' } };
+    const neu = { antworten: {}, stand: '2026-11-02T10:00:00.000Z', fertig: {} };
+    expect(
+      fertigZusammen(
+        new Map([
+          [K1, new Map([[ANNA, alt]])],
+          [K2, new Map([[ANNA, neu]])],
+        ]),
+      ).has(ANNA),
+    ).toBe(false);
+    expect(fertigZusammen(new Map([[K1, new Map([[ANNA, alt]])]])).get(ANNA)).toEqual({ a: 'z1' });
+    // Gleichstand: die kleinere Kategorie – wie bei den Antworten.
+    const gleich = (f: Record<string, string>) => ({
+      antworten: {},
+      stand: '2026-11-02T10:00:00.000Z',
+      fertig: f,
+    });
+    expect(
+      fertigZusammen(
+        new Map([
+          [K2, new Map([[ANNA, gleich({ k2: 'z' })]])],
+          [K1, new Map([[ANNA, gleich({ k1: 'z' })]])],
+        ]),
+      ).get(ANNA),
+    ).toEqual({ k1: 'z' });
+  });
+});

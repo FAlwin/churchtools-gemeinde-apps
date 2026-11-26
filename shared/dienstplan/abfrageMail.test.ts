@@ -18,7 +18,7 @@ const standard = { mail: null };
 
 describe('mailFuer', () => {
   it('Standard: Betreff mit Zeitraum, Text mit Frist, Gruppe und dem ChurchTools-Vornamen', () => {
-    const m = mailFuer(standard, A, 'Musik', LINK);
+    const m = mailFuer(standard, A, 'Musik', LINK, 'zusagen');
     expect(m.betreff).toBe('Bitte eintragen: Wann kannst du im Februar und März?');
     expect(m.html).toContain(`Hallo ${CT_VORNAME},`);
     expect(m.html).toContain('die Musik plant <b>Februar und März</b>');
@@ -27,13 +27,13 @@ describe('mailFuer', () => {
   });
 
   it('Zeitraum und Frist kommen aus den vorhandenen Regeln (monateText, tagLang)', () => {
-    const m = mailFuer(standard, A, 'Musik', LINK);
+    const m = mailFuer(standard, A, 'Musik', LINK, 'zusagen');
     expect(m.html).toContain(htmlText(monateText(A.von, A.bis)));
     expect(m.html).toContain(htmlText(tagLang(A.frist)));
   });
 
   it('der Knopf steht unter dem zweiten Absatz, der Nachsatz danach – mit dem Link', () => {
-    const { html } = mailFuer(standard, A, 'Musik', LINK);
+    const { html } = mailFuer(standard, A, 'Musik', LINK, 'zusagen');
     const knopf = html.indexOf('Im Dienstplaner eintragen');
     expect(html.indexOf('plant')).toBeLessThan(knopf);
     expect(knopf).toBeLessThan(html.indexOf('Hast du inzwischen alles eingetragen?'));
@@ -42,7 +42,13 @@ describe('mailFuer', () => {
   });
 
   it('ein kurzer Text: der Knopf steht am Ende', () => {
-    const { html } = mailFuer({ mail: { betreff: 'b', text: 'Nur ein Satz.' } }, A, 'Musik', LINK);
+    const { html } = mailFuer(
+      { mail: { betreff: 'b', text: 'Nur ein Satz.' } },
+      A,
+      'Musik',
+      LINK,
+      'zusagen',
+    );
     expect(html.endsWith('</a></p>')).toBe(true);
     expect(html).toContain('<p>Nur ein Satz.</p>');
   });
@@ -53,6 +59,7 @@ describe('mailFuer', () => {
       A,
       'Kinder & Jugend',
       LINK,
+      'zusagen',
     );
     expect(m.betreff).toBe('Frist Dienstag, 5. Januar & Kinder & Jugend');
     expect(m.html).toContain('<p>Zeile 1<br>Zeile 2 ' + CT_VORNAME + '</p>');
@@ -64,6 +71,7 @@ describe('mailFuer', () => {
       A,
       '<b onload="x">',
       'https://ct.test/"><script>',
+      'zusagen',
     );
     expect(m.html).not.toContain('<script>');
     expect(m.html).toContain(
@@ -73,13 +81,25 @@ describe('mailFuer', () => {
   });
 
   it('ein eingesetzter Wert wird nicht noch einmal ausgewertet', () => {
-    const m = mailFuer({ mail: { betreff: '{gruppe}', text: 't {gruppe}' } }, A, '{frist}', LINK);
+    const m = mailFuer(
+      { mail: { betreff: '{gruppe}', text: 't {gruppe}' } },
+      A,
+      '{frist}',
+      LINK,
+      'zusagen',
+    );
     expect(m.betreff).toBe('{frist}');
     expect(m.html).toContain('t {frist}');
   });
 
   it('ein unbekannter Platzhalter bleibt stehen (sichtbar statt verschluckt)', () => {
-    const m = mailFuer({ mail: { betreff: '{zeitrum}', text: 'x {zeitrum}' } }, A, 'Musik', LINK);
+    const m = mailFuer(
+      { mail: { betreff: '{zeitrum}', text: 'x {zeitrum}' } },
+      A,
+      'Musik',
+      LINK,
+      'zusagen',
+    );
     expect(m.betreff).toBe('{zeitrum}');
     expect(m.html).toContain('x {zeitrum}');
   });

@@ -21,7 +21,9 @@ import {
   antwortenSchublade,
   eigeneAntwortenLesen,
   eigeneAntwortenSchreiben,
+  fertigMarkieren,
   type Antworten,
+  type Fertig,
   type VerfuegbarkeitGrund,
   type Vertretungen,
 } from '@shared/dienstplan/verfuegbarkeit';
@@ -46,6 +48,8 @@ export interface Verfuegbarkeit {
   antworten: Antworten;
   /** Die eigenen gesuchten Vertretungen (E5c-6); leer, wenn keine da ist oder nichts gelesen werden konnte. */
   vertretungen: Vertretungen;
+  /** Die eigenen „Fertig“-Bestätigungen bei Abfragen „Nur abwesend“ (V-4); leer, wenn keine da ist oder nichts gelesen werden konnte. */
+  fertig: Fertig;
   /** Lesen ging schief – dann steht `antworten` für nichts, und es wird nicht geschrieben. */
   lesefehler: VerfuegbarkeitGrund | null;
 }
@@ -57,8 +61,34 @@ export const KEINE_VERFUEGBARKEIT: Verfuegbarkeit = {
   bereit: [],
   antworten: {},
   vertretungen: {},
+  fertig: {},
   lesefehler: null,
 };
+
+/**
+ * **Die Ablage „Antworten <Gruppe>“ einer Dienstgruppe:** ihre Kategorie und ihr Stand aus Rechten und Kategorie-Liste – die EINE
+ * Rechnung für „Verfügbarkeit“ (`verfuegbarkeitLesen`), „Einrichten …“ und den Start einer Abfrage (V-4).
+ */
+export function antwortenAblage(
+  rechte: ModulRechte,
+  kategorien: readonly { id: number; shorty: string }[],
+  gruppe: Pick<Dienstgruppe, 'id' | 'name'>,
+): { kategorie: number | null; stand: SchubladenStand } {
+  const kategorie = kategorieAusListe(kategorien, antwortenSchublade(gruppe).kuerzel);
+  return { kategorie, stand: schubladenStand(rechte, kategorie) };
+}
+
+/** Der Stand der Ablage einer Dienstgruppe, **frisch** aus ChurchTools (Rechte und Kategorien jedes Mal neu, wie `ladeVerfuegbarkeit`). Wirft bei Lesefehlern. */
+export async function antwortenAblageStand(
+  gruppe: Pick<Dienstgruppe, 'id' | 'name'>,
+): Promise<SchubladenStand> {
+  const modul = await modulId();
+  const [rechteRoh, liste] = await Promise.all([
+    port.daten<Record<string, unknown> | null>('/permissions/global'),
+    kategorienLesen(port, modul),
+  ]);
+  return antwortenAblage(modulRechteAus(rechteRoh?.[MODUL_KUERZEL]), liste, gruppe).stand;
+}
 
 /**
  * Der Kern ohne Netz-Technik (Tests reichen einen nachgebauten Speicher herein): Stand je Dienstgruppe aus Rechten und
@@ -72,25 +102,44 @@ export async function verfuegbarkeitLesen(
   gruppen: readonly Dienstgruppe[],
   person: number,
 ): Promise<Verfuegbarkeit> {
-  const zeilen = gruppen.map((gruppe): EigeneSchublade => {
-    const kategorie = kategorieAusListe(kategorien, antwortenSchublade(gruppe).kuerzel);
-    return { gruppe, kategorie, stand: schubladenStand(rechte, kategorie) };
-  });
+  const zeilen = gruppen.map(
+    (gruppe): EigeneSchublade => ({
+      gruppe,
+      ...antwortenAblage(rechte, kategorien, gruppe),
+    }),
+  );
   const bereit = zeilen
     .filter((z) => z.stand === 'bereit' && z.kategorie !== null)
     .map((z) => z.kategorie as number);
   if (bereit.length === 0) {
-    return { modul, gruppen: zeilen, bereit, antworten: {}, vertretungen: {}, lesefehler: null };
+    return {
+      modul,
+      gruppen: zeilen,
+      bereit,
+      antworten: {},
+      vertretungen: {},
+      fertig: {},
+      lesefehler: null,
+    };
   }
   const r = await eigeneAntwortenLesen(p, modul, bereit, person);
   if (!r.ok)
-    return { modul, gruppen: zeilen, bereit, antworten: {}, vertretungen: {}, lesefehler: r.grund };
+    return {
+      modul,
+      gruppen: zeilen,
+      bereit,
+      antworten: {},
+      vertretungen: {},
+      fertig: {},
+      lesefehler: r.grund,
+    };
   return {
     modul,
     gruppen: zeilen,
     bereit,
     antworten: r.wert.antworten,
     vertretungen: r.wert.vertretungen,
+    fertig: r.wert.fertig,
     lesefehler: null,
   };
 }
@@ -187,6 +236,49 @@ export function speichereVerfuegbarkeit(
   return verfuegbarkeitSpeichern(port, v, person, antworten, heute);
 }
 
+/**
+ * **„Fertig“ speichern** (V-4): die Bestätigung dieser Abfrage in alle bereiten Kategorien (Kern: `fertigMarkieren`, nacheinander,
+ * nichts wird wiederholt, Erfolg ist erst, was nachgelesen dasteht). **Die Kategorie der Dienstgruppe der Abfrage muss bereit sein** –
+ * die Planer lesen nur dort; ohne sie wäre „fertig“ für sie unsichtbar. Kein „Ja“ wird geschrieben.
+ */
+export async function fertigSpeichern(
+  p: EntwurfPort,
+  v: Verfuegbarkeit,
+  person: number,
+  dienstgruppeId: number,
+  abfrageId: string,
+  heute: string,
+): Promise<SpeichernErgebnis> {
+  if (v.lesefehler)
+    return { ok: false, text: 'Fertig geht gerade nicht: ' + grundSatz(v.lesefehler) };
+  const zeile = v.gruppen.find((z) => z.gruppe.id === dienstgruppeId);
+  if (!zeile || zeile.kategorie === null || !v.bereit.includes(zeile.kategorie))
+    return {
+      ok: false,
+      text: `Fertig geht noch nicht: Der Speicher der Antworten für „${zeile?.gruppe.name ?? 'deine Dienstgruppe'}“ ist nicht eingerichtet oder nicht freigegeben. Bitte die Leitung fragen.`,
+    };
+  const r = await fertigMarkieren(p, v.modul, v.bereit, person, abfrageId, heute);
+  if (!r.ok) return { ok: false, text: 'Fertig nicht gespeichert: ' + grundSatz(r.grund) };
+  const fehler = r.ergebnisse.flatMap((e) => (e.ok ? [] : [e]));
+  if (fehler.length === 0) return { ok: true };
+  const name = (kategorie: number): string =>
+    v.gruppen.find((z) => z.kategorie === kategorie)?.gruppe.name ?? 'deine Dienstgruppe';
+  return {
+    ok: false,
+    text: fehler
+      .map((e) => `Für „${name(e.kategorie)}“ nicht gespeichert: ${grundSatz(e.grund)}`)
+      .join(' '),
+  };
+}
+
+export const speichereFertig = (
+  v: Verfuegbarkeit,
+  person: number,
+  dienstgruppeId: number,
+  abfrageId: string,
+  heute: string,
+): Promise<SpeichernErgebnis> => fertigSpeichern(port, v, person, dienstgruppeId, abfrageId, heute);
+
 const VERWEIGERT_ANLEGEN =
   'ChurchTools erlaubt dir nicht, Kategorien anzulegen. Das kann die Gemeinde-Verwaltung einrichten.';
 
@@ -195,7 +287,9 @@ const VERWEIGERT_ANLEGEN =
  * Rechte darauf). Nacheinander; `kategorieSicherstellen` legt nur an, was (sichtbar) noch fehlt, und sieht danach nach.
  * Wirft beim ersten Fehlschlag – die übrigen werden dann nicht versucht.
  */
-export async function richteAntwortenEin(gruppen: readonly Dienstgruppe[]): Promise<void> {
+export async function richteAntwortenEin(
+  gruppen: readonly Pick<Dienstgruppe, 'id' | 'name'>[],
+): Promise<void> {
   const modul = await modulId();
   for (const g of gruppen) {
     await kategorieSicherstellen(port, modul, antwortenSchublade(g), VERWEIGERT_ANLEGEN);

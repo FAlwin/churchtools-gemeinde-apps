@@ -13,7 +13,14 @@
  * (gilt die Antwort für diesen Dienst, ist die Gruppe sichtbar?) und `antwortStufe` (Ja / Vielleicht / keine Antwort / kann
  * nicht). Nirgends sonst wird entschieden, was eine Antwort bedeutet.
  */
-import type { Antwort, Antworten, Vertretungen, Zusage } from './verfuegbarkeit';
+import {
+  fertigBei,
+  type Antwort,
+  type Antworten,
+  type Fertig,
+  type Vertretungen,
+  type Zusage,
+} from './verfuegbarkeit';
 
 /**
  * Was geladen ist. `sichtbar` = die Dienstgruppen (`Dienst.dienstgruppeId`), deren Antworten gelesen werden konnten. Jede
@@ -29,7 +36,22 @@ export interface PersonenAntworten {
    * Nur Personen mit mindestens einer Suche stehen darin.
    */
   vertretungen?: ReadonlyMap<number, Vertretungen>;
+  /**
+   * Je Person ihr **„Fertig“** bei Abfragen „Nur abwesend“ (V-4, `fertigZusammen` – derselbe Wert wie `jePerson`); fehlt = keine.
+   * Nur Personen mit mindestens einer Bestätigung stehen darin.
+   */
+  fertig?: ReadonlyMap<number, Fertig>;
 }
+
+/**
+ * **Hat diese Person bei dieser Abfrage „Fertig“ gedrückt?** Die eine Frage dazu für Planer (Stand, Erinnern, Start) – die
+ * Mitarbeitenden lesen ihr eigenes `fertig` direkt. Ohne Abfrage-ID (`null`: noch keine Abfrage) gibt es nichts zu bestätigen.
+ */
+export const hatBestaetigt = (
+  antworten: Pick<PersonenAntworten, 'fertig'> | null | undefined,
+  personId: number,
+  abfrageId: string | null,
+): boolean => fertigBei(antworten?.fertig?.get(personId), abfrageId);
 
 /** Noch nichts geladen – nichts ist sichtbar. */
 export const KEINE_ANTWORTEN: PersonenAntworten = { jePerson: new Map(), sichtbar: new Set() };

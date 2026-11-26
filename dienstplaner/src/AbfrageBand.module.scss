@@ -11,10 +11,29 @@
   font-size: 14px;
 }
 
+// Der Text nimmt den Platz, bricht in sich um und schiebt Knopf/Link in die nächste Zeile, statt unter ihnen zu
+// verschwinden (V-4, 26.11.2026: bei ~800 px lief „… dann:“ unter den Knopf „Fertig“).
 .text {
+  flex: 1 1 16rem;
   min-width: 0;
 }
 
 .rechts {
   margin-left: auto;
+}
+
+// Nach „Fertig“ (V-4): sanft grün, wie das Etikett „fertig“.
+.gruen {
+  background: color-mix(in srgb, var(--green) 14%, transparent);
+}
+
+.leise {
+  color: var(--text2);
+  font-size: 13px;
+}
+
+.fehler {
+  margin: 6px 0 0;
+  color: var(--red);
+  font-size: 14px;
 }

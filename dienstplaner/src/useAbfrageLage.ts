@@ -4,6 +4,7 @@ import type { Fehlermeldung } from '@ui/ct/fehlerMeldung';
 import {
   erinnerSpalten,
   fehlendeInGruppe,
+  type AbfrageRegel,
   nurVorgesehene,
   termineFuerAbfrage,
   type GruppenErgebnis,
@@ -42,6 +43,11 @@ export function useAbfrageLage(o: {
   bis: string;
   fest: readonly number[] | null;
   heute: string;
+  /**
+   * Nach welcher Regel „offen“ gilt (V-4): bei „Nur abwesend“ zählt die Bestätigung „Fertig“ der laufenden Abfrage. Beim Starten gibt
+   * es noch keine Abfrage-ID (`abfrageId: null`) – dann hat niemand bestätigt.
+   */
+  regel: AbfrageRegel;
 }): {
   /** Der Plan wird (nach-)geladen. */
   planLaedt: boolean;
@@ -54,7 +60,7 @@ export function useAbfrageLage(o: {
   ergebnis: GruppenErgebnis | null;
   neuLaden: () => void;
 } {
-  const { plan, gruppe, von, bis, fest, heute, ladeZeitraum } = o;
+  const { plan, gruppe, von, bis, fest, heute, ladeZeitraum, regel } = o;
   const zeitraumOk = von !== '' && bis !== '' && von <= bis;
   const imGezeigten =
     zeitraumOk &&
@@ -131,6 +137,7 @@ export function useAbfrageLage(o: {
             antworten: antw.antworten,
             heute,
             personenlisten: o.personenlisten,
+            regel,
           })
       : null;
 

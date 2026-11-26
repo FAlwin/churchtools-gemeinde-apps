@@ -934,8 +934,10 @@ function ablaufDemo(
 function speicherDemo(fall: string) {
   const kategorien = [
     { id: 40, shorty: 'dienstplaner-entwuerfe-4', name: 'Entwürfe Musik' },
-    // „Verfügbarkeit“ (E5c-1c): Alwins Ja/Vielleicht für Musik – Technik hat keine Antworten-Schublade.
+    // „Verfügbarkeit“ (E5c-1c): Alwins Ja/Vielleicht für Musik. Technik (V-4) hat eine eigene Schublade ohne Antworten: Dort steht
+    // nur „Fertig“ der Abfrage „Nur abwesend“ (der Knopf im Band).
     { id: 41, shorty: 'dienstplaner-antworten-4', name: 'Antworten Musik' },
+    { id: 45, shorty: 'dienstplaner-antworten-3', name: 'Antworten Technik' },
     // Personenliste (PL-1): Technik hat dafür eine Schublade – ohne Entwürfe, nur mit der Liste.
     { id: 42, shorty: 'dienstplaner-entwuerfe-3', name: 'Entwürfe Technik' },
     // „Einstellungen“ (L4-2): die Betriebsart der Live-Ansicht – leer, es gilt der Standard „bis Beginn“.
@@ -1087,14 +1089,32 @@ function speicherDemo(fall: string) {
     },
   };
   // Technik fragt die Verfügbarkeit nur als „Nur abwesend“ (V-2/V-3): Musik fragt Ja · Vielleicht · Nein – so gibt es in „Verfügbarkeit“
-  // den Umschalter „Abwesenheiten | Zusagen“, und in „Zusagen“ stehen nur Termine mit Gesang-Plätzen (Musik).
+  // den Umschalter „Abwesenheiten | Zusagen“, und in „Zusagen“ stehen nur Termine mit Gesang-Plätzen (Musik). Seit V-4 läuft auch bei
+  // Technik eine Abfrage (Termine mit Ton oder Licht): Die Karte bittet um Abwesenheiten und „Fertig“, in „Verfügbarkeit“ steht das
+  // Band mit dem Knopf. Alwin ist an 101, 103, 105 und 106 eingeteilt – offen ist für ihn nur der 102 (bis er „Fertig“ drückt).
   const abfrageTechnik = {
     art: 'dienstplaner-abfragen-3',
     fassung: 1,
     version: 1,
     zeit: zeit(-2, '07:30'),
     von: { personId: 1, name: 'Alwin Friesen' },
-    inhalt: { plan: null, abfragen: [], einrichtung: null, verfuegbarkeit: 'abwesend' },
+    inhalt: {
+      plan: null,
+      abfragen: [
+        {
+          id: 'demo-abfrage-technik',
+          von: tagVon(3),
+          bis: tagVon(45),
+          frist: tagVon(2),
+          oeffnen: tagVon(-2),
+          termine: [101, 102, 103, 105, 106],
+          gestartet: { personId: 1, name: 'Alwin Friesen', zeit: zeit(-2, '07:30') },
+          beendet: null,
+        },
+      ],
+      einrichtung: null,
+      verfuegbarkeit: 'abwesend',
+    },
   };
   // Technik: Reihenfolge Anna · Alwin · Spike · David · Ben; Tags Einweisung (E) und Springer (S) – Anna ist nur im Ton
   // „Einweisung“; Ben (49) macht Pause ohne Ende und steht unten, blass. Anna pausiert hier bis nach dem 1. Dezember –
@@ -1146,11 +1166,13 @@ function speicherDemo(fall: string) {
       ],
     ],
     [42, [{ id: 420, dataCategoryId: 42, value: JSON.stringify(personenlisteTechnik) }]],
+    // „Antworten Technik“ (V-4): leer, bis jemand „Fertig“ drückt.
+    [45, []],
     [
       43,
       [
         // „Abfrage …“ (R-2): Musik hat eine laufende Abfrage – die Frist ist in 2 Tagen (blaues Etikett), der Zeitraum beginnt in 3.
-        // Das Fenster „Abfrage“ zeigt dafür den Stand; Technik hat keine (dort das Formular zum Starten) und fragt „Nur abwesend“.
+        // Das Fenster „Abfrage“ zeigt dafür den Stand; Technik fragt „Nur abwesend“ und hat seit V-4 ebenfalls eine laufende Abfrage.
         { id: 430, dataCategoryId: 43, value: JSON.stringify(abfrageMusik) },
         { id: 431, dataCategoryId: 43, value: JSON.stringify(abfrageTechnik) },
       ],

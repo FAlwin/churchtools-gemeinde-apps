@@ -89,6 +89,21 @@ export type Vertretungen = Record<string, Vertretung>;
 export const vertretungsSchluessel = (terminId: number, dienstId: number): string =>
   `${terminId}:${dienstId}`;
 
+/**
+ * **„Hat geantwortet“ bei einer Abfrage „Nur abwesend“** (V-4, 26.11.2026): je Abfrage-ID der Zeitpunkt (ISO), an dem die Person
+ * „Fertig“ gedrückt hat. Es ist **kein „Ja“** und steht nie in `antworten` – ein freier Termin ist bei „Nur abwesend“ keine Antwort,
+ * erst diese Bestätigung macht die Person „fertig“ (`beantwortetNach` in `erinnern.ts`). Liegt im **eigenen** Wert der Ablage (das
+ * Team darf sie lesen). Optional und abwärtskompatibel wie `vertretungen` (`fassung` bleibt 1; alte Werte ohne das Feld gelten weiter).
+ */
+export type Fertig = Record<string, string>;
+
+/** So viele Bestätigungen behält ein Wert (die neuesten) – beendete Abfragen räumt sonst niemand auf. */
+export const MAX_FERTIG = 20;
+
+/** So lang darf eine Abfrage-ID in `fertig` sein (wie `abfrageSchema`: `id` höchstens 64 Zeichen). */
+const MAX_FERTIG_ID = 64;
+const MAX_FERTIG_ZEIT = 40;
+
 interface Ablage {
   art: typeof ART;
   fassung: typeof FASSUNG;
@@ -96,6 +111,8 @@ interface Ablage {
   antworten: Antworten;
   /** Nur, wenn eine Vertretung gesucht wird (E5c-6) – sonst fehlt das Feld ganz. */
   vertretungen?: Vertretungen;
+  /** Nur, wenn die Person bei einer Abfrage „Fertig“ gedrückt hat (V-4) – sonst fehlt das Feld ganz. */
+  fertig?: Fertig;
   /** ISO-Zeitpunkt des Speicherns. */
   stand: string;
 }
@@ -106,6 +123,7 @@ export interface PersonenWert {
   person: number;
   antworten: Antworten;
   vertretungen: Vertretungen;
+  fertig: Fertig;
   stand: string;
 }
 
@@ -205,6 +223,22 @@ export function vertretungBereinigt(
   };
 }
 
+/**
+ * **Die eine Stelle, die `fertig` in seine Form bringt** – beim Lesen UND beim Schreiben (das Nachlesen darf nichts anderes
+ * zurückgeben, als geschrieben wurde): nur Einträge mit nichtleerer ID (höchstens 64 Zeichen) und nichtleerem Zeitpunkt, von
+ * denen die `MAX_FERTIG` neuesten bleiben (bei gleichem Zeitpunkt die größere ID zuerst). Ein falscher Typ (kein Objekt) ergibt leer.
+ */
+export function fertigBereinigt(roh: unknown): Fertig {
+  if (!roh || typeof roh !== 'object' || Array.isArray(roh)) return {};
+  const eintraege = Object.entries(roh as Record<string, unknown>).flatMap(([id, zeit]) =>
+    id !== '' && id.length <= MAX_FERTIG_ID && istText(zeit) && zeit.length <= MAX_FERTIG_ZEIT
+      ? [[id, zeit] as const]
+      : [],
+  );
+  eintraege.sort((a, b) => (a[1] !== b[1] ? (a[1] < b[1] ? 1 : -1) : a[0] < b[0] ? 1 : -1));
+  return Object.fromEntries(eintraege.slice(0, MAX_FERTIG));
+}
+
 /** Ein Wert → Antworten einer Person, wenn er von uns ist und vollständig; sonst `null`. Einzelne kaputte Einträge fallen weg. */
 export function personenWertAus(w: Wert): PersonenWert | null {
   const a = inhaltAus<Partial<Ablage>>(w, ART, FASSUNG);
@@ -228,7 +262,14 @@ export function personenWertAus(w: Wert): PersonenWert | null {
       if (v) vertretungen[schluessel] = v;
     }
   }
-  return { wert: w, person: a.person, antworten, vertretungen, stand: a.stand };
+  return {
+    wert: w,
+    person: a.person,
+    antworten,
+    vertretungen,
+    fertig: fertigBereinigt(a.fertig),
+    stand: a.stand,
+  };
 }
 
 /** Neuer als: späterer `stand`, bei Gleichstand die höhere Wert-ID. */
@@ -266,6 +307,8 @@ export interface StandAntworten {
   antworten: Antworten;
   /** Gesuchte Vertretungen (E5c-6); fehlt = keine. */
   vertretungen?: Vertretungen;
+  /** „Fertig“ bei Abfragen „Nur abwesend“ (V-4); fehlt = keine. */
+  fertig?: Fertig;
   stand: string;
 }
 
@@ -287,43 +330,53 @@ export function neuesterStand<T extends { stand: string }>(
 }
 
 /**
- * Die Antworten aller Personen aus mehreren Kategorien zusammenführen: je Person gilt `neuesterStand`. Eingang: je
- * Kategorie das Ergebnis von `alleAntwortenLesen`.
+ * **Je Person aus mehreren Kategorien den Wert des `neuesterStand` nehmen** – die EINE Mechanik hinter `antwortenZusammen`,
+ * `vertretungenZusammen` und `fertigZusammen` (V-4: sonst wäre `fertigZusammen` die dritte Kopie). `wahl` holt aus dem
+ * Stand der Person, was gezeigt wird; `undefined` = die Person kommt nicht vor.
  */
-export function antwortenZusammen(
+function zusammenAus<T>(
   jeKategorie: ReadonlyMap<number, ReadonlyMap<number, StandAntworten>>,
-): Map<number, Antworten> {
+  wahl: (s: StandAntworten) => T | undefined,
+): Map<number, T> {
   const kandidaten = new Map<number, { kategorie: number; wert: StandAntworten }[]>();
   for (const [kategorie, personen] of jeKategorie)
     for (const [person, wert] of personen)
       kandidaten.set(person, [...(kandidaten.get(person) ?? []), { kategorie, wert }]);
-  const zusammen = new Map<number, Antworten>();
+  const zusammen = new Map<number, T>();
   for (const [person, liste] of kandidaten) {
     const beste = neuesterStand(liste);
-    if (beste) zusammen.set(person, beste.antworten);
+    const t = beste ? wahl(beste) : undefined;
+    if (t !== undefined) zusammen.set(person, t);
   }
   return zusammen;
 }
 
 /**
+ * Die Antworten aller Personen aus mehreren Kategorien zusammenführen: je Person gilt `neuesterStand`. Eingang: je
+ * Kategorie das Ergebnis von `alleAntwortenLesen`.
+ */
+export const antwortenZusammen = (
+  jeKategorie: ReadonlyMap<number, ReadonlyMap<number, StandAntworten>>,
+): Map<number, Antworten> => zusammenAus(jeKategorie, (s) => s.antworten);
+
+/**
  * Die gesuchten Vertretungen aller Personen aus mehreren Kategorien: je Person gilt **derselbe** Wert wie bei den Antworten
  * (`neuesterStand`) – eine Regel, damit beides aus demselben Schreibvorgang stammt.
  */
-export function vertretungenZusammen(
+export const vertretungenZusammen = (
   jeKategorie: ReadonlyMap<number, ReadonlyMap<number, StandAntworten>>,
-): Map<number, Vertretungen> {
-  const kandidaten = new Map<number, { kategorie: number; wert: StandAntworten }[]>();
-  for (const [kategorie, personen] of jeKategorie)
-    for (const [person, wert] of personen)
-      kandidaten.set(person, [...(kandidaten.get(person) ?? []), { kategorie, wert }]);
-  const zusammen = new Map<number, Vertretungen>();
-  for (const [person, liste] of kandidaten) {
-    const beste = neuesterStand(liste);
-    if (beste?.vertretungen && Object.keys(beste.vertretungen).length > 0)
-      zusammen.set(person, beste.vertretungen);
-  }
-  return zusammen;
-}
+): Map<number, Vertretungen> =>
+  zusammenAus(jeKategorie, (s) =>
+    s.vertretungen && Object.keys(s.vertretungen).length > 0 ? s.vertretungen : undefined,
+  );
+
+/** Das „Fertig“ aller Personen (V-4): derselbe Wert wie bei den Antworten (`neuesterStand`); nur Personen mit mindestens einem Eintrag. */
+export const fertigZusammen = (
+  jeKategorie: ReadonlyMap<number, ReadonlyMap<number, StandAntworten>>,
+): Map<number, Fertig> =>
+  zusammenAus(jeKategorie, (s) =>
+    s.fertig && Object.keys(s.fertig).length > 0 ? s.fertig : undefined,
+  );
 
 /** Alle Antworten einer Kategorie, je Person der neueste Wert (mit `stand`) – **frisch**, nie aus einem Cache. */
 export async function alleAntwortenLesen(
@@ -338,7 +391,12 @@ export async function alleAntwortenLesen(
       wert: new Map(
         [...je].map(([person, v]) => [
           person,
-          { antworten: v.antworten, vertretungen: v.vertretungen, stand: v.stand },
+          {
+            antworten: v.antworten,
+            vertretungen: v.vertretungen,
+            fertig: v.fertig,
+            stand: v.stand,
+          },
         ]),
       ),
     };
@@ -359,7 +417,12 @@ export async function eigeneAntwortenLesen(
   kategorien: number[],
   person: number,
 ): Promise<
-  LesenErgebnis<{ antworten: Antworten; vertretungen: Vertretungen; stand: string | null }>
+  LesenErgebnis<{
+    antworten: Antworten;
+    vertretungen: Vertretungen;
+    fertig: Fertig;
+    stand: string | null;
+  }>
 > {
   const kandidaten: { kategorie: number; wert: PersonenWert }[] = [];
   let gelesen = 0;
@@ -380,6 +443,7 @@ export async function eigeneAntwortenLesen(
     wert: {
       antworten: beste?.antworten ?? {},
       vertretungen: beste?.vertretungen ?? {},
+      fertig: beste?.fertig ?? {},
       stand: beste?.stand ?? null,
     },
   };
@@ -436,6 +500,19 @@ export function gleicheVertretungen(x: Vertretungen, y: Vertretungen): boolean {
   );
 }
 
+/** Steht für diese Abfrage eine Bestätigung da? (Nur eigene Einträge – nie etwas aus der Prototyp-Kette.) */
+export const fertigBei = (fertig: Fertig | null | undefined, abfrageId: string | null): boolean =>
+  abfrageId !== null && !!fertig && Object.prototype.hasOwnProperty.call(fertig, abfrageId);
+
+/** Gleiches „Fertig“ – unabhängig von der Reihenfolge, nach der Bereinigung verglichen (Maßstab für „angekommen“). */
+export function gleichesFertig(x: Fertig, y: Fertig): boolean {
+  const a = fertigBereinigt(x);
+  const b = fertigBereinigt(y);
+  const ka = Object.keys(a).sort();
+  const kb = Object.keys(b).sort();
+  return ka.length === kb.length && ka.every((k, i) => k === kb[i] && a[k] === b[k]);
+}
+
 /** Nur die Vertretungen, deren Termin nicht vergangen ist (`tag >= heute`), bereinigt wie beim Lesen. */
 function vertretungenAb(v: Vertretungen, heute: string): Vertretungen {
   const aus: Vertretungen = {};
@@ -461,6 +538,7 @@ async function eineKategorieSchreiben(
   person: number,
   antworten: Antworten,
   vertretungen: Vertretungen | undefined,
+  fertig: Fertig | undefined,
   heute: string,
 ): Promise<KategorieErgebnis> {
   const fehl = (grund: VerfuegbarkeitGrund): KategorieErgebnis => ({
@@ -483,7 +561,11 @@ async function eineKategorieSchreiben(
   // jedes Speichern in „Verfügbarkeit“ die Markierung. Vergangenes fällt auch hier heraus.
   const vertretungenZiel = vertretungenAb(vertretungen ?? eigene[0]?.vertretungen ?? {}, heute);
   const hatVertretung = Object.keys(vertretungenZiel).length > 0;
-  const leer = Object.keys(antworten).length === 0 && !hatVertretung;
+  // „Fertig“ (V-4) gehört ebenso zum Wert der Person: `undefined` = erhalten, was frisch gelesen dasteht (sonst löschte jedes
+  // Speichern von Ja/Vielleicht oder jede Vertretungssuche die Bestätigung).
+  const fertigZiel = fertigBereinigt(fertig ?? eigene[0]?.fertig ?? {});
+  const hatFertig = Object.keys(fertigZiel).length > 0;
+  const leer = Object.keys(antworten).length === 0 && !hatVertretung && !hatFertig;
   const text = JSON.stringify({
     art: ART,
     fassung: FASSUNG,
@@ -491,6 +573,8 @@ async function eineKategorieSchreiben(
     antworten,
     // Ohne Vertretung fehlt das Feld ganz (alte Leser kennen es nicht, der Wert bleibt wie vor E5c-6).
     ...(hatVertretung ? { vertretungen: vertretungenZiel } : {}),
+    // Ohne Bestätigung fehlt das Feld ganz (V-4, wie bei den Vertretungen).
+    ...(hatFertig ? { fertig: fertigZiel } : {}),
     stand,
   } satisfies Ablage);
   if (!leer && text.length > MAX_ZEICHEN) return fehl('zu-gross');
@@ -525,7 +609,8 @@ async function eineKategorieSchreiben(
     : !!da &&
       da.stand === stand &&
       gleicheAntworten(da.antworten, antworten) &&
-      gleicheVertretungen(da.vertretungen, vertretungenZiel);
+      gleicheVertretungen(da.vertretungen, vertretungenZiel) &&
+      gleichesFertig(da.fertig, fertigZiel);
   if (angekommen) return { kategorie, ok: true };
   return fehl(abgebrochen ? 'voruebergehend' : 'nicht-angekommen');
 }
@@ -538,7 +623,9 @@ async function eineKategorieSchreiben(
  *
  * **`vertretungen` (E5c-6):** `undefined` = **erhalten, was in der Kategorie frisch gelesen dasteht** (der Weg von „Wann kann
  * ich?“ – sonst löschte das Speichern die Markierung „Vertretung gesucht“); ein Wert = genau diese (der Weg von „Vertretung
- * suchen“). Vergangene Termine fallen in beiden Fällen heraus. Ein Wert ohne Antworten **und** ohne Vertretung wird gelöscht.
+ * suchen“). Vergangene Termine fallen in beiden Fällen heraus. Ein Wert ohne Antworten, ohne Vertretung **und** ohne „Fertig“ wird gelöscht.
+ *
+ * **`fertig` (V-4):** genauso – `undefined` erhält, was frisch gelesen dasteht; ein Wert (der Weg von `fertigMarkieren`) ersetzt es.
  */
 export async function eigeneAntwortenSchreiben(
   p: EntwurfPort,
@@ -548,6 +635,7 @@ export async function eigeneAntwortenSchreiben(
   antworten: Antworten,
   heute: string,
   vertretungen?: Vertretungen,
+  fertig?: Fertig,
 ): Promise<KategorieErgebnis[]> {
   const bleibt: Antworten = {};
   // Bereinigt wie beim Lesen: Was hier geschrieben wird, ist genau das, was das Nachlesen zurückgibt.
@@ -556,7 +644,7 @@ export async function eigeneAntwortenSchreiben(
   const ergebnisse: KategorieErgebnis[] = [];
   for (const kat of kategorien)
     ergebnisse.push(
-      await eineKategorieSchreiben(p, modul, kat, person, bleibt, vertretungen, heute),
+      await eineKategorieSchreiben(p, modul, kat, person, bleibt, vertretungen, fertig, heute),
     );
   return ergebnisse;
 }
@@ -595,6 +683,45 @@ export async function vertretungMarkieren(
     gelesen.wert.antworten,
     heute,
     vertretungen,
+  );
+  return { ok: true, ergebnisse };
+}
+
+/**
+ * **„Fertig“ bei einer Abfrage „Nur abwesend“ speichern** (V-4): erst die eigenen Werte **frisch** aus allen Kategorien lesen (die
+ * Antworten, Vertretungen und bisherigen Bestätigungen bleiben, wie sie sind), die Bestätigung dieser Abfrage mit dem Zeitpunkt
+ * dazutun und überall hineinschreiben, **nacheinander**, nachgelesen – es wird **kein „Ja“** geschrieben. Ist das Lesen nicht
+ * möglich, wird **nichts** geschrieben. Nichts wird wiederholt. Steht die Bestätigung schon da, bleibt der erste Zeitpunkt.
+ */
+export async function fertigMarkieren(
+  p: EntwurfPort,
+  modul: number,
+  kategorien: number[],
+  person: number,
+  abfrageId: string,
+  heute: string,
+): Promise<
+  { ok: true; ergebnisse: KategorieErgebnis[] } | { ok: false; grund: VerfuegbarkeitGrund }
+> {
+  const gelesen = await eigeneAntwortenLesen(p, modul, kategorien, person);
+  if (!gelesen.ok) return { ok: false, grund: gelesen.grund };
+  // Steht sie schon da (auch nur in einer der Kategorien), bleibt der erste Zeitpunkt – geschrieben wird trotzdem in alle, so
+  // heilt ein zweiter Versuch eine Kategorie, in die der erste nicht ankam.
+  const fertig = fertigBereinigt({
+    ...gelesen.wert.fertig,
+    ...(fertigBei(gelesen.wert.fertig, abfrageId) ? {} : { [abfrageId]: p.jetzt() }),
+  });
+  // Passt die neue ID nicht hinein (leer, zu lang), wäre nichts geschrieben – das darf nie „ok“ heißen.
+  if (!fertigBei(fertig, abfrageId)) return { ok: false, grund: 'nicht-angekommen' };
+  const ergebnisse = await eigeneAntwortenSchreiben(
+    p,
+    modul,
+    kategorien,
+    person,
+    gelesen.wert.antworten,
+    heute,
+    undefined,
+    fertig,
   );
   return { ok: true, ergebnisse };
 }

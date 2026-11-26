@@ -101,6 +101,12 @@ export interface AbwesenheitenTeile {
   laedt: boolean;
   fehler: boolean;
   neuLaden: () => Promise<unknown>;
+  /**
+   * Was die App wissen muss, um R1 einzuhalten (V-4, „Fertig“ im Band der Abfrage): `vorgemerkt` = Zahl der vorgemerkten Änderungen
+   * (die Speichern-Leiste ist offen – erst speichern, dann „Fertig“), `gefuellt` = ein gefüllter Knopf steht schon da (die
+   * Speichern-Leiste oder das grüne „Zeitraum eintragen“/Plus), `ansicht` = die gezeigte Ansicht.
+   */
+  aktion: { vorgemerkt: number; gefuellt: boolean; ansicht: VerfuegbarkeitAnsicht };
 }
 
 /**
@@ -898,11 +904,12 @@ export function AbwesenheitenSeite({
 
   // Am iPad/Rechner grün rechts in der Werkzeugzeile, am Handy das Plus (`useNeuAnlegen`). Solange etwas vorgemerkt ist, gibt
   // es keins – EIN Speichern-Weg.
+  // In „Zusagen“ gibt es kein „+ Zeitraum“ (R3: Grün nur, wo man etwas anlegt).
+  const neuSichtbar = !laedt && !fehler && anzahl === 0 && !imZusagenBlatt;
   const neu = useNeuAnlegen({
     label: 'Zeitraum eintragen',
     onClick: zeitraumOeffnen,
-    // In „Zusagen“ gibt es kein „+ Zeitraum“ (R3: Grün nur, wo man etwas anlegt).
-    sichtbar: !laedt && !fehler && anzahl === 0 && !imZusagenBlatt,
+    sichtbar: neuSichtbar,
     disabled: !online,
     dataTour: 'verf-plus',
   });
@@ -1280,6 +1287,11 @@ export function AbwesenheitenSeite({
     laedt,
     fehler,
     neuLaden,
+    aktion: {
+      vorgemerkt: anzahl,
+      gefuellt: anzahl > 0 || neuSichtbar,
+      ansicht: imZusagenBlatt ? 'zusagen' : 'abwesenheiten',
+    },
   });
 }
 

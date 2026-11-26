@@ -7,7 +7,7 @@ import {
   type StandAbschnitte,
   type Zeitzeile,
 } from '@shared/dienstplan/abfrageFenster';
-import type { Abfrage } from '@shared/dienstplan/abfragen';
+import type { Abfrage, VerfuegbarkeitArt } from '@shared/dienstplan/abfragen';
 import { AbfrageZeitleiste } from './AbfrageZeitleiste';
 import { abgleichText, automatikHinweis, bekommenErinnerungenText } from './abfragenTexte';
 import styles from './AbfrageFenster.module.scss';
@@ -28,6 +28,7 @@ export function AbfrageStand({
   onNochmal,
   zeilen,
   eingerichtet,
+  art = 'zusagen',
   automatik = null,
 }: {
   abfrage: Abfrage;
@@ -43,6 +44,11 @@ export function AbfrageStand({
   zeilen: Zeitzeile[];
   /** Die Erinnerungen sind in ChurchTools eingerichtet (`inhalt.einrichtung`). */
   eingerichtet: boolean;
+  /**
+   * Wie die Dienstgruppe fragt (V-4). Bei „Nur abwesend“ ist „fertig“, wer „Fertig“ gedrückt hat – „2 von 4 Terminen offen“ sagte
+   * dort nichts (ein freier Termin ist keine Antwort), die Zahl entfällt.
+   */
+  art?: VerfuegbarkeitArt;
   /** Der Abgleich beim Öffnen: wer noch Erinnerungen bekommt, wer inzwischen ausgetragen wurde (`null`: noch nicht / nicht möglich). */
   automatik?: { drin: number; ausgetragen: number } | null;
 }) {
@@ -84,9 +90,11 @@ export function AbfrageStand({
               {abschnitte.offen.map((p) => (
                 <li key={p.personId}>
                   {p.name}{' '}
-                  <small>
-                    · {p.offen} von {p.von} offen
-                  </small>
+                  {art === 'zusagen' && (
+                    <small>
+                      · {p.offen} von {p.von} offen
+                    </small>
+                  )}
                 </li>
               ))}
             </ul>

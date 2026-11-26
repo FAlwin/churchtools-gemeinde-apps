@@ -182,6 +182,10 @@ interface Aufbau {
   automatik?: AutomatikAnschluss;
   jetzt?: string;
   ladePersonen?: PersonenLader;
+  /** Die Antworten aller Personen – Standard: `ANTWORTEN()`. */
+  antworten?: PersonenAntworten;
+  /** Der Stand der Ablage „Antworten <Gruppe>“ (V-4) – ohne Angabe wird nicht geprüft. */
+  ablageStand?: AbfrageAnschluss['ablageStand'];
 }
 function zeige(o: Aufbau = {}) {
   const lesen = o.lesen ?? vi.fn(() => Promise.resolve(stand(null)));
@@ -200,7 +204,7 @@ function zeige(o: Aufbau = {}) {
       ladePersonen={
         o.ladePersonen ?? ((() => Promise.resolve(personenStand())) satisfies PersonenLader)
       }
-      ladeAntworten={(() => Promise.resolve(ANTWORTEN())) satisfies AntwortenLader}
+      ladeAntworten={(() => Promise.resolve(o.antworten ?? ANTWORTEN())) satisfies AntwortenLader}
       erinnern={{
         senden: () => Promise.resolve({}),
         link: () => 'https://ct.test/ccm/dienstplaner/',
@@ -214,6 +218,7 @@ function zeige(o: Aufbau = {}) {
               ich: ICH,
               neueId: () => 'neu-1',
               jetzt: () => o.jetzt ?? ZEIT,
+              ...(o.ablageStand ? { ablageStand: o.ablageStand } : {}),
               ...(o.automatik
                 ? {
                     automatik: o.automatik,
@@ -1095,5 +1100,190 @@ describe('Automatik in ChurchTools (R-5b)', () => {
     await new Promise((r) => setTimeout(r, 30));
     expect(w.log).toEqual([]);
     expect(within(fenster).queryByText(/bekommt? noch Erinnerungen/)).toBeNull();
+  });
+});
+
+/**
+ * **V-4: Abfrage bei „Nur abwesend“ aus Sicht der Planer.** Musik fragt hier nur nach Abwesenheiten (Termine 20, 21, 24; Carla ist am
+ * 18.10. abwesend). Die Ja-Antworten in `ANTWORTEN()` zählen nicht – fertig ist, wer „Fertig“ bestätigt hat oder überall abwesend ist.
+ * Ohne Bestätigung sind Anna (3 Termine), Ben (3) und Carla (2: 21. und 01.11.) offen.
+ */
+describe('Abfrage bei „Nur abwesend“ (V-4)', () => {
+  const abwesendLaufend = (einrichtung: AbfragenInhalt['einrichtung'] = null): AbfragenInhalt => ({
+    plan: EIGENER_PLAN,
+    abfragen: [LAUFEND],
+    einrichtung,
+    verfuegbarkeit: 'abwesend',
+  });
+  const mitFertig = (...fertig: [number, Record<string, string>][]): PersonenAntworten => ({
+    ...ANTWORTEN(),
+    fertig: new Map(fertig),
+  });
+  const tn = (person: number) => ({ person, rolle: R_TEILNEHMER });
+
+  it('ohne Bestätigung ist niemand fertig – auch Ben nicht, obwohl er Ja gesagt hat; keine Zahl „x von y offen“', async () => {
+    const { fenster } = await oeffnen({ lesen: nurMusik(abwesendLaufend()) }, /^Abfrage Musik/);
+    expect(await within(fenster).findByText('Noch offen · 3')).toBeTruthy();
+    const offen = within(fenster).getByRole('list', { name: 'Noch offen' });
+    expect(offen.textContent).toContain('Anna Test');
+    expect(offen.textContent).toContain('Ben Test');
+    expect(offen.textContent).toContain('Carla Test');
+    expect(offen.textContent).not.toMatch(/von 3 offen/);
+    expect(within(fenster).getByText('Fertig · 0')).toBeTruthy();
+  });
+
+  it('wer „Fertig“ bestätigt hat, steht unter Fertig (Ben); die Bestätigung einer anderen Abfrage zählt nicht (Anna)', async () => {
+    const { fenster } = await oeffnen(
+      {
+        lesen: nurMusik(abwesendLaufend()),
+        antworten: mitFertig([8, { a1: ZEIT }], [5, { andere: ZEIT }]),
+      },
+      /^Abfrage Musik/,
+    );
+    expect(await within(fenster).findByText('Noch offen · 2')).toBeTruthy();
+    expect(within(fenster).getByText('Fertig · 1')).toBeTruthy();
+    expect(within(fenster).getByText('Ben Test')).toBeTruthy();
+    expect(within(fenster).getByRole('list', { name: 'Noch offen' }).textContent).not.toContain(
+      'Ben',
+    );
+  });
+
+  it('Gegenstück Zusagen: dieselben Daten, aber Ja zählt (Ben fertig), die Bestätigung nicht – „x von y offen“ steht da', async () => {
+    const inhalt: AbfragenInhalt = { ...abwesendLaufend(), verfuegbarkeit: 'zusagen' };
+    const { fenster } = await oeffnen(
+      { lesen: nurMusik(inhalt), antworten: mitFertig([5, { a1: ZEIT }]) },
+      /^Abfrage Musik/,
+    );
+    expect(await within(fenster).findByText('Noch offen · 2')).toBeTruthy();
+    const offen = within(fenster).getByRole('list', { name: 'Noch offen' });
+    expect(offen.textContent).toContain('Anna Test');
+    expect(offen.textContent).toContain('von 3 offen');
+    expect(within(fenster).getByText('Ben Test')).toBeTruthy();
+  });
+
+  it('Start mit Automatik: eingetragen werden ALLE, die nicht überall abwesend sind (auch Ben mit seinem Ja) – und die Mail nennt „Fertig“', async () => {
+    const { w, a } = hilfsgruppe();
+    const { fenster } = await oeffnen({
+      lesen: nurMusik({ ...standardInhalt(), einrichtung: EINR, verfuegbarkeit: 'abwesend' }, 7),
+      automatik: a,
+      jetzt: '2026-10-14T08:00:00Z',
+    });
+    await waitFor(() =>
+      expect(knopf(fenster, 'Abfrage starten')).toHaveProperty('disabled', false),
+    );
+    fireEvent.click(knopf(fenster, 'Abfrage starten'));
+    await waitFor(() =>
+      expect(w.log.filter((z) => z.startsWith('PUT /groups/50/members'))).toHaveLength(3),
+    );
+    expect(w.log.filter((z) => z.startsWith('PUT /groups/50/members'))).toEqual([
+      'PUT /groups/50/members/5',
+      'PUT /groups/50/members/8',
+      'PUT /groups/50/members/11',
+    ]);
+    const steps = (w.patches[0] as { steps: { actionData: Record<string, unknown> }[] }).steps;
+    expect(String(steps[0].actionData.body)).toContain('tippe auf „Fertig“');
+    expect(String(steps[0].actionData.body)).not.toContain('Ja, Vielleicht oder Nein');
+  });
+
+  it('Abgleich beim Öffnen: trägt aus, wer „Fertig“ gedrückt hat (Ben) – Anna und Carla bleiben, nichts wird eingetragen', async () => {
+    const { w, a } = hilfsgruppe({ mitglieder: [tn(5), tn(8), tn(11)] });
+    const { fenster } = await oeffnen(
+      {
+        lesen: nurMusik(abwesendLaufend(EINR)),
+        automatik: a,
+        antworten: mitFertig([8, { a1: ZEIT }]),
+      },
+      /^Abfrage Musik/,
+    );
+    expect(
+      await within(fenster).findByText(/1 Person ausgetragen, die inzwischen geantwortet hat/),
+    ).toBeTruthy();
+    expect(w.mitglieder.map((m) => m.person).sort()).toEqual([11, 5]);
+    expect(w.log.filter((z) => z.startsWith('PUT'))).toEqual([]);
+  });
+
+  it('Gegenprobe Abgleich: ohne Bestätigung trägt der Abgleich NIEMANDEN aus (Ben hat nur Ja gesagt)', async () => {
+    const { w, a } = hilfsgruppe({ mitglieder: [tn(5), tn(8), tn(11)] });
+    const { fenster } = await oeffnen(
+      { lesen: nurMusik(abwesendLaufend(EINR)), automatik: a },
+      /^Abfrage Musik/,
+    );
+    await within(fenster).findByText('Noch offen · 3');
+    await new Promise((r) => setTimeout(r, 30));
+    expect(w.log.filter((z) => z.startsWith('DELETE'))).toEqual([]);
+    expect(w.mitglieder).toHaveLength(3);
+  });
+});
+
+/**
+ * **V-4: Start einer Abfrage „Nur abwesend“ nur mit bereiter Ablage „Antworten <Gruppe>“.** Ohne sie gäbe es kein „Fertig“ – der Start
+ * meldet das ehrlich und schreibt nichts. Zusagen-Gruppen bleiben unverändert.
+ */
+describe('Start ohne Ablage der Antworten (V-4)', () => {
+  const leer = (art: 'zusagen' | 'abwesend'): AbfragenInhalt => ({
+    ...standardInhalt(),
+    verfuegbarkeit: art,
+  });
+  const MELDUNG =
+    'Für Musik fehlt die Ablage „Antworten Musik“ – erst „Einrichten …“ in den Einstellungen.';
+  const starte = async (
+    art: 'zusagen' | 'abwesend',
+    ablageStand?: AbfrageAnschluss['ablageStand'],
+    extra: Partial<Aufbau> = {},
+  ) => {
+    const z = await oeffnen({ lesen: nurMusik(leer(art)), ablageStand, ...extra });
+    await waitFor(() =>
+      expect(knopf(z.fenster, 'Abfrage starten')).toHaveProperty('disabled', false),
+    );
+    fireEvent.click(knopf(z.fenster, 'Abfrage starten'));
+    return z;
+  };
+
+  it.each(['einrichtbar', 'fehlt', 'nur-lesen'] as const)(
+    'Nur abwesend, Ablage „%s“: nicht gestartet, die Meldung nennt die Ablage – nichts geschrieben',
+    async (ablage) => {
+      const stand = vi.fn(() => Promise.resolve(ablage));
+      const { fenster, speichern } = await starte('abwesend', stand);
+      expect(await within(fenster).findByRole('alert')).toHaveProperty('textContent', MELDUNG);
+      expect(stand).toHaveBeenCalledWith({ id: 4, name: 'Musik' });
+      expect(speichern).not.toHaveBeenCalled();
+    },
+  );
+
+  it('Nur abwesend, Ablage bereit: gestartet wie bisher', async () => {
+    const { speichern } = await starte('abwesend', () => Promise.resolve('bereit'));
+    await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
+    expect(gespeichert(speichern)[0][1].abfragen).toHaveLength(1);
+  });
+
+  it('Nur abwesend mit Automatik: ohne Ablage wird auch NICHTS in ChurchTools geschrieben (keine Routine, keine Mitglieder)', async () => {
+    const { w, a } = hilfsgruppe();
+    const { fenster, speichern } = await starte('abwesend', () => Promise.resolve('fehlt'), {
+      automatik: a,
+    });
+    expect(await within(fenster).findByRole('alert')).toHaveProperty('textContent', MELDUNG);
+    expect(speichern).not.toHaveBeenCalled();
+    expect(w.log).toEqual([]);
+  });
+
+  it('der Stand der Ablage ist nicht lesbar (Netz): nicht gestartet, die Meldung des Fehlers steht da – nicht „Ablage fehlt“', async () => {
+    const stand = vi.fn(() => Promise.reject(new ApiError(503, 'weg')));
+    const { fenster, speichern } = await starte('abwesend', stand);
+    const meldung = (await within(fenster).findByRole('alert')).textContent;
+    expect(meldung).not.toBe(MELDUNG);
+    expect(meldung).toBeTruthy();
+    expect(speichern).not.toHaveBeenCalled();
+  });
+
+  it('Zusagen-Gruppe: der Stand wird gar nicht gefragt, der Start geht wie bisher', async () => {
+    const stand = vi.fn(() => Promise.resolve('fehlt' as const));
+    const { speichern } = await starte('zusagen', stand);
+    await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
+    expect(stand).not.toHaveBeenCalled();
+  });
+
+  it('ohne Anschluss zur Ablage (ältere Aufrufer) wird nicht geprüft', async () => {
+    const { speichern } = await starte('abwesend');
+    await waitFor(() => expect(speichern).toHaveBeenCalledTimes(1));
   });
 });

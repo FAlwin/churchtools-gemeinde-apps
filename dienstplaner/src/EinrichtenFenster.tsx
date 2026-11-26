@@ -11,6 +11,8 @@ import {
   type Lauf,
 } from './einrichtenAbfragen';
 import {
+  EINRICHTEN_ABLAGE,
+  EINRICHTEN_ABLAGE_RECHTE,
   EINRICHTEN_ANSEHEN,
   EINRICHTEN_GRUPPE,
   EINRICHTEN_RECHTE,
@@ -71,7 +73,8 @@ export function EinrichtenFenster({
     lage !== null &&
     lage.gruppeId !== null &&
     !lage.plan.gruppeAnlegen &&
-    !lage.plan.routineAnlegen;
+    !lage.plan.routineAnlegen &&
+    !lage.ablage?.anlegen;
   const aufgegeben =
     (lauf?.art === 'gelaufen' && !lauf.ok && lauf.fehler?.nochmal === false) ||
     (lauf?.art === 'gestoppt' && !lauf.nochmal);
@@ -137,13 +140,18 @@ function Vorher({ lage }: { lage: Lage }) {
       <>
         <p className={styles.text}>
           Alles ist eingerichtet: die Gruppe „{lage.gruppeName}“, ihre Routine und die zwei Rechte
-          aller Planer – nur für diese Gruppe.
+          aller Planer – nur für diese Gruppe
+          {lage.ablage ? `, dazu die Ablage „${lage.ablage.name}“` : ''}.
         </p>
         <Hinweise lage={lage} />
         <p className={styles.hinweis}>{EINRICHTEN_ANSEHEN}</p>
       </>
     );
-  const nurRechte = lage.gruppeId !== null && !lage.plan.gruppeAnlegen && !lage.plan.routineAnlegen;
+  const nurRechte =
+    lage.gruppeId !== null &&
+    !lage.plan.gruppeAnlegen &&
+    !lage.plan.routineAnlegen &&
+    !lage.ablage?.anlegen;
   const bekommen = lage.rechteNachtragen.map((r) => r.person);
   return (
     <>
@@ -181,6 +189,22 @@ function Vorher({ lage }: { lage: Lage }) {
           )}
           <span className={styles.leise}>{EINRICHTEN_RECHTE}</span>
         </li>
+        {lage.ablage && (
+          <li>
+            <b>Ablage „{lage.ablage.name}“</b> –{' '}
+            {lage.ablage.anlegen
+              ? 'wird angelegt.'
+              : lage.ablage.stand === 'bereit'
+                ? 'schon da.'
+                : 'steht da, ist aber nicht ganz freigegeben.'}
+            <span className={styles.leise}>
+              {EINRICHTEN_ABLAGE}
+              {!lage.ablage.anlegen && lage.ablage.stand !== 'bereit'
+                ? ` ${EINRICHTEN_ABLAGE_RECHTE}`
+                : ''}
+            </span>
+          </li>
+        )}
       </ol>
       <Hinweise lage={lage} />
       <p className={styles.hinweis}>{EINRICHTEN_ANSEHEN}</p>

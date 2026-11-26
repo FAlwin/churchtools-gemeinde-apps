@@ -474,7 +474,7 @@ anderen Personen vor dem Senden **abwählen**.
 
 **Das brauchst du:** Dienstplaner in der **Test-Instanz**, ein Konto, das die Dienstgruppe (Musik) **planen** darf, der Speicher „Antworten
 Musik“ mit dem Recht „sehen“, mehrere kommende Termine mit Musik-Diensten und ein Mitglied der Gruppe (du oder ein Test-Konto mit Mail-Adresse), das
-für mindestens einen Termin **weder Ja/Vielleicht noch Nein** (Abwesenheit) eingetragen hat und dort nicht eingeteilt ist.
+für mindestens einen Termin **weder Ja/Vielleicht noch Nein** (Abwesenheit) eingetragen hat und dort nicht eingeteilt ist. (Bei einer Dienstgruppe mit **Nur abwesend** zählt seit V-4 statt Ja/Vielleicht, ob die Person in der laufenden Abfrage **Fertig** getippt hat – TF-VERF-24.)
 
 **Das muss passieren:** In Planen liegt „Erinnern“ im **⋯**-Menü (mit „Teilen“; seit B3, vorher ein Knopf in der Zeile). Das Fenster nennt die Fehlenden mit ihren offenen Terminen, zeigt vorher
 die Mail und verschickt je Person eine eigene.
@@ -737,7 +737,7 @@ selbst. Wer antwortet, steht danach nicht mehr in der Gruppe.
 dieses Konto), ein Konto **ohne** Planer-Recht, und Zugriff auf ChurchTools zum Nachsehen (Ablage „Einstellungen“ des Dienstplaners).
 
 **Das muss passieren:** Planer stellen je Dienstgruppe ein, wie die Verfügbarkeit gefragt wird; die Wahl wird mit dem „Speichern“ des Fensters gespeichert und gilt
-sofort. Wer nicht plant, sieht die Wahl nicht. (Dass die Oberfläche sich danach richtet, steht in TF-VERF-23; Abfrage und Planen folgen mit V-4 und V-5 – hier prüfst du nur die Einstellung.)
+sofort. Wer nicht plant, sieht die Wahl nicht. (Dass die Oberfläche sich danach richtet, steht in TF-VERF-23, die Abfrage mit „Fertig“ in TF-VERF-24; das Planen folgt mit V-5 – hier prüfst du nur die Einstellung.)
 
 1. Als Planer **Einstellungen** öffnen: Der Abschnitt **„Verfügbarkeit & Erinnerungen“** beginnt mit **„Verfügbarkeit fragen“** und zwei Wahlpunkten mit je einer Erklärzeile
    („Jede Person sagt je Termin zu, vielleicht oder ab. …“ / „Jede Person hakt nur an, wann sie nicht kann. …“). Vorgewählt ist **Ja · Vielleicht · Nein**.
@@ -782,7 +782,7 @@ Zusagen fragt. Beim Öffnen ist **Abwesenheiten** gewählt; über die Abfrage ei
 4. In **Zusagen** bei einem Termin **Nein** wählen, **nicht** speichern, zu **Abwesenheiten** wechseln: Der Haken **Abwesend** sitzt schon (vorgemerkt), unten steht **eine** Leiste
    „1 Änderung vorgemerkt“. **Speichern** → in ChurchTools eine Abwesenheit mit der Terminzeit.
 5. **Über die Abfrage:** Aus der Karte der Musik-Abfrage auf dem Start (oder dem Link `#/abwesenheiten?abfrage=<Musik>`) öffnen → **Zusagen** ist gewählt, das Band steht darüber, die Liste zeigt den
-   Zeitraum der Abfrage. Ohne Abfrage in der Adresse öffnet wieder **Abwesenheiten**.
+   Zeitraum der Abfrage. Ohne Abfrage in der Adresse öffnet wieder **Abwesenheiten**. Über die Abfrage einer Gruppe mit **Nur abwesend** (TF-VERF-24) öffnet **Abwesenheiten** mit dem Band „… dann: Fertig“.
 6. **Konto nur in der „Nur abwesend“-Gruppe:** **kein** Umschalter, nur die Abwesenheiten (Haken, „Deine Zeiträume“, **⋯ → Alle Einträge …**).
 7. Wenn ChurchTools beim Lesen der Einstellung einer Gruppe nicht antwortet: der Umschalter ist trotzdem da (die Gruppe gilt als „Zusagen“, nichts geht verloren).
 8. **Musik-App** (Abwesenheiten in ChurchTools): unverändert – **Termine | Einträge** wie bisher (TF-VERF-09).
@@ -794,5 +794,46 @@ Zusagen fragt. Beim Öffnen ist **Abwesenheiten** gewählt; über die Abfrage ei
 - **Betrifft:** `ui/abwesenheiten/AbwesenheitenSeite.tsx`, `ui/abwesenheiten/zeitraeume.ts`, `dienstplaner/src/Abwesenheiten.tsx`, `dienstplaner/src/useVerfuegbarkeitAnsichten.ts`, `shared/dienstplan/verfuegbarkeitAnsicht.ts`, `dienstplaner/src/ladeTermine.ts`
 - **Automatisiert:** weitgehend – `shared/dienstplan/verfuegbarkeitAnsicht.test.ts` (welche Gruppen fragen Zusagen, Start-Ansicht, Termine mit Diensten), `ui/abwesenheiten/zeitraeume.test.ts` („Deine Zeiträume“), `dienstplaner/src/Abwesenheiten.ansichten.test.tsx` (Umschalter mit/ohne Zusagen-Gruppe, Lesefehler, Zusagen-Liste gefiltert mit Schild, unvollständige Plätze, „Deine Zeiträume“, „Alle Einträge …“, Hilfe, Fenster über Fenster), `dienstplaner/src/Abwesenheiten.abfrage.test.tsx` (Start-Ansicht über die Abfrage), `dienstplaner/src/Abwesenheiten.werkzeug.test.tsx`. Von Hand bleibt der Durchklick mit echtem ChurchTools (Termine mit Diensten sichtbar für einfache Mitglieder) und das Handy.
 - **Historie:** Dienstplaner V-3 (26.11.2026), Bauplan „Zuschnitt V“, Entwurf `verfuegbarkeit-einstellungen-v4.html`
+
+</details>
+
+### TF-VERF-24 · Abfrage bei „Nur abwesend“: Häkchen setzen, „Fertig“, Austritt
+
+**Das brauchst du:** Die **Test-Instanz**, eine Dienstgruppe mit **Nur abwesend** (TF-VERF-22, z. B. Technik) mit **bereitem** Speicher „Antworten Technik“, dafür eingerichtete Erinnerungen
+(TF-VERF-20), ein **Planer-Konto**, **zwei Mitarbeitende** dieser Gruppe mit E-Mail-Adresse (bei einer/m eine Abwesenheit an **allen** Terminen des Zeitraums möglich). **Achtung:** Der Start trägt
+echte Personen ein, die Routine **verschickt echte Mails** – nur Test-Konten. Nach dem Test die Abfrage beenden und die Abwesenheiten entfernen.
+
+**Das muss passieren:** Ein freier Termin ist bei „Nur abwesend“ keine Antwort. Fertig ist, wer **„Fertig“** gedrückt hat – oder an allen Terminen der Abfrage abwesend ist. Wer fertig ist, steht nicht
+mehr in der Hilfsgruppe und bekommt keine Mail mehr. Gespeichert wird nur „hat geantwortet“, kein „Ja“.
+
+1. Als Planer **Planen → ⋯ → Abfrage …**, die Gruppe wählen, Zeitraum und Frist einstellen, **Abfrage starten**. **Alle** Mitglieder, die nicht an allen Terminen abwesend sind, werden in die
+   Hilfsgruppe eingetragen (auch wer früher einmal Ja gesagt hatte – Ja zählt nicht). Die erste **Mail** sagt: „… trag im Dienstplaner ein, an welchen Terminen du nicht kannst, und tippe auf „Fertig“.“
+2. Als Mitarbeiter/in: Auf der **Startseite** steht die Karte „Wann kannst du im …?“ mit „<Gruppe> fragt für N Termine (…). Trag ein, wann du nicht kannst, und tippe auf „Fertig“.“ – **ohne** Zahl offener
+   Termine und **ohne** Fortschrittsbalken. **Jetzt eintragen** (und der Knopf in der Mail) öffnet **Verfügbarkeit → Abwesenheiten** mit dem Zeitraum der Abfrage – auch, wenn die Person zusätzlich in einer
+   Zusagen-Gruppe ist (dann steht der Umschalter da, **Abwesenheiten** ist gewählt).
+3. Über der Liste steht das **blaue Band**: Etikett „bis <Frist>“, „Abfrage <Gruppe> · <Zeitraum> – Häkchen setzen, wo du nicht kannst, dann:“, der Knopf **Fertig** und rechts „Alle Termine zeigen“. Kein
+   „noch n von m offen“. **Fertig** ist ein Neben-Knopf (weiß mit Rand), solange das grüne **+ Zeitraum eintragen** (am Handy das runde Plus) da ist – nur ein gefüllter Knopf je Ansicht.
+4. Einen Haken **Abwesend** setzen (vorgemerkt): Statt des Knopfs steht im Band **erst speichern**. **Verwerfen** → der Knopf ist wieder da. Den Haken setzen und **Speichern** → in ChurchTools steht die
+   Abwesenheit; das Band zeigt wieder **Fertig** (gespeichert ist noch keine Bestätigung).
+5. **Fertig** tippen → das Band wird **grün**: „fertig · Danke! An allen anderen Terminen im Zeitraum kannst du. Ändern geht jederzeit.“ In ChurchTools (Ablage „Antworten Technik“, Wert der Person):
+   `fertig` mit der Abfrage-ID und dem Zeitpunkt, `antworten` leer. **Die Startseite** zeigt keine Karte mehr; die Person ist **nicht mehr Mitglied der Hilfsgruppe** (ChurchTools: „Meine Gruppen“) – es
+   kommt keine Mail mehr.
+6. Danach noch einen Haken setzen und speichern (oder wieder abhaken): Das Band bleibt **grün**.
+7. **Nicht beantwortet, aber überall abwesend:** Die Person, die an **allen** Terminen der Abfrage eine Abwesenheit hat, ist ohne „Fertig“ schon fertig (grünes Band, keine Karte, nicht mehr in der Gruppe).
+   Wer an einem Termin **nicht** abwesend ist und nicht „Fertig“ gedrückt hat, bleibt offen.
+8. Als Planer **Abfrage … → Stand**: Wer „Fertig“ gedrückt hat, steht unter **Fertig**; die übrigen unter **Noch offen** – **ohne** „x von y offen“. Beim Öffnen werden Fertige aus der Hilfsgruppe
+   ausgetragen (leise Zeile). **Erinnern**: Wer „Fertig“ gedrückt hat, bekommt keine Mail; der Text im Fenster nennt „Fertig“. Ohne laufende Abfrage ist die Gruppe gesperrt („Erinnern geht in einer
+   laufenden Abfrage“).
+9. **Ablage fehlt (Einrichten und Start):** Gibt es „Antworten <Gruppe>“ noch nicht, nennt **Einstellungen → „Einrichten …“** sie **vor dem Klick** als eigene Zeile („Ablage „Antworten Technik“ – wird angelegt.“; ist sie da: „schon da.“). Nach **Einrichten** steht „Ablage „Antworten Technik“ angelegt“ im Bericht, in ChurchTools gibt es die Kategorie, der Admin hat alle Rechte darauf. Vor dem Einrichten: **Abfrage starten** bei „Nur abwesend“ meldet „Für Technik fehlt die Ablage „Antworten Technik“ – erst „Einrichten …“ in den Einstellungen.“, startet **nicht** und trägt niemanden ein. Eine Gruppe mit **Zusagen** startet unverändert.
+10. **Fehlerfälle:** Ist „Antworten <Gruppe>“ nicht eingerichtet oder nicht freigegeben, sagt **Fertig** das („… nicht eingerichtet oder nicht freigegeben. Bitte die Leitung fragen.“) und schreibt nichts; bei
+    einem Aussetzer von ChurchTools steht „… antwortet gerade nicht. Nichts verloren – …“ unter dem Band, der Knopf bleibt, es wird nichts wiederholt. Eine Gruppe mit **Zusagen** ist unverändert (Band
+    „noch n von m offen“, kein **Fertig**, Karte mit Fortschritt).
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/dienstplan/verfuegbarkeit.ts`, `shared/dienstplan/erinnern.ts`, `shared/dienstplan/abfrageStand.ts`, `shared/dienstplan/abfrageMail.ts`, `shared/dienstplan/personenAntworten.ts`, `dienstplaner/src/ladeVerfuegbarkeit.ts`, `dienstplaner/src/ladeAntworten.ts`, `dienstplaner/src/useAbfragen.ts`, `dienstplaner/src/useAbfrageLage.ts`, `dienstplaner/src/useAbfrageRegeln.ts`, `dienstplaner/src/AbfrageBand.tsx`, `dienstplaner/src/AbfrageKarte.tsx`, `dienstplaner/src/Abwesenheiten.tsx`, `dienstplaner/src/ErinnernFenster.tsx`, `dienstplaner/src/einrichtenAbfragen.ts`, `dienstplaner/src/EinrichtenFenster.tsx`, `ui/abwesenheiten/AbwesenheitenSeite.tsx`
+- **Automatisiert:** weitgehend – `shared/dienstplan/abfrageFertig.test.ts` (die Tabelle bestätigt / alle abwesend / teils / nichts für beide Arten, Planer und Mitarbeitende rechnen gleich, Regel einer Gruppe, Texte), `shared/dienstplan/verfuegbarkeit.test.ts` („Fertig“: alter Wert lesbar, Erhalt, Nachlesen, Konflikt, kaputtes Feld, anderer Fassung unangetastet), `dienstplaner/src/Abwesenheiten.abfrage.test.tsx` (Band, Fertig, grünes Band, „erst speichern“, R1, Fehler, Austritt nach Fertig), `dienstplaner/src/Startseite.abfrage.test.tsx` (Karte, kein Balken, Austritt), `dienstplaner/src/Planen.abfrage.test.tsx` (Stand, Eintragen beim Start, Abgleich), `dienstplaner/src/Planen.erinnern.test.tsx` (Erinnern schließt Bestätigte aus, Sperren, Einleitung), `dienstplaner/src/ladeVerfuegbarkeit.test.ts`, `dienstplaner/src/ladeAntworten.test.ts`, `dienstplaner/src/einrichtenAbfragen.test.ts` und `dienstplaner/src/EinstellungenFenster.einrichten.test.tsx` (Ablage einrichten), `dienstplaner/src/Planen.abfrage.test.tsx` (Start ohne Ablage). Von Hand bleibt der Durchklick mit echtem ChurchTools (Hilfsgruppe, Mails, Rechte an der Antworten-Ablage) und das Handy.
+- **Historie:** Dienstplaner V-4 (26.11.2026), Bauplan „Zuschnitt V“, Entwurf `verfuegbarkeit-einstellungen-v4.html` (Abschnitt „Abfragen“ in v2)
 
 </details>

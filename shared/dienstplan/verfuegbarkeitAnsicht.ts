@@ -6,7 +6,7 @@
  * **Eine Regel:** „fragt nach Zusagen?“ ist ausschließlich `fragtZusagen` (V-2) – hier nur auf die eigenen Gruppen angewandt.
  */
 import type { Dienstgruppe } from '../ct/dienstgruppen';
-import { fragtZusagen, type AbfragenInhalt } from './abfragen';
+import { fragtZusagen, type AbfragenInhalt, type VerfuegbarkeitArt } from './abfragen';
 import type { RohTermin } from './termine';
 
 export type VerfuegbarkeitAnsicht = 'abwesenheiten' | 'zusagen';
@@ -27,12 +27,20 @@ export function zusagenGruppen(
  * **Womit die Seite aufgeht:** immer mit „Abwesenheiten“ – außer man kommt über eine Abfrage (`#/abwesenheiten?abfrage=<id>`,
  * Karte oder Mail) einer Dienstgruppe, die nach Zusagen fragt: dann „Zusagen“. `abfrageGruppe` ist die Gruppe der gültigen
  * Abfrage (`null` ohne). Ohne Zusagen-Gruppe gibt es keine Ansicht „Zusagen“.
+ *
+ * **`abfrageArt` (V-4):** die Art, wie die Gruppe der Abfrage fragt, aus dem Dokument, das die Abfrage selbst geliefert hat. Fragt sie
+ * „Nur abwesend“, gilt immer „Abwesenheiten“ – dort steht das Band mit „Fertig“. Das gilt auch dann, wenn die Liste der Zusagen-Gruppen
+ * die Gruppe wegen eines vorübergehenden Lesefehlers fälschlich enthält (`null` = Zusagen, V-3): Sonst ginge die Seite auf „Zusagen“ auf,
+ * und das Band mit „Fertig“ fehlte ganz.
  */
 export function ansichtBeimOeffnen(
   abfrageGruppe: number | null,
   zusagen: readonly Pick<Dienstgruppe, 'id'>[],
+  abfrageArt: VerfuegbarkeitArt | null = null,
 ): VerfuegbarkeitAnsicht {
-  return abfrageGruppe !== null && zusagen.some((g) => g.id === abfrageGruppe)
+  return abfrageArt !== 'abwesend' &&
+    abfrageGruppe !== null &&
+    zusagen.some((g) => g.id === abfrageGruppe)
     ? 'zusagen'
     : 'abwesenheiten';
 }

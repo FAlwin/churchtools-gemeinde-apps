@@ -85,6 +85,7 @@ const bereit = (antworten: Antworten = {}): Verfuegbarkeit => ({
   bereit: [30],
   antworten,
   vertretungen: {},
+  fertig: {},
   lesefehler: null,
 });
 
@@ -440,6 +441,7 @@ describe('Gesperrt, wenn Ja/Vielleicht nicht gespeichert werden kann', () => {
       bereit: [],
       antworten: {},
       vertretungen: {},
+      fertig: {},
       lesefehler: null,
     };
     zeige();
@@ -463,6 +465,7 @@ describe('Gesperrt, wenn Ja/Vielleicht nicht gespeichert werden kann', () => {
       bereit: [],
       antworten: {},
       vertretungen: {},
+      fertig: {},
       lesefehler: null,
     };
     einrichten.mockRejectedValue(new Error('ChurchTools erlaubt dir nicht, Kategorien anzulegen.'));

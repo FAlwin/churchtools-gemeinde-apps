@@ -18,7 +18,12 @@
  */
 import { ctId } from '../ct/ctId';
 import type { RoutinenSchritt } from '../ct/routinen';
-import { erinnerungsTage, type Abfrage, type Erinnerungsplan } from './abfragen';
+import {
+  erinnerungsTage,
+  type Abfrage,
+  type Erinnerungsplan,
+  type VerfuegbarkeitArt,
+} from './abfragen';
 import { mailFuer } from './abfrageMail';
 
 /** Der Gruppentyp der Hilfsgruppen – legt ein Admin einmal in ChurchTools an (Anleitung `docs/betrieb/DIENSTPLANER.md`). */
@@ -257,6 +262,8 @@ export function abfrageRoutinenSchritte(o: {
   heute: string;
   dienstgruppe: string;
   link: string;
+  /** Wie die Dienstgruppe die Verfügbarkeit abfragt (V-4) – der Standardtext der Mail hängt daran (`mailFuer`). */
+  art: VerfuegbarkeitArt;
   /**
    * Wer die Abfrage startet – kommt als `senderId` in den Schritt. **ChurchTools übernimmt das Feld nicht** (gemessen
    * 26.11.2026: gespeichert wird `senderId: null`); die Mails kommen vom Standard-Absender der Instanz („<Gemeinde>“
@@ -266,7 +273,7 @@ export function abfrageRoutinenSchritte(o: {
 }): RoutinenSchritt[] {
   const { abfrage: a, heute } = o;
   const tage = erinnerungsTage(o.plan, a, heute);
-  const m = mailFuer(o.plan, a, o.dienstgruppe, o.link);
+  const m = mailFuer(o.plan, a, o.dienstgruppe, o.link, o.art);
   const mail: RoutinenSchritt = {
     actionKey: 'send-member-email',
     isEnabled: true,

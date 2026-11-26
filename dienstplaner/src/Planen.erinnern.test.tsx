@@ -14,6 +14,10 @@ import type { AntwortenLader } from './ladeAntworten';
 import type { PersonenLader } from './ladePersonen';
 import type { MailSender } from './erinnernSenden';
 import { Planen } from './Planen';
+import type { AbfrageAnschluss } from './AbfrageFenster';
+import type { Abfrage } from '@shared/dienstplan/abfragen';
+import { standardInhalt, type AbfragenStand } from '@shared/dienstplan/abfragenSpeicher';
+import { EINLEITUNG_ABWESEND, EINLEITUNG_STANDARD } from '@shared/dienstplan/erinnern';
 import { ganzSichtbar, planbar } from './start';
 import { startFuer } from './start.testutil';
 import { daten as entwuerfeDaten, nachgebaut } from './entwurfAnschluss.testutil';
@@ -118,6 +122,8 @@ interface Aufbau {
   start?: ReturnType<typeof startFuer>;
   /** Die Personenlisten je Dienstgruppe (PL-3: Pause), wie sie aus den Entwürfen kommen. */
   personenlisten?: [number, Personenliste][];
+  /** Der Anschluss an die Abfragen (V-4: daran hängt, ob eine Gruppe „Nur abwesend“ fragt). Ohne: überall Zusagen. */
+  abfragen?: AbfrageAnschluss;
 }
 function zeige(o: Aufbau = {}) {
   const senden = o.senden ?? vi.fn<MailSender>(() => Promise.resolve({}));
@@ -145,6 +151,7 @@ function zeige(o: Aufbau = {}) {
       ladePersonen={o.personen ?? (() => Promise.resolve(personenStand()))}
       ladeAntworten={o.antworten ?? (() => Promise.resolve(ANTWORTEN()))}
       erinnern={o.erinnern === false ? undefined : { senden, link: () => LINK }}
+      abfragen={o.abfragen}
       {...(o.personenlisten
         ? {
             entwuerfe: nachgebaut({
@@ -672,5 +679,160 @@ describe('Senden und Ergebnis', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(senden).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * **V-4: Erinnern bei „Nur abwesend“.** Musik fragt hier nur nach Abwesenheiten; die Ja-Antworten (Ben an beiden Terminen, Anna am
+ * 21.) zählen nicht, ein freier Termin ist keine Antwort – fertig ist, wer die Abfrage mit „Fertig“ bestätigt hat (oder überall
+ * abwesend ist). Ohne Bestätigung fehlen also alle drei: Anna (18., 21.), Ben (18., 21.), Carla (21.; am 18. ist sie abwesend).
+ */
+describe('Erinnern bei „Nur abwesend“ (V-4)', () => {
+  const ZEIT = '2026-10-14T09:00:00.000Z';
+  const ABFRAGE: Abfrage = {
+    id: 'a1',
+    von: '2026-10-18',
+    bis: '2026-10-21',
+    frist: '2026-10-16',
+    oeffnen: '2026-10-14',
+    termine: [20, 21],
+    gestartet: { personId: 1, name: 'Alwin', zeit: '2026-10-14T07:00:00Z' },
+    beendet: null,
+  };
+  const abfragenMit = (
+    a: Abfrage | null,
+    art: 'zusagen' | 'abwesend' = 'abwesend',
+  ): AbfrageAnschluss => ({
+    lesen: (id) =>
+      Promise.resolve<AbfragenStand>({
+        inhalt: {
+          ...standardInhalt(),
+          verfuegbarkeit: id === 4 ? art : 'zusagen',
+          abfragen: id === 4 && a ? [a] : [],
+        },
+        gespeichert: null,
+        unlesbar: false,
+        fehler: null,
+      }),
+    speichern: vi.fn(),
+    ich: { personId: 1, name: 'Alwin' },
+  });
+  const mitFertig =
+    (fertig: [number, Record<string, string>][]): AntwortenLader =>
+    () =>
+      Promise.resolve({ ...ANTWORTEN(), fertig: new Map(fertig) });
+  const chip = (f: HTMLElement, name: string) =>
+    within(within(f).getByRole('list', { name: 'Dienstgruppen' })).getByRole('button', { name });
+  const namen = (f: HTMLElement) => zeilen(f).map((z) => z.textContent ?? '');
+
+  it('ohne Bestätigung fehlen alle drei – Ja-Antworten zählen nicht; Anna und Ben mit beiden Terminen, Carla nur mit dem 21.', async () => {
+    const { fenster } = await oeffnen({ abfragen: abfragenMit(ABFRAGE) });
+    await geladen(fenster);
+    expect(await within(fenster).findByRole('button', { name: 'Musik · 3' })).toBeTruthy();
+    const z = namen(fenster);
+    expect(z).toHaveLength(3);
+    expect(z[0]).toContain('Anna Test');
+    expect(z[0]).toContain('2 offen');
+    expect(z[1]).toContain('Ben Test');
+    expect(z[1]).toContain('2 offen');
+    expect(z[2]).toContain('Carla Test');
+    expect(z[2]).toContain('1 offen: Mi, 21.10.');
+  });
+
+  it('wer „Fertig“ gedrückt hat, wird nicht erinnert (Ben): Musik · 2, Ben fehlt in der Liste', async () => {
+    const { fenster } = await oeffnen({
+      abfragen: abfragenMit(ABFRAGE),
+      antworten: mitFertig([[BEN.id, { a1: ZEIT }]]),
+    });
+    await geladen(fenster);
+    expect(await within(fenster).findByRole('button', { name: 'Musik · 2' })).toBeTruthy();
+    expect(namen(fenster).map((t) => t.split(' ')[0] + ' ' + t.split(' ')[1])).toEqual([
+      expect.stringContaining('Anna'),
+      expect.stringContaining('Carla'),
+    ]);
+    expect(within(fenster).queryByText(/Ben Test/)).toBeNull();
+  });
+
+  it('die Bestätigung einer ANDEREN Abfrage zählt nicht', async () => {
+    const { fenster } = await oeffnen({
+      abfragen: abfragenMit(ABFRAGE),
+      antworten: mitFertig([[BEN.id, { andere: ZEIT }]]),
+    });
+    await geladen(fenster);
+    expect(await within(fenster).findByRole('button', { name: 'Musik · 3' })).toBeTruthy();
+  });
+
+  it('Gegenstück Zusagen: die Bestätigung zählt NICHT, Ja schon – wie vor V-4 (Musik · 2)', async () => {
+    const { fenster } = await oeffnen({
+      abfragen: abfragenMit(ABFRAGE, 'zusagen'),
+      antworten: mitFertig([[ANNA.id, { a1: ZEIT }]]),
+    });
+    await geladen(fenster);
+    expect(await within(fenster).findByRole('button', { name: 'Musik · 2' })).toBeTruthy();
+    expect(namen(fenster)[0]).toContain('Anna Test');
+  });
+
+  it('ohne laufende Abfrage ist die Gruppe gesperrt – mit Grund (kein „Fertig“ möglich), nichts geraten', async () => {
+    const { fenster } = await oeffnen({ abfragen: abfragenMit(null) });
+    await geladen(fenster);
+    expect(
+      await within(fenster).findByText(
+        'Musik ist gesperrt: Die Gruppe fragt nur nach Abwesenheiten – Erinnern geht in einer laufenden Abfrage.',
+      ),
+    ).toBeTruthy();
+    expect((chip(fenster, 'Musik · gesperrt') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('Lesefehler beim Dokument der Abfragen (Netz): die Gruppe ist gesperrt, „Erneut versuchen“ lädt neu – vorübergehend ist nicht „Zusagen“', async () => {
+    let netzWeg = true;
+    const echt = abfragenMit(ABFRAGE).lesen;
+    const lesen: AbfrageAnschluss['lesen'] = (id) =>
+      netzWeg ? Promise.reject(new Error('weg')) : echt(id);
+    const { fenster } = await oeffnen({ abfragen: { ...abfragenMit(ABFRAGE), lesen } });
+    await geladen(fenster);
+    expect(
+      await within(fenster).findByText('Musik ist gesperrt: Art der Abfrage nicht geladen.'),
+    ).toBeTruthy();
+    expect((chip(fenster, 'Musik · gesperrt') as HTMLButtonElement).disabled).toBe(true);
+    netzWeg = false;
+    fireEvent.click(within(fenster).getByRole('button', { name: 'Erneut versuchen' }));
+    expect(await within(fenster).findByRole('button', { name: 'Musik · 3' })).toBeTruthy();
+  });
+
+  it('ein unlesbares Dokument gilt wie der Startwert als „Zusagen“ (V-2/V-3): Musik · 2 wie bisher', async () => {
+    const lesen: AbfrageAnschluss['lesen'] = () =>
+      Promise.resolve({
+        inhalt: standardInhalt(),
+        gespeichert: null,
+        unlesbar: true,
+        fehler: null,
+      });
+    const { fenster } = await oeffnen({ abfragen: { ...abfragenMit(ABFRAGE), lesen } });
+    await geladen(fenster);
+    expect(await within(fenster).findByRole('button', { name: 'Musik · 2' })).toBeTruthy();
+  });
+
+  it('die Einleitung ist bei „Nur abwesend“ eine andere (mit „Fertig“) und geht so in die Mail – bei Zusagen bleibt der alte Text', async () => {
+    const { fenster, senden } = await oeffnen({ abfragen: abfragenMit(ABFRAGE) });
+    await geladen(fenster);
+    await within(fenster).findByRole('button', { name: 'Musik · 3' });
+    fireEvent.click(within(fenster).getByRole('button', { name: /Text anpassen/ }));
+    expect(within(fenster).getByLabelText<HTMLTextAreaElement>(/^Text \(nach/).value).toBe(
+      EINLEITUNG_ABWESEND,
+    );
+    (senden as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { sentRecipientIds: [5, 8, 11] },
+    });
+    fireEvent.click(sendeKnopf(fenster, /^An 3 Personen senden$/));
+    await screen.findByText('Erinnert');
+    expect(bodies(senden)[0].body).toContain('tippe dann auf „Fertig“');
+    expect(bodies(senden)[0].body).not.toContain(EINLEITUNG_STANDARD);
+    cleanup();
+    const zusagen = await oeffnen({ abfragen: abfragenMit(ABFRAGE, 'zusagen') });
+    await geladen(zusagen.fenster);
+    fireEvent.click(within(zusagen.fenster).getByRole('button', { name: /Text anpassen/ }));
+    expect(within(zusagen.fenster).getByLabelText<HTMLTextAreaElement>(/^Text \(nach/).value).toBe(
+      EINLEITUNG_STANDARD,
+    );
   });
 });

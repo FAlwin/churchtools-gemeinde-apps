@@ -19,7 +19,7 @@ import { useToast } from '@ui/fenster/useToast';
 import { Toast } from '@ui/fenster/Toast';
 import { Icon } from '@ui/icons/icons';
 import { ladeMeineDienste } from './ladeBeiwerk';
-import { AbfrageBand } from './AbfrageBand';
+import { AbfrageBand, type FertigBand } from './AbfrageBand';
 import { austrittFuerEigene, useBand } from './useAbfragen';
 import { HILFE_VERFUEGBARKEIT } from './hilfeTexte';
 import { adresseFuer } from './reiter';
@@ -29,12 +29,14 @@ import {
   type ZusagenQuelle,
 } from './useVerfuegbarkeitAnsichten';
 import { ansichtBeimOeffnen } from '@shared/dienstplan/verfuegbarkeitAnsicht';
+import { fertigBei, type Fertig } from '@shared/dienstplan/verfuegbarkeit';
 import type { Start } from './start';
 import type { Zeitraum } from '@shared/ct/zeitraum';
 import {
   einrichtbareGruppen,
   ladeVerfuegbarkeit,
   richteAntwortenEin,
+  speichereFertig,
   speichereVerfuegbarkeit,
   verfuegbarkeitHinweis,
   type SpeichernErgebnis,
@@ -168,6 +170,9 @@ export function DienstHinweis({
 
 const KEINE_DIENSTE: { id: number; name: string }[] = [];
 
+const GERADE_NICHT_FERTIG =
+  'Fertig geht gerade nicht: ChurchTools antwortet nicht. Nichts verloren – bitte gleich noch einmal versuchen.';
+
 const GERADE_NICHT =
   'Ja/Vielleicht geht gerade nicht: ChurchTools antwortet nicht. Nichts verloren – Nein geht weiter, später bitte noch einmal.';
 
@@ -188,7 +193,13 @@ function useZusagen(
    * der Termin stand bis zum Neuladen ohne Antwort da.
    */
   schreibStand: number,
-): Zusagen {
+): {
+  zusagen: Zusagen;
+  /** Meine „Fertig“-Bestätigungen bei Abfragen „Nur abwesend“ (V-4); leer, solange nichts gelesen ist. */
+  fertig: Fertig;
+  /** „Fertig“ für eine Abfrage speichern (V-4) – nachgelesen; wirft nicht. */
+  fertigSpeichern: (dienstgruppeId: number, abfrageId: string) => Promise<SpeichernErgebnis>;
+} {
   // Geladen wie überall in den Erweiterungen (`useLaden`): späte Antworten zählen nicht, und beim Neuladen bleibt der
   // bisherige Stand stehen, bis der neue da ist – scheitert das Neuladen, gilt weiter der bisherige.
   const { stand, neu, setze } = useLaden(
@@ -209,7 +220,7 @@ function useZusagen(
     if (fehlerText) console.warn('[wann-kann-ich] Antworten nicht geladen:', fehlerText);
   }, [fehlerText]);
   const einrichtbar = v ? einrichtbareGruppen(v) : [];
-  return {
+  const zusagen: Zusagen = {
     antworten: v?.antworten ?? {},
     dienste,
     bereit: v !== null && v.bereit.length > 0 && v.lesefehler === null,
@@ -239,6 +250,27 @@ function useZusagen(
       // Gelungen heißt: nachgelesen steht es da – dann gilt die geschriebene Karte sofort. Den wahren Stand holt danach
       // in jedem Fall `schreibStand` (die Seite meldet jeden Speicherversuch über `geaendert`, auch einen gescheiterten).
       if (r.ok) setze((alt) => ({ ...alt, antworten }));
+      return r;
+    },
+  };
+  return {
+    zusagen,
+    fertig: v?.fertig ?? {},
+    fertigSpeichern: async (dienstgruppeId, abfrageId) => {
+      if (!v) return { ok: false, text: GERADE_NICHT_FERTIG };
+      let r: SpeichernErgebnis;
+      try {
+        r = await speichereFertig(v, ichId, dienstgruppeId, abfrageId, heute);
+      } catch (e) {
+        console.warn('[verfuegbarkeit] Fertig nicht gespeichert:', e);
+        r = { ok: false, text: 'Fertig konnte nicht gespeichert werden – bitte noch einmal.' };
+      }
+      // Gelungen heißt: nachgelesen steht es da – dann gilt es sofort (der wahre Stand kommt mit `schreibStand`).
+      if (r.ok)
+        setze((alt) => ({
+          ...alt,
+          fertig: { ...alt.fertig, [abfrageId]: new Date().toISOString() },
+        }));
       return r;
     },
   };
@@ -304,15 +336,35 @@ export function Abwesenheiten({
     () => ({ dienst, heute, stand, zusagen: zusagenQuelle }),
     [dienst, heute, stand, zusagenQuelle],
   );
-  const zusagen = useZusagen(ichId, dienstgruppen, heute, eigeneDienste, stand);
+  const { zusagen, fertig, fertigSpeichern } = useZusagen(
+    ichId,
+    dienstgruppen,
+    heute,
+    eigeneDienste,
+    stand,
+  );
   const { wartet, band } = useBand({
     start,
     dienstgruppeId: start ? abfrageGruppe : null,
     heute,
     zeitzone,
     antworten: zusagen.antworten,
+    fertig,
     schreibStand: stand,
   });
+  // „Fertig“ bei „Nur abwesend“ (V-4): ein Versuch zur Zeit, nie wiederholt. Danach prüft der Austritt (unten, an `stand`), ob ich
+  // aus der Hilfsgruppe austreten darf – dieselbe Rechnung wie nach jedem Speichern.
+  const [fertigLaeuft, setFertigLaeuft] = useState(false);
+  const [fertigFehler, setFertigFehler] = useState<string | null>(null);
+  const fertigDruecken = async () => {
+    if (!band || fertigLaeuft) return;
+    setFertigLaeuft(true);
+    setFertigFehler(null);
+    const r = await fertigSpeichern(band.lage.gruppe.id, band.lage.abfrage.id);
+    setFertigLaeuft(false);
+    if (r.ok) setStand((n) => n + 1);
+    else setFertigFehler(r.text);
+  };
   // Austritt beim Antworten (R-5b): Nach jedem Speicherversuch prüft die App, ob in einer eingerichteten Abfrage nichts mehr offen
   // ist, und trägt mich dann aus der Hilfsgruppe aus. Leise, ein Lauf zur Zeit, kein Wiederhol-Takt.
   const austrittLaeuft = useRef(false);
@@ -348,10 +400,15 @@ export function Abwesenheiten({
       </div>
     );
 
-  // Beim Öffnen „Abwesenheiten“; über die Abfrage einer Gruppe mit Zusagen „Zusagen“ (`ansichtBeimOeffnen`).
+  // Beim Öffnen „Abwesenheiten“; über die Abfrage einer Gruppe mit Zusagen „Zusagen“ (`ansichtBeimOeffnen`) – über die einer Gruppe
+  // „Nur abwesend“ (V-4) bleibt es „Abwesenheiten“, dort steht das Band mit „Fertig“.
   const ansichten: Ansichten = {
     zusagenMoeglich: zusagenGruppen.gruppen.length > 0,
-    start: ansichtBeimOeffnen(band ? band.lage.gruppe.id : null, zusagenGruppen.gruppen),
+    start: ansichtBeimOeffnen(
+      band ? band.lage.gruppe.id : null,
+      zusagenGruppen.gruppen,
+      band ? band.lage.inhalt.verfuegbarkeit : null,
+    ),
     useZusagenTermine,
     hilfe: { seite: 'Verfügbarkeit', abschnitte: HILFE_VERFUEGBARKEIT },
   };
@@ -378,19 +435,44 @@ export function Abwesenheiten({
           <div className={styles.seite}>
             {/* Die Werkzeugzeile steht über der Karte, nicht darin (B4, R5). */}
             {t.werkzeug}
-            {band && (
-              <AbfrageBand
-                gruppe={band.lage.gruppe.name}
-                abfrage={band.lage.abfrage}
-                stand={
-                  band.stand ? { offen: band.stand.offen.length, gesamt: band.stand.gesamt } : null
-                }
-                heute={heute}
-                onAlle={() => {
-                  window.location.hash = adresseFuer('abwesenheiten');
-                }}
-              />
-            )}
+            {/* „Nur abwesend“ (V-4): das Band mit „Fertig“ gehört in die Ansicht „Abwesenheiten“ – unter „Zusagen“ wäre es verwirrend. */}
+            {band &&
+              (band.lage.inhalt.verfuegbarkeit === 'zusagen' ||
+                t.aktion.ansicht === 'abwesenheiten') && (
+                <AbfrageBand
+                  gruppe={band.lage.gruppe.name}
+                  abfrage={band.lage.abfrage}
+                  stand={
+                    band.stand
+                      ? { offen: band.stand.offen.length, gesamt: band.stand.gesamt }
+                      : null
+                  }
+                  heute={heute}
+                  onAlle={() => {
+                    window.location.hash = adresseFuer('abwesenheiten');
+                  }}
+                  fertigBand={
+                    band.lage.inhalt.verfuegbarkeit === 'abwesend'
+                      ? ({
+                          // Bestätigt gilt immer. Sonst entscheidet mein Stand – und ist er nicht zu berechnen, weil die Termine des
+                          // Zeitraums fehlen, bleibt der Knopf (vorübergehend ist nicht „fertig“, aber auch nicht „kein Knopf“).
+                          fertig: fertigBei(fertig, band.lage.abfrage.id)
+                            ? true
+                            : band.stand
+                              ? band.stand.offen.length === 0
+                              : band.lage.zeilen === null
+                                ? false
+                                : null,
+                          erstSpeichern: t.aktion.vorgemerkt > 0,
+                          haupt: !t.aktion.gefuellt,
+                          arbeitet: fertigLaeuft,
+                          fehler: fertigFehler,
+                          onFertig: () => void fertigDruecken(),
+                        } satisfies FertigBand)
+                      : undefined
+                  }
+                />
+              )}
             <section className={styles.karte} aria-label="Verfügbarkeit">
               {t.fehler ? (
                 <div className={styles.hinweis}>

@@ -12,7 +12,9 @@ import {
 } from '@shared/dienstplan/verfuegbarkeit';
 import {
   KEINE_VERFUEGBARKEIT,
+  antwortenAblage,
   einrichtbareGruppen,
+  fertigSpeichern,
   verfuegbarkeitHinweis,
   verfuegbarkeitLesen,
   verfuegbarkeitSpeichern,
@@ -344,5 +346,108 @@ describe('verfuegbarkeitSpeichern – ehrlich je Dienstgruppe', () => {
     expect(r.text).not.toContain('nur zum Teil'); // alle scheitern → kein „Teil“
     expect(r.text).toContain('„Technik“');
     expect(r.text).toContain('„Musik“');
+  });
+});
+
+describe('fertigSpeichern – „Fertig“ bei „Nur abwesend“ (V-4)', () => {
+  const lage = async (port: EntwurfPort, rechte = RECHTE_ALLE) =>
+    verfuegbarkeitLesen(
+      port,
+      MODUL,
+      rechte,
+      kategorienListe([TECHNIK, MUSIK]),
+      [TECHNIK, MUSIK],
+      ICH,
+    );
+
+  it('schreibt die Bestätigung in alle bereiten Kategorien; danach liest verfuegbarkeitLesen sie (Erzeuger gegen Leser) – kein Ja', async () => {
+    const { port } = speicher();
+    const v = await lage(port);
+    expect(await fertigSpeichern(port, v, ICH, TECHNIK.id, 'a1', HEUTE)).toEqual({ ok: true });
+    const danach = await lage(port);
+    expect(Object.keys(danach.fertig)).toEqual(['a1']);
+    expect(danach.antworten).toEqual({});
+  });
+
+  it('die Kategorie der Dienstgruppe der Abfrage muss bereit sein – sonst wäre „fertig“ für die Planer unsichtbar: nichts geschrieben, Text nennt die Gruppe', async () => {
+    const { port, s } = speicher();
+    // Technik: nur ansehen; Musik bereit.
+    const rechte = modulRechteAus({
+      'view custom data': [30, 31],
+      'create custom data': [31],
+      'edit custom data': [31],
+      'delete custom data': [31],
+    });
+    const v = await lage(port, rechte);
+    expect(v.bereit).toEqual([31]);
+    const r = await fertigSpeichern(port, v, ICH, TECHNIK.id, 'a1', HEUTE);
+    expect(r).toMatchObject({ ok: false });
+    expect(!r.ok && r.text).toContain('„Technik“');
+    expect(s.werte).toEqual([]);
+  });
+
+  it('eine Dienstgruppe, die ich gar nicht habe: nichts geschrieben', async () => {
+    const { port, s } = speicher();
+    const v = await lage(port);
+    expect(await fertigSpeichern(port, v, ICH, 99, 'a1', HEUTE)).toMatchObject({ ok: false });
+    expect(s.werte).toEqual([]);
+  });
+
+  it('Lesefehler beim Laden (lesefehler): „Fertig geht gerade nicht“ mit dem Grund, nichts geschrieben', async () => {
+    const { port, s } = speicher();
+    const v = { ...(await lage(port)), lesefehler: 'voruebergehend' as const };
+    const r = await fertigSpeichern(port, v, ICH, TECHNIK.id, 'a1', HEUTE);
+    expect(!r.ok && r.text).toMatch(
+      /^Fertig geht gerade nicht: ChurchTools antwortet gerade nicht/,
+    );
+    expect(s.werte).toEqual([]);
+  });
+
+  it('eine Kategorie scheitert vorübergehend: Text nennt die Gruppe und „antwortet gerade nicht“ (nicht „kein Recht“); die andere steht', async () => {
+    const { port, s } = speicher();
+    const v = await lage(port);
+    s.schreibenWirft.set(31, new Fehler(503));
+    const r = await fertigSpeichern(port, v, ICH, TECHNIK.id, 'a1', HEUTE);
+    expect(!r.ok && r.text).toContain('Für „Musik“ nicht gespeichert');
+    expect(!r.ok && r.text).toContain('antwortet gerade nicht');
+    expect(s.werte.filter((w) => w.dataCategoryId === 30)).toHaveLength(1);
+  });
+
+  it('Lesen beim Speichern scheitert: nichts geschrieben, Text „Fertig nicht gespeichert“', async () => {
+    const { port, s } = speicher();
+    const v = await lage(port);
+    s.lesenWirft.set(30, new Fehler(503));
+    s.lesenWirft.set(31, new Fehler(503));
+    const r = await fertigSpeichern(port, v, ICH, TECHNIK.id, 'a1', HEUTE);
+    expect(!r.ok && r.text).toMatch(/^Fertig nicht gespeichert:/);
+    expect(s.werte).toEqual([]);
+  });
+});
+
+describe('antwortenAblage – die eine Rechnung für Verfügbarkeit, Einrichten und Start (V-4)', () => {
+  const liste = kategorienListe([TECHNIK, MUSIK]);
+  it('Kategorie und Stand: bereit, nur lesen, fehlt (kein Recht) und einrichtbar (darf anlegen)', () => {
+    expect(antwortenAblage(RECHTE_ALLE, liste, MUSIK)).toEqual({ kategorie: 31, stand: 'bereit' });
+    const nurSehen = modulRechteAus({ 'view custom data': [31] });
+    expect(antwortenAblage(nurSehen, liste, MUSIK)).toEqual({ kategorie: 31, stand: 'nur-lesen' });
+    expect(antwortenAblage(modulRechteAus({}), liste, MUSIK)).toEqual({
+      kategorie: 31,
+      stand: 'fehlt',
+    });
+    const anlegen = modulRechteAus({ 'create custom category': true });
+    expect(antwortenAblage(anlegen, [], MUSIK)).toEqual({ kategorie: null, stand: 'einrichtbar' });
+    expect(antwortenAblage(modulRechteAus({}), [], MUSIK)).toEqual({
+      kategorie: null,
+      stand: 'fehlt',
+    });
+  });
+
+  it('verfuegbarkeitLesen meldet je Gruppe genau dasselbe wie antwortenAblage', async () => {
+    const { port } = speicher();
+    const v = await verfuegbarkeitLesen(port, MODUL, RECHTE_ALLE, liste, [TECHNIK, MUSIK], ICH);
+    for (const z of v.gruppen)
+      expect({ kategorie: z.kategorie, stand: z.stand }).toEqual(
+        antwortenAblage(RECHTE_ALLE, liste, z.gruppe),
+      );
   });
 });

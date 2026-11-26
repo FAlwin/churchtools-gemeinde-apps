@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { Absence, AbsenceEvent } from '@shared/types/index';
 import { datumText, tagKurz } from '@shared/ct/datum';
 import { diensteAus } from '@shared/ct/dienste';
@@ -21,6 +21,7 @@ import { ladeAbwesenheiten, ladeMeineDienste } from './ladeBeiwerk';
 import { ladeRohTermine, ladeZeitraum } from './ladeTermine';
 import {
   ladeVerfuegbarkeit,
+  speichereFertig,
   speichereVerfuegbarkeit,
   type Verfuegbarkeit,
 } from './ladeVerfuegbarkeit';
@@ -64,6 +65,7 @@ vi.mock('./ladeVerfuegbarkeit', async (orig) => ({
   ...(await orig<typeof import('./ladeVerfuegbarkeit')>()),
   ladeVerfuegbarkeit: vi.fn(),
   speichereVerfuegbarkeit: vi.fn(),
+  speichereFertig: vi.fn(),
 }));
 const abfragen = vi.mocked(ladeAbfragen);
 const abwesenheiten = vi.mocked(ladeAbwesenheiten);
@@ -71,6 +73,7 @@ const zeitraum = vi.mocked(ladeZeitraum);
 const rohe = vi.mocked(ladeRohTermine);
 const laden = vi.mocked(ladeVerfuegbarkeit);
 const speichern = vi.mocked(speichereVerfuegbarkeit);
+const fertigSpeichern = vi.mocked(speichereFertig);
 
 const HEUTE = '2026-11-10';
 const MUSIK: Dienstgruppe = { id: 4, name: 'Musik', fuerAlle: false };
@@ -143,6 +146,7 @@ const bereit = (antworten: Antworten = {}): Verfuegbarkeit => ({
   bereit: [30],
   antworten,
   vertretungen: {},
+  fertig: {},
   lesefehler: null,
 });
 const abfrageStand = (a: Abfrage | null): AbfragenStand => ({
@@ -502,5 +506,297 @@ describe('Austritt beim Antworten (R-5b)', () => {
     await new Promise((r) => setTimeout(r, 30));
     expect(w.mitglieder).toHaveLength(1);
     expect(warn.mock.calls.flat().join(' ')).not.toContain('Failed');
+  });
+});
+
+/**
+ * **V-4: Abfrage bei „Nur abwesend“** – das Band mit „Fertig“, das grüne Band danach, „erst speichern“ bei vorgemerkten Häkchen,
+ * der Austritt aus der Hilfsgruppe nach „Fertig“. Technik (3) fragt nur Abwesenheiten; Ich bin dort mit „Ton“ (Dienst 6) und an
+ * Termin 105 eingeteilt, Termin 106 ist als abwesend eingetragen, 103 ist abgesagt: offen sind 101, 102 und 104 – bis „Fertig“.
+ */
+describe('Abfrage „Nur abwesend“ (V-4)', () => {
+  const TECHNIK: Dienstgruppe = { id: 3, name: 'Technik', fuerAlle: false };
+  const START_TECHNIK: Start = startFuer({
+    gruppen: [
+      { id: 7, name: 'Technikteam', leitung: false },
+      { id: 9, name: 'Musikteam', leitung: false },
+    ],
+    dienste: START.dienste,
+  });
+  const ZEIT = '2026-11-10T09:00:00.000Z';
+  const technikAbfrage = (extra: Partial<AbfragenStand['inhalt']> = {}) =>
+    abfragen.mockImplementation((id) =>
+      Promise.resolve({
+        ...abfrageStand(id === 3 ? ABFRAGE : null),
+        inhalt: {
+          ...standardInhalt(),
+          abfragen: id === 3 ? [ABFRAGE] : [],
+          verfuegbarkeit: 'abwesend',
+          ...extra,
+        },
+      }),
+    );
+  const technik = (extra: { dienstgruppen?: Dienstgruppe[] } = {}) =>
+    zeige({
+      abfrageGruppe: 3,
+      start: START_TECHNIK,
+      dienstgruppen: [TECHNIK],
+      ...extra,
+    });
+  const bereitTechnik = (extra: Partial<Verfuegbarkeit> = {}): Verfuegbarkeit => ({
+    ...bereit(),
+    gruppen: [{ gruppe: TECHNIK, kategorie: 30, stand: 'bereit' }],
+    ...extra,
+  });
+  beforeEach(() => {
+    window.location.hash = '#/abwesenheiten?abfrage=3';
+    technikAbfrage();
+    stand = bereitTechnik();
+    fertigSpeichern.mockImplementation(() => {
+      stand = { ...stand, fertig: { ...stand.fertig, [ABFRAGE.id]: ZEIT } };
+      return Promise.resolve({ ok: true });
+    });
+    dienst.anlegen.mockResolvedValue(undefined as never);
+  });
+  const fertigKnopf = (b: HTMLElement) => within(b).queryByRole('button', { name: 'Fertig' });
+  const druecke = async () => {
+    await klick(fertigKnopf(await screen.findByRole('note', { name: 'Abfrage' }))!);
+  };
+
+  it('vor „Fertig“: Etikett „bis“, Text mit Zeitraum und Bitte, Knopf „Fertig“ – keine Zahl offener Termine; gespeichert wird nichts', async () => {
+    technik();
+    const b = within(await screen.findByRole('note', { name: 'Abfrage' }));
+    expect(
+      await b.findByText(
+        'Abfrage Technik · 01.02.–31.03. – Häkchen setzen, wo du nicht kannst, dann:',
+      ),
+    ).toBeTruthy();
+    expect(b.getByText(`bis ${tagKurz('2026-11-17')}`)).toBeTruthy();
+    expect(b.getByRole('button', { name: 'Fertig' })).toBeTruthy();
+    expect(b.getByRole('button', { name: 'Alle Termine zeigen' })).toBeTruthy();
+    expect(screen.getByRole('note', { name: 'Abfrage' }).textContent).not.toMatch(/offen/);
+    expect(fertigSpeichern).not.toHaveBeenCalled();
+    expect(speichern).not.toHaveBeenCalled();
+  });
+
+  it('„Fertig“ speichert die Bestätigung für DIESE Abfrage und Gruppe – kein Ja – und das Band wird grün', async () => {
+    technik();
+    await druecke();
+    await screen.findByText(
+      'Danke! An allen anderen Terminen im Zeitraum kannst du. Ändern geht jederzeit.',
+    );
+    expect(fertigSpeichern).toHaveBeenCalledTimes(1);
+    expect(fertigSpeichern.mock.calls[0].slice(1)).toEqual([1, 3, 'a1', HEUTE]);
+    expect(speichern).not.toHaveBeenCalled(); // kein „Ja“
+    const b = screen.getByRole('note', { name: 'Abfrage' });
+    expect(within(b).getByText('fertig')).toBeTruthy();
+    expect(fertigKnopf(b)).toBeNull();
+    expect(b.textContent).not.toContain('Häkchen setzen');
+  });
+
+  it('wer nach „Fertig“ noch ein Häkchen setzt und speichert, bleibt fertig', async () => {
+    technik();
+    await druecke();
+    await screen.findByText(/Danke! An allen anderen Terminen/);
+    await klick(screen.getAllByRole('button', { name: /^Abwesend – Gottesdienst/ })[0]);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    await waitFor(() => expect(dienst.anlegen).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.getByText(/Danke! An allen anderen Terminen/)).toBeTruthy();
+    expect(fertigSpeichern).toHaveBeenCalledTimes(1);
+  });
+
+  it('bereits bestätigt (aus dem Speicher): das Band ist von Anfang an grün', async () => {
+    stand = bereitTechnik({ fertig: { [ABFRAGE.id]: ZEIT } });
+    technik();
+    await screen.findByText(/Danke! An allen anderen Terminen/);
+    expect(fertigSpeichern).not.toHaveBeenCalled();
+  });
+
+  it('eine Bestätigung einer ANDEREN Abfrage macht diese nicht fertig', async () => {
+    stand = bereitTechnik({ fertig: { andere: ZEIT } });
+    technik();
+    const b = within(await screen.findByRole('note', { name: 'Abfrage' }));
+    expect(await b.findByRole('button', { name: 'Fertig' })).toBeTruthy();
+  });
+
+  it('an allen Terminen abwesend (ChurchTools-Abwesenheit) heißt fertig – ohne Knopf', async () => {
+    abwesenheiten.mockResolvedValue(
+      Object.values(TAGE).map(
+        (tag, i): CtAbsence => ({
+          id: 50 + i,
+          startDate: tag,
+          endDate: tag,
+          startTime: null,
+          endTime: null,
+        }),
+      ),
+    );
+    technik();
+    await screen.findByText(/Danke! An allen anderen Terminen/);
+    expect(fertigSpeichern).not.toHaveBeenCalled();
+  });
+
+  it('R1: solange das grüne „Zeitraum eintragen“ steht, ist „Fertig“ nicht gefüllt – sonst gäbe es zwei Hauptknöpfe', async () => {
+    technik();
+    const b = await screen.findByRole('note', { name: 'Abfrage' });
+    const knopf = fertigKnopf(b)!;
+    expect(knopf.className).not.toMatch(/haupt/);
+    // …und der gefüllte grüne Knopf der Werkzeugzeile ist wirklich da.
+    expect(screen.getAllByRole('button', { name: /Zeitraum eintragen/ }).length).toBeGreaterThan(0);
+  });
+
+  it('lassen sich die Termine des Zeitraums nicht laden, bleibt „Fertig“ trotzdem (die Bestätigung braucht sie nicht) – und eine vorhandene zeigt das grüne Band', async () => {
+    zeitraum.mockRejectedValue(new Error('weg'));
+    technik();
+    const b = await screen.findByRole('note', { name: 'Abfrage' });
+    await waitFor(() => expect(fertigKnopf(b)).toBeTruthy());
+    cleanup();
+    stand = bereitTechnik({ fertig: { [ABFRAGE.id]: ZEIT } });
+    technik();
+    await screen.findByText(/Danke! An allen anderen Terminen/);
+  });
+
+  it('mit vorgemerkten Häkchen (Speichern-Leiste offen) steht „erst speichern“ statt des Knopfs – nach „Verwerfen“ ist er wieder da', async () => {
+    technik();
+    const b = await screen.findByRole('note', { name: 'Abfrage' });
+    expect(fertigKnopf(b)).toBeTruthy();
+    await klick(screen.getAllByRole('button', { name: /^Abwesend – Gottesdienst/ })[0]);
+    expect(within(b).getByText('erst speichern')).toBeTruthy();
+    expect(fertigKnopf(b)).toBeNull();
+    await klick(screen.getByRole('button', { name: 'Verwerfen' }));
+    expect(fertigKnopf(b)).toBeTruthy();
+    expect(within(b).queryByText('erst speichern')).toBeNull();
+  });
+
+  it('Speichern scheitert: die Meldung steht unter dem Band, der Knopf bleibt, das Band wird nicht grün – ein Versuch, kein Wiederholen', async () => {
+    fertigSpeichern.mockResolvedValue({
+      ok: false,
+      text: 'Fertig nicht gespeichert: ChurchTools antwortet gerade nicht.',
+    });
+    technik();
+    await druecke();
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'ChurchTools antwortet gerade nicht',
+    );
+    expect(fertigKnopf(screen.getByRole('note', { name: 'Abfrage' }))).toBeTruthy();
+    expect(screen.queryByText(/Danke! An allen anderen Terminen/)).toBeNull();
+    expect(fertigSpeichern).toHaveBeenCalledTimes(1);
+  });
+
+  it('ein Wurf beim Speichern wird zur Meldung (nichts bricht), und ein zweiter Versuch ist möglich', async () => {
+    fertigSpeichern.mockRejectedValueOnce(new Error('weg'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    technik();
+    await druecke();
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'konnte nicht gespeichert werden',
+    );
+    warn.mockRestore();
+    await klick(fertigKnopf(screen.getByRole('note', { name: 'Abfrage' }))!);
+    await screen.findByText(/Danke! An allen anderen Terminen/);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('mit Zusagen-Gruppe daneben: über die Abfrage öffnet „Abwesenheiten“ mit dem Band; unter „Zusagen“ steht das Band mit „Fertig“ nicht', async () => {
+    abfragen.mockImplementation((id) =>
+      Promise.resolve({
+        ...abfrageStand(id === 3 ? ABFRAGE : null),
+        inhalt: {
+          ...standardInhalt(),
+          abfragen: id === 3 ? [ABFRAGE] : [],
+          verfuegbarkeit: id === 3 ? 'abwesend' : 'zusagen',
+        },
+      }),
+    );
+    technik({ dienstgruppen: [TECHNIK, MUSIK] });
+    const zeile = await screen.findByRole('toolbar', { name: 'Werkzeuge' });
+    expect(
+      within(zeile).getByRole('button', { name: 'Abwesenheiten' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    const b = await screen.findByRole('note', { name: 'Abfrage' });
+    expect(fertigKnopf(b)).toBeTruthy();
+    await klick(within(zeile).getByRole('button', { name: 'Zusagen' }));
+    expect(screen.queryByRole('note', { name: 'Abfrage' })).toBeNull();
+  });
+
+  it('Einstieg: scheitert nur der Leser der Ansichten am Dokument (Netz), gilt Technik dort als „Zusagen“ – die Seite geht trotzdem auf „Abwesenheiten“ auf, das Band mit „Fertig“ steht da', async () => {
+    // Der erste Aufruf für Technik (die Liste der Zusagen-Gruppen, V-3) scheitert, der des Bands gelingt.
+    const technikDoc = abfragen.getMockImplementation()!;
+    let erster = true;
+    abfragen.mockImplementation((id) => {
+      if (id === 3 && erster) {
+        erster = false;
+        return Promise.reject(new Error('weg'));
+      }
+      return technikDoc(id);
+    });
+    technik();
+    const zeile = await screen.findByRole('toolbar', { name: 'Werkzeuge' });
+    expect(
+      within(zeile).getByRole('button', { name: 'Abwesenheiten' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    const b = await screen.findByRole('note', { name: 'Abfrage' });
+    expect(fertigKnopf(b)).toBeTruthy();
+  });
+
+  it('Zusagen-Gruppe: unverändert – „noch X von N offen“, kein „Fertig“', async () => {
+    window.location.hash = '#/abwesenheiten?abfrage=4';
+    abfragen.mockImplementation((id) => Promise.resolve(abfrageStand(id === 4 ? ABFRAGE : null)));
+    stand = bereit();
+    zeige();
+    const b = await screen.findByRole('note', { name: 'Abfrage' });
+    await within(b).findByText(/noch \d+ von 6 offen/);
+    expect(fertigKnopf(b)).toBeNull();
+  });
+
+  describe('Austritt nach „Fertig“', () => {
+    const mitEinrichtung = () => technikAbfrage({ einrichtung: EINR });
+
+    it('nach „Fertig“ trage ich mich aus der Hilfsgruppe aus (nachgelesen) – die anderen bleiben', async () => {
+      const { w, a } = hilfsgruppe({
+        mitglieder: [
+          { person: START.ichId, rolle: R_TEILNEHMER },
+          { person: 99, rolle: R_TEILNEHMER },
+        ],
+      });
+      anschluss.aktuell = a;
+      mitEinrichtung();
+      technik();
+      await druecke();
+      await waitFor(() => expect(w.log).toContain(`DELETE /groups/50/members/${START.ichId}`));
+      expect(w.mitglieder.map((m) => m.person)).toEqual([99]);
+    });
+
+    it('Gegenprobe: ohne „Fertig“ (nur Häkchen gespeichert, nicht überall abwesend) bleibe ich in der Gruppe – kein DELETE', async () => {
+      const { w, a } = hilfsgruppe({ mitglieder: [{ person: START.ichId, rolle: R_TEILNEHMER }] });
+      anschluss.aktuell = a;
+      mitEinrichtung();
+      technik();
+      await klick((await screen.findAllByRole('button', { name: /^Abwesend – Gottesdienst/ }))[0]);
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+        await new Promise((r) => setTimeout(r, 0));
+      });
+      await waitFor(() => expect(dienst.anlegen).toHaveBeenCalled());
+      await new Promise((r) => setTimeout(r, 30));
+      expect(w.log.filter((z) => z.startsWith('DELETE'))).toEqual([]);
+      expect(w.mitglieder).toHaveLength(1);
+    });
+
+    it('scheitert „Fertig“, bleibe ich in der Gruppe (kein DELETE)', async () => {
+      const { w, a } = hilfsgruppe({ mitglieder: [{ person: START.ichId, rolle: R_TEILNEHMER }] });
+      anschluss.aktuell = a;
+      mitEinrichtung();
+      fertigSpeichern.mockResolvedValue({ ok: false, text: 'nein' });
+      technik();
+      await druecke();
+      await screen.findByRole('alert');
+      await new Promise((r) => setTimeout(r, 30));
+      expect(w.log.filter((z) => z.startsWith('DELETE'))).toEqual([]);
+    });
   });
 });

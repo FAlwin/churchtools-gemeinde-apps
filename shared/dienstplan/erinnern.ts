@@ -18,12 +18,22 @@
  * **Nichts neu erfunden, nichts nachgebaut:** Mitglieder, Antworten und Abwesenheiten kommen aus `personenRaster` – derselben
  * Rechnung wie die Ansicht „Personen“, die die Zellen färbt. Was dort „Antwort“ oder „abwesend“ heißt, heißt es hier.
  *
+ * **Je Art der Verfügbarkeits-Abfrage (V-4):** Bei Dienstgruppen mit „Nur abwesend“ ist ein freier Termin keine Antwort, eine
+ * Ja/Vielleicht-Antwort zählt nicht – dort heißt „beantwortet“ **Abwesenheit oder die Bestätigung „Fertig“ der Abfrage**. Die
+ * Regel steht **einmal** in `beantwortetNach`; `fehlendeInGruppe` (Planer) und `meinStandInAbfrage` (Mitarbeitende) fragen sie.
+ *
  * **Unsichere Lage sperrt die Gruppe, statt zu raten** (`gruppeGrund`): Sind die Antworten oder die Abwesenheiten nicht
  * lesbar, die Mitglieder verborgen oder ein Laden gescheitert, wüsste man nicht, wer geantwortet hat – „keine Antwort“ wäre
  * dann geraten, und die Mail ginge an Leute, die längst geantwortet haben. Die Gruppe bleibt gesperrt, mit einem kurzen Grund.
  */
 import { monatName, tagKurz } from '../ct/datum';
-import { antwortenSichtbar, type PersonenAntworten } from './personenAntworten';
+import {
+  fragtZusagen,
+  laufendeAbfrage,
+  type AbfragenInhalt,
+  type VerfuegbarkeitArt,
+} from './abfragen';
+import { antwortenSichtbar, hatBestaetigt, type PersonenAntworten } from './personenAntworten';
 import type { PersonenDaten } from './personenDaten';
 import { pauseAm, type Personenliste } from './personenliste';
 import { istVorgesehen, personenRaster, rasterDienste } from './personenRaster';
@@ -87,6 +97,56 @@ export const terminZaehlt = (t: { tag: string; abgesagt?: boolean }, heute: stri
   !t.abgesagt && t.tag >= heute;
 
 /**
+ * **„Beantwortet“ – DIE Regel je Art der Abfrage** (V-4, 26.11.2026). Ein Termin ist für eine Person beantwortet, wenn
+ * - sie dort **abwesend** ist (ChurchTools-Abwesenheit, `decktTermin` – das „Nein“, in jeder Art), oder
+ * - bei **Zusagen** (`Ja · Vielleicht · Nein`): sie dort Ja/Vielleicht geantwortet hat (`antwort`, auch „nur bestimmte Dienste“), oder
+ * - bei **„Nur abwesend“**: sie die Abfrage mit **„Fertig“ bestätigt hat** (`bestaetigt`) – ein freier Termin ist dort keine Antwort,
+ *   und gespeicherte Ja/Vielleicht-Antworten zählen nicht (sie sind nur ausgeblendet).
+ *
+ * Das ergibt „fertig“ = bestätigt **oder** an allen Terminen der Abfrage abwesend. Wer rechnet, wer an einer Abfrage noch offen
+ * ist (Planer: `fehlendeInGruppe`, Mitarbeitende: `meinStandInAbfrage`, dazu Erinnern, Eintragen beim Start, Abgleich und Austritt),
+ * ruft diese Funktion – niemand baut das Oder noch einmal nach.
+ */
+export function beantwortetNach(
+  art: VerfuegbarkeitArt,
+  s: { antwort: boolean; abwesend: boolean; bestaetigt: boolean },
+): boolean {
+  if (s.abwesend) return true;
+  return art === 'zusagen' ? s.antwort : s.bestaetigt;
+}
+
+/**
+ * **Nach welcher Regel eine Dienstgruppe „offen“ rechnet:** die Art und – bei „Nur abwesend“ – die ID der laufenden Abfrage, deren
+ * „Fertig“ zählt (`null`: es läuft keine; dann hat niemand bestätigt). Bei Zusagen hängt nichts an der Abfrage.
+ */
+export type AbfrageRegel = { art: 'zusagen' } | { art: 'abwesend'; abfrageId: string | null };
+
+/** Die Regel bis man das Dokument der Dienstgruppe kennt – und für alle, die nach Zusagen fragen (V-2: der Startwert). */
+export const ZUSAGEN_REGEL: AbfrageRegel = { art: 'zusagen' };
+
+/**
+ * Die Regel einer Dienstgruppe aus ihrem Dokument: die Art (`fragtZusagen`, **die** Regel dazu) und – bei „Nur abwesend“ – die
+ * laufende Abfrage (`laufendeAbfrage`). `null` (nicht gelesen, nicht lesbar) gilt wie der Startwert als „Zusagen“.
+ */
+export function abfrageRegelAus(
+  inhalt: Pick<AbfragenInhalt, 'verfuegbarkeit' | 'abfragen'> | null,
+  heute: string,
+): AbfrageRegel {
+  if (inhalt === null || fragtZusagen(inhalt)) return ZUSAGEN_REGEL;
+  return { art: 'abwesend', abfrageId: laufendeAbfrage(inhalt, heute)?.id ?? null };
+}
+
+/**
+ * Warum „Erinnern“ eine Gruppe nicht rechnen kann, obwohl alles geladen ist: Bei „Nur abwesend“ ohne laufende Abfrage gibt es
+ * kein „Fertig“ – die Mail ginge an alle, die nicht überall abwesend sind, ohne dass sie es beantworten könnten. `null`: kein Hindernis.
+ */
+export function ohneAbfrageGrund(regel: AbfrageRegel): string | null {
+  return regel.art === 'abwesend' && regel.abfrageId === null
+    ? 'Die Gruppe fragt nur nach Abwesenheiten – Erinnern geht in einer laufenden Abfrage'
+    : null;
+}
+
+/**
  * Die Spalten, an denen erinnert werden kann: aus den gezeigten (`spalten`) die, die `terminZaehlt` (nicht in der
  * Vergangenheit, nicht abgesagt). In der Reihenfolge von `spalten`.
  */
@@ -138,7 +198,7 @@ export function offeneTermine<T extends { tag: string; abgesagt?: boolean }>(o: 
   termine: readonly T[];
   /** Heute, `YYYY-MM-DD` (Ortszeit der Gemeinde). */
   heute: string;
-  /** Antwort aus „Verfügbarkeit“ **oder** Abwesenheit (Nein = Abwesenheit, `decktTermin`). */
+  /** Beantwortet nach der Art der Abfrage – **immer über `beantwortetNach`** (Antwort, Abwesenheit, „Fertig“). */
   beantwortet: (t: T) => boolean;
   /** In der Dienstgruppe an diesem Termin zugesagt oder angefragt. */
   eingeteilt: (t: T) => boolean;
@@ -218,6 +278,8 @@ export function fehlendeInGruppe(o: {
   heute: string;
   /** Die Personenlisten je Dienstgruppe (PL-3: Pause). Ohne Angabe oder ohne Liste dieser Gruppe gilt keine Pause. */
   personenlisten?: ReadonlyMap<number, Personenliste>;
+  /** Nach welcher Regel „beantwortet“ gilt (V-4, `beantwortetNach`). Ohne Angabe: Zusagen, wie bisher. */
+  regel?: AbfrageRegel;
 }): GruppenErgebnis {
   const spalten = erinnerSpalten(o.plan, o.spalten, o.heute);
   const grund = gruppeGrund({ ...o, spalten });
@@ -236,8 +298,9 @@ export function fehlendeInGruppe(o: {
 
   const namen = new Map<number, string>();
   const mitglieder = new Set<number>();
-  /** Je Spalte (Position in `spalten`): wer dort geantwortet hat (Antwort oder Abwesenheit) bzw. eingeteilt ist. */
-  const beantwortet = spalten.map(() => new Set<number>());
+  /** Je Spalte (Position in `spalten`): wer dort Ja/Vielleicht geantwortet hat, abwesend oder eingeteilt ist. */
+  const geantwortet = spalten.map(() => new Set<number>());
+  const abwesend = spalten.map(() => new Set<number>());
   const eingeteilt = spalten.map(() => new Set<number>());
   for (const b of raster.blocks) {
     for (const r of b.zeilen) {
@@ -247,7 +310,8 @@ export function fehlendeInGruppe(o: {
       }
       r.zellen.forEach((z, pos) => {
         // „Nur bestimmte Dienste“ zählt als beantwortet: `antwort` ist da, auch wenn sie diesen Dienst nicht nennt.
-        if (z.antwort !== null || z.abwesend !== null) beantwortet[pos].add(r.personId);
+        if (z.antwort !== null) geantwortet[pos].add(r.personId);
+        if (z.abwesend !== null) abwesend[pos].add(r.personId);
         if (z.zustand === 'zugesagt' || z.zustand === 'angefragt') eingeteilt[pos].add(r.personId);
       });
     }
@@ -258,14 +322,24 @@ export function fehlendeInGruppe(o: {
   /** Position in `spalten` je Termin-ID – die Fragen unten gelten je Termin. */
   const posVon = new Map(termine.map((t, pos) => [t.terminId, pos]));
 
+  const regel = o.regel ?? ZUSAGEN_REGEL;
+  const abfrageId = regel.art === 'abwesend' ? regel.abfrageId : null;
   const personen: Fehlende[] = [];
   const pausiert: number[] = [];
   for (const personId of mitglieder) {
+    const bestaetigt = hatBestaetigt(o.antworten, personId, abfrageId);
     const { offen, pausiert: nurPause } = offeneTermine({
       termine,
       heute: o.heute,
       vorgesehen: (t) => hatDienste[posVon.get(t.terminId)!],
-      beantwortet: (t) => beantwortet[posVon.get(t.terminId)!].has(personId),
+      beantwortet: (t) => {
+        const pos = posVon.get(t.terminId)!;
+        return beantwortetNach(regel.art, {
+          antwort: geantwortet[pos].has(personId),
+          abwesend: abwesend[pos].has(personId),
+          bestaetigt,
+        });
+      },
       eingeteilt: (t) => eingeteilt[posVon.get(t.terminId)!].has(personId),
       pausiert: (t) => pauseAm(liste, personId, t.tag) !== null,
     });
@@ -349,6 +423,17 @@ export function betreffStandard(termine: readonly Pick<OffenerTermin, 'tag'>[]):
 }
 export const EINLEITUNG_STANDARD =
   'für diese Termine fehlt noch deine Antwort. Bitte trag kurz ein, ob du kannst – Ja, Vielleicht oder Nein. Danke!';
+
+/**
+ * Die Einleitung bei Dienstgruppen mit „Nur abwesend“ (V-4): dort gibt es kein Ja/Vielleicht – man trägt ein, wann man nicht
+ * kann, und tippt auf „Fertig“. Die Termine darunter sind die, an denen die Person (noch) nicht als abwesend eingetragen ist.
+ */
+export const EINLEITUNG_ABWESEND =
+  'bitte trag im Dienstplaner ein, an welchen der folgenden Termine du nicht kannst, und tippe dann auf „Fertig“. Danke!';
+
+/** Die Einleitung, die der Planer zuerst sieht: nur wenn **alle** gewählten Gruppen „Nur abwesend“ fragen, der Text dafür. */
+export const einleitungStandard = (alleNurAbwesend: boolean): string =>
+  alleNurAbwesend ? EINLEITUNG_ABWESEND : EINLEITUNG_STANDARD;
 
 /** Der Vorname aus „Vorname Nachname“ (ChurchTools `title`) – das erste Wort; ohne Namen „du“. */
 export function vorname(name: string): string {

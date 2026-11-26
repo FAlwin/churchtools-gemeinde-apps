@@ -6,14 +6,16 @@ import { tagKurz } from '@shared/ct/datum';
 import {
   betreffAus,
   betreffStandard,
-  EINLEITUNG_STANDARD,
+  einleitungStandard,
   empfaengerAus,
   erinnerSpalten,
   fehlendeInGruppe,
   mailInhalt,
   nurVorgesehene,
   offenKurz,
+  ohneAbfrageGrund,
   pausiertAusgelassen,
+  ZUSAGEN_REGEL,
   type Empfaenger,
   type GruppenErgebnis,
 } from '@shared/dienstplan/erinnern';
@@ -35,6 +37,7 @@ import {
 } from './erinnernSenden';
 import type { AntwortenLader } from './ladeAntworten';
 import type { PersonenLader } from './ladePersonen';
+import { useAbfrageRegeln, type AbfragenLader } from './useAbfrageRegeln';
 import { usePersonenAntworten } from './usePersonenAntworten';
 import { usePersonenDaten } from './usePersonenDaten';
 import styles from './ErinnernFenster.module.scss';
@@ -67,6 +70,7 @@ export function ErinnernFenster({
   ladeAntworten,
   anschluss,
   personenlisten,
+  ladeAbfragen,
   onClose,
 }: {
   plan: Plan;
@@ -80,6 +84,11 @@ export function ErinnernFenster({
   anschluss: ErinnernAnschluss;
   /** Die Personenlisten je Dienstgruppe (PL-3): Wer dort pausiert, wird nicht erinnert. Ohne Angabe gibt es keine Pause. */
   personenlisten?: ReadonlyMap<number, Personenliste>;
+  /**
+   * Wie jede Dienstgruppe die Verfügbarkeit abfragt (V-4): bei „Nur abwesend“ zählt „Fertig“ der laufenden Abfrage, nicht Ja/Vielleicht.
+   * Ohne Angabe gilt überall „Zusagen“, wie vor V-4.
+   */
+  ladeAbfragen?: AbfragenLader;
   onClose: () => void;
 }) {
   // ── Laden: Mitglieder und Abwesenheiten der CT-Gruppen, Antworten je Dienstgruppe – beim Öffnen ──
@@ -96,6 +105,7 @@ export function ErinnernFenster({
   const personen = usePersonenDaten(ladePersonen, ctGruppen, zeitraum);
   const antwortGruppen = [...new Set(gruppen.flatMap((g) => (g.gruppe ? [g.gruppe.id] : [])))];
   const antw = usePersonenAntworten(ladeAntworten, antwortGruppen);
+  const regelStand = useAbfrageRegeln(ladeAbfragen, antwortGruppen, heute);
 
   // ── Was der Planer gewählt hat ──
   const [auswahl, setAuswahl] = useState<Set<string> | null>(null);
@@ -103,7 +113,7 @@ export function ErinnernFenster({
   const [vorschau, setVorschau] = useState<number | null>(null);
   const [textOffen, setTextOffen] = useState(false);
   const [betreffEigen, setBetreffEigen] = useState<string | null>(null);
-  const [einleitung, setEinleitung] = useState(EINLEITUNG_STANDARD);
+  const [einleitungEigen, setEinleitungEigen] = useState<string | null>(null);
   const [kopie, setKopie] = useState(false);
 
   // ── Was beim Senden geschah ──
@@ -115,30 +125,51 @@ export function ErinnernFenster({
   // Zählt die Läufe – der Ergebnis-Bildschirm fängt mit jedem neu an (Haken der übrigen).
   const [laeufe, setLaeufe] = useState(0);
 
-  const laedt = personen.laedt || antw.laedt;
+  const laedt = personen.laedt || antw.laedt || regelStand.laedt;
   const ladeFehler = antw.fehler ?? personen.fehler;
   const neuLaden = () => {
     personen.neuLaden();
     antw.neuLaden();
+    regelStand.neuLaden();
   };
 
-  const zeilen: { schluessel: string; name: string; ergebnis: GruppenErgebnis }[] = gruppen.map(
-    (g) => ({
+  // Die Regel je Gruppe (V-4): ohne Angabe oder ohne Gruppe „Zusagen“; ein nicht lesbares Dokument sperrt die Gruppe (nichts raten).
+  const regelVon = (g: PlanGruppe) =>
+    (g.gruppe ? regelStand.regeln.get(g.gruppe.id) : undefined) ?? ZUSAGEN_REGEL;
+  const zeilen: {
+    schluessel: string;
+    name: string;
+    ergebnis: GruppenErgebnis;
+    abwesend: boolean;
+  }[] = gruppen.map((g) => {
+    const regel = regelVon(g);
+    const sperre =
+      regel === 'unbekannt'
+        ? { grund: 'Art der Abfrage nicht geladen', nochmal: true }
+        : (() => {
+            const grund = ohneAbfrageGrund(regel);
+            return grund === null ? null : { grund, nochmal: false };
+          })();
+    return {
       schluessel: gruppenSchluessel(g),
       name: gruppenName(g),
+      abwesend: regel !== 'unbekannt' && regel.art === 'abwesend',
       ergebnis: ladeFehler
         ? { art: 'gesperrt', grund: 'Nicht geladen', nochmal: true }
-        : fehlendeInGruppe({
-            plan,
-            spalten,
-            gruppe: g,
-            daten: personen.daten,
-            antworten: antw.antworten,
-            heute,
-            personenlisten,
-          }),
-    }),
-  );
+        : sperre
+          ? { art: 'gesperrt', ...sperre }
+          : fehlendeInGruppe({
+              plan,
+              spalten,
+              gruppe: g,
+              daten: personen.daten,
+              antworten: antw.antworten,
+              heute,
+              personenlisten,
+              regel: regel === 'unbekannt' ? ZUSAGEN_REGEL : regel,
+            }),
+    };
+  });
   const offeneZahl = (z: (typeof zeilen)[number]) =>
     z.ergebnis.art === 'ok' ? z.ergebnis.personen.length : 0;
   // Vorauswahl: die erste Gruppe mit Fehlenden – sonst die erste, die sich beurteilen lässt.
@@ -149,6 +180,12 @@ export function ErinnernFenster({
       zeilen.some((z) => z.schluessel === k && z.ergebnis.art === 'ok'),
     ),
   );
+  // Die Einleitung: der eigene Text des Planers, sonst der Standard – bei lauter „Nur abwesend“-Gruppen der passende (V-4).
+  const einleitung =
+    einleitungEigen ??
+    einleitungStandard(
+      gewaehlt.size > 0 && zeilen.every((z) => !gewaehlt.has(z.schluessel) || z.abwesend),
+    );
   const empfaenger = empfaengerAus(
     zeilen.flatMap((z) =>
       gewaehlt.has(z.schluessel) && z.ergebnis.art === 'ok'
@@ -271,6 +308,8 @@ export function ErinnernFenster({
           <p className={styles.hinweis}>
             Erinnert wird, wer für mindestens einen Termin weder Ja/Vielleicht noch Nein eingetragen
             hat – und dort nicht schon eingeteilt ist.
+            {zeilen.some((z) => z.abwesend) &&
+              ' Bei „Nur abwesend“ zählt statt Ja/Vielleicht, ob die Person „Fertig“ getippt hat.'}
           </p>
 
           {wegenPause > 0 && (
@@ -358,7 +397,7 @@ export function ErinnernFenster({
                 id="erinnern-text"
                 className={`${styles.feld} ${styles.mehrzeilig}`}
                 value={einleitung}
-                onChange={(ev) => setEinleitung(ev.target.value)}
+                onChange={(ev) => setEinleitungEigen(ev.target.value)}
               />
               <p className={styles.hinweis}>
                 Darunter folgen automatisch die offenen Termine der Person und der Knopf „Im

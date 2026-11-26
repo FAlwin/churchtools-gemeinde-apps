@@ -49,6 +49,8 @@ import {
 } from '@shared/ct/gruppenart';
 import type { Einrichtung } from '@shared/dienstplan/abfragen';
 import type { AbfragenStand } from '@shared/dienstplan/abfragenSpeicher';
+import type { SchubladenStand } from '@shared/dienstplan/entwuerfe';
+import { antwortenSchublade } from '@shared/dienstplan/verfuegbarkeit';
 import {
   einrichtenPlan,
   gruppenIdsDerDienste,
@@ -88,8 +90,22 @@ export interface EinrichtenPort extends CtPort {
   liste<T>(pfad: string): Promise<T[]>;
 }
 
+/**
+ * Die Ablage „Antworten <Gruppe>“ (V-4): Dort steht bei „Nur abwesend“ das „Fertig“, bei Zusagen Ja/Vielleicht. Gelesen und angelegt wird mit
+ * den vorhandenen Bausteinen (`antwortenAblageStand`, `richteAntwortenEin` in `ladeVerfuegbarkeit.ts`) – wer sie anlegt, bekommt in
+ * ChurchTools sofort alle Rechte darauf, wie beim bisherigen Einrichten.
+ */
+export interface EinrichtenAblage {
+  /** Der Stand frisch gelesen; wirft bei Lesefehlern. */
+  stand: (dienstgruppe: { id: number; name: string }) => Promise<SchubladenStand>;
+  /** Legt sie an (und sieht danach nach); wirft, wenn es nicht geht. */
+  anlegen: (dienstgruppe: { id: number; name: string }) => Promise<void>;
+}
+
 export interface EinrichtenAnschluss {
   port: EinrichtenPort;
+  /** Die Ablage der Antworten mit einrichten. Ohne: nicht Teil des Einrichtens (Tests, ältere Aufrufer). */
+  ablage?: EinrichtenAblage;
   /** Der EINE Weg, eine Mitgliedschaft anzulegen (`ui/ct/mitglieder.ts`, Wächter `eineMitgliedschaft`). */
   mitgliedAnlegen: (gruppe: number, person: number, angaben: MitgliedAngaben) => Promise<void>;
   /** Aus der Gruppe austragen – ebenfalls der EINE Weg (`ui/ct/mitglieder.ts`). */
@@ -117,9 +133,11 @@ export function ctAutomatikAnschluss(): AutomatikAnschluss {
 /** Der echte Anschluss (Browser, angemeldet in ChurchTools). */
 export function ctEinrichtenAnschluss(
   abfragen: EinrichtenAnschluss['abfragen'],
+  ablage?: EinrichtenAblage,
 ): EinrichtenAnschluss {
   return {
     ...ctAutomatikAnschluss(),
+    ablage,
     namen: async (ids) => {
       try {
         const personen = await personenRoh(ids);
@@ -189,6 +207,12 @@ export interface Lage {
   /** Planer, denen eines der zwei Rechte für die Hilfsgruppe fehlt – mit den fehlenden (Namen wie im Fenster). */
   rechteNachtragen: { person: Person; fehlt: { schluessel: GruppenRecht; name: string }[] }[];
   plan: EinrichtenPlan;
+  /**
+   * Die Ablage „Antworten <Gruppe>“ (V-4); `null` ohne Anschluss dazu. `anlegen`: Sie fehlt und darf angelegt werden (`einrichtbar`).
+   * Steht sie da, ist aber nicht zu sehen oder nicht zu ändern, kann das Einrichten daran nichts ändern: Das ist ein Hinweis
+   * (`stand`), kein Hindernis.
+   */
+  ablage: { name: string; stand: SchubladenStand; anlegen: boolean } | null;
   /** Alles ist eingerichtet, es fehlt nichts. */
   fertig: boolean;
 }
@@ -372,6 +396,16 @@ async function lageLesenOhneFangen(
       if (da === null) throw new Stopp('Die Rechte eines Planers sind nicht lesbar.', true);
       rechte.set(id, da);
     }
+  // 7. Die Ablage der Antworten (frisch gelesen): fehlt sie und darf sie angelegt werden, kommt sie dazu.
+  const ablageStand = a.ablage ? await a.ablage.stand(dienstgruppe) : null;
+  const ablage =
+    ablageStand === null
+      ? null
+      : {
+          name: antwortenSchublade(dienstgruppe).name,
+          stand: ablageStand,
+          anlegen: ablageStand === 'einrichtbar',
+        };
   const plan = einrichtenPlan(planerIds, {
     gruppe: gruppeId !== null,
     routine: routineId !== null,
@@ -402,7 +436,8 @@ async function lageLesenOhneFangen(
       fehlt: r.fehlt.map((k) => ({ schluessel: k, name: rechtName(k) })),
     })),
     plan,
-    fertig: plan.nichtsZuTun && !routineAus,
+    ablage,
+    fertig: plan.nichtsZuTun && !routineAus && !ablage?.anlegen,
   };
 }
 
@@ -586,6 +621,13 @@ export async function einrichten(
       angelegt.push(
         `Rechte für ${name}: ${r.fehlt.map((k) => k.name).join(', ')} (nur für „${l.gruppeName}“)`,
       );
+    }
+    // Die Ablage „Antworten <Gruppe>“: nur anlegen, was fehlt – und danach nachsehen (ein Erfolg ist erst, was dasteht).
+    if (l.ablage?.anlegen && a.ablage) {
+      await a.ablage.anlegen(dienstgruppe);
+      if ((await a.ablage.stand(dienstgruppe)) !== 'bereit')
+        throw new NichtUebernommen(`die Ablage „${l.ablage.name}“`);
+      angelegt.push(`Ablage „${l.ablage.name}“ angelegt`);
     }
     return { art: 'gelaufen', ok: true, angelegt, hinweise, fehler: null };
   } catch (e) {

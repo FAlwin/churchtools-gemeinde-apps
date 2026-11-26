@@ -24,7 +24,7 @@ import {
   type MeinStand,
 } from '@shared/dienstplan/abfrageStand';
 import type { TerminZeile } from '@shared/dienstplan/termine';
-import type { Antworten } from '@shared/dienstplan/verfuegbarkeit';
+import type { Antworten, Fertig } from '@shared/dienstplan/verfuegbarkeit';
 import type { CtAbsence } from '@shared/ct/typen';
 import { useLaden } from '@ui/ct/useLaden';
 import { austretenWennFertig } from './abfrageAutomatikLauf';
@@ -65,16 +65,23 @@ async function laufende(
 /** Mein Stand in der Abfrage – die Daten, wie sie die Rechnung braucht (Einteilungen aus den Terminen und `start.dienste`). */
 export function meinStand(o: {
   start: Pick<Start, 'dienste'>;
-  lage: Pick<AbfrageLage, 'gruppe' | 'abfrage'>;
+  /** Die Abfrage samt Dokument: dessen Art (`verfuegbarkeit`) entscheidet, was „beantwortet“ heißt. */
+  lage: Pick<AbfrageLage, 'gruppe' | 'abfrage'> & {
+    inhalt: Pick<AbfragenInhalt, 'verfuegbarkeit'>;
+  };
   zeilen: readonly TerminZeile[];
   antworten: Antworten;
+  /** Meine „Fertig“-Bestätigungen (V-4). */
+  fertig: Fertig;
   abwesenheiten: readonly CtAbsence[];
   heute: string;
 }): MeinStand<TerminZeile> {
   return meinStandInAbfrage({
     abfrage: o.lage.abfrage,
+    art: o.lage.inhalt.verfuegbarkeit,
     termine: o.zeilen,
     antworten: o.antworten,
+    fertig: o.fertig,
     abwesenheiten: o.abwesenheiten,
     eingeteilt: eingeteilteTermine(
       o.zeilen,
@@ -126,6 +133,7 @@ async function standJeLage(
       lage,
       zeilen: zeilenJe[i],
       antworten: v.antworten,
+      fertig: v.fertig,
       abwesenheiten,
       heute,
     });
@@ -286,6 +294,8 @@ export function useBand(o: {
   heute: string;
   zeitzone: string;
   antworten: Antworten;
+  /** Meine „Fertig“-Bestätigungen (V-4) – bei „Nur abwesend“ zählt nur sie, nicht die Antworten. */
+  fertig: Fertig;
   schreibStand: number;
 }): { wartet: boolean; band: { lage: BandLage; stand: MeinStand<TerminZeile> | null } | null } {
   const { start, dienstgruppeId, heute, zeitzone } = o;
@@ -319,6 +329,7 @@ export function useBand(o: {
             lage,
             zeilen: lage.zeilen,
             antworten: o.antworten,
+            fertig: o.fertig,
             abwesenheiten,
             heute,
           })

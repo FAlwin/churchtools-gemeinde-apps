@@ -1,7 +1,7 @@
 /**
  * **Abfragen mit Frist + Erinnerungsplan** (Bauplan R-1, Kern ohne Oberfläche, Alwin 25.11.2026): Ein Planer startet je
  * Dienstgruppe eine **Abfrage** – Zeitraum (`von`–`bis`), **Frist**, an der die Antworten da sein sollen, und ein Tag, an
- * dem sie **öffnet**. Mitarbeitende antworten bis zur Frist in „Wann kann ich?“; erinnert wird nach einem je Dienstgruppe
+ * dem sie **öffnet**. Mitarbeitende antworten bis zur Frist in „Verfügbarkeit“; erinnert wird nach einem je Dienstgruppe
  * einstellbaren **Erinnerungsplan**. Hier stehen nur Typen und Regeln – gespeichert wird in `abfragenSpeicher.ts`, „offen“
  * rechnet `offeneTermine` in `erinnern.ts`.
  *

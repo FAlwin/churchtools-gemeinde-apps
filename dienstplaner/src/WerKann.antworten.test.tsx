@@ -142,7 +142,7 @@ describe('WerKann mit Antworten (E5c-4)', () => {
     const liste = await screen.findByRole('list', { name: 'Wer kann?' });
     expect(within(liste).getAllByRole('listitem')).toHaveLength(5);
     expect(screen.queryByRole('region')).toBeNull();
-    expect(screen.getByText(/Antworten aus „Wann kann ich\?“ gerade nicht geladen/)).toBeTruthy();
+    expect(screen.getByText(/Antworten aus „Verfügbarkeit“ gerade nicht geladen/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Nochmal versuchen' }));
     await screen.findByRole('region', { name: 'Hat Ja gesagt' });
     expect(screen.queryByText(/gerade nicht geladen/)).toBeNull();

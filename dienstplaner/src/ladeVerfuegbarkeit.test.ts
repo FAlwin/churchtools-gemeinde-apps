@@ -286,7 +286,7 @@ describe('verfuegbarkeitSpeichern – ehrlich je Dienstgruppe', () => {
     expect((await lage(port)).antworten).toEqual(A);
   });
 
-  it('E5c-6: Speichern aus „Wann kann ich?“ behält die Markierung „Vertretung gesucht“ – auch wenn sie erst NACH dem Laden der Seite entstand', async () => {
+  it('E5c-6: Speichern aus „Verfügbarkeit“ behält die Markierung „Vertretung gesucht“ – auch wenn sie erst NACH dem Laden der Seite entstand', async () => {
     const { port } = speicher();
     await eigeneAntwortenSchreiben(port, MODUL, [30, 31], ICH, A, HEUTE);
     // Die Seite lädt ihren Stand (ohne Markierung) …
@@ -309,7 +309,7 @@ describe('verfuegbarkeitSpeichern – ehrlich je Dienstgruppe', () => {
       { terminId: 246, vertretung: gesucht },
       HEUTE,
     );
-    // … und speichert dann in „Wann kann ich?“ (die Seite weiß nichts von der Markierung).
+    // … und speichert dann in „Verfügbarkeit“ (die Seite weiß nichts von der Markierung).
     const neu = antw({ '2': ['vielleicht', '2026-12-13'] });
     expect(await verfuegbarkeitSpeichern(port, v, ICH, neu, HEUTE)).toEqual({ ok: true });
     const danach = await lage(port);

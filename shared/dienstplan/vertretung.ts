@@ -47,7 +47,7 @@ import { vertretungsSchluessel, type Vertretung, type Vertretungen } from './ver
 
 // ── Wen man fragen kann ──────────────────────────────────────────────────────
 
-/** Eine Person aus dem Team, die man fragen kann – mit ihrer Antwort aus „Wann kann ich?“ zu **diesem** Termin. */
+/** Eine Person aus dem Team, die man fragen kann – mit ihrer Antwort aus „Verfügbarkeit“ zu **diesem** Termin. */
 export interface Vorschlag {
   personId: number;
   name: string;

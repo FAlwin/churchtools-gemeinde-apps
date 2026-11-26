@@ -1,6 +1,6 @@
 /**
  * **„Erinnern“ – wer hat noch nicht geantwortet?** (Bauplan E5c-5, Entwurf `e5c-5-erinnern.html`, Variante B): Der Planer
- * erinnert Mitglieder einer Dienstgruppe, die für Termine im gezeigten Zeitraum noch keine Antwort aus „Wann kann ich?“
+ * erinnert Mitglieder einer Dienstgruppe, die für Termine im gezeigten Zeitraum noch keine Antwort aus „Verfügbarkeit“
  * eingetragen haben. Nur Rechnen und Texte – geladen wird in `dienstplaner/src`, verschickt in `erinnernSenden.ts`.
  *
  * **Fehlend** (Alwin, 19.11.2026): Mitglied einer Dienstgruppe, das für **mindestens einen** Termin weder Ja/Vielleicht noch
@@ -138,7 +138,7 @@ export function offeneTermine<T extends { tag: string; abgesagt?: boolean }>(o: 
   termine: readonly T[];
   /** Heute, `YYYY-MM-DD` (Ortszeit der Gemeinde). */
   heute: string;
-  /** Antwort aus „Wann kann ich?“ **oder** Abwesenheit (Nein = Abwesenheit, `decktTermin`). */
+  /** Antwort aus „Verfügbarkeit“ **oder** Abwesenheit (Nein = Abwesenheit, `decktTermin`). */
   beantwortet: (t: T) => boolean;
   /** In der Dienstgruppe an diesem Termin zugesagt oder angefragt. */
   eingeteilt: (t: T) => boolean;

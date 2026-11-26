@@ -82,7 +82,7 @@ function antwortenDes(
   );
 }
 
-/** Die Antwort aus „Wann kann ich?“ als kurzer Text hinter dem Namen („Ja“, „Vielleicht – nur bis 12 Uhr“). */
+/** Die Antwort aus „Verfügbarkeit“ als kurzer Text hinter dem Namen („Ja“, „Vielleicht – nur bis 12 Uhr“). */
 const antwortKurz = (k: Bewertet): string | null => (k.antwort ? antwortText(k.antwort) : null);
 
 /** Warum jemand eher nicht passt – die Texte von „Wer kann?“ und ChurchTools, dazu was der Lauf beiträgt. */
@@ -138,7 +138,7 @@ export function ZauberstabFach({
   /** Ohne Anschluss kein Stift. */
   vorlieben?: EntwurfAnschluss['vorlieben'];
   /**
-   * Die Antworten aus „Wann kann ich?“ (E5c-4): Ja vor Vielleicht vor keiner Antwort. Ohne Angabe – oder wenn sie nicht
+   * Die Antworten aus „Verfügbarkeit“ (E5c-4): Ja vor Vielleicht vor keiner Antwort. Ohne Angabe – oder wenn sie nicht
    * sichtbar sind oder nicht geladen werden konnten – rechnet der Zauberstab wie vor E5c-4.
    */
   antworten?: { lader: AntwortenLader; dienstName: (id: number) => string | undefined };
@@ -331,7 +331,7 @@ export function ZauberstabFach({
 
       {antwortFehler && zustand.art !== 'laedt' && (
         <p className={styles.hinweis} role="status">
-          Antworten aus „Wann kann ich?“ gerade nicht geladen – die Vorschläge sind ohne sie
+          Antworten aus „Verfügbarkeit“ gerade nicht geladen – die Vorschläge sind ohne sie
           berechnet.
         </p>
       )}

@@ -23,7 +23,7 @@ afterEach(() => {
   wurzel.remove();
 });
 
-/** Ein Kasten, der einen Stapel aufmacht – wie die klebende Leiste in „Wann kann ich?“. */
+/** Ein Kasten, der einen Stapel aufmacht – wie die klebende Leiste in „Verfügbarkeit“. */
 function Kasten({ children }: { children: React.ReactNode }) {
   return (
     <div data-testid="kasten" style={{ position: 'sticky', zIndex: 2 }}>

@@ -119,7 +119,7 @@ interface Props {
    */
   ladePersonen?: PersonenLader;
   /**
-   * Die Antworten aus „Wann kann ich?“ für die Ansicht „Personen“ (E5c-3) – Ja/Vielleicht färben die Zellen. Ohne zeigt die
+   * Die Antworten aus „Verfügbarkeit“ für die Ansicht „Personen“ (E5c-3) – Ja/Vielleicht färben die Zellen. Ohne zeigt die
    * Ansicht keine Antworten (und sagt es).
    */
   ladeAntworten?: AntwortenLader;

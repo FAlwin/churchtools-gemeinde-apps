@@ -15,7 +15,7 @@ const blattText = (o: { label: string; zahl?: number; anzahl?: number }) =>
  * beim Antippen die Ansichten als Fenster öffnet (`AuswahlFenster`). Beides sieht aus wie der gewählte Umschalter
  * am Rechner – nur nimmt der Knopf am Handy so wenig Platz wie sein Wort.
  *
- * Eine Ansicht kann einen **Merker** tragen (`zahl`, B4/E24: „Einträge“ in „Wann kann ich?“): ein blau gefüllter Kreis direkt
+ * Eine Ansicht kann einen **Merker** tragen (`zahl`, B4/E24: „Einträge“ in „Verfügbarkeit“): ein blau gefüllter Kreis direkt
  * hinter dem Wort, in derselben Zeile. Am Handy steht der Merker einer anderen Ansicht hinter dem Pfeil, damit man ihn
  * nicht erst im Fenster findet; im Fenster selbst steht die Zahl in Klammern.
  *

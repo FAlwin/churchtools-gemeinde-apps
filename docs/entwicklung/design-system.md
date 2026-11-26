@@ -124,7 +124,7 @@ ChurchTools). Ausnahme: der ChordPro-**Editor** nutzt bewusst Monospace (`'JetBr
     sonst vom Schließen zurückgesetzt (Lehre 05.08.2026); jeder Eintrag bekommt einen eigenen Test (`MehrMenue.test.tsx`).
     Fenster, die ein Eintrag öffnet, gehören der Seite (eigener Zustand), nicht dem Menü (`HilfeFenster`).
   - **`ZeitraumLeiste`** (`ui/bedienung`, B4; R5): ‹ Zeitraum › als EIN gerahmter Baustein für die Mitte der Werkzeugzeile; die Pfeile
-    bekommen vom Aufrufer Name, Zustand und Wirkung („Planen“: `Terminleiste`, „Wann kann ich?“: `AbwesenheitenSeite`). Statt eines
+    bekommen vom Aufrufer Name, Zustand und Wirkung („Planen“: `Terminleiste`, „Verfügbarkeit“: `AbwesenheitenSeite`). Statt eines
     Zeitraums für „Dienste“ lässt man `mitte` weg – `rechts` bleibt trotzdem rechts. **`TextKnopf`** (B4; R2): ein stiller Knopf als
     blaues Wort („Weitere Wochen laden“, „Alle Termine zeigen“). **Merker an einer Ansicht** (E24): `AnsichtWahl` mit `zahl` zeigt einen
     blau gefüllten Kreis (`ReiterZaehler ton="blau"`) direkt hinter dem Wort; Rot bleibt dem Alarm („fällig“) vorbehalten.

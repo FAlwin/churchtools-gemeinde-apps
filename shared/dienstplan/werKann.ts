@@ -10,7 +10,7 @@
  *   Planer herausgenommen oder ersetzt“ zu unterscheiden.** Alwin (14.10.): frühere Absagen werden gar nicht
  *   gezeigt – deshalb zählt dieser Abzug auch nicht für die Reihenfolge, sonst stünde jemand still unten.
  * - `monthlyUtilization` zählt je Monat die Dienste **in dieser Dienstgruppe**, nicht über alle Dienste.
- * - **Antworten aus „Wann kann ich?“ (E5c-4, Variante A):** Sind sie sichtbar, ordnet `abschnitteAus` die Liste in Abschnitte
+ * - **Antworten aus „Verfügbarkeit“ (E5c-4, Variante A):** Sind sie sichtbar, ordnet `abschnitteAus` die Liste in Abschnitte
  *   „Hat Ja gesagt“ · „Vielleicht“ · „Keine Antwort“ · „Kann nicht / abwesend“ (`antwortStufe`, dieselbe Einordnung wie im
  *   Raster und im Zauberstab); innerhalb eines Abschnitts bleibt die Reihenfolge von oben. Sind sie nicht sichtbar, gibt es
  *   die eine Liste wie vor E5c-4 – nie alle unter „Keine Antwort“.

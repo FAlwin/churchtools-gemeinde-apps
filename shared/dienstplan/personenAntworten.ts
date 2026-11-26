@@ -1,5 +1,5 @@
 /**
- * **Die Antworten aus „Wann kann ich?“ in der Ansicht „Personen“** (Bauplan E5c-3, Variante D): Was geladen ist, und die
+ * **Die Antworten aus „Verfügbarkeit“ in der Ansicht „Personen“** (Bauplan E5c-3, Variante D): Was geladen ist, und die
  * Regeln, wie eine Antwort in der Zelle ankommt. Nur Rechnen – geladen wird in `dienstplaner/src/ladeAntworten.ts`, die
  * Fläche malt `PersonenRaster.tsx`.
  *

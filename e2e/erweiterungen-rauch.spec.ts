@@ -27,7 +27,7 @@ const WEGE: Record<
     da: 'Anmeldeschluss',
   },
   dienstplaner: {
-    start: 'Wann kann ich?',
+    start: 'Verfügbarkeit',
     gehe: (p) => p.getByRole('button', { name: 'Planen', exact: true }).click(),
     ziel: /#\/planen$/,
     da: 'Wer wie oft?',

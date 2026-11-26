@@ -120,7 +120,7 @@ export function TerminAnsicht({
   vertretung?: VertretungZugriff;
   /** Einteilen als Entwurf (F1) – ohne Anschluss bleibt „Wer kann?“ nur zum Ansehen. */
   entwuerfe?: EntwurfAnschluss;
-  /** Die Antworten aus „Wann kann ich?“ für „Wer kann?“ und den Zauberstab (E5c-4) – ohne bleiben beide wie früher. */
+  /** Die Antworten aus „Verfügbarkeit“ für „Wer kann?“ und den Zauberstab (E5c-4) – ohne bleiben beide wie früher. */
   ladeAntworten?: AntwortenLader;
   /** Die Live-Ansicht gleich öffnen (Adresse `#/termin/ID/live`, Knopf „Live“ auf der Startseite) – nur beim ersten Zeigen. */
   liveStart?: boolean;

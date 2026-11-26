@@ -134,7 +134,7 @@ export function WerKann({
     zeigen: (k: { personId: number; name: string }) => void;
   };
   /**
-   * Die Antworten aus „Wann kann ich?“ (E5c-4): `lader` ist derselbe wie in „Personen“ (`AntwortenLader`), `dienstName`
+   * Die Antworten aus „Verfügbarkeit“ (E5c-4): `lader` ist derselbe wie in „Personen“ (`AntwortenLader`), `dienstName`
    * übersetzt Dienst-IDs in Namen („nur für Gesang“). Ohne Angabe – oder wenn die Antworten dieser Dienstgruppe nicht
    * sichtbar sind – ist die Liste wie vor E5c-4.
    */
@@ -300,7 +300,7 @@ export function WerKann({
           {notiz && <p className={styles.notiz}>{notiz}</p>}
           {antwortFehler && (
             <p className={styles.hinweis} role="status">
-              Antworten aus „Wann kann ich?“ gerade nicht geladen – die Liste zeigt sie deshalb
+              Antworten aus „Verfügbarkeit“ gerade nicht geladen – die Liste zeigt sie deshalb
               nicht.{' '}
               {antwortFehler.nochmal && (
                 <button type="button" className={styles.link} onClick={antw.neuLaden}>

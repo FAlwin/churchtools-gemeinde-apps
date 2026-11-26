@@ -18,11 +18,11 @@ export const ctMailSenden: MailSender = (auftrag) =>
     verweigert: 'ChurchTools erlaubt dir nicht, Mails zu Terminen zu schicken.',
   });
 
-/** „Wann kann ich?“ – die Seite, auf die der Knopf in der Mail führt (Instanz + `/ccm/<Kürzel>/#/abwesenheiten`). */
+/** „Verfügbarkeit“ – die Seite, auf die der Knopf in der Mail führt (Instanz + `/ccm/<Kürzel>/#/abwesenheiten`). */
 export const erinnernLink = (): string =>
   erweiterungsLink(ctBasis(), MODUL_KUERZEL, adresseFuer('abwesenheiten'));
 
-/** „Wann kann ich?“ mit der Abfrage der Dienstgruppe – der Knopf in der Erinnerungs-Mail (`mailFuer`, R-4). */
+/** „Verfügbarkeit“ mit der Abfrage der Dienstgruppe – der Knopf in der Erinnerungs-Mail (`mailFuer`, R-4). */
 export const abfrageLink = (dienstgruppeId: number): string =>
   erweiterungsLink(ctBasis(), MODUL_KUERZEL, adresseFuerAbwesenheitenAbfrage(dienstgruppeId));
 

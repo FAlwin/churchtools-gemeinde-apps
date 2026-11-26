@@ -42,7 +42,7 @@ import styles from './ErinnernFenster.module.scss';
 /** Was „Erinnern“ von außen braucht: wie verschickt wird, und die volle Adresse des Knopfs in der Mail. */
 export interface ErinnernAnschluss {
   senden: MailSender;
-  /** Die volle Adresse von „Wann kann ich?“ (Instanz + `/ccm/<Kürzel>/#/abwesenheiten`). */
+  /** Die volle Adresse von „Verfügbarkeit“ (Instanz + `/ccm/<Kürzel>/#/abwesenheiten`). */
   link: () => string;
 }
 

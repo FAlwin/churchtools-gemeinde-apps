@@ -54,7 +54,7 @@ const NACHSATZ_STIL = 'font-size:12px;color:#5f6368';
 
 /**
  * **Die Mail für eine Abfrage:** Betreff (Klartext) und HTML. `plan.mail === null` = Standardtext. `link` ist die volle
- * Adresse von „Wann kann ich?“ mit der Abfrage (Aufrufer baut sie mit `adresseFuerAbwesenheitenAbfrage` + `erweiterungsLink`).
+ * Adresse von „Verfügbarkeit“ mit der Abfrage (Aufrufer baut sie mit `adresseFuerAbwesenheitenAbfrage` + `erweiterungsLink`).
  */
 export function mailFuer(
   plan: { mail: { betreff: string; text: string } | null },

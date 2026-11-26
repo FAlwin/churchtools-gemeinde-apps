@@ -8,7 +8,7 @@ import { ladeMeineDienste } from './ladeBeiwerk';
 import { HANDY_BREITE } from '@ui/bedienung/useMedienAbfrage';
 
 /**
- * **Die Werkzeugzeile von „Wann kann ich?“** (R5/R12, E24, „Ruhige Bedienung“ B4): wer wo steht, am Rechner und am Handy –
+ * **Die Werkzeugzeile von „Verfügbarkeit“** (R5/R12, E24, „Ruhige Bedienung“ B4): wer wo steht, am Rechner und am Handy –
  * links „Termine | Einträge“ mit Merker, in der Mitte der Zeitraum mit ‹ ›, rechts „Filter“ und der grüne Knopf „Zeitraum
  * eintragen“ (am Handy statt seiner das schwebende Plus). Die Wirkung der Dinge selbst (Haken, Speichern, Fenster) prüfen
  * die übrigen `Abwesenheiten.*.test.tsx`.
@@ -88,11 +88,11 @@ const zeitraumText = (z: HTMLElement) =>
     .getByRole('button', { name: /^Zeitraum: / })
     .getAttribute('aria-label');
 
-describe('Wann kann ich? – Werkzeugzeile am Rechner (B4)', () => {
+describe('Verfügbarkeit – Werkzeugzeile am Rechner (B4)', () => {
   it('eine Zeile über der Karte: Ansicht · Zeitraum mit Pfeilen · Filter · grüner Knopf – in dieser Reihenfolge', async () => {
     zeige();
     const z = await zeile();
-    const karte = screen.getByRole('region', { name: 'Wann kann ich?' });
+    const karte = screen.getByRole('region', { name: 'Verfügbarkeit' });
     expect(karte.contains(z)).toBe(false);
     expect(
       within(z)
@@ -177,7 +177,7 @@ describe('Wann kann ich? – Werkzeugzeile am Rechner (B4)', () => {
   });
 });
 
-describe('Wann kann ich? – Werkzeugzeile am Handy (B4, R12)', () => {
+describe('Verfügbarkeit – Werkzeugzeile am Handy (B4, R12)', () => {
   beforeEach(() => setzeHandy(true));
 
   it('die Ansicht ist ein Knopf mit Blatt; „Einträge“ trägt dort die Zahl in Klammern', async () => {
@@ -211,7 +211,7 @@ describe('Wann kann ich? – Werkzeugzeile am Handy (B4, R12)', () => {
     setzeHandy(true);
     zeige();
     await zeile();
-    const karte = screen.getByRole('region', { name: 'Wann kann ich?' });
+    const karte = screen.getByRole('region', { name: 'Verfügbarkeit' });
     expect(karte.contains(screen.getByRole('button', { name: 'Zeitraum eintragen' }))).toBe(false);
     // Etwas vormerken → die Speichern-Leiste erscheint, und auch sie steht außerhalb der Karte.
     fireEvent.click(screen.getByRole('button', { name: /Nein – Gottesdienst, So, 08\.11\./ }));

@@ -273,7 +273,7 @@ export function VertretungFenster({
           ) : (
             <>
               <p className={styles.hinweis}>
-                Die Antworten aus „Wann kann ich?“ sind für dich nicht lesbar – darum steht hier das
+                Die Antworten aus „Verfügbarkeit“ sind für dich nicht lesbar – darum steht hier das
                 ganze Team, ohne Einordnung.
               </p>
               <Abschnitt

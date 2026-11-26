@@ -1,5 +1,5 @@
 /**
- * **„Wann kann ich?“ – Ja/Vielleicht laden und speichern** (Bauplan E5c-1c): der Browser-Teil zum Speicher-Kern
+ * **„Verfügbarkeit“ – Ja/Vielleicht laden und speichern** (Bauplan E5c-1c): der Browser-Teil zum Speicher-Kern
  * `@shared/dienstplan/verfuegbarkeit` (Regeln und Messwerte dort). Eine Kategorie je **eigener** Dienstgruppe
  * (`eigeneDienstgruppen` in `start.ts`); gelesen und geschrieben wird über alle Kategorien, die **bereit** sind
  * (sehen, ändern und löschen erlaubt – `schubladenStand`, dieselbe Regel wie bei den Entwürfen).
@@ -96,7 +96,7 @@ export async function verfuegbarkeitLesen(
 }
 
 /**
- * Lädt für die Person die Lage von „Wann kann ich?“. **Wirft**, wenn schon das Modul oder die Liste der Kategorien
+ * Lädt für die Person die Lage von „Verfügbarkeit“. **Wirft**, wenn schon das Modul oder die Liste der Kategorien
  * nicht lesbar ist – der Aufrufer sperrt dann Ja/Vielleicht. Die Rechte jedes Mal frisch (wie bei den Entwürfen: wer
  * eine Schublade eben eingerichtet hat, hat erst jetzt Rechte darauf).
  */

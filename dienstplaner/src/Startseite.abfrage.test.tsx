@@ -201,7 +201,7 @@ describe('Karte für Mitarbeitende', () => {
     expect(namen.indexOf('offen')).toBeGreaterThan(namen.indexOf('abfrage-4'));
   });
 
-  it('„Jetzt eintragen“ ist ein Knopf (Neben-Knopf, keine Hauptaktion) und führt zu „Wann kann ich?“ mit der Abfrage', async () => {
+  it('„Jetzt eintragen“ ist ein Knopf (Neben-Knopf, keine Hauptaktion) und führt zu „Verfügbarkeit“ mit der Abfrage', async () => {
     zeige();
     const k = within(await screen.findByRole('region', { name: /^Wann kannst du/ }));
     const knopf = k.getByRole('button', { name: 'Jetzt eintragen' });
@@ -278,7 +278,7 @@ describe('Die Startseite scheitert nie daran – keine Karte, kein Fehlerbalken,
     expect(screen.queryByText(/nochmal|erneut|Fehler/i)).toBeNull();
     expect(vi.mocked(speichereAbfragen)).not.toHaveBeenCalled();
     // Die übrige Startseite steht.
-    expect(screen.getByText('Wann kann ich?')).toBeTruthy();
+    expect(screen.getByText('Verfügbarkeit')).toBeTruthy();
   };
   const stumm = () => vi.spyOn(console, 'warn').mockImplementation(() => {});
 

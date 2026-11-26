@@ -28,7 +28,7 @@
  * (`tagsFuer`) je Zeile und Dienst, dazu die Legende (`tagLegende`). **Ohne Liste der Dienstgruppe** bleibt die Reihenfolge
  * alphabetisch wie vorher; **„ganz abwesend“ rückt trotzdem nach unten** (Alwin, 20.11.2026: entschieden ohne Bedingung).
  *
- * **Antworten aus „Wann kann ich?“ (E5c-3):** Ja/Vielleicht färben die Zelle, Abwesenheit schlägt sie (Regeln in
+ * **Antworten aus „Verfügbarkeit“ (E5c-3):** Ja/Vielleicht färben die Zelle, Abwesenheit schlägt sie (Regeln in
  * `personenAntworten.ts`); der Spaltenkopf zählt verschiedene Personen je Antwort.
  */
 import { decktTermin } from '../absences/index';
@@ -96,7 +96,7 @@ export interface RasterZelle {
   abwesend: { grund: string; von: string; bis: string } | null;
   /** Abwesend UND eingeteilt: ein Warnfall, beides bleibt sichtbar. */
   warnung: boolean;
-  /** Die Antwort aus „Wann kann ich?“ – `null` ohne Antwort **oder** wenn die Antworten dieses Dienstes nicht sichtbar sind. */
+  /** Die Antwort aus „Verfügbarkeit“ – `null` ohne Antwort **oder** wenn die Antworten dieses Dienstes nicht sichtbar sind. */
   antwort: ZellenAntwort | null;
   /** Die Fläche der Zelle: Abwesenheit → `nein`, sonst die Antwort, wenn sie für diesen Dienst gilt; `null` = weiß. */
   flaeche: ZellenFlaeche | null;
@@ -154,7 +154,7 @@ export interface RasterBlock {
   mitgliederVerborgen: boolean;
   /** Ob man die Abwesenheiten dieses Dienstes sieht – ohne Recht sagt der Block es, statt leere Zellen zu zeigen. */
   abwesenheit: 'ok' | 'nichtSichtbar' | 'teilweise';
-  /** Ob man die Antworten aus „Wann kann ich?“ für diesen Dienst sieht – sonst sagt der Block es, statt weißer Zellen. */
+  /** Ob man die Antworten aus „Verfügbarkeit“ für diesen Dienst sieht – sonst sagt der Block es, statt weißer Zellen. */
   antworten: 'ok' | 'nichtSichtbar';
   /** Vorübergehend gescheiterte Gruppen – „Nochmal versuchen“. */
   fehler: { gruppenIds: number[]; text: string; nochmal: boolean } | null;
@@ -240,7 +240,7 @@ export function personenRaster(o: {
   /** Die gezeigten Gruppen mit den gezeigten Diensten (`gezeigteGruppen`, Gruppen- und Dienstfilter), in der Reihenfolge der Matrix. */
   gruppen: PlanGruppe[];
   daten: PersonenDaten;
-  /** Die Antworten aus „Wann kann ich?“ – ohne sieht keine Gruppe welche (kein Fehler, nur keine Farbe). */
+  /** Die Antworten aus „Verfügbarkeit“ – ohne sieht keine Gruppe welche (kein Fehler, nur keine Farbe). */
   antworten?: PersonenAntworten;
   entwurf?: EntwurfSuche;
   /** Die Personenliste je Dienstgruppe (ID, PL-1) – ohne Angabe oder ohne Liste der Gruppe ist alles wie vorher. */
@@ -410,7 +410,7 @@ export function personenRaster(o: {
             };
           });
         const abwesend = abwesendAm(personId, plan.spalten[i]);
-        // Termin-ID als Text – derselbe Schlüssel, unter dem „Wann kann ich?“ die Antwort speichert.
+        // Termin-ID als Text – derselbe Schlüssel, unter dem „Verfügbarkeit“ die Antwort speichert.
         const antwort = antwortFuer(o.antworten, {
           gruppeId: dienst.dienstgruppeId,
           personId,

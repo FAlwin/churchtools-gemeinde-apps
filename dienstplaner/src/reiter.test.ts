@@ -103,8 +103,8 @@ describe('Adressen der Ablaufvorlagen (E10-V3a)', () => {
   });
 });
 
-describe('Adresse „Wann kann ich?“ mit einer Abfrage (R-3)', () => {
-  it('#/abwesenheiten?abfrage=<id> → Dienstgruppe und Reiter „Wann kann ich?“; hin und zurück gleich', () => {
+describe('Adresse „Verfügbarkeit“ mit einer Abfrage (R-3)', () => {
+  it('#/abwesenheiten?abfrage=<id> → Dienstgruppe und Reiter „Verfügbarkeit“; hin und zurück gleich', () => {
     expect(abwesenheitenAbfrageAusAdresse(adresseFuerAbwesenheitenAbfrage(4))).toBe(4);
     expect(adresseFuerAbwesenheitenAbfrage(4)).toBe('#/abwesenheiten?abfrage=4');
     expect(reiterAusAdresse('#/abwesenheiten?abfrage=4', sichtbareReiter(false))).toBe(

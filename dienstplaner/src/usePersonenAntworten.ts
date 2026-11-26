@@ -4,7 +4,7 @@ import { KEINE_ANTWORTEN, type PersonenAntworten } from '@shared/dienstplan/pers
 import type { AntwortenLader } from './ladeAntworten';
 
 /** Vor die Meldung von `fehlerMeldung` – sonst wüsste man nicht, WAS gerade nicht geladen werden konnte. */
-const VOR = 'Die Antworten aus „Wann kann ich?“ konnten nicht geladen werden. ';
+const VOR = 'Die Antworten aus „Verfügbarkeit“ konnten nicht geladen werden. ';
 
 /**
  * **Die Antworten der Ansicht „Personen“** (E5c-3): geladen mit `useLaden` für die Dienstgruppen der gezeigten Dienste –

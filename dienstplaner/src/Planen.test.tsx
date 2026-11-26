@@ -678,7 +678,7 @@ describe('Planen – freien Platz antippen → „Wer kann?“ (E4-2)', () => {
   });
 
   // E5c-4: Der Lader aus „Personen“ (`ladeAntworten`) geht bis in „Wer kann?“ – für die Dienstgruppe des Platzes, mit dem Dienstnamen.
-  it('mit den Antworten aus „Wann kann ich?“ zeigt „Wer kann?“ Abschnitte (Lader aus Planen)', async () => {
+  it('mit den Antworten aus „Verfügbarkeit“ zeigt „Wer kann?“ Abschnitte (Lader aus Planen)', async () => {
     laden.mockResolvedValue([
       { person: { domainIdentifier: '5', title: 'Anna Test' }, score: 0 },
       { person: { domainIdentifier: '6', title: 'Ben Test' }, score: 0 },

@@ -177,7 +177,7 @@ eingetragenen Formular-Adresse ohne Daten (`fetch(..., { mode: 'no-cors' })`, `a
 - Erweiterungs-Speicher:
   - `dienstplaner-entwuerfe-<Gruppe>`: noch nicht gesendete Einteilungen mit Personen-ID und Name bzw. Gastname
     sowie dem Namen der planenden Person (`shared/dienstplan/entwuerfe.ts:57-69,114`).
-  - `dienstplaner-antworten-<Gruppe>`: „Wann kann ich?“ – Ja/Vielleicht je Person und Termin
+  - `dienstplaner-antworten-<Gruppe>`: „Verfügbarkeit“ – Ja/Vielleicht je Person und Termin
     (`shared/dienstplan/verfuegbarkeit.ts:62-100`). Ein „Nein“ wird eine ChurchTools-Abwesenheit.
 - Mails verschickt die Erweiterung selbst nicht. Benachrichtigungen bei Anfragen kommen von ChurchTools.
 

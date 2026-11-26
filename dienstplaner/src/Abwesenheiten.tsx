@@ -225,7 +225,7 @@ function useZusagen(
 }
 
 /**
- * **Reiter „Wann kann ich?“ im Dienstplaner** (Bauplan E7-2c, seit E5c-1c mit Ja · Vielleicht · Nein) – die gemeinsame
+ * **Reiter „Verfügbarkeit“ im Dienstplaner** (Bauplan E7-2c, seit E5c-1c mit Ja · Vielleicht · Nein) – die gemeinsame
  * Seite aus `@ui/abwesenheiten` (dieselbe wie in der Musik-App, dort mit dem Haken), hier mit den eigenen Diensten in der
  * Terminzeile. „Nein“ ist eine Abwesenheit in ChurchTools, Ja/Vielleicht liegen im Speicher der eigenen Dienstgruppen
  * (`ladeVerfuegbarkeit`). Ein Recht braucht es für „Nein“ nicht (die eigenen Abwesenheiten darf jede Person pflegen).
@@ -248,7 +248,7 @@ export function Abwesenheiten({
   /** Die eigenen Dienste (`eigeneDienste`) – für „nur bestimmte Dienste“ bei der Notiz. Eine feste Liste je Start. */
   eigeneDienste?: { id: number; name: string }[];
   /**
-   * „Wann kann ich?“ mit einer Abfrage (R-3, `#/abwesenheiten?abfrage=<Dienstgruppe>`): Mit gültiger laufender Abfrage steht über
+   * „Verfügbarkeit“ mit einer Abfrage (R-3, `#/abwesenheiten?abfrage=<Dienstgruppe>`): Mit gültiger laufender Abfrage steht über
    * der Liste ein Band, und die Liste zeigt genau ihren Zeitraum. Ohne `start` oder ohne gültige Abfrage: die Seite wie bisher.
    */
   start?: Start;
@@ -352,7 +352,7 @@ export function Abwesenheiten({
                 }}
               />
             )}
-            <section className={styles.karte} aria-label="Wann kann ich?">
+            <section className={styles.karte} aria-label="Verfügbarkeit">
               {t.fehler ? (
                 <div className={styles.hinweis}>
                   <FehlerKasten

@@ -1,5 +1,5 @@
 /**
- * **Die Antworten aus „Wann kann ich?“ für die Ansicht „Personen“ laden** (Bauplan E5c-3). Der Speicher liegt je
+ * **Die Antworten aus „Verfügbarkeit“ für die Ansicht „Personen“ laden** (Bauplan E5c-3). Der Speicher liegt je
  * **Dienstgruppe** in einer Kategorie (`antwortenSchublade`), ein Wert je Person (Regeln und Messwerte in
  * `@shared/dienstplan/verfuegbarkeit`). Hier werden **alle Personen** einer Kategorie gelesen (`alleAntwortenLesen`) und
  * über die Kategorien zusammengeführt – mit derselben Regel wie bei den eigenen Antworten (`antwortenZusammen`, neuester

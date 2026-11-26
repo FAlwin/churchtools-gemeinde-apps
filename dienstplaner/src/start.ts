@@ -176,8 +176,8 @@ export function eigeneDienste(start: Pick<Start, 'gruppen' | 'dienste'>): Dienst
 }
 
 /**
- * **Die eigenen Dienstgruppen** (E5c-1c, „Wann kann ich?“): die, an deren eigenen Diensten (`eigeneDienste`) man teilnimmt.
- * In der Reihenfolge der Gemeinde. Dorthin schreibt „Wann kann ich?“ die Ja/Vielleicht-Antworten.
+ * **Die eigenen Dienstgruppen** (E5c-1c, „Verfügbarkeit“): die, an deren eigenen Diensten (`eigeneDienste`) man teilnimmt.
+ * In der Reihenfolge der Gemeinde. Dorthin schreibt „Verfügbarkeit“ die Ja/Vielleicht-Antworten.
  */
 export function eigeneDienstgruppen(
   start: Pick<Start, 'gruppen' | 'dienste' | 'dienstgruppen'>,

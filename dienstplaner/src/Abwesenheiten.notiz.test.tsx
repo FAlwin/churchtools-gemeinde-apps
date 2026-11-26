@@ -14,7 +14,7 @@ import {
 } from './ladeVerfuegbarkeit';
 
 /**
- * **Notiz am Termin + „nur bestimmte Dienste“ (E5c-2)** – die Seite „Wann kann ich?“ mit dem Notiz-Fenster. Aufbau wie
+ * **Notiz am Termin + „nur bestimmte Dienste“ (E5c-2)** – die Seite „Verfügbarkeit“ mit dem Notiz-Fenster. Aufbau wie
  * `Abwesenheiten.zusagen.test.tsx`: Abwesenheiten gegen eine Attrappe des ChurchTools-Dienstes, Ja/Vielleicht gegen eine
  * Attrappe des Speichers. Die Karte, die der Speicher bekommt, wird gegen das geprüft, was die Seite selbst erzeugt.
  */

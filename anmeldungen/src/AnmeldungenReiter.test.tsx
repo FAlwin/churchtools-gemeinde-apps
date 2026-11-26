@@ -10,6 +10,7 @@ import { fensterKnoepfe } from '@ui/fenster/fenster.testutil';
 import * as Z from './zahlung';
 import * as B from './bewegung';
 import * as H from './vonHand';
+import * as P from '@ui/ct/personen';
 import * as M from './mitglieder';
 import * as R from './rundmail';
 import * as E from './einrichten';
@@ -42,13 +43,15 @@ vi.mock('./bewegung', () => ({
 }));
 const bm = vi.mocked(B);
 vi.mock('./vonHand', () => ({
-  personenSuchen: vi.fn(),
   gleichNamige: vi.fn(),
   meinName: vi.fn(),
   vonHandAnmelden: vi.fn(),
   GibtEsSchon: class extends Error {},
 }));
 const hm = vi.mocked(H);
+// Die Suche selbst kommt aus dem Baustein (`ui/bedienung/PersonenSuche` → `ui/ct/personen`).
+vi.mock('@ui/ct/personen', () => ({ personenSuchen: vi.fn() }));
+const pm = vi.mocked(P);
 vi.mock('./mitglieder', () => ({ gruppenfelderLaden: vi.fn() }));
 // Das PDF der Druckliste wird echt gebaut – nur das Scheitern stellt ein Test ein.
 vi.mock('@ui/teilen/listenPdf', async (original) => {
@@ -720,7 +723,7 @@ describe('Anmeldung von Hand (A7-4a)', () => {
     Element.prototype.scrollIntoView = () => Promise.resolve() as unknown as void;
     mm.gruppenfelderLaden.mockResolvedValue(FELDER);
     hm.meinName.mockResolvedValue('Alwin Friesen');
-    hm.personenSuchen.mockResolvedValue([
+    pm.personenSuchen.mockResolvedValue([
       {
         personId: 10,
         vor: 'Jonas',
@@ -826,7 +829,7 @@ describe('Anmeldung von Hand (A7-4a)', () => {
   });
 
   it('neue Person: gleicher Name → „dieselbe Person?“; trotzdem neu → Hinweis, dass sie in ChurchTools bleibt', async () => {
-    hm.personenSuchen.mockResolvedValue([]);
+    pm.personenSuchen.mockResolvedValue([]);
     hm.gleichNamige.mockResolvedValue([
       { personId: 77, vor: 'Nina', nach: 'Neu', geburtstag: null, email: null, adresse: null },
     ]);
@@ -866,7 +869,7 @@ describe('Person dazu (A7-4b)', () => {
   beforeEach(() => {
     Element.prototype.scrollIntoView = () => Promise.resolve() as unknown as void;
     mm.gruppenfelderLaden.mockResolvedValue(FELDER);
-    hm.personenSuchen.mockResolvedValue([
+    pm.personenSuchen.mockResolvedValue([
       {
         personId: 50,
         vor: 'Paul',
@@ -1065,7 +1068,7 @@ describe('Zurückholen (A7-4c)', () => {
   });
 
   it('in der Suche von „Von Hand“: wer abgesagt hat, wird zurückgeholt statt neu angemeldet', async () => {
-    hm.personenSuchen.mockResolvedValue([
+    pm.personenSuchen.mockResolvedValue([
       {
         personId: 11,
         vor: 'Lena',
@@ -1087,7 +1090,7 @@ describe('Zurückholen (A7-4c)', () => {
   });
 
   it('mit Bestätigungsmails (A9-1): Zurückholen nennt die Bestätigung statt „keine Mail“', async () => {
-    hm.personenSuchen.mockResolvedValue([
+    pm.personenSuchen.mockResolvedValue([
       {
         personId: 11,
         vor: 'Lena',
@@ -2064,7 +2067,7 @@ describe('Von Hand in Schritten (F2d)', () => {
     Element.prototype.scrollIntoView = () => Promise.resolve() as unknown as void;
     mm.gruppenfelderLaden.mockResolvedValue(FELDER);
     hm.meinName.mockResolvedValue('Alwin Friesen');
-    hm.personenSuchen.mockResolvedValue([
+    pm.personenSuchen.mockResolvedValue([
       {
         personId: 50,
         vor: 'Paul',
@@ -2185,7 +2188,13 @@ describe('Von Hand in Schritten (F2d)', () => {
   it('auf der ersten Seite führt „‹“ zurück zur Suche', async () => {
     await paulWaehlen(inSchritten());
     fireEvent.click(screen.getByRole('button', { name: 'Zurück' }));
-    expect(screen.getByRole('searchbox', { name: 'Name' })).toBeTruthy();
+    // Suchtext und Treffer stehen noch da – man wählt neu, ohne nochmal zu suchen.
+    expect(screen.getByRole('searchbox', { name: 'Name' })).toHaveProperty('value', 'Probe');
+    expect(
+      within(screen.getByRole('list', { name: 'Gefunden' })).getByRole('button', {
+        name: /Paul Probe/,
+      }),
+    ).toBeTruthy();
   });
 
   it('Person dazu: nur Seiten mit Fragen je Person; eine Pflichtfrage in einem übersprungenen Kontakt-Schritt hält nicht auf', async () => {
@@ -2201,7 +2210,7 @@ describe('Von Hand in Schritten (F2d)', () => {
       1,
     )[0];
     p.unshift({ ...allergie, zustand: 'pflicht' }, schritt('s3', 'Kind'));
-    hm.personenSuchen.mockResolvedValue([
+    pm.personenSuchen.mockResolvedValue([
       {
         personId: 50,
         vor: 'Paul',
@@ -2248,7 +2257,7 @@ describe('Von Hand: freie Antwort (F3b)', () => {
     });
     mm.gruppenfelderLaden.mockResolvedValue(felder);
     hm.meinName.mockResolvedValue('Alwin Friesen');
-    hm.personenSuchen.mockResolvedValue([
+    pm.personenSuchen.mockResolvedValue([
       {
         personId: 50,
         vor: 'Paul',
@@ -2387,7 +2396,7 @@ describe('Adresse von Hand (F4c, Entwurf f4c-von-hand-v1)', () => {
   const tippen = (id: string, wert: string) =>
     fireEvent.change(feld(id), { target: { value: wert } });
   async function paulNehmen(adresse: typeof BACH | null) {
-    hm.personenSuchen.mockResolvedValue([
+    pm.personenSuchen.mockResolvedValue([
       { personId: 50, vor: 'Paul', nach: 'Probe', geburtstag: '2016-04-03', email: null, adresse },
     ]);
     zeigen(fertig(), 10, false, true, false, false, einst());
@@ -2443,7 +2452,7 @@ describe('Adresse von Hand (F4c, Entwurf f4c-von-hand-v1)', () => {
 
   /** Person dazu bei Marias Anmeldung – Jonas (erste Person) wohnt in Lohmar. */
   async function dazuMit(paul: typeof BACH | null) {
-    hm.personenSuchen.mockResolvedValue([
+    pm.personenSuchen.mockResolvedValue([
       {
         personId: 50,
         vor: 'Paul',

@@ -1,8 +1,8 @@
-import { useState } from 'react';
 import { Etikett } from '@ui/bedienung/Etikett';
 import { PersonBild } from '@ui/bedienung/PersonBild';
-import { personenSuchen, type Gefunden } from '@ui/ct/personen';
-import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
+import type { Gefunden } from '@ui/ct/personen';
+import { PersonenSuche } from '@ui/bedienung/PersonenSuche';
+import { usePersonenSuche } from '@ui/bedienung/usePersonenSuche';
 import { rollenFuerTyp } from '@shared/organigramm/mitglieder';
 import type { OrgGruppe } from '@shared/organigramm/gruppen';
 import type { Start } from './start';
@@ -37,23 +37,8 @@ export function PersonAufnehmen({
   onRolle: (rolleId: number) => void;
 }) {
   const rollen = rollenFuerTyp(start.rollen, gruppe.typId);
-  const [suche, setSuche] = useState('');
-  const [treffer, setTreffer] = useState<Gefunden[] | null>(null);
-  const [sucht, setSucht] = useState(false);
-  const [fehler, setFehler] = useState<string | null>(null);
-
-  const suchen = async () => {
-    setSucht(true);
-    setFehler(null);
-    try {
-      setTreffer(await personenSuchen(suche));
-    } catch (e) {
-      setFehler(fehlerMeldung(e).text);
-    } finally {
-      setSucht(false);
-    }
-  };
-
+  // Hier gehalten: „Zurück“ nach der Wahl zeigt Suchtext und Treffer wieder.
+  const suche = usePersonenSuche();
   return (
     <section className={styles.schritt} aria-label="Person aufnehmen">
       <h3>Person in „{gruppe.name}“ aufnehmen</h3>
@@ -62,62 +47,41 @@ export function PersonAufnehmen({
       )}
       {!gewaehlt && (
         <>
-          <form
-            className={styles.suchzeile}
-            onSubmit={(ev) => {
-              ev.preventDefault();
-              void suchen();
+          <PersonenSuche
+            klassen={{
+              form: styles.suchzeile,
+              feld: styles.feld,
+              liste: styles.ziele,
+              zeile: styles.ziel,
+              leer: styles.leise,
+              fehler: styles.fehler,
             }}
-          >
-            <input
-              className={styles.feld}
-              type="search"
-              aria-label="Name"
-              placeholder="Name"
-              value={suche}
-              onChange={(e) => setSuche(e.target.value)}
-              autoFocus
-            />
-            <button
-              type="submit"
-              className={styles.zweit}
-              disabled={sucht || suche.trim().length < 2}
-            >
-              {sucht ? 'Sucht …' : 'Suchen'}
-            </button>
-          </form>
-          {fehler && <p className={styles.fehler}>{fehler}</p>}
-          {treffer && (
-            <ul className={styles.ziele} aria-label="Gefunden">
-              {treffer.length === 0 && <li className={styles.leise}>Niemand gefunden.</li>}
-              {treffer.map((p) => {
-                const ist = dabei.has(p.personId);
-                return (
-                  <li key={p.personId}>
-                    <button
-                      type="button"
-                      className={styles.ziel}
-                      disabled={ist}
-                      onClick={() => onWahl(p)}
-                    >
-                      <PersonBild
-                        name={ganzerName(p)}
-                        bild={null}
-                        initialen={`${p.vor.charAt(0)}${p.nach.charAt(0)}`.toUpperCase()}
-                        groesse={24}
-                      />
-                      <span>{ganzerName(p)}</span>
-                      {ist && (
-                        <span className={styles.schonDabei}>
-                          <Etikett>schon dabei</Etikett>
-                        </span>
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+            zustand={suche}
+            autoFocus
+            knopf={({ disabled, text }) => (
+              <button type="submit" className={styles.zweit} disabled={disabled}>
+                {text}
+              </button>
+            )}
+            gesperrt={(p) => dabei.has(p.personId)}
+            onWahl={onWahl}
+            zeile={(p) => (
+              <>
+                <PersonBild
+                  name={ganzerName(p)}
+                  bild={null}
+                  initialen={`${p.vor.charAt(0)}${p.nach.charAt(0)}`.toUpperCase()}
+                  groesse={24}
+                />
+                <span>{ganzerName(p)}</span>
+                {dabei.has(p.personId) && (
+                  <span className={styles.schonDabei}>
+                    <Etikett>schon dabei</Etikett>
+                  </span>
+                )}
+              </>
+            )}
+          />
           <p className={styles.leise}>
             Nur Personen, die es in ChurchTools schon gibt. Neue legt das Büro dort an.
           </p>

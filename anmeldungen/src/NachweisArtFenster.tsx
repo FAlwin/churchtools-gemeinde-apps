@@ -4,7 +4,7 @@ import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Segment } from '@ui/bedienung/Segment';
 import { useLaden } from '@ui/ct/useLaden';
-import { personenSuchen, type Gefunden } from '@ui/ct/personen';
+import { PersonenSuche } from '@ui/bedienung/PersonenSuche';
 import {
   NACHWEIS_JAHRE_MAX,
   NACHWEIS_JAHRE_MIN,
@@ -105,10 +105,6 @@ export function NachweisArtFenster({
   const gespeichertSind = new Set((art?.vertrauen ?? []).map((p) => p.personId));
   const bleiben = liste.filter((p) => !entfernen.has(p.personId));
 
-  const [suche, setSuche] = useState('');
-  const [treffer, setTreffer] = useState<Gefunden[] | null>(null);
-  const [sucht, setSucht] = useState(false);
-
   const [gruppeId, setGruppeId] = useState<number | null>(art?.id ?? null);
   const [arbeitet, setArbeitet] = useState(false);
   const [eingabeFehler, setEingabeFehler] = useState<string | null>(null);
@@ -178,17 +174,6 @@ export function NachweisArtFenster({
       });
     else setEigene(liste.filter((x) => x.personId !== p.personId));
   };
-
-  async function suchen() {
-    setSucht(true);
-    setEingabeFehler(null);
-    try {
-      setTreffer(await personenSuchen(suche));
-    } catch (e) {
-      setEingabeFehler(fehlerMeldung(e).text);
-    }
-    setSucht(false);
-  }
 
   async function speichern() {
     if (fehler) return setEingabeFehler(fehler);
@@ -458,50 +443,29 @@ export function NachweisArtFenster({
             );
           })}
         </ul>
-        <form
-          className={n.suche}
-          onSubmit={(ev) => {
-            ev.preventDefault();
-            void suchen();
+        <PersonenSuche
+          klassen={{
+            form: n.suche,
+            feld: f.eingabe,
+            liste: n.treffer,
+            zeile: f.aktion,
+            leer: f.hinweis,
+            fehler: f.fehler,
           }}
-        >
-          <input
-            type="search"
-            className={f.eingabe}
-            aria-label="Person suchen"
-            placeholder="Person suchen"
-            value={suche}
-            onChange={(ev) => setSuche(ev.target.value)}
-          />
-          <FensterKnopf type="submit" art="zweit" disabled={sucht || suche.trim().length < 2}>
-            {sucht ? 'Sucht …' : 'Suchen'}
-          </FensterKnopf>
-        </form>
-        {treffer && (
-          <ul className={n.treffer} aria-label="Gefunden">
-            {treffer.length === 0 && <li className={f.hinweis}>Niemand gefunden.</li>}
-            {treffer.map((p) => {
-              const person = { personId: p.personId, name: `${p.vor} ${p.nach}`.trim() };
-              const schonDa = bleiben.some((x) => x.personId === p.personId);
-              return (
-                <li key={p.personId}>
-                  <button
-                    type="button"
-                    className={f.aktion}
-                    disabled={schonDa}
-                    onClick={() => hinzu(person)}
-                  >
-                    <span>
-                      <b>{person.name}</b>
-                      {p.email && <small>{p.email}</small>}
-                    </span>
-                    {schonDa && <Etikett>schon dabei</Etikett>}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+          label="Person suchen"
+          knopfArt="zweit"
+          gesperrt={(p) => bleiben.some((x) => x.personId === p.personId)}
+          onWahl={(p) => hinzu({ personId: p.personId, name: `${p.vor} ${p.nach}`.trim() })}
+          zeile={(p) => (
+            <>
+              <span>
+                <b>{`${p.vor} ${p.nach}`.trim()}</b>
+                {p.email && <small>{p.email}</small>}
+              </span>
+              {bleiben.some((x) => x.personId === p.personId) && <Etikett>schon dabei</Etikett>}
+            </>
+          )}
+        />
         <small className={f.hinweis}>
           Sie bekommen in ChurchTools das Recht, die Angaben zu sehen, einzutragen und die Aufgaben
           abzuhaken.

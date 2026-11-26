@@ -34,10 +34,10 @@ type App = (typeof APPS)[number];
 /** Stand 20.11.2026 (`origin/main` `2ef414a0`, B1: ohne die Lupe der Protokolle, die nach `ui/bedienung` gezogen ist). */
 const OBERGRENZE: Record<App, { knoepfe: number; hoehen: number }> = {
   client: { knoepfe: 109, hoehen: 21 },
-  anmeldungen: { knoepfe: 102, hoehen: 6 },
+  anmeldungen: { knoepfe: 100, hoehen: 6 },
   protokolle: { knoepfe: 81, hoehen: 27 },
   dienstplaner: { knoepfe: 75, hoehen: 19 },
-  organigramm: { knoepfe: 62, hoehen: 2 },
+  organigramm: { knoepfe: 61, hoehen: 2 },
   website: { knoepfe: 12, hoehen: 3 },
   gebetsabend: { knoepfe: 0, hoehen: 0 },
   formular: { knoepfe: 2, hoehen: 0 },

@@ -1107,13 +1107,17 @@ und merkt sich das. Wer nicht in den Kalender darf, sieht nur die Liste.
 10. **Baustein entfernen** (nur in einem Entwurf): Im Protokoll den Baustein **„TEST Nächste Sitzung“** löschen und kurz warten (gespeichert). Im Reiter **Termine** ist er weg; der Wert
     `termin-stand` in „Mitarbeit · <Gruppe>“ ist **nicht** gelöscht, sondern trägt `"geloescht"` (wer, wann). Im Protokoll **Rückgängig** (Strg/⌘+Z) und wieder warten: Der Termin steht wieder
     im Reiter, mit seinem alten Stand, und der Wert hat **kein** `"geloescht"` mehr.
+11. **Termin in ChurchTools gelöscht:** Einen eingetragenen Termin (z. B. „TEST Bibeltag“) in ChurchTools im Kalender **löschen**, im Reiter **Termine** neu laden. Die Zeile steht wieder oben unter
+    „Noch nicht im Kalender“, mit dem Etikett **„in ChurchTools gelöscht“** und **Eintragen** – es gibt für sie **kein „Nicht eintragen“**. Der Wert `termin-stand` in „Mitarbeit“ ist dabei
+    **unverändert** (beim Ansehen wird nichts geschrieben). **Eintragen** legt einen neuen Termin an; danach steht die Zeile unter „Im Kalender“, auch nach Neuladen. Ein Aussetzer (Flugmodus beim
+    Neuladen) lässt dagegen alle Zeilen unter „Im Kalender“ stehen – nur ein gelöschter Termin (404) wandert nach oben.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `protokolle/src/Termine.tsx`, `protokolle/src/TerminFenster.tsx`, `protokolle/src/terminEintragen.ts`, `protokolle/src/terminAnlegen.ts`, `protokolle/src/terminStandSchreiben.ts`, `protokolle/src/kalenderListe.ts`, `protokolle/src/planen.ts`, `protokolle/src/lesen.ts`, `protokolle/src/start.ts`, `protokolle/src/reiter.ts`, `shared/protokolle/termine.ts`, `shared/protokolle/terminStand.ts`, `shared/ct/kalenderRechte.ts`
+- **Betrifft:** `protokolle/src/Termine.tsx`, `protokolle/src/geloeschteTermine.ts`, `protokolle/src/TerminFenster.tsx`, `protokolle/src/terminEintragen.ts`, `protokolle/src/terminAnlegen.ts`, `protokolle/src/terminStandSchreiben.ts`, `protokolle/src/kalenderListe.ts`, `protokolle/src/planen.ts`, `protokolle/src/lesen.ts`, `protokolle/src/start.ts`, `protokolle/src/reiter.ts`, `shared/protokolle/termine.ts`, `shared/protokolle/terminStand.ts`, `shared/ct/kalenderRechte.ts`
 - **Automatisiert:** größtenteils – `shared/protokolle/termine.test.ts` (Sammeln aus echten Dokumenten, Uhrzeit/Titel, Vorbelegung, Zeitraum ganztägig/UTC, Doppelt), `shared/protokolle/terminStand.test.ts`, `protokolle/src/terminAnlegen.test.ts` (Kern: Rumpf, abgelehnt, unklar, ganztägig), `protokolle/src/terminEintragen.test.ts` (verknüpfen, nachlesen), `protokolle/src/terminStandSchreiben.test.ts` (Vermerk, nicht überschreiben, Fehler; Baustein entfernt/zurückgeholt: `termineAbgleichen` gegen den Nachbau – doppelte, andere Sitzungen, nur ein Lesen ohne Änderung, Nachlesen, 502), `protokolle/src/ProtokollSchreiben.test.tsx` (Speichern gibt alle Termin-Bausteine des Texts an `termineAbgleichen`, auch ohne gültiges Datum), `protokolle/src/Termine.test.tsx` (ganzer Weg gegen den Nachbau), `protokolle/src/TerminFenster.test.tsx`, `protokolle/src/planen.test.ts` (Sitzung festlegen unverändert); **nur von Hand:** dass ChurchTools einen ganztägigen Termin (reiner Tag + `allDay`) wirklich als ganztägig anlegt, keine Mails, das Aussehen hell/dunkel/Handy, „Im Protokoll zeigen“ am Gerät
-- **Historie:** 21.11.2026 (W14, nach der Festplanung); 25.11.2026 Schritt 10 (entfernter Baustein wird als gelöscht vermerkt)
+- **Historie:** 21.11.2026 (W14, nach der Festplanung); 25.11.2026 Schritt 10 (entfernter Baustein wird als gelöscht vermerkt); 26.11.2026 Schritt 11 (in ChurchTools gelöschter Termin wird wieder offen gezeigt)
 
 </details>
 

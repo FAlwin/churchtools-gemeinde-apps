@@ -19,7 +19,9 @@ import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import { punktBeschriftung } from '@shared/protokolle/dokument';
 import { termineSammeln, terminLink, type TerminZeile } from '@shared/protokolle/termine';
 import { standNachId, type TerminStand } from '@shared/protokolle/terminStand';
-import { ladeUebersicht } from './lesen';
+import { geloeschteTermineSuchen } from './geloeschteTermine';
+import { einmalLesen, ladeUebersicht } from './lesen';
+import { terminPfad } from './termin';
 import { TerminFenster } from './TerminFenster';
 import { terminMarkieren } from './terminStandSchreiben';
 import type { AufgabenStand } from './useFaellige';
@@ -29,6 +31,8 @@ import styles from './Termine.module.scss';
 interface Reihe {
   z: TerminZeile;
   stand: TerminStand | null;
+  /** Der eingetragene Termin ist in ChurchTools gelöscht (404) – die Zeile gilt wieder als offen. */
+  geloescht: boolean;
 }
 
 /** Dieselbe leere Liste bei jedem Render – ein neues `[]` ließe das Fenster die Ressourcen endlos neu laden. */
@@ -99,17 +103,49 @@ export function Termine({
     if (uebersicht)
       onAufgaben?.(uebersicht.map((u) => ({ gruppe: u.gruppe.id, aufgaben: u.aufgaben })));
   }, [uebersicht, onAufgaben]);
+  // Eingetragene Termine, die es in ChurchTools nicht mehr gibt (404) – nur Anzeige, geschrieben wird nichts.
+  const [weg, setWeg] = useState<ReadonlySet<string>>(new Set());
+  const gespeichert = useMemo(
+    () => (uebersicht ? standNachId(uebersicht.flatMap((u) => u.termine ?? [])) : null),
+    [uebersicht],
+  );
+  useEffect(() => {
+    setWeg(new Set());
+    if (!uebersicht || !gespeichert) return;
+    const termine = termineSammeln(uebersicht).flatMap((z) => {
+      const k = gespeichert.get(z.schluessel);
+      return k?.stand === 'imKalender' && k.kalender ? [k.kalender] : [];
+    });
+    if (!termine.length) return;
+    let vorbei = false;
+    // Je Ladevorgang ein Leser: jede Adresse wird nur einmal gefragt. Die Anzeige wartet nicht darauf.
+    void geloeschteTermineSuchen(
+      termine,
+      einmalLesen(),
+      (pfad) => setWeg((m) => new Set(m).add(pfad)),
+      () => vorbei,
+    );
+    return () => {
+      vorbei = true;
+    };
+  }, [uebersicht, gespeichert]);
   const reihen = useMemo<Reihe[]>(() => {
-    if (!uebersicht) return [];
-    const stand = standNachId(uebersicht.flatMap((u) => u.termine ?? []));
+    if (!uebersicht || !gespeichert) return [];
+    const stand = new Map(gespeichert);
     for (const [id, s] of lokal) stand.set(id, s);
     const mitGruppe =
       auswahl === 'alle' ? uebersicht : uebersicht.filter((u) => String(u.gruppe.id) === auswahl);
-    return termineSammeln(mitGruppe).map((z) => ({ z, stand: stand.get(z.schluessel) ?? null }));
-  }, [uebersicht, auswahl, lokal]);
+    return termineSammeln(mitGruppe).map((z) => {
+      const s = stand.get(z.schluessel) ?? null;
+      // Der Vermerk gilt für genau diesen Kalendertermin: ein neuer Vermerk (Eintragen) hat eine andere Adresse.
+      const geloescht =
+        s?.stand === 'imKalender' && !!s.kalender && weg.has(terminPfad(s.kalender));
+      return { z, stand: s, geloescht };
+    });
+  }, [uebersicht, gespeichert, auswahl, lokal, weg]);
 
-  const offen = reihen.filter((r) => !r.stand || r.stand.stand === 'offen');
-  const drin = reihen.filter((r) => r.stand?.stand === 'imKalender');
+  const offen = reihen.filter((r) => !r.stand || r.stand.stand === 'offen' || r.geloescht);
+  const drin = reihen.filter((r) => r.stand?.stand === 'imKalender' && !r.geloescht);
   const nicht = reihen.filter((r) => r.stand?.stand === 'nichtEintragen');
 
   const gruppeVon = (id: number) => uebersicht?.find((u) => u.gruppe.id === id) ?? null;
@@ -150,13 +186,16 @@ export function Termine({
   const zeigen = (z: TerminZeile) =>
     onZeigen(z.gruppe.id, z.sitzung.schluessel, z.punkt?.blockId ?? null);
 
-  const offeneZeile = ({ z }: Reihe) => (
+  const offeneZeile = ({ z, geloescht }: Reihe) => (
     <li key={z.schluessel} className={styles.zeile}>
       {kachelVon(z)}
       <span className={styles.inhalt}>
         <b>{z.text}</b>
-        <small>
-          {datumText(z.datum)} · aus {wo(z)}
+        <small className={geloescht ? styles.imKalender : undefined}>
+          {geloescht && <Etikett ton="rot">in ChurchTools gelöscht</Etikett>}
+          <span>
+            {datumText(z.datum)} · aus {wo(z)}
+          </span>
         </small>
       </span>
       <span className={styles.aktionen}>
@@ -170,7 +209,8 @@ export function Termine({
               symbol: <Icon name="dokument" size={18} />,
               onClick: () => zeigen(z),
             },
-            ...(darfHier(z)
+            // Ein Eintrag im Kalender wird von „Nicht eintragen“ nie überschrieben (`wennNochOffen`) – der Klick täte nichts.
+            ...(darfHier(z) && !geloescht
               ? [
                   {
                     label: 'Nicht eintragen',

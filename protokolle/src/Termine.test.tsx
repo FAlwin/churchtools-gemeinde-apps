@@ -4,7 +4,12 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import type { Block } from '@shared/protokolle/dokument';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import { teileBauen, type ProtokollKopf } from '@shared/protokolle/speicher';
-import { istTerminStand, terminStandId, type TerminStand } from '@shared/protokolle/terminStand';
+import {
+  istTerminStand,
+  neuerTerminStand,
+  terminStandId,
+  type TerminStand,
+} from '@shared/protokolle/terminStand';
 import { _vergissGemeindeZeitzone, merkeGemeindeZeitzone } from '@shared/ct/zeit';
 import { gruppeEinrichten } from './einrichten';
 import {
@@ -423,6 +428,127 @@ describe('Eintragen', () => {
     await karte();
     expect(await zeilen()).not.toContain('Bibel-Action-Tag');
     fireEvent.click(screen.getByRole('button', { name: /Im Kalender/ }));
+    expect(await zeilen()).toContain('Bibel-Action-Tag');
+  });
+});
+
+/** Ein Vermerk „im Kalender“, wie ihn „Eintragen“ schreibt – auf einen Termin, den der Test selbst anlegt oder weglässt. */
+function eingetragen(block: string, kalenderTermin: number, sitzung = 'fest') {
+  werteVon(ct, gruppe().mitarbeit!).push({
+    id: ct.naechste++,
+    value: JSON.stringify(
+      neuerTerminStand(
+        { gruppe: 194, sitzung, block },
+        'imKalender',
+        { kalender: 4, id: kalenderTermin, name: 'Gemeindeleitung', zeit: '16:00 Uhr' },
+        1,
+        '2026-11-21T08:00:00Z',
+      ),
+    ),
+  });
+}
+const imKalenderAuf = () => fireEvent.click(screen.getByRole('button', { name: /Im Kalender/ }));
+const lesenVon = (id: number) =>
+  ct.aufrufe.filter((a) => a === `GET /calendars/4/appointments/${id}`);
+
+describe('Termin in ChurchTools gelöscht', () => {
+  const dasTermin = (id: number, titel = 'Heiligabend') =>
+    ct.termine.push({ kalender: 4, id, titel, beginn: '2027-12-24T15:00:00Z', anfragen: [] });
+
+  it('404: die Zeile steht wieder oben, mit Etikett und „Eintragen“, ohne „Nicht eintragen“', async () => {
+    dasTermin(161);
+    eingetragen('t1', 161); // Heiligabend – vorhanden
+    eingetragen('t2', 162); // Bibel-Action-Tag – in ChurchTools gelöscht
+    zeigen();
+    await karte();
+    await waitFor(async () => expect(await zeilen()).toContain('Bibel-Action-Tag'));
+    const z = await zeile('Bibel-Action-Tag');
+    expect(within(z).getByText('in ChurchTools gelöscht')).toBeTruthy();
+    expect(within(z).getByRole('button', { name: 'Eintragen' })).toBeTruthy();
+    fireEvent.click(within(z).getByRole('button', { name: 'Mehr' }));
+    expect(await screen.findByRole('menuitem', { name: 'Im Protokoll zeigen' })).toBeTruthy();
+    expect(screen.queryByRole('menuitem', { name: 'Nicht eintragen' })).toBeNull();
+    // Der vorhandene Termin bleibt unter „Im Kalender“ – ohne Etikett „gelöscht“.
+    expect(await zeilen()).not.toContain('Heiligabend, 16 Uhr');
+    imKalenderAuf();
+    expect(await zeilen()).toContain('Heiligabend, 16 Uhr');
+    expect(screen.getAllByText('in ChurchTools gelöscht')).toHaveLength(1);
+  });
+
+  it('beim Lesen wird nichts geschrieben: der Vermerk bleibt, wie er ist', async () => {
+    eingetragen('t2', 162);
+    const vorher = JSON.stringify(werteVon(ct, gruppe().mitarbeit!));
+    const bisher = ct.aufrufe.length;
+    zeigen();
+    await screen.findByText('in ChurchTools gelöscht');
+    expect(JSON.stringify(werteVon(ct, gruppe().mitarbeit!))).toBe(vorher);
+    expect(ct.aufrufe.slice(bisher).filter((a) => /^(POST|PUT|PATCH|DELETE)/.test(a))).toEqual([]);
+  });
+
+  it('jeder andere Fehler (500) ist kein Beleg: die Zeile bleibt unter „Im Kalender“', async () => {
+    eingetragen('t2', 162);
+    ct.terminLesenFehler = true;
+    zeigen();
+    await karte();
+    await waitFor(() => expect(lesenVon(162)).toHaveLength(1));
+    expect(await zeilen()).not.toContain('Bibel-Action-Tag');
+    expect(screen.queryByText('in ChurchTools gelöscht')).toBeNull();
+    imKalenderAuf();
+    expect(await zeilen()).toContain('Bibel-Action-Tag');
+  });
+
+  it('Termin vorhanden: bleibt unter „Im Kalender“', async () => {
+    dasTermin(161);
+    eingetragen('t1', 161);
+    zeigen();
+    await karte();
+    await waitFor(() => expect(lesenVon(161)).toHaveLength(1));
+    expect(screen.queryByText('in ChurchTools gelöscht')).toBeNull();
+    imKalenderAuf();
+    expect(await zeilen()).toContain('Heiligabend, 16 Uhr');
+  });
+
+  it('jede Adresse wird je Ladevorgang höchstens einmal gelesen, auch bei zwei Vermerken auf denselben Termin', async () => {
+    dasTermin(161);
+    eingetragen('t1', 161);
+    eingetragen('t3', 161);
+    eingetragen('t2', 162);
+    eingetragen('u1', 162, 'okt');
+    zeigen();
+    await screen.findByText('Bibel-Action-Tag');
+    await waitFor(() => expect(lesenVon(162)).toHaveLength(1));
+    expect(lesenVon(161)).toHaveLength(1);
+    expect(screen.getAllByText('in ChurchTools gelöscht')).toHaveLength(2);
+  });
+
+  it('„Eintragen“ auf der gelöschten Zeile: der neue Vermerk gilt danach', async () => {
+    eingetragen('t2', 162);
+    zeigen();
+    await screen.findByText('in ChurchTools gelöscht');
+    const f = await fensterOeffnen('Bibel-Action-Tag');
+    await bereit(f, 'Speichern');
+    fireEvent.click(within(f).getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    const neu = ct.termine[0].id;
+    expect(neu).not.toBe(162);
+    // Genau ein Vermerk (derselbe Schlüssel wird überschrieben), mit dem neuen Termin.
+    expect(staende()).toEqual([
+      expect.objectContaining({
+        id: terminStandId('fest', 't2'),
+        stand: 'imKalender',
+        kalender: expect.objectContaining({ id: neu }) as unknown,
+      }),
+    ]);
+    expect(screen.queryByText('in ChurchTools gelöscht')).toBeNull();
+    expect(await zeilen()).not.toContain('Bibel-Action-Tag');
+    // Nach dem Neuladen: der neue Termin ist da – die Zeile bleibt unter „Im Kalender“.
+    cleanup();
+    const davor = lesenVon(neu).length;
+    zeigen();
+    await karte();
+    await waitFor(() => expect(lesenVon(neu)).toHaveLength(davor + 1));
+    expect(screen.queryByText('in ChurchTools gelöscht')).toBeNull();
+    imKalenderAuf();
     expect(await zeilen()).toContain('Bibel-Action-Tag');
   });
 });

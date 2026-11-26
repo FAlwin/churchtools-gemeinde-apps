@@ -43,8 +43,8 @@ export interface ErinnerungenAnschluss {
 export type TeilErgebnis = { art: 'nichts' } | { art: 'ok' } | { art: 'fehler'; text: string };
 
 /**
- * **Der Erinnerungsplan einer Dienstgruppe im Fenster „Einstellungen“** (R-4): frisch lesen beim Öffnen und mit jeder Gruppe,
- * bearbeiten (Entwurf), speichern. Hausregeln wie `AbfrageFenster`/`EinstellungenFenster`: ein Lesefehler sperrt den Abschnitt,
+ * **Der Erinnerungsplan einer Dienstgruppe auf der Seite „Einstellungen“** (R-4): frisch lesen beim Öffnen und mit jeder Gruppe,
+ * bearbeiten (Entwurf), speichern. Hausregeln wie `AbfrageFenster`/`EinstellungenSeite`: ein Lesefehler sperrt den Abschnitt,
  * ein **unlesbarer** Wert wird nie überschrieben (kann aus einer neueren Fassung stammen), bei einem Konflikt wird nichts
  * überschrieben und der neue Stand erscheint, nichts wird automatisch wiederholt.
  *
@@ -100,6 +100,11 @@ export function useErinnerungsplan(a: ErinnerungenAnschluss | undefined) {
   };
   const artGeaendert = schreibbar && art !== null && art !== lese.inhalt.verfuegbarkeit;
   const geaendert = planGeaendert || artGeaendert;
+  /** Alle Änderungen zurück auf den gelesenen Stand („Verwerfen“ in der Leiste der Einstellungen-Seite). */
+  const verwerfen = () => {
+    setBearb(null);
+    setBearbArt(null);
+  };
 
   const waehle = (id: number) => {
     if (id === gewaehlt) return;
@@ -195,6 +200,10 @@ export function useErinnerungsplan(a: ErinnerungenAnschluss | undefined) {
     art,
     setArt,
     geaendert,
+    // Einzeln: Die Leiste der Einstellungen-Seite zählt Plan und Art je als eine Änderung (`anzahlAenderungen`).
+    planGeaendert,
+    artGeaendert,
+    verwerfen,
     laufend,
     heute: a?.heute ?? '',
     // Eingerichtet = die Einrichtung steht im Dokument; bei Lesefehler/unlesbar sagt der Kasten nichts (kein Doppel-Einrichten).

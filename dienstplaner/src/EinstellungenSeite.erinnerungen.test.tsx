@@ -14,12 +14,12 @@ import {
 import { STANDARD_BETREFF } from '@shared/dienstplan/abfrageMail';
 import { standardInhalt, type AbfragenStand } from '@shared/dienstplan/abfragenSpeicher';
 import type { AbfrageAnschluss } from './AbfrageFenster';
-import { EinstellungenFenster } from './EinstellungenFenster';
+import { EinstellungenSeite } from './EinstellungenSeite';
 import { ABFRAGE_UNLESBAR } from './abfragenTexte';
 
 /**
  * **Abschnitt „Verfügbarkeit & Erinnerungen“ in den Einstellungen** (R-4). Die Regeln dahinter prüfen `abfragePlan.test.ts` und
- * `abfrageMail.test.ts`; hier geht es um das Fenster: wer den Abschnitt sieht, was „Speichern“ schreibt (genau ein Aufruf je
+ * `abfrageMail.test.ts`; hier geht es um die Seite: wer den Abschnitt sieht, was „Speichern“ schreibt (genau ein Aufruf je
  * geändertem Teil), und die Fehlerzweige – jeder einzeln.
  */
 const HEUTE = '2026-12-01';
@@ -84,9 +84,8 @@ function zeige(
           daten: { version: 1, zeit: 'z', von: ICH, inhalt: { betriebsart: 'klicken' } },
         } as SpeicherErgebnis<{ betriebsart: string }>)),
   );
-  const onSchliessen = vi.fn();
   render(
-    <EinstellungenFenster
+    <EinstellungenSeite
       darfAendern={o.darfAendern ?? true}
       ich={{ personId: 1, name: 'Alwin' }}
       abfragen={{
@@ -94,12 +93,11 @@ function zeige(
         gruppen: o.gruppen ?? [MUSIK, TECHNIK],
         heute: HEUTE,
       }}
-      onSchliessen={onSchliessen}
       lesen={() => Promise.resolve(betriebsartStand())}
       speichern={betriebsart as never}
     />,
   );
-  return { lesen, speichern, betriebsart, onSchliessen };
+  return { lesen, speichern, betriebsart };
 }
 
 const abschnitt = () => screen.findByRole('region', { name: 'Verfügbarkeit & Erinnerungen' });
@@ -109,6 +107,16 @@ const geladen = async () => {
 };
 const zeilen = () =>
   within(screen.getByRole('list', { name: 'Erinnerungen' })).getAllByRole('listitem');
+/** Die Leiste unten („N Änderungen nicht gespeichert“) – `null`, wenn nichts ungespeichert ist. */
+const leiste = () => screen.queryByRole('group', { name: 'Noch nicht gespeichert' });
+/** Gespeichert (oder nichts mehr offen): die Leiste ist weg, ohne Meldung – die Seite bleibt offen, nichts schließt. */
+const gespeichert = async () => {
+  await waitFor(() => expect(leiste()).toBeNull());
+  expect(screen.queryByRole('alert')).toBeNull();
+};
+const art = (name: RegExp) => screen.getByRole<HTMLInputElement>('radio', { name });
+const ZUSAGEN = /Ja · Vielleicht · Nein/;
+const ABWESEND = /Nur abwesend/;
 const speichernKnopf = () => screen.getByRole<HTMLButtonElement>('button', { name: 'Speichern' });
 const entfernen = (i: number) =>
   fireEvent.click(screen.getAllByRole('button', { name: 'Erinnerung entfernen' })[i]);
@@ -120,14 +128,14 @@ const hinzufuegenTippen = (wort: RegExp | string) => {
 afterEach(cleanup);
 
 describe('Wer den Abschnitt sieht', () => {
-  it('Planer sehen ihn zwischen „Live-Ansicht – für alle“ und „Meine Anzeige“', async () => {
+  it('Planer sehen ihn nach „Meine Anzeige“ und „Live-Ansicht – für alle“ (Reihenfolge der Seite)', async () => {
     zeige();
     const a = await abschnitt();
     const titel = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
     expect(titel).toEqual([
+      'Meine Anzeige',
       'Live-Ansicht – für alle',
       'Verfügbarkeit & Erinnerungen',
-      'Meine Anzeige',
     ]);
     expect(a).toBeTruthy();
   });
@@ -383,11 +391,11 @@ describe('Speichern – nur, was sich geändert hat', () => {
       einrichtung: { gruppeId: 5, routineId: 6 },
       verfuegbarkeit: 'zusagen',
     };
-    const { speichern, onSchliessen } = zeige({ lesen: () => Promise.resolve(stand(inhalt, 3)) });
+    const { speichern } = zeige({ lesen: () => Promise.resolve(stand(inhalt, 3)) });
     await geladen();
     entfernen(1);
     fireEvent.click(speichernKnopf());
-    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    await gespeichert();
     expect(speichern.mock.calls[0][1]).toMatchObject({
       einrichtung: { gruppeId: 5, routineId: 6 },
     });
@@ -400,13 +408,13 @@ describe('Speichern – nur, was sich geändert hat', () => {
       einrichtung: null,
       verfuegbarkeit: 'zusagen' as const,
     };
-    const { speichern, betriebsart, onSchliessen } = zeige({
+    const { speichern, betriebsart } = zeige({
       lesen: () => Promise.resolve(stand(inhalt, 7)),
     });
     await geladen();
     entfernen(1);
     fireEvent.click(speichernKnopf());
-    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    await gespeichert();
     expect(speichern).toHaveBeenCalledTimes(1);
     expect(speichern).toHaveBeenCalledWith(
       4,
@@ -430,42 +438,43 @@ describe('Speichern – nur, was sich geändert hat', () => {
   });
 
   it('nur die Betriebsart: kein Aufruf für den Plan', async () => {
-    const { speichern, betriebsart, onSchliessen } = zeige();
+    const { speichern, betriebsart } = zeige();
     await geladen();
     fireEvent.click(screen.getByRole('radio', { name: /Von Anfang an klicken/ }));
     fireEvent.click(speichernKnopf());
-    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    await gespeichert();
     expect(betriebsart).toHaveBeenCalledTimes(1);
     expect(speichern).not.toHaveBeenCalled();
   });
 
   it('beides geändert: je ein Aufruf', async () => {
-    const { speichern, betriebsart, onSchliessen } = zeige();
+    const { speichern, betriebsart } = zeige();
     await geladen();
     fireEvent.click(screen.getByRole('radio', { name: /Von Anfang an klicken/ }));
     entfernen(0);
     fireEvent.click(speichernKnopf());
-    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    await gespeichert();
     expect(betriebsart).toHaveBeenCalledTimes(1);
     expect(speichern).toHaveBeenCalledTimes(1);
   });
 
-  it('nichts geändert: nichts wird geschrieben, das Fenster schließt', async () => {
-    const { speichern, betriebsart, onSchliessen } = zeige();
+  it('nichts geändert: keine Leiste, nichts wird geschrieben', async () => {
+    const { speichern, betriebsart } = zeige();
     await geladen();
-    fireEvent.click(speichernKnopf());
-    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    expect(leiste()).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Speichern' })).toBeNull();
     expect(speichern).not.toHaveBeenCalled();
     expect(betriebsart).not.toHaveBeenCalled();
   });
 
   it('entfernen und wieder hinzufügen = Standard: nichts geschrieben', async () => {
-    const { speichern, onSchliessen } = zeige();
+    const { speichern } = zeige();
     await geladen();
     entfernen(2);
+    // Erst geändert (Leiste da), dann wieder gleich dem Standard: die Leiste geht von selbst, nichts wird geschrieben.
+    expect(leiste()).not.toBeNull();
     hinzufuegenTippen('Am Tag der Frist');
-    fireEvent.click(speichernKnopf());
-    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    expect(leiste()).toBeNull();
     expect(speichern).not.toHaveBeenCalled();
   });
 
@@ -474,7 +483,7 @@ describe('Speichern – nur, was sich geändert hat', () => {
       punkte: STANDARD_PLAN.punkte.slice(0, 3),
       mail: null,
     };
-    const { speichern, onSchliessen } = zeige({
+    const { speichern } = zeige({
       lesen: () =>
         Promise.resolve(
           stand(
@@ -486,26 +495,59 @@ describe('Speichern – nur, was sich geändert hat', () => {
     await geladen();
     hinzufuegenTippen(/Nach der Frist, wiederholt/);
     fireEvent.click(speichernKnopf());
-    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    await gespeichert();
     expect(speichern.mock.calls[0][1].plan).toBeNull();
   });
 
   it('eigener Betreff: gespeichert, der Text bleibt Standard (mail mit beiden Feldern)', async () => {
-    const { speichern, onSchliessen } = zeige();
+    const { speichern } = zeige();
     await geladen();
     fireEvent.change(screen.getByLabelText('Mail – Betreff'), { target: { value: ' Neu ' } });
     fireEvent.click(speichernKnopf());
-    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    await gespeichert();
     const mail = speichern.mock.calls[0][1].plan?.mail;
     expect(mail?.betreff).toBe('Neu');
     expect(mail?.text.length).toBeGreaterThan(20);
   });
 });
 
+describe('Leiste: Zahl und Verwerfen mit allen drei Teilen', () => {
+  it('Betriebsart, Art und Plan geändert: „3 Änderungen“ – Verwerfen setzt alle drei auf den gelesenen Stand zurück, nichts wird geschrieben', async () => {
+    const { speichern, betriebsart } = zeige();
+    await geladen();
+    fireEvent.click(screen.getByRole('radio', { name: /Von Anfang an klicken/ }));
+    expect(leiste()?.textContent).toContain('1 Änderung nicht gespeichert');
+    fireEvent.click(art(ABWESEND));
+    expect(leiste()?.textContent).toContain('2 Änderungen nicht gespeichert');
+    entfernen(0);
+    expect(leiste()?.textContent).toContain('3 Änderungen nicht gespeichert');
+    fireEvent.click(screen.getByRole('button', { name: 'Verwerfen' }));
+    expect(leiste()).toBeNull();
+    expect(screen.getByRole<HTMLInputElement>('radio', { name: /Bis Beginn/ }).checked).toBe(true);
+    expect(art(ZUSAGEN).checked).toBe(true);
+    expect(zeilen()).toHaveLength(STANDARD_PLAN.punkte.length);
+    expect(speichern).not.toHaveBeenCalled();
+    expect(betriebsart).not.toHaveBeenCalled();
+  });
+
+  it('Gruppenwechsel mit Änderungen fragt der Abschnitt selbst – die Seite fragt nicht noch einmal', async () => {
+    zeige();
+    await geladen();
+    entfernen(0);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Dienstgruppe' }), {
+      target: { value: '5' },
+    });
+    // Genau eine Rückfrage (die des Abschnitts).
+    expect(await screen.findAllByRole('button', { name: 'Verwerfen und wechseln' })).toHaveLength(
+      1,
+    );
+  });
+});
+
 describe('Fehlerzweige – jeder einzeln', () => {
-  it('Plan scheitert, Betriebsart klappt: Meldung nennt den Plan, Fenster bleibt; zweiter Klick schreibt nur den Plan', async () => {
+  it('Plan scheitert, Betriebsart klappt: Meldung nennt den Plan, die Leiste bleibt mit einer Änderung (N sinkt von 2 auf 1); zweiter Klick schreibt nur den Plan', async () => {
     let versuch = 0;
-    const { speichern, betriebsart, onSchliessen } = zeige({
+    const { speichern, betriebsart } = zeige({
       speichern: (_g, neu) =>
         Promise.resolve(
           versuch++ === 0
@@ -516,23 +558,25 @@ describe('Fehlerzweige – jeder einzeln', () => {
     await geladen();
     fireEvent.click(screen.getByRole('radio', { name: /Von Anfang an klicken/ }));
     entfernen(0);
+    expect(leiste()?.textContent).toContain('2 Änderungen nicht gespeichert');
     fireEvent.click(speichernKnopf());
     const meldung = await screen.findByRole('alert');
+    expect(leiste()?.textContent).toContain('1 Änderung nicht gespeichert');
     expect(meldung.textContent).toContain(
       'Erinnerungen für Musik: ChurchTools antwortet gerade nicht',
     );
     expect(meldung.textContent).toContain('Gespeichert: Live-Ansicht.');
-    expect(onSchliessen).not.toHaveBeenCalled();
+    expect(leiste()).not.toBeNull();
     expect(zeilen()).toHaveLength(3);
     fireEvent.click(speichernKnopf());
-    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    await gespeichert();
     expect(betriebsart).toHaveBeenCalledTimes(1);
     expect(speichern).toHaveBeenCalledTimes(2);
   });
 
   it('Betriebsart scheitert, Plan klappt: Meldung nennt die Live-Ansicht; erneut wird nur sie geschrieben', async () => {
     let versuch = 0;
-    const { speichern, betriebsart, onSchliessen } = zeige({
+    const { speichern, betriebsart } = zeige({
       betriebsartSpeichern: () =>
         Promise.resolve(
           versuch++ === 0
@@ -546,12 +590,14 @@ describe('Fehlerzweige – jeder einzeln', () => {
     await geladen();
     fireEvent.click(screen.getByRole('radio', { name: /Von Anfang an klicken/ }));
     entfernen(0);
+    expect(leiste()?.textContent).toContain('2 Änderungen nicht gespeichert');
     fireEvent.click(speichernKnopf());
     const meldung = await screen.findByRole('alert');
+    expect(leiste()?.textContent).toContain('1 Änderung nicht gespeichert');
     expect(meldung.textContent).toContain('Live-Ansicht: ChurchTools antwortet gerade nicht');
     expect(meldung.textContent).toContain('Gespeichert: Erinnerungen für Musik.');
     fireEvent.click(speichernKnopf());
-    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    await gespeichert();
     expect(speichern).toHaveBeenCalledTimes(1);
     expect(betriebsart).toHaveBeenCalledTimes(2);
   });
@@ -563,7 +609,7 @@ describe('Fehlerzweige – jeder einzeln', () => {
       einrichtung: null,
       verfuegbarkeit: 'zusagen' as const,
     };
-    const { onSchliessen } = zeige({
+    zeige({
       speichern: () => Promise.resolve({ ok: false, grund: 'konflikt', jetzt: version(fremd, 5) }),
     });
     await geladen();
@@ -571,7 +617,8 @@ describe('Fehlerzweige – jeder einzeln', () => {
     fireEvent.click(speichernKnopf());
     await screen.findByText(/Bea hat das inzwischen geändert – nichts überschrieben/);
     expect(zeilen()).toHaveLength(1);
-    expect(onSchliessen).not.toHaveBeenCalled();
+    // Der Stand der anderen steht da – nichts mehr ungespeichert, die Leiste ist weg (die Meldung bleibt).
+    expect(leiste()).toBeNull();
   });
 
   it('Plan: Konflikt, aber es steht schon genau das da, was gewünscht war: fertig', async () => {
@@ -584,14 +631,14 @@ describe('Fehlerzweige – jeder einzeln', () => {
       einrichtung: null,
       verfuegbarkeit: 'zusagen' as const,
     };
-    const { onSchliessen } = zeige({
+    zeige({
       speichern: () =>
         Promise.resolve({ ok: false, grund: 'konflikt', jetzt: version(gewuenscht, 2, ICH) }),
     });
     await geladen();
     entfernen(0);
     fireEvent.click(speichernKnopf());
-    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    await gespeichert();
   });
 
   it.each([
@@ -599,29 +646,29 @@ describe('Fehlerzweige – jeder einzeln', () => {
     ['abgemeldet', /Nicht mehr bei ChurchTools angemeldet/],
     ['nicht-angekommen', /nachgelesen steht aber der alte Stand da/],
   ] as const)(
-    'Plan: Speichern scheitert mit „%s“: Meldung, Fenster bleibt, Änderung bleibt',
+    'Plan: Speichern scheitert mit „%s“: Meldung, Leiste bleibt, Änderung bleibt',
     async (grund, text) => {
-      const { onSchliessen } = zeige({ speichern: () => Promise.resolve({ ok: false, grund }) });
+      zeige({ speichern: () => Promise.resolve({ ok: false, grund }) });
       await geladen();
       entfernen(0);
       fireEvent.click(speichernKnopf());
       await screen.findByText(text);
-      expect(onSchliessen).not.toHaveBeenCalled();
+      expect(leiste()).not.toBeNull();
       expect(zeilen()).toHaveLength(3);
     },
   );
 
-  it('Plan: Speichern wirft – Meldung, nichts geschlossen', async () => {
-    const { onSchliessen } = zeige({ speichern: () => Promise.reject(new Error('Netz')) });
+  it('Plan: Speichern wirft – Meldung, Leiste bleibt', async () => {
+    zeige({ speichern: () => Promise.reject(new Error('Netz')) });
     await geladen();
     entfernen(0);
     fireEvent.click(speichernKnopf());
     await screen.findByRole('alert');
-    expect(onSchliessen).not.toHaveBeenCalled();
+    expect(leiste()).not.toBeNull();
   });
 
   it('unlesbar: Hinweis „neuere Version“, nichts änderbar, nie gespeichert', async () => {
-    const { speichern, onSchliessen } = zeige({
+    const { speichern } = zeige({
       lesen: () =>
         Promise.resolve({
           inhalt: standardInhalt(),
@@ -633,8 +680,8 @@ describe('Fehlerzweige – jeder einzeln', () => {
     await screen.findByText(ABFRAGE_UNLESBAR);
     expect(screen.queryByRole('button', { name: 'Erinnerung entfernen' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Erinnerung hinzufügen' })).toBeNull();
-    fireEvent.click(speichernKnopf());
-    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    // Nichts änderbar, also nie eine Leiste und nie ein Schreiben.
+    expect(leiste()).toBeNull();
     expect(speichern).not.toHaveBeenCalled();
   });
 
@@ -705,9 +752,6 @@ describe('Gruppenwechsel', () => {
 });
 
 describe('Verfügbarkeit fragen (V-2)', () => {
-  const art = (name: RegExp) => screen.getByRole<HTMLInputElement>('radio', { name });
-  const ZUSAGEN = /Ja · Vielleicht · Nein/;
-  const ABWESEND = /Nur abwesend/;
   const mitArt = (verfuegbarkeit: 'zusagen' | 'abwesend', teil: Partial<AbfragenInhalt> = {}) => ({
     ...standardInhalt(),
     ...teil,
@@ -752,11 +796,11 @@ describe('Verfügbarkeit fragen (V-2)', () => {
       abfragen: [abfrage],
       einrichtung: { gruppeId: 5, routineId: 6 },
     });
-    const { speichern, onSchliessen } = zeige({ lesen: () => Promise.resolve(stand(inhalt, 3)) });
+    const { speichern } = zeige({ lesen: () => Promise.resolve(stand(inhalt, 3)) });
     await geladen();
     fireEvent.click(art(ABWESEND));
     fireEvent.click(speichernKnopf());
-    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    await gespeichert();
     expect(speichern).toHaveBeenCalledTimes(1);
     const [gruppeId, wunsch, , lesVersion] = speichern.mock.calls[0];
     expect(gruppeId).toBe(4);
@@ -766,45 +810,47 @@ describe('Verfügbarkeit fragen (V-2)', () => {
 
   it('nur die Art geändert: ein ausdrücklich gespeicherter Plan bleibt, wie er ist (wird nicht zu „null“ umgerechnet)', async () => {
     const inhalt = mitArt('zusagen', { plan: STANDARD_PLAN });
-    const { speichern, onSchliessen } = zeige({ lesen: () => Promise.resolve(stand(inhalt, 3)) });
+    const { speichern } = zeige({ lesen: () => Promise.resolve(stand(inhalt, 3)) });
     await geladen();
     fireEvent.click(art(ABWESEND));
     fireEvent.click(speichernKnopf());
-    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    await gespeichert();
     expect(speichern.mock.calls[0][1].plan).toEqual(STANDARD_PLAN);
   });
 
   it('nur der Plan geändert: die Art bleibt, wie gelesen', async () => {
-    const { speichern, onSchliessen } = zeige({
+    const { speichern } = zeige({
       lesen: () => Promise.resolve(stand(mitArt('abwesend'), 3)),
     });
     await geladen();
     entfernen(0);
     fireEvent.click(speichernKnopf());
-    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    await gespeichert();
     expect(speichern.mock.calls[0][1].verfuegbarkeit).toBe('abwesend');
     expect(speichern.mock.calls[0][1].plan).not.toBeNull();
   });
 
-  it('Plan und Art zusammen: genau ein Schreiben', async () => {
-    const { speichern, onSchliessen } = zeige();
+  it('Plan und Art zusammen: genau ein Schreiben (die Leiste zählt zwei Änderungen)', async () => {
+    const { speichern } = zeige();
     await geladen();
     fireEvent.click(art(ABWESEND));
+    expect(leiste()?.textContent).toContain('1 Änderung nicht gespeichert');
     entfernen(0);
+    expect(leiste()?.textContent).toContain('2 Änderungen nicht gespeichert');
     fireEvent.click(speichernKnopf());
-    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    await gespeichert();
     expect(speichern).toHaveBeenCalledTimes(1);
     expect(speichern.mock.calls[0][1].verfuegbarkeit).toBe('abwesend');
     expect(speichern.mock.calls[0][1].plan?.punkte).toHaveLength(3);
   });
 
-  it('nichts geändert: „Speichern“ schreibt nichts und schließt – auch nach Hin- und Zurückwählen', async () => {
-    const { speichern, betriebsart, onSchliessen } = zeige();
+  it('nichts geändert: keine Leiste, nichts wird geschrieben – auch nach Hin- und Zurückwählen', async () => {
+    const { speichern, betriebsart } = zeige();
     await geladen();
     fireEvent.click(art(ABWESEND));
+    expect(leiste()).not.toBeNull();
     fireEvent.click(art(ZUSAGEN));
-    fireEvent.click(speichernKnopf());
-    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    expect(leiste()).toBeNull();
     expect(speichern).not.toHaveBeenCalled();
     expect(betriebsart).not.toHaveBeenCalled();
   });
@@ -814,7 +860,7 @@ describe('Verfügbarkeit fragen (V-2)', () => {
       mitArt('zusagen', { plan: { punkte: [{ art: 'frist' }], mail: null } }),
       4,
     );
-    const { onSchliessen } = zeige({
+    zeige({
       speichern: () => Promise.resolve({ ok: false, grund: 'konflikt', jetzt: fremd }),
     });
     await geladen();
@@ -822,32 +868,34 @@ describe('Verfügbarkeit fragen (V-2)', () => {
     fireEvent.click(speichernKnopf());
     const meldung = await screen.findByRole('alert');
     expect(meldung.textContent).toContain('Bea hat das inzwischen geändert – nichts überschrieben');
-    expect(onSchliessen).not.toHaveBeenCalled();
+    expect(leiste()).toBeNull();
     await waitFor(() => expect(art(ZUSAGEN).checked).toBe(true));
     expect(zeilen()).toHaveLength(1);
   });
 
   it('Konflikt, aber es steht schon genau das da (früherer Versuch kam an): fertig', async () => {
     const schon = version(mitArt('abwesend'), 4);
-    const { onSchliessen } = zeige({
+    zeige({
       speichern: () => Promise.resolve({ ok: false, grund: 'konflikt', jetzt: schon }),
     });
     await geladen();
     fireEvent.click(art(ABWESEND));
     fireEvent.click(speichernKnopf());
-    await waitFor(() => expect(onSchliessen).toHaveBeenCalledTimes(1));
+    await gespeichert();
   });
 
   it('Konflikt mit gleichem Plan, aber anderer Art: nicht „fertig“ – der fremde Stand erscheint', async () => {
     const fremd = version(mitArt('zusagen'), 4);
-    const { onSchliessen } = zeige({
+    zeige({
       speichern: () => Promise.resolve({ ok: false, grund: 'konflikt', jetzt: fremd }),
     });
     await geladen();
     fireEvent.click(art(ABWESEND));
     fireEvent.click(speichernKnopf());
+    // Anders als beim „fertig“ oben: eine Meldung steht da, und der fremde Stand ersetzt die Wahl.
     await screen.findByRole('alert');
-    expect(onSchliessen).not.toHaveBeenCalled();
+    expect(leiste()).toBeNull();
+    await waitFor(() => expect(art(ZUSAGEN).checked).toBe(true));
   });
 
   it('ein unlesbares Dokument sperrt die Auswahl (nie überschreiben)', async () => {

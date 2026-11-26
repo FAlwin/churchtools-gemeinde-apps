@@ -28,7 +28,7 @@ import {
   type Punktart,
 } from '@shared/dienstplan/abfragePlan';
 import { EinrichtenFenster } from './EinrichtenFenster';
-import fenster from './EinstellungenFenster.module.scss';
+import fenster from './EinstellungenSeite.module.scss';
 import {
   automatikHinweis,
   PLAN_GILT_AB_NAECHSTER,

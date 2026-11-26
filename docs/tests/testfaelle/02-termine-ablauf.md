@@ -431,19 +431,19 @@ alle „Daten sehen“ (`docs/betrieb/DIENSTPLANER.md`, „Einstellungen für al
 
 **Das muss passieren:** Die Betriebsart bestimmt, wie lange „Live“ ohne Klick der Uhr folgt; Planer stellen sie für alle ein.
 
-1. Dienstplaner → ganz rechts der Reiter **„Einstellungen“** (am Handy unten rechts) → Fenster mit **„Live-Ansicht – für alle“** und drei
+1. Dienstplaner → ganz rechts der Reiter **„Einstellungen“** (am Handy unten rechts) → die Seite **„Einstellungen“** (Adresse `#/einstellungen`) mit **„Live-Ansicht – für alle“** und drei
    Möglichkeiten; vorgewählt (noch nie gespeichert) ist **„Bis Beginn nach der Uhr, ab Beginn klicken“**.
 2. **Standard, vor Beginn:** „Live“ öffnen → „Jetzt · nach Plan“ läuft durch Soundcheck und Countdown; unter „Jetzt“ steht „Bis Beginn folgt
    „Jetzt“ der Uhr. Ab 10:00 geht es weiter, wenn jemand „Weiter“ drückt.“ Unten **‹ ZURÜCK / WEITER ›** (Titel von Vorgänger und Nachfolger).
 3. **Standard, ab Beginn ohne Klick:** Die Ansicht bleibt am letzten Punkt vor Beginn stehen, das Etikett heißt **„Wartet auf „Weiter““**, die
    Restzeit läuft **rot ins Minus** („−0:45 über der Zeit“), das Zeitkonto ebenso. Auf einem zweiten Gerät steht dasselbe.
 4. **WEITER** drücken → der Punkt **nach** dem gezeigten läuft (die Begrüßung), nicht der erste; ChurchTools-Live-Agenda folgt.
-5. Einstellung auf **„Immer nach der Uhr“** → Speichern. Ein offenes „Live“ folgt nach höchstens 30 s: es läuft jetzt auch nach Beginn
+5. Einstellung auf **„Immer nach der Uhr“** → in der Leiste unten **Speichern** (die Seite bleibt offen, die Leiste verschwindet). Ein offenes „Live“ folgt nach höchstens 30 s: es läuft jetzt auch nach Beginn
    weiter durch den Ablauf, vor dem Start nur **Starten**, kein Zeitkonto.
 6. **„Von Anfang an klicken“** → „Live“ zeigt „Wartet auf „Starten““ und „Noch nicht begonnen“, nichts läuft von selbst; **Starten** beginnt beim
    ersten Punkt (auch vor Beginn).
-7. Mit der Person **ohne** Planer-Recht: Reiter „Einstellungen“ öffnet das Fenster, die Auswahl ist **gesperrt** („Ändern dürfen nur Planer“), kein
-   „Speichern“.
+7. Mit der Person **ohne** Planer-Recht: Reiter „Einstellungen“ öffnet die Seite, die Auswahl ist **gesperrt** („Ändern dürfen nur Planer“), keine
+   Leiste und kein „Speichern“.
 8. Zwei Planer gleichzeitig: Der zweite beim Speichern bekommt „… hat das inzwischen geändert – nichts überschrieben“ und sieht den neuen Stand.
 9. Netz weg (WLAN aus) beim Öffnen der Einstellungen: Hinweis „… konnte nicht gelesen werden“, Auswahl gesperrt, **Nochmal versuchen**; ein
    offenes „Live“ behält seine Betriebsart.
@@ -451,8 +451,8 @@ alle „Daten sehen“ (`docs/betrieb/DIENSTPLANER.md`, „Einstellungen für al
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `dienstplaner/src/EinstellungenFenster.tsx`, `dienstplaner/src/useBetriebsart.ts`, `dienstplaner/src/ladeEinstellungen.ts`, `dienstplaner/src/LiveAnsicht.tsx`, `dienstplaner/src/App.tsx`, `shared/dienstplan/liveEinstellungen.ts`, `shared/ct/liveAgenda.ts`
-- **Automatisiert:** ja – `shared/ct/liveAgenda.test.ts` (alle drei Betriebsarten, Grenze, „wartet“, „Weiter“ vom gezeigten Punkt), `shared/dienstplan/liveEinstellungen.test.ts` (Validierung, Lesen/Speichern, Fehlerzweige vorübergehend/403/401, Konflikt, nicht angekommen), `dienstplaner/src/EinstellungenFenster.test.tsx`, `dienstplaner/src/LiveAnsicht.test.tsx` (Block „Betriebsart und Zeitkonto“, Lesefehler ändert nichts), `dienstplaner/src/App.test.tsx` (Reiter zuletzt, Planer/Nicht-Planer); von Hand bleiben Rechte an der Ablage in ChurchTools, zwei Geräte und das Aussehen
+- **Betrifft:** `dienstplaner/src/EinstellungenSeite.tsx`, `dienstplaner/src/useBetriebsart.ts`, `dienstplaner/src/ladeEinstellungen.ts`, `dienstplaner/src/LiveAnsicht.tsx`, `dienstplaner/src/App.tsx`, `shared/dienstplan/liveEinstellungen.ts`, `shared/ct/liveAgenda.ts`
+- **Automatisiert:** ja – `shared/ct/liveAgenda.test.ts` (alle drei Betriebsarten, Grenze, „wartet“, „Weiter“ vom gezeigten Punkt), `shared/dienstplan/liveEinstellungen.test.ts` (Validierung, Lesen/Speichern, Fehlerzweige vorübergehend/403/401, Konflikt, nicht angekommen), `dienstplaner/src/EinstellungenSeite.test.tsx`, `dienstplaner/src/LiveAnsicht.test.tsx` (Block „Betriebsart und Zeitkonto“, Lesefehler ändert nichts), `dienstplaner/src/App.test.tsx` (Reiter zuletzt, Planer/Nicht-Planer); von Hand bleiben Rechte an der Ablage in ChurchTools, zwei Geräte und das Aussehen
 - **Historie:** Live-Ansicht 2, L4-2 (23.11.2026, Entwurf `entwurf/live-2.html` Abschnitte 1–2 und 8, Entscheidungen A3/A4, T2)
 
 </details>
@@ -619,21 +619,21 @@ seiner alten Zeit weiter, als wäre man nie weg gewesen. Die kurzen Stopps zähl
 
 **Das brauchst du:** Zwei Geräte (z. B. Rechner und Handy), an beiden mit derselben ChurchTools-Person angemeldet; eine zweite Person ohne Planer-Recht; für die Spalten einen Termin mit Rückblick (TF-ABLAUF-50).
 
-**Das muss passieren:** Im Reiter **„Einstellungen“** steht unter „Live-Ansicht – für alle“ der Abschnitt **„Meine Anzeige“** („Gilt für dich auf allen deinen Geräten.“) mit sechs Haken, alle **an**. **Jeder** darf sie ändern, auch wer nicht planen darf; die Betriebsarten darüber bleiben Planern vorbehalten. Die Wahl wirkt sofort, ohne „Speichern“.
+**Das muss passieren:** Auf der Seite **„Einstellungen“** steht ganz oben, vor „Live-Ansicht – für alle“, der Abschnitt **„Meine Anzeige“** („Gilt für dich auf allen deinen Geräten.“) mit sechs Haken, alle **an**. **Jeder** darf sie ändern, auch wer nicht planen darf; die Betriebsarten darüber bleiben Planern vorbehalten. Die Wahl wirkt sofort, ohne „Speichern“.
 
 1. Reiter „Einstellungen“ öffnen: sechs Haken – „−1 / +1 Min“ in der Live-Ansicht, Durchschnitt beim Ablauf bearbeiten, Rückblick im Termin, darunter eingerückt Spalte „Ø bisher“ und Spalte „±“, Infos meiner Dienstgruppen in der Live-Ansicht –, alle an.
 2. „Rückblick im Termin zeigen“ ausschalten: die zwei eingerückten Spalten-Haken werden grau und lassen sich nicht ändern (ihre Auswahl bleibt erhalten). Wieder einschalten: sie sind wieder frei.
 3. Am Rechner „Durchschnitt beim Ablauf bearbeiten zeigen“ ausschalten, rund 3 Sekunden warten, das Handy **neu laden** und „Einstellungen“ öffnen: der Haken ist dort auch aus.
 4. Dieselbe Änderung am Handy rückgängig machen, am Rechner neu laden: wieder an. (Haken, die nie angefasst wurden, bleiben „an“ – auch wenn die Standardwerte später einmal anders wären.)
-5. Als Person **ohne** Planer-Recht: Die Haken lassen sich ändern, die Betriebsarten oben sind grau, unten steht „Fertig“ statt „Speichern“.
+5. Als Person **ohne** Planer-Recht: Die Haken lassen sich ändern, die Betriebsarten sind grau, es erscheint keine Leiste unten (kein „Speichern“).
 6. **ChurchTools nicht erreichbar** (WLAN am Gerät aus, dann einen Haken ändern): der Haken bleibt wie gewählt, darunter steht leise „Noch nicht in ChurchTools gespeichert …“. WLAN wieder an, Seite neu laden: die Wahl ist da und auf dem anderen Gerät ebenfalls. **Es gehen keine Einstellungen verloren**, und beim bloßen Öffnen wird nichts geschrieben.
 7. **Demo** (`…/?demo`): „Einstellungen“ → Haken umschalten wirkt sofort und bleibt nach Neuladen der Seite stehen.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** hoch
-- **Betrifft:** `dienstplaner/src/meineAnzeige.ts`, `dienstplaner/src/MeineAnzeigeAnschluss.tsx`, `dienstplaner/src/EinstellungenFenster.tsx`, `ui/ct/useAblageSpiegel.ts`, `shared/ct/personenAblage.ts`
-- **Automatisiert:** ja – `dienstplaner/src/MeineAnzeigeAnschluss.test.tsx` (gegen die echte Personen-Ablage: Standard schreibt nichts, Laden, 504/502 überschreiben nichts, nur gewählte Felder, zwei Geräte, Fehler beim Speichern, je Person getrennt), `dienstplaner/src/meineAnzeige.test.ts`, `dienstplaner/src/EinstellungenFenster.meineAnzeige.test.tsx`, `dienstplaner/src/App.test.tsx`; von Hand bleiben echte zwei Geräte und ChurchTools mit Dateirechten (Personen-Datei `dienstplaner_anzeige.json`)
+- **Betrifft:** `dienstplaner/src/meineAnzeige.ts`, `dienstplaner/src/MeineAnzeigeAnschluss.tsx`, `dienstplaner/src/EinstellungenSeite.tsx`, `ui/ct/useAblageSpiegel.ts`, `shared/ct/personenAblage.ts`
+- **Automatisiert:** ja – `dienstplaner/src/MeineAnzeigeAnschluss.test.tsx` (gegen die echte Personen-Ablage: Standard schreibt nichts, Laden, 504/502 überschreiben nichts, nur gewählte Felder, zwei Geräte, Fehler beim Speichern, je Person getrennt), `dienstplaner/src/meineAnzeige.test.ts`, `dienstplaner/src/EinstellungenSeite.meineAnzeige.test.tsx`, `dienstplaner/src/App.test.tsx`; von Hand bleiben echte zwei Geräte und ChurchTools mit Dateirechten (Personen-Datei `dienstplaner_anzeige.json`)
 - **Historie:** Live-Ansicht 2, L4-5 (23.11.2026, A15, T7)
 
 </details>

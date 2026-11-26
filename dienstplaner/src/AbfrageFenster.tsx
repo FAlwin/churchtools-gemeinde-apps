@@ -99,7 +99,7 @@ const zufallsId = (): string =>
  * laufende Abfrage (auch eine, die erst öffnet), zeigt es ihren **Stand**; sonst das Formular zum **Starten**. Eine Abfrage
  * je Dienstgruppe zur Zeit.
  *
- * **Hausregeln des Speichers** (wie `EinstellungenFenster`): Gelesen wird beim Öffnen frisch. Ein Lesefehler sperrt Starten
+ * **Hausregeln des Speichers** (wie `EinstellungenSeite`): Gelesen wird beim Öffnen frisch. Ein Lesefehler sperrt Starten
  * und Beenden (es gälte sonst ein „keine Abfrage“, das nicht stimmt). Ein **unlesbarer** Wert wird nie überschrieben – er kann
  * aus einer neueren Fassung stammen. Hat inzwischen ein anderer gespeichert, wird nichts überschrieben und der neue Stand
  * erscheint (hat dort jemand eine Abfrage gestartet, springt das Fenster auf deren Stand). Es wird nie automatisch
@@ -297,7 +297,7 @@ export function AbfrageFenster({
           setProblem(abfragenFehlerText('konflikt', false));
           return false;
         }
-        // Wie `EinstellungenFenster`: der neue Stand, nichts überschrieben – auch ein unlesbarer bleibt unangetastet.
+        // Wie `EinstellungenSeite`: der neue Stand, nichts überschrieben – auch ein unlesbarer bleibt unangetastet.
         const jetzt = r.jetzt;
         const inhalt = jetzt ? abfragenAus(jetzt.inhalt) : null;
         setze(

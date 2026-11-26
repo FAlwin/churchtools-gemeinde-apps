@@ -184,7 +184,7 @@ describe('Reiter des Dienstplaners (E3-1)', () => {
     expect(leiste.closest('header')).toBeNull();
   });
 
-  it('„Einstellungen“: letzter Reiter, öffnet das Fenster – Planer dürfen ändern, andere nur ansehen (L4-2)', async () => {
+  it('„Einstellungen“: letzter Reiter, öffnet die Seite – Planer dürfen ändern, andere nur ansehen (L4-2)', async () => {
     breite(false);
     laden.mockResolvedValue(start([3]));
     const planer = render(<App />);
@@ -193,6 +193,9 @@ describe('Reiter des Dienstplaners (E3-1)', () => {
     expect(knoepfe[knoepfe.length - 1].textContent).toBe('Einstellungen');
     fireEvent.click(knoepfe[knoepfe.length - 1]);
     expect(await screen.findByRole('radiogroup', { name: 'Live-Ansicht – für alle' })).toBeTruthy();
+    // „Speichern“ steht in der Leiste – und die gibt es erst, wenn etwas geändert ist.
+    expect(screen.queryByRole('button', { name: 'Speichern' })).toBeNull();
+    fireEvent.click(screen.getByRole('radio', { name: /Von Anfang an klicken/ }));
     expect(screen.getByRole('button', { name: 'Speichern' })).toBeTruthy();
     planer.unmount();
 
@@ -242,6 +245,178 @@ describe('Reiter des Dienstplaners (E3-1)', () => {
     render(<App />);
     await screen.findByRole('button', { name: 'Erneut versuchen' });
     expect(screen.queryByRole('navigation', { name: 'Bereiche' })).toBeNull();
+  });
+});
+
+describe('Einstellungen als Seite (V-6)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.location.hash = '';
+  });
+  const bereiche = () => screen.findByRole('navigation', { name: 'Bereiche' });
+  const reiter = async (name: string) =>
+    within(await bereiche()).getByRole<HTMLButtonElement>('button', { name });
+  const funk = () => screen.findByRole('radiogroup', { name: 'Live-Ansicht – für alle' });
+  const radio = (label: RegExp) => screen.getByRole<HTMLInputElement>('radio', { name: label });
+  const leiste = () => screen.queryByRole('group', { name: 'Noch nicht gespeichert' });
+  const frage = () => screen.queryByRole('alertdialog', { name: 'Änderungen verwerfen?' });
+  /** Öffnet die Seite als Planer und ändert die Betriebsart – danach ist etwas ungespeichert. */
+  async function geaendert() {
+    breite(false);
+    laden.mockResolvedValue(start([3]));
+    render(<App />);
+    fireEvent.click(await reiter('Einstellungen'));
+    await funk();
+    fireEvent.click(radio(/Von Anfang an klicken/));
+    expect(leiste()).not.toBeNull();
+  }
+
+  it('der Reiter öffnet die Seite unter #/einstellungen und ist markiert – ohne Startseite, ohne „Hallo“, ohne Termine zu laden', async () => {
+    breite(false);
+    laden.mockResolvedValue(start([3]));
+    termineLaden.mockClear();
+    window.location.hash = '#/einstellungen';
+    render(<App />);
+    await funk();
+    expect(screen.getByRole('heading', { level: 2, name: 'Einstellungen' })).toBeTruthy();
+    expect(screen.queryByText('Hallo Alwin')).toBeNull();
+    // Keine Karte der Startseite („Planen“ mit den Dienstgruppen) und kein anderer Reiter-Inhalt.
+    expect(screen.queryByRole('region', { name: 'Planen' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Dienste' })).toBeNull();
+    expect((await reiter('Einstellungen')).getAttribute('aria-pressed')).toBe('true');
+    expect((await reiter('Start')).getAttribute('aria-pressed')).toBe('false');
+    expect(termineLaden).not.toHaveBeenCalled();
+    // Von dort zurück auf Start: jetzt kommen die Termine und der Gruß.
+    fireEvent.click(await reiter('Start'));
+    expect(await screen.findByText('Hallo Alwin')).toBeTruthy();
+    expect(termineLaden).toHaveBeenCalledTimes(1);
+    expect((await reiter('Einstellungen')).getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('Reiter „Einstellungen“ per Klick: Adresse #/einstellungen, auch am Handy', async () => {
+    breite(true);
+    laden.mockResolvedValue(start([3]));
+    render(<App />);
+    fireEvent.click(await reiter('Einstellungen'));
+    await funk();
+    expect(window.location.hash).toBe('#/einstellungen');
+    expect(screen.queryByText('Hallo Alwin')).toBeNull();
+  });
+
+  it('Reiterklick ohne Änderungen: kein Rückfrage-Fenster, es geht direkt', async () => {
+    breite(false);
+    laden.mockResolvedValue(start([3]));
+    render(<App />);
+    fireEvent.click(await reiter('Einstellungen'));
+    await funk();
+    fireEvent.click(await reiter('Dienste'));
+    expect(await screen.findByRole('region', { name: 'Dienste' })).toBeTruthy();
+    expect(window.location.hash).toBe('#/termine');
+    expect(frage()).toBeNull();
+  });
+
+  it('Reiterklick mit Änderungen – „Abbrechen“: bleibt auf der Seite, die Änderung bleibt', async () => {
+    await geaendert();
+    fireEvent.click(await reiter('Dienste'));
+    expect(await screen.findByRole('alertdialog', { name: 'Änderungen verwerfen?' })).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Die Einstellungen sind noch nicht gespeichert. Beim Wechsel gehen die Änderungen verloren.',
+      ),
+    ).toBeTruthy();
+    expect(window.location.hash).toBe('#/einstellungen');
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    await waitFor(() => expect(frage()).toBeNull());
+    expect(window.location.hash).toBe('#/einstellungen');
+    expect(radio(/Von Anfang an klicken/).checked).toBe(true);
+    expect(leiste()).not.toBeNull();
+  });
+
+  it('Reiterklick mit Änderungen – „Verwerfen und wechseln“: geht zum Reiter, die Änderung ist weg', async () => {
+    await geaendert();
+    fireEvent.click(await reiter('Dienste'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Verwerfen und wechseln' }));
+    expect(await screen.findByRole('region', { name: 'Dienste' })).toBeTruthy();
+    expect(window.location.hash).toBe('#/termine');
+    expect(frage()).toBeNull();
+    // Wieder auf die Seite: frisch gelesen, nichts ungespeichert, keine Rückfrage beim nächsten Wechsel.
+    fireEvent.click(await reiter('Einstellungen'));
+    await funk();
+    expect(radio(/Bis Beginn/).checked).toBe(true);
+    expect(leiste()).toBeNull();
+    fireEvent.click(await reiter('Start'));
+    expect(await screen.findByText('Hallo Alwin')).toBeTruthy();
+    expect(frage()).toBeNull();
+  });
+
+  it('„Zurück“ weg von der Seite ohne Änderungen: kein Rückfrage-Fenster', async () => {
+    breite(false);
+    laden.mockResolvedValue(start([3]));
+    window.location.hash = '#/termine';
+    render(<App />);
+    fireEvent.click(await reiter('Einstellungen'));
+    await funk();
+    window.location.hash = '#/termine';
+    expect(await screen.findByRole('region', { name: 'Dienste' })).toBeTruthy();
+    expect(frage()).toBeNull();
+  });
+
+  it('„Zurück“ mit Änderungen – „Abbrechen“: Adresse zurückgesetzt, genau eine Rückfrage (keine Schleife), Seite bleibt', async () => {
+    await geaendert();
+    // Was „Zurück“ im Browser tut: die Adresse wechselt weg von #/einstellungen.
+    window.location.hash = '#/termine';
+    expect(await screen.findByRole('alertdialog', { name: 'Änderungen verwerfen?' })).toBeTruthy();
+    // Das Zurücksetzen löst selbst ein `hashchange` aus – das darf nicht noch einmal fragen und nichts umschalten.
+    await waitFor(() => expect(window.location.hash).toBe('#/einstellungen'));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.getAllByRole('alertdialog', { name: 'Änderungen verwerfen?' })).toHaveLength(1);
+    expect(window.location.hash).toBe('#/einstellungen');
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    await waitFor(() => expect(frage()).toBeNull());
+    expect(radio(/Von Anfang an klicken/).checked).toBe(true);
+    expect(leiste()).not.toBeNull();
+    expect(screen.queryByRole('region', { name: 'Dienste' })).toBeNull();
+    // Und ein zweites „Zurück“ fragt wieder.
+    window.location.hash = '#/termine';
+    expect(await screen.findByRole('alertdialog', { name: 'Änderungen verwerfen?' })).toBeTruthy();
+  });
+
+  it('„Zurück“ mit Änderungen – „Verwerfen und wechseln“: geht zur Zielseite (nicht zum Start), ohne weitere Rückfrage', async () => {
+    await geaendert();
+    window.location.hash = '#/termine';
+    fireEvent.click(await screen.findByRole('button', { name: 'Verwerfen und wechseln' }));
+    expect(await screen.findByRole('region', { name: 'Dienste' })).toBeTruthy();
+    expect(window.location.hash).toBe('#/termine');
+    await new Promise((r) => setTimeout(r, 50));
+    expect(frage()).toBeNull();
+    expect(screen.getByRole('region', { name: 'Dienste' })).toBeTruthy();
+  });
+
+  it('Neu laden mit Änderungen: der Browser-Hinweis kommt – ohne Änderungen nicht, und nicht mehr nach dem Verlassen', async () => {
+    const haelt = () => {
+      const e = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(e);
+      return e.defaultPrevented;
+    };
+    await geaendert();
+    expect(haelt()).toBe(true);
+    fireEvent.click(await reiter('Dienste'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Verwerfen und wechseln' }));
+    await screen.findByRole('region', { name: 'Dienste' });
+    expect(haelt()).toBe(false);
+  });
+
+  it('ohne Planer-Recht: Seite zum Ansehen, nie eine Leiste, nie eine Rückfrage', async () => {
+    breite(false);
+    laden.mockResolvedValue(start([]));
+    render(<App />);
+    fireEvent.click(await reiter('Einstellungen'));
+    await funk();
+    fireEvent.click(radio(/Von Anfang an klicken/));
+    expect(leiste()).toBeNull();
+    fireEvent.click(await reiter('Dienste'));
+    expect(await screen.findByRole('region', { name: 'Dienste' })).toBeTruthy();
+    expect(frage()).toBeNull();
   });
 });
 

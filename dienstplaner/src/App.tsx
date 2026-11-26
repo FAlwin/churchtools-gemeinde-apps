@@ -30,6 +30,7 @@ import { gruppenIdsDerDienste } from '@shared/dienstplan/abfrageAutomatik';
 import { Termine, type TermineZustand } from './Termine';
 import { ladeTermine, ladeZeitraum, MAX_WOCHEN, WOCHEN_JE_SCHRITT } from './ladeTermine';
 import {
+  ADRESSE_EINSTELLUNGEN,
   ADRESSE_VORLAGEN,
   adresseFuer,
   adresseFuerTermin,
@@ -42,6 +43,7 @@ import {
   terminAusAdresse,
   liveAusAdresse,
   adresseFuerLive,
+  istEinstellungenAdresse,
   vorlagenAusAdresse,
   type ReiterId,
 } from './reiter';
@@ -57,7 +59,8 @@ import { leseAuswahl, merkeAuswahl } from './auswahl';
 import { gemeindeZeitzone, heuteImKalender } from '@shared/ct/zeit';
 import { entwurfAnschluss } from './ladeEntwuerfe';
 import type { AbfrageAnschluss } from './AbfrageFenster';
-import { EinstellungenFenster } from './EinstellungenFenster';
+import { EinstellungenSeite } from './EinstellungenSeite';
+import { ConfirmDialog } from '@ui/fenster/ConfirmDialog';
 import { MeineAnzeigeAnschluss } from './MeineAnzeigeAnschluss';
 
 /** Solange keine Termine da sind – ein fester Wert, damit `useVertretung` nicht bei jedem Zeichnen neu rechnet. */
@@ -71,8 +74,10 @@ const KEINE_ZEILEN: TerminZeile[] = [];
 export function App() {
   const [zustand, setZustand] = useState<SeitenZustand>({ art: 'laedt' });
   const [start, setStart] = useState<Start | null>(null);
-  // „Einstellungen“ (L4-2, R13): der letzte Reiter öffnet ein Fenster.
-  const [einstellungenOffen, setEinstellungenOffen] = useState(false);
+  // „Einstellungen“ (V-6): der letzte Reiter öffnet die Seite `#/einstellungen`. Hat sie Ungespeichertes (die Seite meldet
+  // es), fragen Reiterklick und „Zurück“ nach: `ziel` ist die Adresse, zu der es dann ginge.
+  const einstellungenGeaendert = useRef(false);
+  const [ziel, setZiel] = useState<string | null>(null);
   // Der Platz der Lupe im Seitenkopf (R7) – Planen hängt „Person hervorheben“ dort ein.
   const [lupeOrt, setLupeOrt] = useState<HTMLElement | null>(null);
   const [hash, setHash] = useState(() => window.location.hash);
@@ -104,10 +109,31 @@ export function App() {
 
   useEffect(laden, [laden]);
 
+  // Die zuletzt angenommene Adresse – `hashchange` kennt die alte nicht mehr.
+  const angenommen = useRef(window.location.hash);
   useEffect(() => {
-    const folgen = () => setHash(window.location.hash);
+    const folgen = () => {
+      const neu = window.location.hash;
+      // „Zurück“ (oder eine andere Adresse) weg von `#/einstellungen` mit Ungespeichertem: Adresse zurücksetzen und fragen.
+      // Das Zurücksetzen löst selbst ein `hashchange` aus – das zeigt wieder auf `#/einstellungen`, ist also kein
+      // „Weg von“ und fragt nicht noch einmal (keine Schleife). `angenommen` bleibt dabei auf der Einstellungen-Seite.
+      if (
+        istEinstellungenAdresse(angenommen.current) &&
+        !istEinstellungenAdresse(neu) &&
+        einstellungenGeaendert.current
+      ) {
+        window.location.hash = angenommen.current;
+        setZiel(neu);
+        return;
+      }
+      angenommen.current = neu;
+      setHash(neu);
+    };
     window.addEventListener('hashchange', folgen);
     return () => window.removeEventListener('hashchange', folgen);
+  }, []);
+  const einstellungenMelden = useCallback((g: boolean) => {
+    einstellungenGeaendert.current = g;
   }, []);
 
   // Der Anschluss zu den Abfragen – einmal gebaut für Startseite, Planen und Einstellungen (R-2 bis R-4); gebraucht wird er
@@ -151,7 +177,10 @@ export function App() {
   // Die Seite „Ablaufvorlagen“ (E10-V3a): eine Unterseite von „Planen“, nur für den, der „Planen“ sieht. Ohne das Recht
   // gilt die Adresse als unbekannt und führt zum Start.
   const vorlagenAdresse = darfPlanen && terminId === null ? vorlagenAusAdresse(hash) : null;
-  const hauptSicht = terminId === null && vorlagenAdresse === null;
+  // Die Einstellungen-Seite (V-6): `reiterAusAdresse` kennt die Adresse nicht und liefert „Start“ – darum hier zuerst
+  // fragen. Auf der Seite feuert KEIN Zweig der Startseite (nicht zeigen, keine Termine laden, kein „Hallo“, keine Vertretung).
+  const einstellungenSeite = terminId === null && istEinstellungenAdresse(hash);
+  const hauptSicht = terminId === null && vorlagenAdresse === null && !einstellungenSeite;
   const herkunft = useRef<ReiterId>('start');
   // Die genaue Adresse, von der man kam – „zurück“ aus der Termin-Ansicht führt in Planen mit einer Gruppe (Wunsch 7)
   // wieder dorthin, nicht in die gewohnte Ansicht.
@@ -218,10 +247,10 @@ export function App() {
 
   // Start, Termine und Planen zeigen dieselben Termine – geladen wird einmal, wenn einer davon offen ist.
   useEffect(() => {
-    if (aktiv !== 'abwesenheiten' && start && termine === null) {
+    if (aktiv !== 'abwesenheiten' && !einstellungenSeite && start && termine === null) {
       termineLaden(start, wochen);
     }
-  }, [aktiv, start, termine, wochen, termineLaden]);
+  }, [aktiv, einstellungenSeite, start, termine, wochen, termineLaden]);
   // Was wirklich geladen ist – nach einem gescheiterten Nachladen steht `wochen` schon einen Schritt weiter.
   const geladen = termine?.art === 'fertig' ? termine.wochen : wochen;
   // „Weitere Termine laden“ – in Termine und Planen derselbe Schritt. Gezählt wird ab dem Geladenen: Schlägt
@@ -233,8 +262,21 @@ export function App() {
     termineLaden(start, w, true);
   };
 
-  const wechseln = (id: ReiterId) => {
-    window.location.hash = adresseFuer(id);
+  // Weg von der Einstellungen-Seite mit Ungespeichertem: erst fragen. Sonst direkt.
+  const gehen = (adresse: string) => {
+    if (istEinstellungenAdresse(window.location.hash) && einstellungenGeaendert.current) {
+      setZiel(adresse);
+    } else {
+      window.location.hash = adresse;
+    }
+  };
+  const wechseln = (id: ReiterId) => gehen(adresseFuer(id));
+  // „Verwerfen und wechseln“: die Seite verliert ihren Stand mit dem Gehen – erst dann gilt sie als ungeändert.
+  const verwerfenUndGehen = () => {
+    const adresse = ziel;
+    setZiel(null);
+    einstellungenGeaendert.current = false;
+    if (adresse !== null) window.location.hash = adresse;
   };
   const terminZeigen = (id: number) => {
     window.location.hash = adresseFuerTermin(id);
@@ -266,7 +308,7 @@ export function App() {
     start,
     zeilen: termineSicht?.art === 'fertig' ? termineSicht.zeilen : KEINE_ZEILEN,
     heute: heuteImKalender(),
-    aktiv: aktiv === 'start' && terminId === null,
+    aktiv: aktiv === 'start' && terminId === null && !einstellungenSeite,
     onGeaendert: () => {
       if (start) termineLaden(start, geladen, true);
     },
@@ -288,10 +330,15 @@ export function App() {
           zustand={zustand}
           bereiche={bereiche}
           handy={handy}
-          // „Einstellungen“ ist der letzte Reiter (R13) – alle sehen ihn, ändern dürfen Planer (das Fenster prüft es).
+          // „Einstellungen“ ist der letzte Reiter (R13) – alle sehen ihn, ändern dürfen Planer (die Seite prüft es).
           einstellungen={
             start
-              ? { onOeffnen: () => setEinstellungenOffen(true), offen: einstellungenOffen }
+              ? {
+                  onOeffnen: () => {
+                    window.location.hash = ADRESSE_EINSTELLUNGEN;
+                  },
+                  offen: einstellungenSeite,
+                }
               : undefined
           }
           // Die Lupe „Person hervorheben“ (R7/E5) sitzt rechts neben den Reitern – nur in Planen. Planen hängt sie in diesen
@@ -301,8 +348,9 @@ export function App() {
               <span ref={setLupeOrt} style={{ display: 'contents' }} />
             ) : undefined
           }
-          // „Hallo …“ nur auf Start – das entscheidet der Rahmen (erster Reiter aktiv); in der Termin-Ansicht nie.
-          gruss={terminId === null}
+          // „Hallo …“ nur auf Start – das entscheidet der Rahmen (erster Reiter aktiv); in der Termin-Ansicht und auf der
+          // Einstellungen-Seite nie (dort ist `aktiv` „Start“, weil die Adresse unbekannt ist).
+          gruss={terminId === null && !einstellungenSeite}
           onNochmal={laden}
         >
           {start && (
@@ -432,8 +480,8 @@ export function App() {
                   abfrageGruppe={abfrageGruppe}
                 />
               )}
-              {start && einstellungenOffen && (
-                <EinstellungenFenster
+              {start && einstellungenSeite && (
+                <EinstellungenSeite
                   darfAendern={darfPlanen}
                   ich={{ personId: start.ichId, name: start.vorname }}
                   abfragen={{
@@ -446,7 +494,16 @@ export function App() {
                       gruppenIds: (id) => gruppenIdsDerDienste(start.dienste.values(), id),
                     },
                   }}
-                  onSchliessen={() => setEinstellungenOffen(false)}
+                  onGeaendert={einstellungenMelden}
+                />
+              )}
+              {ziel !== null && (
+                <ConfirmDialog
+                  title="Änderungen verwerfen?"
+                  message="Die Einstellungen sind noch nicht gespeichert. Beim Wechsel gehen die Änderungen verloren."
+                  confirmLabel="Verwerfen und wechseln"
+                  onConfirm={verwerfenUndGehen}
+                  onCancel={() => setZiel(null)}
                 />
               )}
             </MeineAnzeigeAnschluss>

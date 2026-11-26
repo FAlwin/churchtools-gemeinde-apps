@@ -1,15 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { STANDARD_BETRIEBSART, type Betriebsart } from '@shared/ct/liveAgenda';
 import { einstellungenAus, type EinstellungenStand } from '@shared/dienstplan/liveEinstellungen';
 import { ladeEinstellungen, speichereEinstellungen } from './ladeEinstellungen';
 import { useMeineAnzeigeAendern, type MeineAnzeige } from './meineAnzeige';
-import { BETRIEBSART_WAHL, einstellungenFehlerText } from './einstellungenTexte';
+import {
+  aenderungenText,
+  anzahlAenderungen,
+  BETRIEBSART_WAHL,
+  einstellungenFehlerText,
+} from './einstellungenTexte';
 import { ErinnerungsplanAbschnitt } from './ErinnerungsplanAbschnitt';
 import { useErinnerungsplan, type ErinnerungenAnschluss } from './useErinnerungsplan';
-import styles from './EinstellungenFenster.module.scss';
+import styles from './EinstellungenSeite.module.scss';
 
 interface Props {
   /** Darf ändern, wer plant – die App prüft es (ChurchTools prüft zusätzlich die Rechte der Kategorie). */
@@ -20,27 +24,41 @@ interface Props {
    * Ohne ihn (oder ohne Planer-Recht) gibt es den Abschnitt nicht.
    */
   abfragen?: ErinnerungenAnschluss;
-  onSchliessen: () => void;
+  /**
+   * Meldet der App, ob es ungespeicherte Änderungen gibt (Leiste sichtbar) – die App fragt damit beim Reiterklick und bei
+   * „Zurück“ im Browser nach. Beim Verlassen der Seite kommt `false`.
+   */
+  onGeaendert?: (geaendert: boolean) => void;
   /** Nur für Tests. */
   lesen?: typeof ladeEinstellungen;
   speichern?: typeof speichereEinstellungen;
 }
 
 /**
- * **Einstellungen** (Live-Ansicht 2, L4-2, Alwin 23.11.2026; R13 – der letzte Reiter öffnet dieses Fenster): bisher
- * „Live-Ansicht – für alle“ mit den drei Betriebsarten. Alle sehen die Wahl, **ändern dürfen nur Planer**. Gelesen wird beim
- * Öffnen frisch; ein Lesefehler sperrt das Speichern (es gilt der Standard, nichts wird auf „kein Wert“ hin überschrieben).
- * Hat inzwischen ein anderer gespeichert, wird nichts überschrieben: Das Fenster zeigt dann dessen Stand.
+ * **Einstellungen als Seite** (V-6, Entwurf V v2 Abschnitt 4; Adresse `#/einstellungen`, vorher ein Fenster – L4-2, R13: der
+ * letzte Reiter öffnet sie). Von oben: **„Meine Anzeige“** (L4-5, A15: jeder stellt für sich ein, was er sehen will – gilt je
+ * Person auf allen Geräten, `MeineAnzeigeAnschluss`; die Schalter wirken sofort, zählen nie als Änderung; scheitert
+ * ChurchTools, bleibt die Wahl auf diesem Gerät stehen und wird nachgeholt), dann **„Live-Ansicht – für alle“** (die drei
+ * Betriebsarten; alle sehen die Wahl, **ändern dürfen nur Planer**), dann der Abschnitt „Verfügbarkeit & Erinnerungen“ (nur
+ * Planer, `ErinnerungsplanAbschnitt`).
  *
- * **Meine Anzeige** (L4-5, A15): darunter stellt **jeder** für sich ein, was er sehen will – gilt je Person auf allen Geräten
- * (Personen-Datei, `MeineAnzeigeAnschluss`). Die Schalter wirken sofort (kein „Speichern“); scheitert ChurchTools, bleibt die
- * Wahl auf diesem Gerät stehen und wird nachgeholt – der Hinweis sagt es leise. Der obere Teil bleibt Planern vorbehalten.
+ * **Eine Leiste unten statt Fenster-Knöpfen**, nur für Planer und nur, solange es Ungespeichertes gibt: „N Änderung(en) nicht
+ * gespeichert · Verwerfen · Speichern“. N zählt `anzahlAenderungen` (Live-Ansicht, Art der Abfrage, Erinnerungsplan – je eine).
+ * Nach dem Speichern schließt nichts mehr: Der Stand ist nachgezogen, die Leiste verschwindet. Gelesen wird beim Öffnen frisch;
+ * ein Lesefehler sperrt das Speichern (es gilt der Standard, nichts wird auf „kein Wert“ hin überschrieben). Hat inzwischen
+ * ein anderer gespeichert, wird nichts überschrieben: Die Seite zeigt dann dessen Stand.
+ *
+ * **Wege aus der Seite:** Reiterklick und „Zurück“ fragt die App ab (`onGeaendert`), Neuladen/Tab schließen der
+ * `beforeunload`-Hinweis des Browsers (hier, nur solange es Änderungen gibt). Den Gruppenwechsel im Erinnerungs-Abschnitt
+ * fragt der Abschnitt selbst ab – nicht doppelt. **„Einrichten …“** (Fenster über der Seite) liest den Stand danach neu, was
+ * ungespeicherte Plan-/Art-Änderungen still verwerfen würde; der Knopf ist aber gesperrt, solange es welche gibt („Erst
+ * speichern, dann einrichten“) – so geht dort nichts verloren. Die Betriebsart ist davon nicht berührt.
  */
-export function EinstellungenFenster({
+export function EinstellungenSeite({
   darfAendern,
   ich,
   abfragen,
-  onSchliessen,
+  onGeaendert,
   lesen = ladeEinstellungen,
   speichern = speichereEinstellungen,
 }: Props) {
@@ -80,6 +98,31 @@ export function EinstellungenFenster({
 
   const gesperrt = !darfAendern || stand === null || stand.fehler !== null;
 
+  // Was ungespeichert ist – nur Planer, nur mit gelesenem Stand. `wahl` kann sich nur bei `!gesperrt` ändern.
+  const liveGeaendert = !gesperrt && wahl !== stand.betriebsart;
+  const anzahl = anzahlAenderungen({
+    live: liveGeaendert,
+    art: darfAendern && erinnerungen.artGeaendert,
+    plan: darfAendern && erinnerungen.planGeaendert,
+  });
+  const zeigeLeiste = darfAendern && anzahl > 0;
+
+  useEffect(() => {
+    onGeaendert?.(zeigeLeiste);
+    return () => onGeaendert?.(false);
+  }, [zeigeLeiste, onGeaendert]);
+
+  // Neu laden oder Tab schließen mit Ungespeichertem: der Hinweis des Browsers – nur solange es Änderungen gibt.
+  useEffect(() => {
+    if (!zeigeLeiste) return;
+    const warnen = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warnen);
+    return () => window.removeEventListener('beforeunload', warnen);
+  }, [zeigeLeiste]);
+
   /** Speichert die Betriebsart – `null`: geklappt, sonst der Satz für den Planer. */
   const betriebsartSpeichern = async (aktuell: EinstellungenStand): Promise<string | null> => {
     try {
@@ -117,17 +160,14 @@ export function EinstellungenFenster({
   };
 
   /**
-   * **Ein „Speichern“ für das ganze Fenster** (R1), aber nur, was sich geändert hat: die Betriebsart und der Erinnerungsplan
+   * **Ein „Speichern“ für die ganze Seite** (R1), aber nur, was sich geändert hat: die Betriebsart und der Erinnerungsplan
    * der gewählten Dienstgruppe sind zwei getrennte Werte. Scheitert einer, sagt die Meldung welcher; der andere bleibt
    * gespeichert (sein Stand ist nachgezogen, ein zweiter Klick schreibt ihn nicht noch einmal). Nichts wird wiederholt.
    */
   const speichernKlick = async () => {
     if (stand === null) return;
     const betriebsartNoetig = wahl !== stand.betriebsart;
-    if (!betriebsartNoetig && !erinnerungen.geaendert) {
-      onSchliessen();
-      return;
-    }
+    if (!betriebsartNoetig && !erinnerungen.geaendert) return;
     setArbeitet(true);
     setProblem(null);
     try {
@@ -144,10 +184,8 @@ export function EinstellungenFenster({
         if (r.art === 'ok') gespeichertes.push(`Erinnerungen für ${name}`);
         else if (r.art === 'fehler') probleme.push(`Erinnerungen für ${name}: ${r.text}`);
       }
-      if (probleme.length === 0) {
-        onSchliessen();
-        return;
-      }
+      // Alles geklappt: nichts zu melden, die Leiste verschwindet von selbst (der Stand ist nachgezogen).
+      if (probleme.length === 0) return;
       setProblem(
         [
           ...probleme,
@@ -159,68 +197,88 @@ export function EinstellungenFenster({
     }
   };
 
+  /** Alles zurück auf den gelesenen Stand – die Betriebsart hier, Plan und Art im Erinnerungs-Hook. */
+  const verwerfen = () => {
+    if (stand) setWahl(stand.betriebsart);
+    erinnerungen.verwerfen();
+    setProblem(null);
+  };
+
+  const meldung = problem && (
+    <p className={styles.meldung} role="alert">
+      {problem}
+    </p>
+  );
+
   return (
-    <Sheet
-      title="Einstellungen"
-      onClose={onSchliessen}
-      mittel
-      beschaeftigt={arbeitet}
-      cancelLabel={darfAendern ? 'Schließen' : null}
-      knoepfe={
-        stand?.fehler ? (
-          <FensterKnopf onClick={laden}>Nochmal versuchen</FensterKnopf>
-        ) : darfAendern ? (
-          <FensterKnopf disabled={gesperrt || arbeitet} onClick={() => void speichernKlick()}>
-            {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
-          </FensterKnopf>
-        ) : (
-          // Wer nicht planen darf, hat oben nichts zu speichern – „Meine Anzeige“ wirkt sofort.
-          <FensterKnopf onClick={onSchliessen}>Fertig</FensterKnopf>
-        )
-      }
-    >
-      <h3 className={styles.titel}>Live-Ansicht – für alle</h3>
-      <p className={styles.leise}>
-        {darfAendern ? 'Ändern dürfen Planer. ' : 'Ändern dürfen nur Planer. '}
-        Wer weiterklicken darf, steht in ChurchTools am Dienst („Erlaubt, die Live-Agenda zu
-        steuern“).
-      </p>
-      {stand === null ? (
-        <p className={styles.leise} role="status">
-          Wird geladen …
-        </p>
-      ) : (
-        <div className={styles.wahl} role="radiogroup" aria-label="Live-Ansicht – für alle">
-          {BETRIEBSART_WAHL.map((w) => (
-            <label key={w.wert}>
-              <input
-                type="radio"
-                name="betriebsart"
-                checked={wahl === w.wert}
-                disabled={gesperrt || arbeitet}
-                onChange={() => setWahl(w.wert)}
-              />
-              <span>
-                {w.label}
-                <small>{w.erklaerung}</small>
-              </span>
-            </label>
-          ))}
-        </div>
-      )}
-      {stand?.fehler && (
-        <p className={styles.fehler} role="alert">
-          {einstellungenFehlerText(stand.fehler, true)}
-        </p>
-      )}
-      {problem && (
-        <p className={styles.fehler} role="alert">
-          {problem}
-        </p>
-      )}
-      {zeigeErinnerungen && <ErinnerungsplanAbschnitt z={erinnerungen} gesperrt={arbeitet} />}
+    <section className={styles.seite} aria-labelledby="einstellungen-titel">
+      <h2 id="einstellungen-titel" className={styles.seitenTitel}>
+        Einstellungen
+      </h2>
       <MeineAnzeigeTeil anzeige={anzeige} setzen={anzeigeSetzen} abgleichFehler={abgleichFehler} />
-    </Sheet>
+      <section aria-labelledby="live-titel" className={styles.abschnitt}>
+        <h3 id="live-titel" className={styles.titel}>
+          Live-Ansicht – für alle
+        </h3>
+        <p className={styles.leise}>
+          {darfAendern ? 'Ändern dürfen Planer. ' : 'Ändern dürfen nur Planer. '}
+          Wer weiterklicken darf, steht in ChurchTools am Dienst („Erlaubt, die Live-Agenda zu
+          steuern“).
+        </p>
+        {stand === null ? (
+          <p className={styles.leise} role="status">
+            Wird geladen …
+          </p>
+        ) : (
+          <div className={styles.wahl} role="radiogroup" aria-label="Live-Ansicht – für alle">
+            {BETRIEBSART_WAHL.map((w) => (
+              <label key={w.wert}>
+                <input
+                  type="radio"
+                  name="betriebsart"
+                  checked={wahl === w.wert}
+                  disabled={gesperrt || arbeitet}
+                  onChange={() => setWahl(w.wert)}
+                />
+                <span>
+                  {w.label}
+                  <small>{w.erklaerung}</small>
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
+        {stand?.fehler && (
+          <>
+            <p className={styles.fehler} role="alert">
+              {einstellungenFehlerText(stand.fehler, true)}
+            </p>
+            <FensterKnopf art="zweit" onClick={laden}>
+              Nochmal versuchen
+            </FensterKnopf>
+          </>
+        )}
+      </section>
+      {zeigeErinnerungen && <ErinnerungsplanAbschnitt z={erinnerungen} gesperrt={arbeitet} />}
+      {zeigeLeiste ? (
+        // Die Leiste klebt unten und bleibt beim Scrollen sichtbar – gestaltet nach `.sendeLeiste` in `Planen.module.scss`,
+        // Markup nach `useEinteilen.tsx` („N Entwürfe noch nicht gesendet“). Bewusst lokal gebaut, kein geteilter Baustein.
+        <div className={styles.leiste} role="group" aria-label="Noch nicht gespeichert">
+          {meldung}
+          <span role="status">{aenderungenText(anzahl)}</span>
+          <span className={styles.leisteKnoepfe}>
+            <FensterKnopf art="loeschen" disabled={arbeitet} onClick={verwerfen}>
+              Verwerfen
+            </FensterKnopf>
+            <FensterKnopf disabled={arbeitet} onClick={() => void speichernKlick()}>
+              {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
+            </FensterKnopf>
+          </span>
+        </div>
+      ) : (
+        meldung
+      )}
+    </section>
   );
 }
 
@@ -247,7 +305,7 @@ function MeineAnzeigeTeil({
   abgleichFehler: boolean;
 }) {
   return (
-    <section aria-labelledby="meine-anzeige-titel" className={styles.meine}>
+    <section aria-labelledby="meine-anzeige-titel" className={styles.abschnitt}>
       <h3 id="meine-anzeige-titel" className={styles.titel}>
         Meine Anzeige
       </h3>

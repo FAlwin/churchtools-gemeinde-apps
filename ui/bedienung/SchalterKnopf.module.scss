@@ -1,0 +1,22 @@
+// Eine Zeile mit Schalter: Beschriftung links, Schalter rechts, ohne Rand – sie steht in einem Kasten des Aufrufers.
+.zeile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 2px 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+    color: var(--text2);
+  }
+}

@@ -3,7 +3,7 @@
  * nach – in der Form, die an der Test-Instanz gemessen wurde (12.10.2026) –, damit die Seite ohne Instanz
  * zu sehen und zu bedienen ist. Seit A3 merkt sich die Demo auch, was geschrieben wird (Anlegen,
  * Einrichten, Termine), bis die Seite neu geladen wird. `?demo=leer` zeigt „keine Gruppen",
- * `?demo=fehler` den Fehlerfall, `?demo=einrichten` die Erweiterung vor dem Einrichten (keine Formular-Adresse), `?demo=admin` einen Gruppen-Admin (verschieben, endgültig löschen), `?demo=vertrauen` eine Vertrauensperson der Nachweise ohne „Berechtigungen verwalten“ (sieht die Seite „Nachweise“, kann nichts anlegen). Seit N1b gibt es zwei Nachweis-Arten (Führungszeugnis, JuLeiCa), `#/nachweise` zeigt sie. Wird nie mitgebaut (siehe `main.tsx`).
+ * `?demo=fehler` den Fehlerfall, `?demo=einrichten` die Erweiterung vor dem Einrichten (keine Formular-Adresse), `?demo=admin` einen Gruppen-Admin (verschieben, endgültig löschen), `?demo=vertrauen` eine Vertrauensperson der Nachweise ohne „Berechtigungen verwalten“ (sieht die Seite „Nachweise“, kann nichts anlegen). Seit N1b gibt es zwei Nachweis-Arten (Führungszeugnis, JuLeiCa), `#/nachweise` zeigt sie. Seit N3b zeigt die Lobpreisfreizeit (`#/v/46`, Vorbereiten) die Karte „Nachweise“ mit einer „Nur wenn“-Bedingung, der Worship-Workshop (`#/v/43`) eine kaputte. Wird nie mitgebaut (siehe `main.tsx`).
  *
  * Die Beschreibungen entstehen mit `einstellungenAlsText` – wie im Betrieb.
  */
@@ -465,7 +465,14 @@ function demoGruppen(): Map<number, G> {
       g(
         'Worship-Workshop',
         9,
-        beschreibung(tag(54, '10:00'), null, 'Gemeindesaal', fest(1500), 73),
+        // N3b: eine kaputte Bedingung (die Frage gibt es nicht mehr) und eine Art, die diese Person nicht sieht – beides zeigt
+        // die Karte „Nachweise“ mit Hinweis statt still zu brechen.
+        beschreibung(tag(54, '10:00'), null, 'Gemeindesaal', fest(1500), 73, {
+          nachweise: [
+            { artGruppeId: 61, fuer: 'nurWenn', feld: 'frage:gibtsnicht', antworten: ['Ja'] },
+            { artGruppeId: 99, fuer: 'alle' },
+          ],
+        }),
         { maxMembers: 20 },
         2,
       ),
@@ -542,6 +549,10 @@ function demoGruppen(): Map<number, G> {
               fristTage: 14,
               zweck: 'Lobpreisfreizeit [Nachname]',
             },
+            // N3b: Führungszeugnis nur fürs Team „Technik“ (Frage je Person), JuLeiCa aus – die Karte „Nachweise“ zeigt es.
+            nachweise: [
+              { artGruppeId: 61, fuer: 'nurWenn', feld: 'frage:bereich', antworten: ['Technik'] },
+            ],
           },
         ),
         {

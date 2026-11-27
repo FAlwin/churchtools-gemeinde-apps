@@ -20,6 +20,7 @@ import { STUFE_NACHWEIS } from '@shared/anmeldung/felder';
 import {
   NACHWEIS_SCHRITTE,
   nachweisArtSichern,
+  nachweisArtenKurz,
   nachweisArtenLesen,
   nachweisEinstieg,
   type NachweisEingabe,
@@ -654,6 +655,37 @@ describe('Lesen', () => {
       return await falsch.alleSeiten(pfad);
     });
     await expect(nachweisArtenLesen(11)).rejects.toMatchObject({ status: 503 });
+  });
+});
+
+describe('Arten in Kurzform (Karte „Nachweise“ der Veranstaltung, N3b)', () => {
+  it('Name ohne Präfix, Nummer, „fertig“ – nach Name sortiert, ohne ein einziges Mitglied zu lesen', async () => {
+    falsch.mitArt();
+    const b = falsch.gruppeAnlegen('Nachweis: JuLeiCa', nachweisNotiz({ ...E, gueltigJahre: 2 }));
+    const a = falsch.gruppeAnlegen('Nachweis: Führungszeugnis', nachweisNotiz(E));
+    falsch.gruppeAnlegen('Nachweis: Halb');
+    expect(await nachweisArtenKurz()).toEqual([
+      { id: a.id, name: 'Führungszeugnis', fertig: true },
+      { id: expect.any(Number), name: 'Halb', fertig: false },
+      { id: b.id, name: 'JuLeiCa', fertig: true },
+    ]);
+    expect(ct.ctAlleSeiten.mock.calls.some(([pfad]) => String(pfad).includes('/members'))).toBe(
+      false,
+    );
+    expect(falsch.aufrufe).toEqual([]);
+  });
+
+  it('keine Gruppenart „Nachweis“: leer', async () => {
+    expect(await nachweisArtenKurz()).toEqual([]);
+  });
+
+  it('ein vorübergehender Fehler beim Lesen wirft – nie „keine Art“', async () => {
+    falsch.mitArt();
+    falsch.gruppeAnlegen('Nachweis: X', nachweisNotiz(E));
+    ct.ctAlleSeiten.mockImplementation(async () => {
+      throw new ApiError(503, 'weg');
+    });
+    await expect(nachweisArtenKurz()).rejects.toMatchObject({ status: 503 });
   });
 });
 

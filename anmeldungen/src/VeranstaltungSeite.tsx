@@ -43,6 +43,8 @@ import { EinrichtenFenster } from './EinrichtenFenster';
 import { FreigebenFenster } from './FreigebenFenster';
 import { AnmeldeLinkKarte } from './AnmeldeLink';
 import { NachpruefungKarte, type NachpruefungStand } from './NachpruefungKarte';
+import { Karte, Zeile } from './VeranstaltungKarte';
+import { NachweiseKarte } from './NachweiseKarte';
 import { ablaeufeAbgleichen, ablaeufeLesen, type AblaufStand } from './ablaeufe';
 import { MailsFenster } from './MailsFenster';
 import { nachpruefungAus } from './nachpruefung';
@@ -56,7 +58,6 @@ import { ReiterLeiste } from '@ui/bedienung/ReiterLeiste';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { KopfLink } from '@ui/bedienung/KopfKnopf';
 import { MehrMenue } from '@ui/bedienung/MehrMenue';
-import { TextKnopf } from '@ui/bedienung/TextKnopf';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import type { Option } from '@ui/bedienung/OptionWaehlen';
 import type { Aenderung } from './Rueckgaengig';
@@ -112,38 +113,6 @@ type Fenster =
   | 'einrichten'
   | { preis: PreisFenster }
   | null;
-
-function Karte({
-  titel,
-  onBearbeiten,
-  knopf = 'Bearbeiten',
-  children,
-}: {
-  titel: string;
-  onBearbeiten?: () => void;
-  /** Beschriftung des Knopfs – „Ansehen“, wo auch ohne Recht etwas zu sehen ist (Formular, U1). */
-  knopf?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className={s.karte} aria-label={titel}>
-      <div className={s.kopf}>
-        <h2>{titel}</h2>
-        {onBearbeiten && <TextKnopf onClick={onBearbeiten}>{knopf}</TextKnopf>}
-      </div>
-      <dl className={v.kv}>{children}</dl>
-    </section>
-  );
-}
-
-function Zeile({ titel, children }: { titel: string; children: React.ReactNode }) {
-  return (
-    <>
-      <dt>{titel}</dt>
-      <dd>{children}</dd>
-    </>
-  );
-}
 
 /**
  * **Karte „Datenschutz“** (A4, Löschdatum seit A9-3a): Frist und das Datum, an dem ChurchTools die Anmeldungen entfernt –
@@ -875,6 +844,13 @@ export function VeranstaltungSeite({
                 heute={heute}
                 onBearbeiten={bearbeiten('mails')}
                 onEinrichten={darfMails ? () => setFenster('einrichten') : undefined}
+              />
+              <NachweiseKarte
+                id={id}
+                name={daten.name}
+                e={e}
+                darf={darf}
+                onGespeichert={gespeichert('Nachweise gespeichert.')}
               />
               <DatenschutzKarte
                 monate={e.loeschfristMonate}

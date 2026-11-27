@@ -136,3 +136,36 @@ löschen (mit **Rückgängig**).
 - **Historie:** U3 (23.11.2026, Entwurf `r2-u3-filter-ansichten-v1`)
 
 </details>
+
+### TF-ANM-06 · Veranstaltung: Karte „Nachweise“ einstellen
+
+**Das brauchst du:** Eine Veranstaltung mit Recht zum Bearbeiten, mindestens eine fertig eingerichtete Nachweis-Art
+(z. B. „Führungszeugnis“) und im Formular eine Frage mit festen Antworten (z. B. „Bereich“); für Schritt 7 ein zweites
+Konto ohne Recht zum Bearbeiten.
+
+**Das muss passieren:** Im Bereich **Vorbereiten** steht die Karte **Nachweise** mit einer Zeile je Art („alle
+Angemeldeten“, „nur wenn Bereich ist …“ oder „aus“). Im Fenster **Nachweise · Veranstaltung** lässt sich je Art einstellen,
+für wen sie gilt; nach dem Speichern gilt es auch nach dem Neuladen, **Rückgängig** stellt den Stand davor her. Eingetragen
+wird noch niemand – das kommt erst mit dem Öffnen durch eine Vertrauensperson (N3c).
+
+1. **Vorbereiten** öffnen: Die Karte **Nachweise** zeigt jede Art, die du sehen darfst, mit „aus“, solange nichts eingestellt ist.
+2. **Bearbeiten**, **Führungszeugnis** einschalten, **Alle Angemeldeten** lassen, **Speichern**: Die Karte zeigt „alle Angemeldeten“,
+   unter der Meldung steht **Rückgängig**.
+3. **Bearbeiten**, **Nur wenn …** wählen: Die erste Frage ist vorgewählt, **Speichern** geht erst, wenn mindestens eine Antwort
+   angehakt ist. Antwort wählen, **Fertig**, **Speichern**: Die Karte zeigt „nur wenn Bereich ist …“.
+4. Unter beiden Möglichkeiten steht: „Eingetragen wird, sobald eine Vertrauensperson oder ein Admin die Erweiterung öffnet. Wer schon in
+   der Nachweis-Gruppe ist, bekommt keine neue Aufforderung.“
+5. Im Formular die Frage löschen (oder ausschalten), auf die „Nur wenn“ schaut: Die Karte zeigt in Rot, dass es die Frage nicht mehr gibt –
+   und dass bis zur neuen Wahl niemand den Nachweis braucht. Eine Antwort umbenennen: „Nur wenn“ zieht mit.
+6. **Wie eine frühere Veranstaltung** von dieser anlegen: Die Kopie hat dieselben Nachweis-Einstellungen.
+7. Ohne Recht: Die Karte ist da, hat aber kein **Bearbeiten**.
+8. Am Handy (375 px) und im dunklen Modus: Die Karte und das Fenster passen, die Antworten-Auswahl öffnet als Fenster, nichts ragt über den Rand.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `anmeldungen/src/NachweiseKarte.tsx`, `anmeldungen/src/VeranstaltungSeite.tsx`, `anmeldungen/src/nachweisArten.ts`, `shared/anmeldung/nachweisBedarf.ts`, `shared/anmeldung/formular.ts`
+- **Automatisiert:** ja – `nachweisBedarf.test.ts` (wer braucht den Nachweis: je Person/Kontakt, Mehrfachauswahl, Ankreuzen, freie Antwort, kaputte Bedingung, Umbenennen, Speichern/Lesen), `NachweiseKarte.test.tsx`, `VeranstaltungSeite.test.tsx` und `einrichten.test.ts` (Kopie, Umbenennen beim Speichern der Frage); von Hand bleiben die Sicht eines Kontos ohne Recht in ChurchTools und das Handy
+- **Historie:** N3b (27.11.2026, Entwurf `n-nachweise-v2`, Entscheidungsliste E20, E27 ff.)
+
+</details>

@@ -166,6 +166,33 @@ export async function nachweisArtenLesen(typId: number): Promise<NachweisArt[]> 
   return (await artenUndRollen(typId)).arten;
 }
 
+/** Eine Nachweis-Art in der Kurzform – für die Karte „Nachweise“ einer Veranstaltung (N3b). */
+export interface NachweisArtKurz {
+  /** Nummer der Gruppe in ChurchTools – die Kennung in `nachweise` der Einstellungen. */
+  id: number;
+  name: string;
+  /** `false`: in der Beschreibung stehen keine (gültigen) Einstellungen – die Art ist nicht fertig eingerichtet. */
+  fertig: boolean;
+}
+
+/**
+ * **Die Nachweis-Arten, die man sehen darf – nur Name und Nummer** (N3b). Anders als `nachweisArtenLesen` ohne die
+ * Mitglieder je Gruppe (eine Anfrage je Art wäre hier nur Last). `[]`: es gibt keine Art (oder keine ist sichtbar – die
+ * Gruppen sind „eingeschränkt“, `NACHWEIS_SICHTBARKEIT`); wirft bei jedem Lesefehler, damit „nicht lesbar“ nie wie „keine“
+ * aussieht.
+ */
+export async function nachweisArtenKurz(): Promise<NachweisArtKurz[]> {
+  const { id: typId } = await gruppenartSuchen(portLesen(), istNachweisArt);
+  if (typId === null) return [];
+  return (await gruppenDerArt(typId))
+    .map((g) => ({
+      id: g.id,
+      name: nachweisNameAus(g.name),
+      fertig: nachweisEinstellungenLesen(g.information?.note) !== null,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'de'));
+}
+
 /**
  * Die Arten samt ihren Personen (N2a). `sichtbar` entscheidet je Art, ob die Personen gelesen werden dürfen – die eine
  * Regel dafür: Admin („Berechtigungen verwalten“) alle, sonst nur Arten, deren Vertrauensperson man ist. Eine Art, die

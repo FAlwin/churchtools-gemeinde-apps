@@ -955,6 +955,9 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **`protokolle-v1.8.2` (27.11.2026):** Kleinkram aus den Handtests (#1189): Tags-Zeile sagt „keine (weiteren) Termin-Tags“
+  statt leer zu bleiben; Personensuche liefert `bild` (aus `imageUrl`) – „Im Auftrag von“ und Organigramm „Person aufnehmen“
+  zeigen das Profilbild; „Nur verknüpfen“ mit gewähltem Bild sagt, dass es nicht hochgeladen wird.
 - **v2.42.1 und `protokolle-v1.8.1` (27.11.2026) = leere Datumsfelder unter iOS.** Ein leeres Datumsfeld zeigt unter iOS
   nichts und fiel ohne greifende feste Höhe auf Rand und Polster zusammen (Liederheft Von/Bis wegen `flex: 1` in der
   Spalte, Dienstplaner Abfrage/Person ohne `height`). Fix im Baustein `datumsfeld`: `::-webkit-date-and-time-value

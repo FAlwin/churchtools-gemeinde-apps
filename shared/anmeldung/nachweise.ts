@@ -37,9 +37,11 @@ const STUFE_SEHEN = 1;
 
 /**
  * Die gruppeninternen Rechte der Leiter-Rolle (Alwin, 19.11.2026): die Vertrauenspersonen sehen die Gruppe und ihre
- * Mitglieder, sehen und ändern die Angaben (Stufe `STUFE_NACHWEIS`) und führen Follow-ups durch. Dazu kommt als sechstes
- * das Modulrecht `NACHWEIS_MODULRECHT` (Nummer je Instanz anders, darum nicht in dieser Liste). Die Teilnehmer-Rolle
- * bekommt keins davon. Churchauth-Nummern: 10101 Gruppenmitglieder sehen, 10102 Gruppeninfos sehen, 10126 Gruppenmitgliedsfelder
+ * Mitglieder, sehen und ändern die Angaben (Stufe `STUFE_NACHWEIS`) und führen Follow-ups durch. Seit N3a (E19, Messung M10
+ * Punkt 7, 27.11.2026) dürfen sie auch **Personen in die Gruppe eintragen** (10107) – für „Eintragen beim Öffnen“ (N3c) und
+ * „Person eintragen“ (N4). Dazu kommt das Modulrecht `NACHWEIS_MODULRECHT` (Nummer je Instanz anders, darum nicht in dieser
+ * Liste). Die Teilnehmer-Rolle bekommt keins davon. Churchauth-Nummern (gruppenintern, auf allen Instanzen gleich):
+ * 10101 Gruppenmitglieder sehen, 10102 Gruppeninfos sehen, 10107 Gruppenmitglieder hinzufügen, 10126 Gruppenmitgliedsfelder
  * sehen, 10133 Gruppenmitgliedsfelder bearbeiten, 10110 Follow-ups durchführen. Die Stufe steht in `dataId`; der PUT schickt
  * `dataId: [stufe]` (`rechteErgaenzen`).
  */
@@ -49,6 +51,8 @@ export const NACHWEIS_LEITER_RECHTE: readonly SollRecht[] = [
   { authId: 10126, name: 'Gruppenmitgliedsfelder sehen', dataId: STUFE_NACHWEIS },
   { authId: 10133, name: 'Gruppenmitgliedsfelder bearbeiten', dataId: STUFE_NACHWEIS },
   { authId: 10110, name: 'Follow-ups durchführen', dataId: null },
+  // M10: ohne Stufe gesetzt (`PUT … {authId: 10107}`) – Otto konnte danach eintragen.
+  { authId: 10107, name: 'Gruppenmitglieder hinzufügen', dataId: null },
 ];
 
 /**
@@ -70,6 +74,18 @@ export const NACHWEIS_MODULRECHT = {
 export const NACHWEIS_TEILNEHMER_RECHTE: readonly SollRecht[] = [
   { authId: 10102, name: 'Gruppeninfos sehen', dataId: STUFE_SEHEN },
 ];
+
+/**
+ * **Die Ablage „Nachweis-Stand“** im Datenspeicher der Erweiterung (N3a, E22/E23): je Nachweis-Art ein Wert mit dem Stand je
+ * Person – nur „gültig bis“ bzw. „offen“/„rot“, nie das Ergebnis. Lesen dürfen alle mit „Anmeldungen sehen“ (die Leitungen
+ * der Veranstaltungen), schreiben die Vertrauenspersonen. Format und Rechte: `nachweisStandAblage.ts`.
+ */
+export const NACHWEIS_STAND_KATEGORIE = {
+  kuerzel: 'nachweis-stand',
+  name: 'Nachweis-Stand',
+  beschreibung:
+    'Von der Erweiterung „Anmeldungen“ angelegt: je Nachweis-Art gültig bis / offen / rot je Person (kein Ergebnis) – bitte nicht löschen.',
+} as const;
 
 // ── Name der Gruppe ─────────────────────────────────────────────────────────────────────────────────────────────
 

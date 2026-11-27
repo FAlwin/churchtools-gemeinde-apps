@@ -96,7 +96,7 @@ describe('nachweisGrundlageLesen', () => {
     expect(falsch.aufrufe).toEqual([]);
   });
 
-  it('nur das Modulrecht fehlt (die fünf Gruppenrechte stehen): rechtFehlt true, nichts geschrieben', async () => {
+  it('nur das Modulrecht fehlt (die sechs Gruppenrechte stehen): rechtFehlt true, nichts geschrieben', async () => {
     mitNachweisArt(alsRechte(NACHWEIS_LEITER_RECHTE), alsRechte(NACHWEIS_TEILNEHMER_RECHTE));
     expect((await nachweisGrundlageLesen()).rechtFehlt).toBe(true);
     expect(falsch.aufrufe).toEqual([]);

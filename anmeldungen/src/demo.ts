@@ -11,6 +11,7 @@ import { einstellungenAlsText, type OeffentlicheEinstellungen } from '@shared/an
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import {
   NACHWEIS_ABLAUF_NAME,
+  NACHWEIS_STAND_KATEGORIE,
   nachweisEinstellungenLesen,
   nachweisNotiz,
   nachweisSchritte,
@@ -872,7 +873,8 @@ export function demoStarten(fall: string): void {
       return antwort({ data: { churchcore, churchdb, churchcal: { 'edit category': [1] } } });
     }
     // ── Nachweise (N1b) ──
-    // Rechte-Definitionen: nur das Modulrecht „Anmeldungen sehen“ (Nummer je Instanz anders – hier eine Demo-Nummer).
+    // Rechte-Definitionen: das Modulrecht „Anmeldungen sehen“ und die Rechte des Datenspeichers (Nummern je Instanz anders –
+    // hier die der Test-Instanz).
     if (pfad === '/permissions/definitions')
       return antwort({
         data: {
@@ -882,9 +884,31 @@ export function demoStarten(fall: string): void {
               name: 'Anmeldungen',
               permissions: [
                 { authId: 2020, key: 'view', name: 'Anmeldungen sehen', valueType: 'boolean' },
+                { authId: 2021, key: 'view custom category' },
+                { authId: 2025, key: 'view custom data' },
+                { authId: 2026, key: 'create custom data' },
+                { authId: 2027, key: 'edit custom data' },
+                { authId: 2028, key: 'delete custom data' },
               ],
             },
           ],
+        },
+      });
+    // Wer „Anmeldungen sehen“ hat (N3a): in der Demo nur die Leiter-Rolle der Nachweise.
+    if (pfad === '/permissions/global/auths/2020/assignment-summary')
+      return antwort({
+        data: {
+          authId: 2020,
+          dataId: null,
+          effectivePersonCount: 1,
+          assignments: {
+            statuses: [],
+            groupTypes: [
+              { groupTypeId: NACHWEIS_TYP, groupTypeRoleIds: [LEITER_ROLLE], personCount: 1 },
+            ],
+            groups: [],
+            persons: [],
+          },
         },
       });
     let r = /^\/permissions\/group_type_role\/(\d+)$/.exec(pfad);
@@ -1368,20 +1392,27 @@ export function demoStarten(fall: string): void {
     if (pfad === '/custommodules') return antwort({ data: [{ id: 7, shorty: 'anmeldungen' }] });
     if (pfad === '/custommodules/7/customdatacategories') {
       if (m === 'POST') {
-        DATEN.kategorien.push({ id: 50, shorty: String(body.shorty) });
-        return antwort({ data: { id: 50 } }, 201);
+        const id = 50 + DATEN.kategorien.length;
+        DATEN.kategorien.push({ id, shorty: String(body.shorty) });
+        return antwort({ data: { id } }, 201);
       }
       return antwort({ data: DATEN.kategorien });
     }
-    r = /^\/custommodules\/7\/customdatacategories\/50\/customdatavalues(?:\/(\d+))?$/.exec(pfad);
+    r = /^\/custommodules\/7\/customdatacategories\/(\d+)\/customdatavalues(?:\/(\d+))?$/.exec(
+      pfad,
+    );
     if (r) {
+      const kategorie = Number(r[1]);
       if (m === 'POST')
-        DATEN.werte.push({ id: naechste++, dataCategoryId: 50, value: String(body.value) });
+        DATEN.werte.push({ id: naechste++, dataCategoryId: kategorie, value: String(body.value) });
       if (m === 'PUT') {
-        const w = DATEN.werte.find((x) => x.id === Number(r[1]));
+        const w = DATEN.werte.find((x) => x.id === Number(r[2]));
         if (w) w.value = String(body.value);
       }
-      return antwort({ data: m === 'GET' ? DATEN.werte : {} }, m === 'POST' ? 201 : 200);
+      return antwort(
+        { data: m === 'GET' ? DATEN.werte.filter((w) => w.dataCategoryId === kategorie) : {} },
+        m === 'POST' ? 201 : 200,
+      );
     }
     return antwort({}, 404);
   };
@@ -1392,7 +1423,11 @@ const DATEN: {
   kategorien: { id: number; shorty: string }[];
   werte: { id: number; dataCategoryId: number; value: string }[];
 } = {
-  kategorien: [{ id: 50, shorty: 'anmeldungen-einstellungen' }],
+  // 51: die Ablage „Nachweis-Stand“ (N3a) – die Demo schreibt dort beim Öffnen der Seite „Nachweise“.
+  kategorien: [
+    { id: 50, shorty: 'anmeldungen-einstellungen' },
+    { id: 51, shorty: NACHWEIS_STAND_KATEGORIE.kuerzel },
+  ],
   werte: [
     {
       id: 1,

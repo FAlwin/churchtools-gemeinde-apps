@@ -9,10 +9,18 @@ import {
   NACHWEIS_AUFGABE_ERNEUT,
   NACHWEIS_AUFGABE_ERSTE,
   NACHWEIS_FELDER,
+  NACHWEIS_LEITER_RECHTE,
+  NACHWEIS_STAND_KATEGORIE,
   nachweisNotiz,
   type NachweisEinstellungen,
 } from '@shared/anmeldung/nachweise';
-import { nachweisGueltigBis, plusJahre } from '@shared/anmeldung/nachweisStand';
+import {
+  nachweisGueltigBis,
+  personStand,
+  plusJahre,
+  standFuerLeitung,
+} from '@shared/anmeldung/nachweisStand';
+import { standAusWert } from '@shared/anmeldung/nachweisStandAblage';
 import { EinsichtTeilweise, einsichtFesthalten, einsichtNachziehen } from './nachweisEinsicht';
 import { nachweisPersonenLesen, type NachweisPerson } from './nachweisPersonen';
 import { nachweiseSeiteLaden } from './nachweisArten';
@@ -31,6 +39,10 @@ vi.mock('@ui/ct/verbindung', () => ({
   istUeberlastet: () => false,
 }));
 const ct = vi.mocked(V);
+/** Der Datenspeicher (Ablage „Nachweis-Stand“, N3a) läuft über denselben ersetzten Anschluss. */
+vi.mock('@ui/ct/modulPort', async () =>
+  (await import('./nachweisArten.testutil')).modulPortImTest(),
+);
 
 let falsch: FalschesNachweisCt;
 const HEUTE = heuteImKalender();
@@ -503,7 +515,12 @@ describe('Nachziehen beim Öffnen der Seite', () => {
     falsch.ohneMitgliederRecht.add(g.id);
     const s = await nachweiseSeiteLaden();
     expect(s.arten[0].personen).toBeNull();
-    expect(falsch.aufrufe).toEqual([]);
+    // Als Admin zieht die Seite Rechte und Ablage nach (N3a) – sonst nichts, auch kein Stand (Personen nicht gelesen).
+    expect(
+      falsch.aufrufe.filter(
+        (a) => !a.pfad.startsWith('/permissions/') && !a.pfad.endsWith('/customdatacategories'),
+      ),
+    ).toEqual([]);
   });
 
   it('eine Art, die nicht deine ist (kein Admin, keine Leitung), wird nicht angefasst', async () => {
@@ -512,5 +529,134 @@ describe('Nachziehen beim Öffnen der Seite', () => {
     const s = await nachweiseSeiteLaden();
     expect(s.arten).toEqual([]);
     expect(falsch.aufrufe).toEqual([]);
+  });
+});
+
+describe('Stand für die Leitungen beim Öffnen der Seite (N3a)', () => {
+  const OHNE_ADMIN = { churchcore: { 'view birthdays': true } };
+  /** Paula (10) gültig, Rita (11) Rücksprache mit Datum, Otto (12) angefordert. */
+  function welt() {
+    const g = art();
+    dabei(g.id, 10, 'Paula Messnull');
+    falsch.feldSetzen(g.id, 10, NACHWEIS_FELDER[0].name, plusTage(HEUTE, -3));
+    falsch.feldSetzen(g.id, 10, NACHWEIS_FELDER[1].name, AUSGESTELLT);
+    dabei(g.id, 11, 'Rita Messvier');
+    falsch.feldSetzen(g.id, 11, NACHWEIS_FELDER[0].name, plusTage(HEUTE, -3));
+    falsch.feldSetzen(g.id, 11, NACHWEIS_FELDER[1].name, AUSGESTELLT);
+    falsch.feldSetzen(
+      g.id,
+      11,
+      'Ergebnis',
+      falsch.optionsNummer(g.id, 'Ergebnis', ERGEBNIS_EINTRAG),
+    );
+    dabei(g.id, 12, 'Otto Messnull');
+    falsch.aufgabeSetzen(g.id, { personId: 12, createdDate: `${HEUTE}T10:00:00Z` });
+    return g;
+  }
+  const kategorieDa = () =>
+    (falsch.basis.kategorien = [{ id: 100, shorty: NACHWEIS_STAND_KATEGORIE.kuerzel, name: 'x' }]);
+  const stand = (gruppe: number) =>
+    falsch.basis.werte.map((w) => standAusWert(w)).find((x) => x?.gruppe === gruppe)?.personen;
+  const alsVertrauensperson = (g: { id: number }) => {
+    falsch.global = OHNE_ADMIN;
+    falsch.mitgliedSetzen(g.id, {
+      personId: falsch.ichId,
+      groupTypeRoleId: 56,
+      title: 'Anna Leitung',
+    });
+  };
+
+  it('schreibt je Person den Wert aus der einen Regel – Rücksprache als „rot“, nie mit Datum', async () => {
+    const g = welt();
+    const s = await nachweiseSeiteLaden();
+    const soll = new Map(
+      s.arten[0].personen!.map((p) => [
+        p.personId,
+        standFuerLeitung(personStand(p, E, HEUTE).stand),
+      ]),
+    );
+    expect(stand(g.id)).toEqual(soll);
+    expect(stand(g.id)!.get(10)).toBe(BIS);
+    expect(stand(g.id)!.get(11)).toBe('rot');
+    expect(stand(g.id)!.get(12)).toBe('offen');
+    // Nichts aus den Gruppenfeldern außer dem Tag: kein Ergebnis, kein Ausstellungsdatum.
+    expect(falsch.basis.werte[0].value).not.toContain(AUSGESTELLT);
+    expect(falsch.basis.werte[0].value).not.toContain(ERGEBNIS_EINTRAG);
+  });
+
+  it('wer ausgetreten ist, fällt beim nächsten Öffnen weg', async () => {
+    const g = welt();
+    await nachweiseSeiteLaden();
+    falsch.mitglieder.set(
+      g.id,
+      falsch.mitglieder.get(g.id)!.filter((m) => m.personId !== 12),
+    );
+    await nachweiseSeiteLaden();
+    expect([...stand(g.id)!.keys()].sort()).toEqual([10, 11]);
+    expect(falsch.basis.werte).toHaveLength(1);
+  });
+
+  it('Admin öffnet: fehlende Rechte der Leiter-Rolle (z. B. 10107 aus N3a) und die Ablage werden nachgezogen', async () => {
+    welt();
+    falsch.basis.rechte.set(
+      56,
+      NACHWEIS_LEITER_RECHTE.filter((r) => r.authId !== 10107).map(({ authId, dataId }) => ({
+        authId,
+        dataId,
+      })),
+    );
+    const s = await nachweiseSeiteLaden();
+    expect(falsch.basis.rechte.get(56)).toContainEqual({ authId: 10107, dataId: null });
+    expect(falsch.basis.kategorien.map((k) => k.shorty)).toEqual([
+      NACHWEIS_STAND_KATEGORIE.kuerzel,
+    ]);
+    expect(s.grundlage.rechtFehlt).toBe(false);
+  });
+
+  it('Admin öffnet, das Nachziehen scheitert: die Seite lädt trotzdem, rechtFehlt bleibt, wie es war', async () => {
+    welt();
+    falsch.scheitert = [{ muster: 'PUT /permissions', status: 503 }];
+    const s = await nachweiseSeiteLaden();
+    expect(s.arten[0].personen).toHaveLength(3);
+    expect(s.grundlage.rechtFehlt).toBe(true);
+  });
+
+  it('Vertrauensperson (kein Admin): schreibt den Stand, fasst keine Rechte und keine Kategorie an', async () => {
+    const g = welt();
+    alsVertrauensperson(g);
+    kategorieDa();
+    await nachweiseSeiteLaden();
+    expect(stand(g.id)?.get(10)).toBe(BIS);
+    expect(
+      reihe().filter((x) => x.includes('/permissions') || x.endsWith('/customdatacategories')),
+    ).toEqual([]);
+  });
+
+  it('Vertrauensperson ohne sichtbare Kategorie: nichts geschrieben, kein Anlegen, die Seite lädt', async () => {
+    const g = welt();
+    alsVertrauensperson(g);
+    const s = await nachweiseSeiteLaden();
+    expect(s.arten).toHaveLength(1);
+    expect(falsch.aufrufe.filter((a) => a.pfad.includes('/custommodules'))).toEqual([]);
+  });
+
+  it('Werte gerade nicht lesbar (503): die Seite lädt, nichts geschrieben, nichts gelöscht', async () => {
+    const g = welt();
+    alsVertrauensperson(g);
+    kategorieDa();
+    falsch.basis.werte = [{ id: 1, dataCategoryId: 100, value: 'alt' }];
+    falsch.basis.werteLesenScheitert = 503;
+    const s = await nachweiseSeiteLaden();
+    expect(s.arten[0].personen).toHaveLength(3);
+    expect(falsch.aufrufe.filter((a) => a.pfad.includes('/customdatavalues'))).toEqual([]);
+    expect(falsch.basis.werte).toEqual([{ id: 1, dataCategoryId: 100, value: 'alt' }]);
+  });
+
+  it('eine Art ohne gültige Einstellungen bekommt keinen Stand', async () => {
+    const g = falsch.gruppeAnlegen('Nachweis: Halb');
+    dabei(g.id, 10);
+    await nachweiseSeiteLaden();
+    expect(stand(g.id)).toBeUndefined();
+    expect(falsch.basis.werte).toEqual([]);
   });
 });

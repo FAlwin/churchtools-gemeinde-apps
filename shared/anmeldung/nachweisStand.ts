@@ -210,6 +210,43 @@ export function standTon(s: NachweisStand): EtikettTonNachweis {
   }
 }
 
+// ── Stand für die Leitung einer Veranstaltung (N3a, E23/E26) ─────────────────────────────────────────────────────
+
+/**
+ * Was die Leitung einer Veranstaltung über eine Person erfährt: der Tag „gültig bis“ (`YYYY-MM-DD`), `'offen'` (noch kein
+ * gültiger Nachweis, wartet auf Einsicht) oder `'rot'` (braucht die Vertrauensperson). **Nie das Ergebnis.** (Ein Text:
+ * ein Typ „Tag | 'offen' | 'rot'“ fiele in TypeScript ohnehin zu `string` zusammen.)
+ */
+export type StandFuerLeitung = string;
+
+/**
+ * **Die Abbildung Stand → Leitung** – die eine Stelle dafür (E26). Geht vom Stand aus, NIE von `gueltigBis`: Bei
+ * „Rücksprache“ ist `gueltigBis` gesetzt, die Leitung darf aber kein „gültig bis“ sehen.
+ *
+ * | Stand                                       | Leitung       |
+ * | ------------------------------------------- | ------------- |
+ * | gültig, läuft ab, abgelaufen                | Tag „bis“     |
+ * | Rücksprache, fehlt (> 4 Wochen)             | `rot`         |
+ * | angefordert, noch keine Aufgabe, unvollst.  | `offen`       |
+ *
+ * „Rücksprache“ und „fehlt“ geben denselben Wert – so verrät `rot` kein Ergebnis.
+ */
+export function standFuerLeitung(s: NachweisStand): StandFuerLeitung {
+  switch (s.art) {
+    case 'gueltig':
+    case 'laeuftAb':
+    case 'abgelaufen':
+      return s.bis;
+    case 'ruecksprache':
+    case 'fehlt':
+      return 'rot';
+    case 'angefordert':
+    case 'keineAufgabe':
+    case 'unvollstaendig':
+      return 'offen';
+  }
+}
+
 /** Braucht die Vertrauensperson (Startseite „Braucht deine Aufmerksamkeit“, Filter auf der Seite)? */
 export function brauchtAufmerksamkeit(s: NachweisStand): boolean {
   return (

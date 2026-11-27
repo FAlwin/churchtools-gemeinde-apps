@@ -37,6 +37,10 @@ vi.mock('./einrichten', async (original) => ({
   gemeindeLogo: vi.fn(),
 }));
 const ct = vi.mocked(V);
+/** Der Datenspeicher (Ablage „Nachweis-Stand“, N3a) läuft über denselben ersetzten Anschluss. */
+vi.mock('@ui/ct/modulPort', async () =>
+  (await import('./nachweisArten.testutil')).modulPortImTest(),
+);
 const einrichten = vi.mocked(Einrichten);
 
 const PNG =

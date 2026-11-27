@@ -1,6 +1,6 @@
 /**
  * **Die Grundlage für Nachweise in ChurchTools** (Etappe F, N1a; Oberfläche folgt in N1b): die Gruppenart „Nachweis“ samt
- * Rechte an ihrer Leiter-Rolle (fünf in der Gruppe, dazu das Modulrecht „‚Anmeldungen‘ sehen“). Lesen und Sichern trennt, was ein Mensch ohne Recht noch sehen darf:
+ * Rechte an ihrer Leiter-Rolle (sechs in der Gruppe, dazu das Modulrecht „‚Anmeldungen‘ sehen“). Lesen und Sichern trennt, was ein Mensch ohne Recht noch sehen darf:
  *
  * - `nachweisGrundlageLesen` schreibt nie. Die Rechte der Rolle liest sie nur, wenn man „Berechtigungen verwalten“ hat
  *   (`churchcore: administer persons`, über `rechteAus` wie überall) – sonst `rechtFehlt: null`. **Nicht lesbar ist nicht
@@ -68,7 +68,7 @@ export interface NachweisGrundlage {
  * - `anders` (z. B. „Rollen fehlen“) → **422** mit dem Text des Bausteins: Das ist keine Störung von ChurchTools, sondern
  *   etwas, das jemand in ChurchTools ansehen muss. Mit 502 las `fehlerMeldung` es als „antwortet gerade nicht“ (N1b).
  */
-function uebersetzt(e: unknown): unknown {
+export function uebersetzt(e: unknown): unknown {
   if (!(e instanceof GruppenartFehler)) return e;
   if (e.art === 'nichtUebernommen') return new NichtUebernommen(e.was);
   return new ApiError(e.art === 'anders' ? 422 : 502, e.message);

@@ -8,6 +8,7 @@
  * - `scheitert`: Schreibaufrufe, die mit einem Status abbrechen (z. B. 503, Zeitüberschreitung);
  * - `sichtbarkeitFest`: Gruppen entstehen mit dieser Sichtbarkeit, was auch geschickt wird.
  */
+import { vi } from 'vitest';
 import { ApiError } from '@ui/ct/fehler';
 import { FalschesCt, type Aufruf } from '@shared/ct/gruppenart.testutil';
 
@@ -647,4 +648,17 @@ export function offeneAufgabe(
   id = 1,
 ) {
   return { id, titel, angelegt: seit, faellig, seit };
+}
+
+/**
+ * **Der Datenspeicher im Test** (Ablage „Nachweis-Stand“, N3a): `@ui/ct/modulPort` mit festem Kürzel „anmeldungen“ (sonst
+ * käme es aus der Bau-Adresse, im Test `/`) und ohne Merker für die Modul-Nummer – der Rest läuft über den ersetzten
+ * Anschluss `@ui/ct/verbindung`, also über die Attrappe. Einbinden je Testdatei:
+ * `vi.mock('@ui/ct/modulPort', async () => (await import('./nachweisArten.testutil')).modulPortImTest());`
+ */
+export async function modulPortImTest() {
+  const o = await vi.importActual<typeof import('@ui/ct/modulPort')>('@ui/ct/modulPort');
+  const { modulSuchen } = await import('@shared/ct/modulDaten');
+  const port = o.modulPortFuer(() => 'anmeldungen');
+  return { ...o, modulPort: port, modulId: (wer: string) => modulSuchen(port, wer) };
 }

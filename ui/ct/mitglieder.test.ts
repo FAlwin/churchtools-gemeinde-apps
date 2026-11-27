@@ -143,6 +143,9 @@ describe('istSchonDrin – „Die Person ist bereits in der Gruppe“ (M11)', ()
         messageKey: 'error.forbidden.add.group.member',
       });
     expect(istSchonDrin(await fehlerBeimAnlegen())).toBe(false);
+    // Ein anderes 403 mit eigenem Schlüssel (kein error.forbidden…) ist auch nicht „schon drin“.
+    antwort = () => json(403, { message: 'Gruppe ist voll', messageKey: 'member.add.group.full' });
+    expect(istSchonDrin(await fehlerBeimAnlegen())).toBe(false);
     antwort = () => json(400, SCHON_DRIN);
     expect(istSchonDrin(await fehlerBeimAnlegen())).toBe(false);
     antwort = () => json(403, { message: 'Die Person ist bereits in der Gruppe' });

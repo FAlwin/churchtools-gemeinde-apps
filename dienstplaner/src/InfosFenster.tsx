@@ -3,7 +3,7 @@ import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { INFOS_MAX } from '@shared/ct/terminInfos';
-import { speichereInfos } from './ladeTerminInfos';
+import { speichereInfos } from '@ui/ct/terminInfosPort';
 import styles from './InfosFenster.module.scss';
 
 /**

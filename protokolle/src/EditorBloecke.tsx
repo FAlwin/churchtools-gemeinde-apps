@@ -26,6 +26,7 @@ import { gaesteWert, ohneWert } from '@shared/protokolle/anwesenheit';
 import type { ProtokollEditor } from './editorSchema';
 import { AufgabenKontext } from './aufgabenKontext';
 import { Haken } from './Haken';
+import { ReiheKarte } from './ReiheKarte';
 /** Platzhalter, solange es das To-Do noch nicht gibt (ohne Text): der Haken zeigt „offen“, bedienbar ist er nicht. */
 const LEERE_AUFGABE = neueAufgabe({ id: '', gruppe: 0, sitzung: null, text: '', von: 0, am: '' });
 
@@ -361,6 +362,31 @@ export function TerminBlock({
  * Ein **Eingabefeld** im Kasten (Gäste der Anwesenheit, S5-3) bekommt den Klick: dort nur `stopPropagation`, sonst
  * käme es nie zum Fokus.
  */
+/**
+ * **Reihe** (Baustein „Reihe“): im Editor nur die lesende Karte (`ReiheKarte`) mit „Bearbeiten“ und „In Events übertragen“
+ * – keine Eingabefelder im Block (Fokus, Tasten und Rückgängig von BlockNote würden sich mit ihnen schlagen); bearbeitet wird
+ * in Fenstern. Wie der feste Punkt: BlockNote würde den Klick auf die Karte sonst als Cursor-Setzen schlucken – die Knöpfe
+ * reagieren auf `click` und bleiben bedienbar.
+ */
+export function ReiheBlock({ block }: { block: { props: { reihe: string } } }) {
+  const kasten = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = kasten.current;
+    if (!el) return;
+    const halt = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    el.addEventListener('mousedown', halt);
+    return () => el.removeEventListener('mousedown', halt);
+  }, []);
+  return (
+    <div ref={kasten} className={styles.festerPunkt} contentEditable={false}>
+      <ReiheKarte reiheId={block.props.reihe} />
+    </div>
+  );
+}
+
 export function VerweisBlock({
   block,
   editor,

@@ -76,6 +76,7 @@ import { anwesenheitLesen, treffenAbschliessen } from './anwesenheitSchreiben';
 import { FreigabeFenster, type FreigabeFolge } from './FreigabeFenster';
 import { ZurueckVermerk } from './FreigabeVermerk';
 import { ProtokollTeilen, TeilenKnopf, type TeilenRahmen } from './ProtokollTeilen';
+import { ReiheAnbieter } from './ReiheAnbieter';
 import { KiFuellen, KiKnopf } from './KiFuellen';
 import { ProtokollLoeschen } from './ProtokollLoeschen';
 import { loeschbar } from '@shared/protokolle/loeschen';
@@ -98,6 +99,9 @@ type Laden =
   /** Kein Entwurf (mehr) oder Blöcke, die dieser Editor nicht kennt – nur lesen. */
   | { art: 'lesen'; dokument: Block[] | null; grund: string }
   | { art: 'bereit'; kopf: ProtokollKopf; dokument: Block[] };
+
+/** Für die Zustände ohne Dokument (`ReiheAnbieter`) – immer dieselbe Liste, damit nichts neu gerechnet wird. */
+const KEIN_DOKUMENT: readonly Block[] = [];
 
 /**
  * **Ein Protokoll schreiben** (Bauplan S4-1, Entwurf 7) – für Leitung und „Schreibt mit“ (W16) bei einem Protokoll im Entwurf. Oben Titel und
@@ -885,35 +889,43 @@ export function ProtokollSchreiben({
     </>
   );
 
+  // Der Anbieter für den Baustein „Reihe“ steht in JEDEM Zustand an der Wurzel – sonst baute React den Kopf beim Wechsel
+  // von „lädt“ zu „bereit“ neu auf (ein Knopf, der eben noch da war, wäre ein anderer).
   if (laden.art === 'laedt')
     return (
-      <div className={ansicht.seite}>
-        {kopfZeile}
-        <p className={ansicht.hinweis}>Wird geladen …</p>
-      </div>
+      <ReiheAnbieter gruppeId={gruppeId} dokument={KEIN_DOKUMENT}>
+        <div className={ansicht.seite}>
+          {kopfZeile}
+          <p className={ansicht.hinweis}>Wird geladen …</p>
+        </div>
+      </ReiheAnbieter>
     );
   if (laden.art === 'fehler')
     return (
-      <div className={ansicht.seite}>
-        {kopfZeile}
-        <FehlerKasten fehler={laden.fehler} onNochmal={oeffnen} />
-      </div>
+      <ReiheAnbieter gruppeId={gruppeId} dokument={KEIN_DOKUMENT}>
+        <div className={ansicht.seite}>
+          {kopfZeile}
+          <FehlerKasten fehler={laden.fehler} onNochmal={oeffnen} />
+        </div>
+      </ReiheAnbieter>
     );
   if (laden.art === 'lesen')
     return (
-      <div className={ansicht.seite}>
-        {kopfZeile}
-        <p className={ansicht.hinweis}>{laden.grund}</p>
-        {laden.dokument &&
-          rahmen(
-            <>
-              <section className={ansicht.karte} aria-label="Protokoll">
-                <ProtokollAnsicht dokument={laden.dokument} aufgaben={aufgaben} />
-              </section>
-              <Bereiche dokument={laden.dokument} aufgaben={aufgaben} naechste={naechste} />
-            </>,
-          )}
-      </div>
+      <ReiheAnbieter gruppeId={gruppeId} dokument={laden.dokument ?? []}>
+        <div className={ansicht.seite}>
+          {kopfZeile}
+          <p className={ansicht.hinweis}>{laden.grund}</p>
+          {laden.dokument &&
+            rahmen(
+              <>
+                <section className={ansicht.karte} aria-label="Protokoll">
+                  <ProtokollAnsicht dokument={laden.dokument} aufgaben={aufgaben} />
+                </section>
+                <Bereiche dokument={laden.dokument} aufgaben={aufgaben} naechste={naechste} />
+              </>,
+            )}
+        </div>
+      </ReiheAnbieter>
     );
 
   const lage = z?.lage ?? 'frei';
@@ -932,203 +944,205 @@ export function ProtokollSchreiben({
   const ichSelbst = sperre?.von === schreiber.person;
 
   return (
-    <div className={ansicht.seite}>
-      {kopfZeile}
-      <Segment
-        className={styles.umschalter}
-        value={lesen ? 'lesen' : 'schreiben'}
-        options={[
-          { value: 'schreiben', label: 'Schreiben' },
-          { value: 'lesen', label: 'Lesen' },
-        ]}
-        onChange={(v) => {
-          setLesen(v === 'lesen');
-          // Erst speichern, dann lesen – die Lese-Ansicht zeigt den Stand, den auch alle anderen sehen.
-          const s = steuerung.current;
-          if (v === 'lesen' && s?.zustand.lage === 'schreibe') void s.jetzt();
-        }}
-        ariaLabel="Ansicht"
-        verbunden
-      />
+    <ReiheAnbieter gruppeId={gruppeId} dokument={dok}>
+      <div className={ansicht.seite}>
+        {kopfZeile}
+        <Segment
+          className={styles.umschalter}
+          value={lesen ? 'lesen' : 'schreiben'}
+          options={[
+            { value: 'schreiben', label: 'Schreiben' },
+            { value: 'lesen', label: 'Lesen' },
+          ]}
+          onChange={(v) => {
+            setLesen(v === 'lesen');
+            // Erst speichern, dann lesen – die Lese-Ansicht zeigt den Stand, den auch alle anderen sehen.
+            const s = steuerung.current;
+            if (v === 'lesen' && s?.zustand.lage === 'schreibe') void s.jetzt();
+          }}
+          ariaLabel="Ansicht"
+          verbunden
+        />
 
-      {lage === 'gesperrt' && sperre && (
-        <div className={styles.hinweis} role="status">
-          <Icon name="lock" size={18} />
-          <div>
-            <b>
-              {ichSelbst
-                ? 'Du schreibst gerade in einem anderen Fenster oder auf einem anderen Gerät.'
-                : `${sperre.name} schreibt gerade.`}
-            </b>{' '}
-            Zuletzt gespeichert um {uhrzeit(sperre.seit, zeitzone)}. Du siehst den gespeicherten
-            Stand – er aktualisiert sich alle {MITLESEN_MS / 1000} Sekunden.
-            {z?.offen && (
-              <>
-                {' '}
-                Deine letzte Änderung hier ist nicht gespeichert – markiere und kopiere sie bei
-                Bedarf.
-              </>
-            )}
+        {lage === 'gesperrt' && sperre && (
+          <div className={styles.hinweis} role="status">
+            <Icon name="lock" size={18} />
+            <div>
+              <b>
+                {ichSelbst
+                  ? 'Du schreibst gerade in einem anderen Fenster oder auf einem anderen Gerät.'
+                  : `${sperre.name} schreibt gerade.`}
+              </b>{' '}
+              Zuletzt gespeichert um {uhrzeit(sperre.seit, zeitzone)}. Du siehst den gespeicherten
+              Stand – er aktualisiert sich alle {MITLESEN_MS / 1000} Sekunden.
+              {z?.offen && (
+                <>
+                  {' '}
+                  Deine letzte Änderung hier ist nicht gespeichert – markiere und kopiere sie bei
+                  Bedarf.
+                </>
+              )}
+            </div>
+            <button type="button" className={styles.knopf} onClick={() => setFrage('uebernehmen')}>
+              {ichSelbst ? 'Hier weiterschreiben' : 'Schreiben übernehmen'}
+            </button>
           </div>
-          <button type="button" className={styles.knopf} onClick={() => setFrage('uebernehmen')}>
-            {ichSelbst ? 'Hier weiterschreiben' : 'Schreiben übernehmen'}
-          </button>
-        </div>
-      )}
-      {lage === 'veraendert' && (
-        <div className={styles.hinweis} role="alert">
-          <Icon name="warnung" size={18} />
-          <div>
-            <b>Inzwischen hat jemand anderes gespeichert.</b> Damit nichts überschrieben wird,
-            speichert dieses Fenster nicht mehr. Deine letzten Änderungen siehst du hier noch –
-            markiere und kopiere sie bei Bedarf, dann lade den aktuellen Stand.
+        )}
+        {lage === 'veraendert' && (
+          <div className={styles.hinweis} role="alert">
+            <Icon name="warnung" size={18} />
+            <div>
+              <b>Inzwischen hat jemand anderes gespeichert.</b> Damit nichts überschrieben wird,
+              speichert dieses Fenster nicht mehr. Deine letzten Änderungen siehst du hier noch –
+              markiere und kopiere sie bei Bedarf, dann lade den aktuellen Stand.
+            </div>
+            <button type="button" className={styles.knopf} onClick={neuLaden}>
+              Aktuellen Stand laden
+            </button>
           </div>
-          <button type="button" className={styles.knopf} onClick={neuLaden}>
-            Aktuellen Stand laden
-          </button>
-        </div>
-      )}
-      {(lage === 'fest' || lage === 'weg') && (
-        <div className={styles.hinweis} role="alert">
-          <Icon name="lock" size={18} />
-          <div>
-            {lage === 'fest'
-              ? 'Das Protokoll wurde inzwischen freigegeben und lässt sich nicht mehr ändern.'
-              : 'Dieses Protokoll gibt es nicht mehr.'}
+        )}
+        {(lage === 'fest' || lage === 'weg') && (
+          <div className={styles.hinweis} role="alert">
+            <Icon name="lock" size={18} />
+            <div>
+              {lage === 'fest'
+                ? 'Das Protokoll wurde inzwischen freigegeben und lässt sich nicht mehr ändern.'
+                : 'Dieses Protokoll gibt es nicht mehr.'}
+            </div>
+            <button type="button" className={styles.knopf} onClick={neuLaden}>
+              Neu laden
+            </button>
           </div>
-          <button type="button" className={styles.knopf} onClick={neuLaden}>
-            Neu laden
-          </button>
-        </div>
-      )}
-      {hinweis && (
-        <p className={styles.nebenbei} role="status">
-          {hinweis}
-        </p>
-      )}
-      {vorschlagHinweis && (
-        <p className={vorschlagStil.hinweis} role="status">
-          <Icon name="idee" size={18} />
-          {vorschlagHinweis}
-        </p>
-      )}
-      {bearbeitbar && mOrt && (
-        <VorschlaegeKasten
-          liste={offeneVorschlaege}
-          ich={schreiber.person}
-          fehler={vorschlagFehler}
-          aktionen={{
-            uebernehmen: (v) =>
-              vorschlagTun(async () => {
-                await insProtokoll([v]);
-              })(),
-            naechstesMal: (v) =>
-              vorschlagTun(async () =>
-                vorschlagNeu(
-                  await vorschlagSchreiben(mOrt, v.id, (x) =>
-                    aufsNaechsteMal(x, sitzung, ichV, new Date().toISOString()),
+        )}
+        {hinweis && (
+          <p className={styles.nebenbei} role="status">
+            {hinweis}
+          </p>
+        )}
+        {vorschlagHinweis && (
+          <p className={vorschlagStil.hinweis} role="status">
+            <Icon name="idee" size={18} />
+            {vorschlagHinweis}
+          </p>
+        )}
+        {bearbeitbar && mOrt && (
+          <VorschlaegeKasten
+            liste={offeneVorschlaege}
+            ich={schreiber.person}
+            fehler={vorschlagFehler}
+            aktionen={{
+              uebernehmen: (v) =>
+                vorschlagTun(async () => {
+                  await insProtokoll([v]);
+                })(),
+              naechstesMal: (v) =>
+                vorschlagTun(async () =>
+                  vorschlagNeu(
+                    await vorschlagSchreiben(mOrt, v.id, (x) =>
+                      aufsNaechsteMal(x, sitzung, ichV, new Date().toISOString()),
+                    ),
                   ),
+                )(),
+              // Ablehnen nur die Leitung (W16) – übernehmen und aufs nächste Mal gehört zum Schreiben.
+              ...(leitung ? { ablehnen: setAblehnenFuer } : {}),
+            }}
+          />
+        )}
+        {freigabe && (
+          <FreigabeFenster
+            hinweise={freigabe.hinweise}
+            zusammenfassung={freigabe.zusammenfassung}
+            mitTreffen={freigabe.treffen !== null}
+            laedt={freigabe.laedtAnwesenheit || freigabe.laedtBeitrag}
+            gruppe={gruppe}
+            beitrag={freigabe.beitrag}
+            onAnsehen={zurStelle}
+            onFreigeben={freigebenJetzt}
+            onFertig={() => {
+              setFreigabe(null);
+              if (onFreigegeben) onFreigegeben();
+              else onZurueck(true);
+            }}
+            onClose={() => setFreigabe(null)}
+          />
+        )}
+        {ablehnenFuer && mOrt && leitung && (
+          <VorschlagAblehnen
+            vorschlag={ablehnenFuer}
+            onAblehnen={async (grund) => {
+              vorschlagNeu(
+                await vorschlagSchreiben(mOrt, ablehnenFuer.id, (x) =>
+                  ablehnen(x, grund, ichV, new Date().toISOString()),
                 ),
-              )(),
-            // Ablehnen nur die Leitung (W16) – übernehmen und aufs nächste Mal gehört zum Schreiben.
-            ...(leitung ? { ablehnen: setAblehnenFuer } : {}),
-          }}
-        />
-      )}
-      {freigabe && (
-        <FreigabeFenster
-          hinweise={freigabe.hinweise}
-          zusammenfassung={freigabe.zusammenfassung}
-          mitTreffen={freigabe.treffen !== null}
-          laedt={freigabe.laedtAnwesenheit || freigabe.laedtBeitrag}
-          gruppe={gruppe}
-          beitrag={freigabe.beitrag}
-          onAnsehen={zurStelle}
-          onFreigeben={freigebenJetzt}
-          onFertig={() => {
-            setFreigabe(null);
-            if (onFreigegeben) onFreigegeben();
-            else onZurueck(true);
-          }}
-          onClose={() => setFreigabe(null)}
-        />
-      )}
-      {ablehnenFuer && mOrt && leitung && (
-        <VorschlagAblehnen
-          vorschlag={ablehnenFuer}
-          onAblehnen={async (grund) => {
-            vorschlagNeu(
-              await vorschlagSchreiben(mOrt, ablehnenFuer.id, (x) =>
-                ablehnen(x, grund, ichV, new Date().toISOString()),
-              ),
-            );
-            setAblehnenFuer(null);
-          }}
-          onClose={() => setAblehnenFuer(null)}
-        />
-      )}
+              );
+              setAblehnenFuer(null);
+            }}
+            onClose={() => setAblehnenFuer(null)}
+          />
+        )}
 
-      {rahmen(
-        <>
-          {/* Beim Lesen bleibt der Editor bestehen (nur ausgeblendet) – sonst ginge, was noch nicht gespeichert ist, verloren. */}
-          <div hidden={lesen}>
-            <AufgabenKontext.Provider value={kontext}>
-              <DokumentEditor
-                key={laden.kopf.stand + laden.kopf.sitzung}
-                start={laden.dokument}
-                bearbeitbar={bearbeitbar}
-                griff={editor}
-                fremdeAufgabe={fremdeAufgabe}
-                onAenderung={(d) => {
-                  // Nur ein Schnappschuss der Anwesenheit (W16): keine Eingabe – kein Speichern, keine Sperre. Er fährt mit
-                  // dem nächsten Speichern mit.
-                  const nurSchnappschuss = nurSchnappschussAnders(dok, d);
-                  setDok(d);
-                  if (nurSchnappschuss) return;
-                  setHinweis(null);
-                  steuerung.current?.geaendert();
-                }}
-              />
-            </AufgabenKontext.Provider>
-          </div>
-          {lesen && (
-            <section className={ansicht.karte} aria-label="Protokoll">
-              <ProtokollAnsicht dokument={dok} aufgaben={aufgaben} />
-            </section>
-          )}
-          <Bereiche dokument={dok} aufgaben={aufgaben} naechste={naechste} />
-        </>,
-      )}
+        {rahmen(
+          <>
+            {/* Beim Lesen bleibt der Editor bestehen (nur ausgeblendet) – sonst ginge, was noch nicht gespeichert ist, verloren. */}
+            <div hidden={lesen}>
+              <AufgabenKontext.Provider value={kontext}>
+                <DokumentEditor
+                  key={laden.kopf.stand + laden.kopf.sitzung}
+                  start={laden.dokument}
+                  bearbeitbar={bearbeitbar}
+                  griff={editor}
+                  fremdeAufgabe={fremdeAufgabe}
+                  onAenderung={(d) => {
+                    // Nur ein Schnappschuss der Anwesenheit (W16): keine Eingabe – kein Speichern, keine Sperre. Er fährt mit
+                    // dem nächsten Speichern mit.
+                    const nurSchnappschuss = nurSchnappschussAnders(dok, d);
+                    setDok(d);
+                    if (nurSchnappschuss) return;
+                    setHinweis(null);
+                    steuerung.current?.geaendert();
+                  }}
+                />
+              </AufgabenKontext.Provider>
+            </div>
+            {lesen && (
+              <section className={ansicht.karte} aria-label="Protokoll">
+                <ProtokollAnsicht dokument={dok} aufgaben={aufgaben} />
+              </section>
+            )}
+            <Bereiche dokument={dok} aufgaben={aufgaben} naechste={naechste} />
+          </>,
+        )}
 
-      {frage === 'uebernehmen' && sperre && (
-        <ConfirmDialog
-          title={ichSelbst ? 'Hier weiterschreiben?' : 'Schreiben übernehmen?'}
-          message={
-            ichSelbst
-              ? 'Das andere Fenster hört dann auf zu speichern. Was dort seit dem letzten Speichern getippt wurde, bleibt nur dort sichtbar.'
-              : `${sperre.name} kann dann nicht mehr speichern. Was seit dem letzten Speichern (${uhrzeit(sperre.seit, zeitzone)}) getippt wurde, bleibt nur in diesem anderen Fenster sichtbar.`
-          }
-          confirmLabel="Übernehmen"
-          harmlos
-          beschaeftigt={beschaeftigt}
-          onConfirm={uebernehmen}
-          onCancel={() => setFrage(null)}
-        />
-      )}
-      {frage === 'verlassen' && (
-        <ConfirmDialog
-          title="Nicht gespeichert"
-          message="Die letzten Änderungen konnten nicht gespeichert werden. Wenn du jetzt gehst, sind sie verloren."
-          confirmLabel="Trotzdem verlassen"
-          cancelLabel="Hierbleiben"
-          onConfirm={() => {
-            setFrage(null);
-            void zurueck(true);
-          }}
-          onCancel={() => setFrage(null)}
-        />
-      )}
-    </div>
+        {frage === 'uebernehmen' && sperre && (
+          <ConfirmDialog
+            title={ichSelbst ? 'Hier weiterschreiben?' : 'Schreiben übernehmen?'}
+            message={
+              ichSelbst
+                ? 'Das andere Fenster hört dann auf zu speichern. Was dort seit dem letzten Speichern getippt wurde, bleibt nur dort sichtbar.'
+                : `${sperre.name} kann dann nicht mehr speichern. Was seit dem letzten Speichern (${uhrzeit(sperre.seit, zeitzone)}) getippt wurde, bleibt nur in diesem anderen Fenster sichtbar.`
+            }
+            confirmLabel="Übernehmen"
+            harmlos
+            beschaeftigt={beschaeftigt}
+            onConfirm={uebernehmen}
+            onCancel={() => setFrage(null)}
+          />
+        )}
+        {frage === 'verlassen' && (
+          <ConfirmDialog
+            title="Nicht gespeichert"
+            message="Die letzten Änderungen konnten nicht gespeichert werden. Wenn du jetzt gehst, sind sie verloren."
+            confirmLabel="Trotzdem verlassen"
+            cancelLabel="Hierbleiben"
+            onConfirm={() => {
+              setFrage(null);
+              void zurueck(true);
+            }}
+            onCancel={() => setFrage(null)}
+          />
+        )}
+      </div>
+    </ReiheAnbieter>
   );
 }
 

@@ -1,0 +1,111 @@
+// Fenster „Reihe“: Name und je Abend eine Karte (Entwurf `reihe-events-v1`) – am Handy untereinander, am Rechner zwei
+// Spalten je Karte.
+@use '@ui/design/mixins' as m;
+
+.zeilen {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.abend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface2);
+}
+
+.abendKopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.raster {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.breit {
+  grid-column: 1 / -1;
+}
+
+.klein {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+
+  > span {
+    color: var(--text2);
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+}
+
+.eingabe {
+  @include m.eingabefeld;
+  @include m.datumsfeld;
+  box-sizing: border-box;
+  width: 100%;
+  height: 38px;
+  padding: 0 10px;
+  font-size: 14.5px;
+}
+
+.notiz {
+  height: auto;
+  min-height: 38px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.event {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.liste {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wahl {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  cursor: pointer;
+
+  small {
+    display: block;
+    color: var(--text2);
+    font-size: 12.5px;
+  }
+}
+
+.stand {
+  margin: 0;
+  color: var(--text2);
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  .raster {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ErweiterungsSeite, type SeitenZustand } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { SuchLupe } from '@ui/bedienung/SuchLupe';
@@ -14,6 +14,7 @@ import { Termine } from './Termine';
 import { protokollSchluessel } from '@shared/protokolle/sitzungen';
 import { reiterMitZaehler, sichtbareReiter, sitzungAusAdresse, type ReiterId } from './reiter';
 import { useFaellige } from './useFaellige';
+import { ReiheBasis } from './themenreiheKontext';
 
 /**
  * Die Protokolle in ChurchTools (Bauplan S1/S2-2/S3-2/S7-1): Start, Sitzungen, To-Dos, Termine (W14) und – nur für Admins – Einstellungen. Am
@@ -103,86 +104,104 @@ export function App() {
         onSchliessen={zu}
       />
     ) : undefined;
+  // Was der Baustein „Reihe“ aus dem Start braucht (`ReiheAnbieter`) – einmal hier, nicht an jedem Bildschirm durchgereicht.
+  const reiheBasis = useMemo(
+    () =>
+      start
+        ? {
+            modul: start.modul,
+            gruppen: start.gruppen,
+            schreibbar: start.schreibbar,
+            ich: { person: start.id, name: start.vorname },
+            eventKalender: start.eventsAnlegen,
+          }
+        : null,
+    [start],
+  );
   const bereiche = mitReitern ? { reiter: mitZaehler, aktiv, onWechsel: wechseln } : undefined;
 
   return (
-    <ErweiterungsSeite
-      app="Protokolle"
-      zustand={zustand}
-      bereiche={bereiche}
-      handy={handy}
-      lupe={lupe}
-      // „Hallo …“ nur auf Start – das entscheidet der Rahmen (erster Reiter aktiv); in der Suche nie.
-      gruss={!suche.offen}
-      onNochmal={laden}
-    >
-      {start && suche.offen && (
-        <Suche
-          modul={start.modul}
-          gruppen={start.gruppen}
-          begriff={suche.begriff}
-          ich={start.id}
-          schreibbar={start.schreibbar}
-          onTreffer={(gruppe, sitzung, punkt) => zuSitzungen({ gruppe, sitzung, punkt })}
-        />
-      )}
-      {start && !suche.offen && aktiv === 'start' && (
-        <Startseite
-          modul={start.modul}
-          ich={{ person: start.id, name: start.vorname }}
-          gruppen={start.gruppen}
-          schreibbar={start.schreibbar}
-          onSitzung={(gruppe, sitzung) => zuSitzungen({ gruppe, sitzung })}
-          onGruppe={(gruppe) => zuSitzungen({ gruppe })}
-          onAlleToDos={() => wechseln('todos')}
-          faellige={faellig.faellige}
-          vorlauf={faellig.vorlauf}
-          onAufgaben={faellig.melden}
-        />
-      )}
-      {start && !suche.offen && aktiv === 'todos' && (
-        <ToDos
-          modul={start.modul}
-          ich={{ person: start.id, name: start.vorname }}
-          gruppen={start.gruppen}
-          schreibbar={start.schreibbar}
-          onSitzung={(gruppe, sitzung) => zuSitzungen({ gruppe, sitzung })}
-          onAufgaben={faellig.melden}
-        />
-      )}
-      {start && !suche.offen && aktiv === 'termine' && (
-        <Termine
-          modul={start.modul}
-          ich={{ person: start.id, name: start.vorname }}
-          gruppen={start.gruppen}
-          kalenderSchreiben={start.kalenderSchreiben}
-          vorlagenSchreiben={start.vorlagenSchreiben}
-          tagsVerwalten={start.tagsVerwalten}
-          ressourcenBuchen={start.ressourcenBuchen}
-          ressourcenVerwalten={start.ressourcenVerwalten}
-          eventsAnlegen={start.eventsAnlegen}
-          gruppentypenAnlegen={start.gruppentypenAnlegen}
-          onZeigen={(gruppe, sitzung, punkt) => zuSitzungen({ gruppe, sitzung, punkt })}
-          onAufgaben={faellig.melden}
-        />
-      )}
-      {start && !suche.offen && aktiv === 'sitzungen' && (
-        <Sitzungen
-          key={
-            auswahl ? `${auswahl.gruppe}:${auswahl.sitzung ?? ''}:${auswahl.punkt ?? ''}` : 'reiter'
-          }
-          modul={start.modul}
-          gruppen={start.gruppen}
-          ich={{ person: start.id, name: start.vorname }}
-          vollerName={`${start.vorname} ${start.nachname}`.trim()}
-          gemeinde={start.gemeinde}
-          schreibbar={start.schreibbar}
-          auswahl={auswahl}
-        />
-      )}
-      {start && !suche.offen && aktiv === 'verwaltung' && (
-        <Verwaltung modul={start.modul} onVorlauf={faellig.vorlaufSetzen} />
-      )}
-    </ErweiterungsSeite>
+    <ReiheBasis.Provider value={reiheBasis}>
+      <ErweiterungsSeite
+        app="Protokolle"
+        zustand={zustand}
+        bereiche={bereiche}
+        handy={handy}
+        lupe={lupe}
+        // „Hallo …“ nur auf Start – das entscheidet der Rahmen (erster Reiter aktiv); in der Suche nie.
+        gruss={!suche.offen}
+        onNochmal={laden}
+      >
+        {start && suche.offen && (
+          <Suche
+            modul={start.modul}
+            gruppen={start.gruppen}
+            begriff={suche.begriff}
+            ich={start.id}
+            schreibbar={start.schreibbar}
+            onTreffer={(gruppe, sitzung, punkt) => zuSitzungen({ gruppe, sitzung, punkt })}
+          />
+        )}
+        {start && !suche.offen && aktiv === 'start' && (
+          <Startseite
+            modul={start.modul}
+            ich={{ person: start.id, name: start.vorname }}
+            gruppen={start.gruppen}
+            schreibbar={start.schreibbar}
+            onSitzung={(gruppe, sitzung) => zuSitzungen({ gruppe, sitzung })}
+            onGruppe={(gruppe) => zuSitzungen({ gruppe })}
+            onAlleToDos={() => wechseln('todos')}
+            faellige={faellig.faellige}
+            vorlauf={faellig.vorlauf}
+            onAufgaben={faellig.melden}
+          />
+        )}
+        {start && !suche.offen && aktiv === 'todos' && (
+          <ToDos
+            modul={start.modul}
+            ich={{ person: start.id, name: start.vorname }}
+            gruppen={start.gruppen}
+            schreibbar={start.schreibbar}
+            onSitzung={(gruppe, sitzung) => zuSitzungen({ gruppe, sitzung })}
+            onAufgaben={faellig.melden}
+          />
+        )}
+        {start && !suche.offen && aktiv === 'termine' && (
+          <Termine
+            modul={start.modul}
+            ich={{ person: start.id, name: start.vorname }}
+            gruppen={start.gruppen}
+            kalenderSchreiben={start.kalenderSchreiben}
+            vorlagenSchreiben={start.vorlagenSchreiben}
+            tagsVerwalten={start.tagsVerwalten}
+            ressourcenBuchen={start.ressourcenBuchen}
+            ressourcenVerwalten={start.ressourcenVerwalten}
+            eventsAnlegen={start.eventsAnlegen}
+            gruppentypenAnlegen={start.gruppentypenAnlegen}
+            onZeigen={(gruppe, sitzung, punkt) => zuSitzungen({ gruppe, sitzung, punkt })}
+            onAufgaben={faellig.melden}
+          />
+        )}
+        {start && !suche.offen && aktiv === 'sitzungen' && (
+          <Sitzungen
+            key={
+              auswahl
+                ? `${auswahl.gruppe}:${auswahl.sitzung ?? ''}:${auswahl.punkt ?? ''}`
+                : 'reiter'
+            }
+            modul={start.modul}
+            gruppen={start.gruppen}
+            ich={{ person: start.id, name: start.vorname }}
+            vollerName={`${start.vorname} ${start.nachname}`.trim()}
+            gemeinde={start.gemeinde}
+            schreibbar={start.schreibbar}
+            auswahl={auswahl}
+          />
+        )}
+        {start && !suche.offen && aktiv === 'verwaltung' && (
+          <Verwaltung modul={start.modul} onVorlauf={faellig.vorlaufSetzen} />
+        )}
+      </ErweiterungsSeite>
+    </ReiheBasis.Provider>
   );
 }

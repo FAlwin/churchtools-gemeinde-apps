@@ -20,7 +20,6 @@ import {
   GruppenartFehler,
   rechteErgaenzenAn,
   rechtTraegerLesen,
-  zielSchluessel,
   type CtPort,
   type RechtZiel,
   type SollRecht,
@@ -192,8 +191,8 @@ const zielName = (z: RechtZiel): string => {
  * was fehlt, entzieht nie etwas, liest jedes Ziel nach. Läuft beim Speichern einer Nachweis-Art und beim Öffnen der Seite
  * durch einen Admin – so bekommen neue Träger von „Anmeldungen sehen“ das Leserecht von selbst.
  *
- * `leiterRolle`: die Leiter-Rolle der Gruppenart „Nachweis“. Steht sie selbst unter den Trägern (sie hat „Anmeldungen
- * sehen“ aus `leiterSoll`), bekommt sie einmal das volle Soll.
+ * `leiterRolle`: die Leiter-Rolle der Gruppenart „Nachweis“ – sie bekommt das volle Soll. Steht sie auch unter den Trägern
+ * (sie hat „Anmeldungen sehen“ aus `leiterSoll`), fehlt beim zweiten Abgleich nichts mehr.
  */
 export async function standAblageSichern(
   ct: CtPort,
@@ -229,7 +228,8 @@ export async function standAblageSichern(
   ];
   const leiter: RechtZiel = { art: 'group_type_role', id: leiterRolle };
   const traeger = await rechtTraegerLesen(ct, n.modulSehen);
-  const ziele = [leiter, ...traeger.filter((z) => zielSchluessel(z) !== zielSchluessel(leiter))];
+  // Steht die Leiter-Rolle selbst unter den Trägern, schreibt ihr zweiter Durchgang nichts mehr (Lesen ⊂ Schreiben).
+  const ziele = [leiter, ...traeger];
   for (const z of ziele)
     await rechteErgaenzenAn(ct, z, z === leiter ? schreiben : lesen, zielName(z));
   return { kategorie, ziele };

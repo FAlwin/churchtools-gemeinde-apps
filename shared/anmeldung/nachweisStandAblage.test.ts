@@ -83,7 +83,8 @@ describe('standWert / standAusWert', () => {
     const personen = new Map<number, string>();
     let id = 100000;
     let fehler: unknown = null;
-    while (fehler === null) {
+    // Mit Obergrenze: ohne die Prüfung im Code liefe die Schleife sonst endlos.
+    while (fehler === null && personen.size < 2000) {
       try {
         standWert(5, new Map([...personen, [id, 'rot']]));
         personen.set(id++, 'rot');

@@ -356,8 +356,8 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
       lesenHaeltAb?: number;
       /** Die Predigtserie (`series`) des Ablaufs; ein `PUT …/agenda` setzt sie wie ChurchTools (gekürzt, leer = null). */
       serie?: string | null;
-      /** Termine, die sich den Ablauf teilen (`eventIds`). */
-      eventIds?: number[];
+      /** Weitere Termine, die sich den Ablauf teilen – wie ChurchTools als Schlüssel in `startTimes` (`verbundeneTermine`). */
+      verbunden?: number[];
     } = {},
   ) {
     let items = ABLAUF.items.map((i, n) => ({ ...i, position: n }));
@@ -402,15 +402,23 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
         if (o.lesenScheitertAb !== undefined && lesen >= o.lesenScheitertAb) {
           return Promise.resolve(json(502, {}));
         }
-        const mitAuge = items.map((i) =>
-          i.id === versteckt ? { ...i, startTimes: { '7': null } } : i,
+        const mitAuge = items.map((i, n) =>
+          i.id === versteckt
+            ? { ...i, startTimes: { '7': null } }
+            : n === 0 && o.verbunden
+              ? {
+                  ...i,
+                  startTimes: Object.fromEntries(
+                    [7, ...o.verbunden].map((t) => [String(t), i.start]),
+                  ),
+                }
+              : i,
         );
         const antwort = json(200, {
           data: {
             calendarId: 2,
             isLocked: o.gesperrt ?? false,
             series: serie,
-            eventIds: o.eventIds ?? [7],
             items: mitAuge,
           },
         });
@@ -565,6 +573,8 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
     fireEvent.click(await screen.findByRole('button', { name: /Predigtserie\s*keine/ }));
     const fenster = await screen.findByRole('dialog', { name: 'Predigtserie' });
+    // Nicht geteilt: kein Hinweis auf andere Termine.
+    expect(within(fenster).queryByText(/Gilt für alle Termine/)).toBeNull();
     fireEvent.change(within(fenster).getByRole('textbox'), {
       target: { value: '  Römerbrief  ' },
     });
@@ -576,7 +586,7 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
   });
 
   it('Predigtserie entfernen: Feld leeren und speichern schreibt { series: null }', async () => {
-    const ct = ctMitAblauf({ serie: 'Die Psalmen', eventIds: [7, 8] });
+    const ct = ctMitAblauf({ serie: 'Die Psalmen', verbunden: [8] });
     zeige({ start: darfKalender([2]) });
     fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
     fireEvent.click(await screen.findByRole('button', { name: /Predigtserie\s*Die Psalmen/ }));

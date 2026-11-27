@@ -23,7 +23,12 @@ import { ablaufEnde, ablaufZeileAus, type AblaufZeile } from '@shared/ct/ablaufZ
 import { datumText, tagKurz } from '@shared/ct/datum';
 import type { AblaufTermin } from '@shared/ct/ablaufRecht';
 import { ablaufAnlegen } from '@shared/ct/ablaufAnlegen';
-import { ablaufBestandLesen, ablaufNeuAufsetzen, type AblaufStand } from '@shared/ct/ablaufNeu';
+import {
+  ablaufBestandLesen,
+  ablaufNeuAufsetzen,
+  verbundeneTermine,
+  type AblaufStand,
+} from '@shared/ct/ablaufNeu';
 import { vorlagenFuer } from '@shared/ct/ablaufVorschlaege';
 import { liveInfoGruppen } from '@shared/ct/liveAgenda';
 import { ortszeitAus } from '@shared/ct/zeit';
@@ -527,7 +532,7 @@ export function TerminAblauf({
       {serieOffen && aktiv && ablauf !== null && (
         <PredigtserieFenster
           serie={serie}
-          geteilt={(ablauf.eventIds?.length ?? 0) > 1}
+          geteilt={verbundeneTermine(ablauf, terminId).length > 0}
           onSpeichern={async (neu) => {
             try {
               await browserSerieSetzen(terminId, neu);

@@ -61,7 +61,9 @@ export interface AblaufBestandLeser {
 /**
  * Die **anderen** Termine, die diesen Ablauf teilen, aufsteigend. Erkennbar nur an den `startTimes`-Schlüsseln der
  * Punkte (je verbundenem Termin einer). Ein **leerer** geteilter Ablauf ist deshalb nicht erkennbar – ChurchTools
- * liefert keine Liste der Termine (gemessen E6-5b-0 Teil 3); verloren geht dort beim Ersetzen nichts.
+ * liefert keine Liste der Termine (gemessen E6-5b-0 Teil 3); verloren geht dort beim Ersetzen nichts. Seit dem Herbst 2026
+ * trägt der Ablauf ein Feld `eventIds` (am 27.11.2026 gelesen, nur an NICHT geteilten Abläufen: `[eigene ID]`) – an einem
+ * geteilten nicht gemessen, deshalb bleibt diese Regel die eine Stelle (auch für den Hinweis im Fenster „Predigtserie“).
  */
 export function verbundeneTermine(agenda: CtAgenda, eventId: number): number[] {
   const ids = new Set<number>();

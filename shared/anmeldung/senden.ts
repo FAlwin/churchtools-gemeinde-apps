@@ -30,6 +30,8 @@ import { tagPunkt } from '../ct/datum';
 import { leeren } from './bedingungen';
 import { freiMitText, freiSchluessel, freiText } from './freieAntwort';
 import { adresseAntwort, adresseWerte } from './adresse';
+import { GRUPPENFELD_MAX } from './feldwert';
+import { listeAus, listeDaten, listeLesbar, listenSumme, summeFuerCt } from './zeilenListe';
 import {
   berechnePreis,
   euroText,
@@ -356,11 +358,30 @@ export function anmeldungAufbauen(
       if (!ctFeld) throw new PasstNicht(`das Feld „${name}“ fehlt im Anmeldeformular`);
       return ctFeld;
     };
-    // F6a: Das Absenden einer Liste mit Zeilen kommt erst mit F6b – bis dahin laut scheitern („nicht richtig
-    // eingerichtet“), nie still ohne die Liste anmelden. Der Baustein ist bis dahin nur in Entwicklung/Demo zu haben.
-    if (f.typ === 'liste')
-      throw new PasstNicht(`„${f.frage}“ (Liste mit Zeilen) kann noch nicht abgeschickt werden`);
     const ctFeld = spalte(f.id, f.frage);
+    // F6b (E1): die Liste lesbar, in „(Daten)“ die Zeilen in fester Form, mit „Summe zeigen“ die Summe mit Punkt (M9).
+    if (f.typ === 'liste') {
+      const l = f.liste;
+      const liste = listeAus(w);
+      const daten = l ? listeDaten(l, liste) : '';
+      if (!l || !daten) return [];
+      // Ohne Login kürzt ChurchTools still (M9) – gekürzte Daten ließen sich nie wieder öffnen. Das Formular hält vorher
+      // auf (`listePruefen`); hier die zweite Sicherung für jeden Weg, der hier vorbeikommt.
+      if (daten.length > GRUPPENFELD_MAX)
+        throw new PasstNicht(`„${f.frage}“ ist zu lang zum Speichern`);
+      const zusatz = (schluessel: string) => {
+        const z = ctZusatzSpalten(f).find((x) => x.schluessel === schluessel)!;
+        return String(spalte(z.schluessel, z.name).id);
+      };
+      const summe = listenSumme(l, liste);
+      return [
+        { id: String(ctFeld.id), type: 'custom', value: listeLesbar(l, liste) },
+        { id: zusatz(`${f.id}.daten`), type: 'custom', value: daten },
+        ...(summe === null
+          ? []
+          : [{ id: zusatz(`${f.id}.summe`), type: 'custom', value: summeFuerCt(summe) }]),
+      ];
+    }
     if (f.typ === 'unterschrift') {
       const striche = unterschriftAus(w);
       if (!striche)

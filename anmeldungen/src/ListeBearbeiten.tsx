@@ -4,12 +4,14 @@ import { TextKnopf } from '@ui/bedienung/TextKnopf';
 import { ZeilenKnopf } from '@ui/bedienung/ZeilenKnopf';
 import { ListeEingabe } from '@ui/anmeldeformular/ListeEingabe';
 import type { Feld } from '@shared/anmeldung/formular';
+import { GRUPPENFELD_MAX, zahlText } from '@shared/anmeldung/feldwert';
 import {
   EINHEIT_MAX,
   SPALTEN_MAX,
   SPALTEN_NAME_MAX,
   ZEILEN_MAX,
   ZELLE_MAX,
+  listeKoennteZuLangWerden,
   neueSpalte,
   type ListeAntwort,
   type ListeEinstellung,
@@ -151,6 +153,13 @@ export function ListeBearbeiten({
         </TextKnopf>
       </span>
       <HoechstZahl max={l.max} onMax={(max) => onListe({ ...l, max })} />
+      {listeKoennteZuLangWerden(l) && (
+        <p className={k.notiz} role="note">
+          Achtung: So viele Zeilen und Spalten passen mit längeren Einträgen nicht in ChurchTools
+          (höchstens {zahlText(GRUPPENFELD_MAX)} Zeichen). Das Formular sagt es dann beim Absenden.
+          Weniger Zeilen oder Spalten schaffen Luft.
+        </p>
+      )}
       {f.zustand === 'pflicht' && (
         <p className={k.notiz} role="note">
           Pflicht: Es muss mindestens eine Zeile vollständig ausgefüllt sein.

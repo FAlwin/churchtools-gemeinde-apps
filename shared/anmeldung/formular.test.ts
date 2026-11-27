@@ -23,6 +23,7 @@ import {
   geburtsdatumAn,
   nurText,
   pruefeAntworten,
+  zuLang,
   pruefeFormular,
   mitWer,
   setzeGeburtsdatum,
@@ -31,6 +32,7 @@ import {
   type OeffentlicheEinstellungen,
 } from './formular';
 import { STANDARD_BEZAHLUNG } from './bezahlung';
+import { GRUPPENFELD_MAX } from './feldwert';
 import { mitVorgaben } from './gestaltung';
 import { neueEinstellungen } from './vorlagen';
 import { kurzname, moeglicheQuellen } from './bedingungen';
@@ -520,6 +522,45 @@ describe('lange Antworten (F5a)', () => {
 
   it('256 Zeichen nicht – schon das Speichern lehnt sie ab', () => {
     expect(() => einstellungenAlsText(mitAntwort(256))).toThrow();
+  });
+});
+
+// ── F6b: Höchstlänge von Texten (M9: ohne Login kürzt ChurchTools still auf 4.000 Zeichen) ──
+describe('lange Texte (F6b)', () => {
+  const mit = (...felder: Feld[]) => {
+    const e = neueEinstellungen('einfach');
+    e.formular.anmeldung.splice(2, 0, ...felder);
+    return e.formular;
+  };
+  const antw = (extra: Record<string, unknown>) => ({
+    anmeldung: { name: { vor: 'A', nach: 'B' }, mail: 'a@b.de', priv: true, ...extra } as never,
+    personen: [{ pname: { vor: 'A', nach: 'B' } }],
+  });
+  const bem = eigen('textarea', 'Bemerkungen', { id: 'bem' });
+  const kurz = eigen('text', 'Gemeinde', { id: 'gem', zustand: 'pflicht' });
+
+  it('4.000 Zeichen gehen, 4.001 halten auf – auch freiwillig, Leerraum an den Enden zählt nicht', () => {
+    const f = mit(bem, kurz);
+    const voll = 'ä'.repeat(GRUPPENFELD_MAX);
+    expect(pruefeAntworten(f, antw({ bem: `  ${voll}\n`, gem: voll }))).toEqual([]);
+    expect(pruefeAntworten(f, antw({ bem: `${voll}x`, gem: `${voll}x` }))).toEqual([
+      'anmeldung.bem.lang',
+      'anmeldung.gem.lang',
+    ]);
+    expect(zuLang(`${voll}x`)).toBe(true);
+    expect(zuLang(` ${voll} `)).toBe(false);
+  });
+
+  it('der Text einer freien Antwort genauso – unter `.freilang`', () => {
+    const wahl = eigen('radio', 'Gemeinde', {
+      id: 'gw',
+      antworten: ['ECG'],
+      frei: { name: 'Andere', textfeld: 'auf' },
+    });
+    const f = mit(wahl);
+    expect(
+      pruefeAntworten(f, antw({ gw: 'Andere', 'gw.frei': 'x'.repeat(GRUPPENFELD_MAX + 1) })),
+    ).toEqual(['anmeldung.gw.freilang']);
   });
 });
 

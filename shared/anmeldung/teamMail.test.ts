@@ -122,6 +122,26 @@ describe('antwortAlsText', () => {
   });
 });
 
+describe('antwortAlsText – Liste mit Zeilen (F6b)', () => {
+  it('lesbar wie in ChurchTools (`listeLesbar`), nur vollständige Zeilen; ohne Zeile nichts', () => {
+    const liste = {
+      id: 'inv',
+      typ: 'liste',
+      liste: {
+        spalten: [
+          { id: 'a', name: 'Was', art: 'text' },
+          { id: 'b', name: 'Anzahl', art: 'zahl' },
+        ],
+        max: 10,
+      },
+    } as Feld;
+    expect(
+      antwortAlsText(liste, { inv: { zeilen: [{ a: 'Zelt', b: '2' }, { a: 'Kocher' }] } }),
+    ).toBe('Was · Anzahl\nZelt · 2');
+    expect(antwortAlsText(liste, { inv: { zeilen: [{}] } })).toBeNull();
+  });
+});
+
 describe('teamBausteinNamen', () => {
   it('jede Frage der Tabelle (Kurzname) und die Anmelde-Nr.', () => {
     expect(teamBausteinNamen(einstellungen())).toEqual([

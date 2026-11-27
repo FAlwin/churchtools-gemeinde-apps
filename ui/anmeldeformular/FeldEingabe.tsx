@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
-import { nurText, type Antwort, type Feld } from '@shared/anmeldung/formular';
+import { nurText, zuLang, type Antwort, type Feld } from '@shared/anmeldung/formular';
+import { GRUPPENFELD_MAX, zahlText } from '@shared/anmeldung/feldwert';
 import { wahlAntworten, type AntwortZustand } from '@shared/anmeldung/bedingungen';
 import { freiGewaehlt, freiMitText, freiName } from '@shared/anmeldung/freieAntwort';
 import { hinweisTeile } from '@shared/anmeldung/hinweisLinks';
@@ -7,6 +8,20 @@ import { datumText } from '@shared/ct/datum';
 import { AdresseEingabe, ErziehungsEingabe, UnterschriftEingabe } from './Bausteine';
 import { ListeEingabe } from './ListeEingabe';
 import s from './AnmeldeFormular.module.scss';
+
+/** F6b: Mehr fasst eine Spalte in ChurchTools nicht (M9) – gekürzt wird nie, das Formular hält auf. */
+const LANG_TEXT = `Das ist zu lang – höchstens ${zahlText(GRUPPENFELD_MAX)} Zeichen. Bitte kürzer fassen.`;
+
+/** Ab 90 % der Grenze steht unter einem langen Text, wie viel noch geht (`zuLang` entscheidet, was zu viel ist). */
+function Zaehler({ text }: { text: string }) {
+  const n = text.trim().length;
+  if (n < GRUPPENFELD_MAX * 0.9) return null;
+  return (
+    <span className={zuLang(text) ? s.err : s.help} aria-live="polite">
+      {zahlText(n)} von {zahlText(GRUPPENFELD_MAX)} Zeichen
+    </span>
+  );
+}
 
 function Pflicht({ f }: { f: Feld }) {
   if (f.zustand === 'pflicht')
@@ -229,6 +244,7 @@ export function FeldEingabe({
           }}
         />
         {fehlerText(`Bitte „${frei.name}“ eintragen.`, 'frei')}
+        {fehlerText(LANG_TEXT, 'freilang')}
       </div>
     ) : null;
   /** Bei „steht immer da“ steht das Feld in der Zeile der freien Antwort (Eine Antwort, Mehrere Antworten). */
@@ -359,7 +375,7 @@ export function FeldEingabe({
     );
   }
   return (
-    <div className={`${s.pf} ${hatFehler() ? s.bad : ''}`}>
+    <div className={`${s.pf} ${hatFehler() || hatFehler('lang') ? s.bad : ''}`}>
       <label id={`${id}-l`} htmlFor={id}>
         {f.frage}
         <Pflicht f={f} />
@@ -373,6 +389,8 @@ export function FeldEingabe({
           {geloest}
         </span>
       )}
+      {f.typ === 'textarea' && typeof wert === 'string' && <Zaehler text={wert} />}
+      {fehlerText(LANG_TEXT, 'lang')}
       {!geloest &&
         fehlerText(
           f.typ === 'email' && typeof wert === 'string' && wert.trim()

@@ -1213,3 +1213,96 @@ describe('Adresse im Formular (F4)', () => {
     expect(screen.queryByText('Bitte den Ort eintragen.')).toBeNull();
   });
 });
+
+// ── F6b: Länge vor dem Absenden (M9: ohne Login kürzt ChurchTools still auf 4.000 Zeichen) ──
+describe('Absenden mit Liste und langen Texten (F6b)', () => {
+  afterEach(() => vi.useRealTimers());
+
+  function echtMit(extra: Record<string, unknown>) {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-16T10:00:00Z'));
+    const e = freizeit();
+    e.formular.anmeldung.splice(
+      2,
+      0,
+      {
+        id: 'inv',
+        art: 'eigen',
+        typ: 'liste',
+        frage: 'Was bringst du mit?',
+        hilfe: '',
+        zustand: 'freiwillig',
+        antworten: [],
+        liste: { spalten: [{ id: 'a', name: 'Was', art: 'text' }], max: 50 },
+      },
+      {
+        id: 'bem',
+        art: 'eigen',
+        typ: 'textarea',
+        frage: 'Hinweise zum Gepäck',
+        hilfe: '',
+        zustand: 'freiwillig',
+        antworten: [],
+      },
+    );
+    const start = musterAntworten(e, HEUTE);
+    Object.assign(start.anmeldung, extra);
+    const onAbsenden = vi.fn().mockResolvedValue({
+      personen: [{ index: 0, name: 'Maria Beispiel', ergebnis: 'angemeldet' }],
+      mail: '',
+    } satisfies Abgeschickt);
+    render(
+      <AnmeldeFormular
+        ansicht={{
+          basis: BASIS,
+          name: 'Freizeit',
+          gemeinde: 'ECG',
+          einstellungen: e,
+          freiePlaetze: 3,
+        }}
+        heute={HEUTE}
+        start={start}
+        onAbsenden={onAbsenden}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText(/Ich bin einverstanden/));
+    vi.setSystemTime(new Date('2026-10-16T10:00:10Z'));
+    return onAbsenden;
+  }
+  const absenden = () =>
+    act(async () => fireEvent.click(screen.getByRole('button', { name: 'Verbindlich anmelden' })));
+
+  it('eine passende Liste geht mit – die Zeilen stehen bei den Antworten', async () => {
+    const onAbsenden = echtMit({ inv: { zeilen: [{ a: 'Zelt' }, {}] } });
+    await absenden();
+    expect(onAbsenden).toHaveBeenCalledTimes(1);
+    expect(onAbsenden.mock.calls[0][0].antworten.anmeldung.inv).toEqual({
+      zeilen: [{ a: 'Zelt' }, {}],
+    });
+  });
+
+  it('„(Daten)“ über 4.000 Zeichen → nichts geschickt, Satz unter der Liste (nie still gekürzt)', async () => {
+    const zeilen = Array.from({ length: 45 }, (_, i) => ({ a: `${'x'.repeat(90)} ${i}` }));
+    const onAbsenden = echtMit({ inv: { zeilen } });
+    await absenden();
+    expect(onAbsenden).not.toHaveBeenCalled();
+    expect(screen.getByText(/Die Liste ist zu lang zum Speichern/)).toBeTruthy();
+  });
+
+  it('ein langer Text über 4.000 Zeichen → nichts geschickt, Meldung und Zähler am Feld', async () => {
+    const onAbsenden = echtMit({ bem: 'a'.repeat(4001) });
+    expect(screen.getByText('4.001 von 4.000 Zeichen')).toBeTruthy();
+    await absenden();
+    expect(onAbsenden).not.toHaveBeenCalled();
+    expect(screen.getByText(/Das ist zu lang – höchstens 4.000 Zeichen/)).toBeTruthy();
+  });
+
+  it('Zähler erst ab 90 % der Grenze', () => {
+    echtMit({ bem: 'a'.repeat(3599) });
+    expect(screen.queryByText(/von 4.000 Zeichen/)).toBeNull();
+    fireEvent.change(screen.getByLabelText(/Hinweise zum Gepäck/), {
+      target: { value: 'a'.repeat(3600) },
+    });
+    expect(screen.getByText('3.600 von 4.000 Zeichen')).toBeTruthy();
+  });
+});

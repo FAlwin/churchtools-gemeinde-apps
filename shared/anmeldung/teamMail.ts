@@ -24,6 +24,7 @@ import {
 import { freiAnzeige, freiText } from './freieAntwort';
 import { MEHRFACH_TRENNER } from './liste';
 import { erziehungText, type PersonErgebnis } from './senden';
+import { listeAus, listeLesbar } from './zeilenListe';
 
 /** Ohne Einstellung: an, ohne eigenen Text, alle Antworten (Alwin: Standard an). */
 export const TEAM_STANDARD: TeamMailEinstellung = { an: true, text: '', ohne: [] };
@@ -59,6 +60,9 @@ export function antwortAlsText(f: Feld, teil: Record<string, Antwort>): string |
       return erziehungText(w);
     case 'unterschrift':
       return 'unterschrieben';
+    // F6b: die Liste so lesbar wie in ChurchTools (Kopfzeile + eine Zeile je Eintrag; Umbrüche macht `zeile` zu „, “).
+    case 'liste':
+      return (f.liste && listeLesbar(f.liste, listeAus(w))) || null;
     case 'multi':
       return Array.isArray(w) && w.length ? w.map(frei).join(MEHRFACH_TRENNER) : null;
     default:

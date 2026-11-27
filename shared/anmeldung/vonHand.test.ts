@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anmeldungenAus, type MitgliedRoh } from './liste';
+import { anmeldungenAus, antwortText, einmalFelder, type MitgliedRoh } from './liste';
 import { nachpruefen, pruefMitgliederAus } from './nachpruefung';
 import { pruefeAntworten } from './formular';
 import {
@@ -441,5 +441,97 @@ describe('Zurückholen (A7-4c)', () => {
     const plan = zurueckPlan(x, b, [], FELDER, true, HEUTE);
     expect(plan.felder[x.ctFelder.foto]).toBeUndefined();
     expect(plan.verloren).toEqual(['Dürfen Fotos veröffentlicht werden?: Vielleicht']);
+  });
+});
+
+describe('F6b: Liste mit Zeilen von Hand', () => {
+  const LISTE = {
+    spalten: [
+      { id: 'a', name: 'Was', art: 'text' as const },
+      { id: 'b', name: 'Wert', art: 'zahl' as const, summe: true },
+    ],
+    max: 10,
+  };
+  /** Eine Liste im Kontakt-Teil (900–902) und eine je Person (910–912), mit ihren Spalten in ChurchTools. */
+  const mitListen = () => {
+    const x = e();
+    const feld = (id: string, frage: string) => ({
+      id,
+      art: 'eigen' as const,
+      typ: 'liste' as const,
+      frage,
+      hilfe: '',
+      zustand: 'freiwillig' as const,
+      antworten: [],
+      liste: LISTE,
+    });
+    x.formular.anmeldung.splice(2, 0, feld('inv', 'Was bringst du mit?'));
+    x.formular.person.push(feld('gep', 'Gepäck'));
+    x.ctFelder = {
+      ...x.ctFelder,
+      inv: 900,
+      'inv.daten': 901,
+      'inv.summe': 902,
+      gep: 910,
+      'gep.daten': 911,
+      'gep.summe': 912,
+    };
+    const felder = new Map(FELDER);
+    for (const [id, name] of [
+      [900, 'Was bringst du mit?'],
+      [901, 'Was bringst du mit? (Daten)'],
+      [902, 'Was bringst du mit? – Summe Wert'],
+      [910, 'Gepäck'],
+      [911, 'Gepäck (Daten)'],
+      [912, 'Gepäck – Summe Wert'],
+    ] as const)
+      felder.set(id, { id, name, fieldTypeCode: 'textarea' });
+    return { x, felder };
+  };
+
+  it('dieselbe Regel wie das Formular: lesbar, „(Daten)“, Summe – und die Tabelle liest den lesbaren Text', () => {
+    const { x, felder } = mitListen();
+    const { a } = ein(x);
+    a.anmeldung.inv = { zeilen: [{ a: 'Zelt', b: '150' }] };
+    a.personen[0].gep = { zeilen: [{ a: 'Schlafsack', b: '2,5' }, {}] };
+    const hand = handFelder(x, a, { option: 0, extras: [] }, HEUTE, felder, {
+      nr: 'HAND01',
+      mitPlatz: true,
+      papier: null,
+    });
+    expect([hand[900], hand[902], hand[910], hand[912]]).toEqual([
+      'Was · Wert\nZelt · 150',
+      '150',
+      'Was · Wert\nSchlafsack · 2,5',
+      '2.5',
+    ]);
+    expect(JSON.parse(String(hand[911]))).toEqual({
+      v: 1,
+      s: ['a', 'b'],
+      z: [['Schlafsack', 2.5]],
+    });
+    // Bis F6c zeigen Tabelle, Fenster und Druckliste den lesbaren Text (`antwortText`) – nie „[object Object]“.
+    const [anm] = anmeldungenAus(x, stand([mitglied(hand, 'active')]), STICHTAG);
+    const gep = x.formular.person.find((f) => f.id === 'gep')!;
+    expect(antwortText(gep, anm.personen[0].werte, x.ctFelder)).toBe(
+      'Was · Wert\nSchlafsack · 2,5',
+    );
+  });
+
+  it('Person dazu: ihre Liste ja, die Liste der Anmeldung samt „(Daten)“ und Summe nicht', () => {
+    const { x, felder } = mitListen();
+    const { a } = ein(x);
+    a.anmeldung.inv = { zeilen: [{ a: 'Zelt', b: '150' }] };
+    a.personen[0].gep = { zeilen: [{ a: 'Schlafsack', b: '2' }] };
+    const hand = handFelder(x, a, { option: 0, extras: [] }, HEUTE, felder, {
+      nr: 'HAND01',
+      mitPlatz: true,
+      papier: null,
+      nurPerson: true,
+    });
+    expect([hand[900], hand[901], hand[902]]).toEqual([undefined, undefined, undefined]);
+    expect(hand[911]).toBeTruthy();
+    expect(einmalFelder(x)).toEqual(expect.arrayContaining([900, 901, 902]));
+    expect(einmalFelder(x)).not.toContain(911);
   });
 });

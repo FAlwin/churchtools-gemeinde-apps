@@ -32,7 +32,6 @@ import {
   type FeldEntwurf,
 } from './baukastenEntwurf';
 import { geburtsdatumNoetigText } from './anzeige';
-import { bausteinFrei } from './bausteinFrei';
 import { ListeBearbeiten } from './ListeBearbeiten';
 import k from './Baukasten.module.scss';
 
@@ -42,8 +41,8 @@ import k from './Baukasten.module.scss';
  * nach einer Pause) – diese Komponente meldet nur Änderungen.
  */
 
-/** Die Fragetypen zur Wahl – ohne Bausteine, die noch nicht für alle da sind (`bausteinFrei`, F6a). */
-const fragetypen = () => BAUSTEINE.filter((x) => x.gruppe === 'frage' && bausteinFrei(x.typ));
+/** Die Fragetypen zur Wahl. */
+const fragetypen = () => BAUSTEINE.filter((x) => x.gruppe === 'frage');
 
 /** Wie die Eingabe aussieht – damit man beim Bearbeiten sieht, was Gäste ausfüllen (Google Forms: „Kurzantwort“). */
 function Muster({ f }: { f: Feld }) {

@@ -11,6 +11,7 @@ import {
   aufmerksamkeit,
   belegungAus,
   einteilen,
+  istAnmeldungArt,
   istVeranstaltung,
   LOGO_KENNUNG,
   phaseVon,
@@ -74,6 +75,16 @@ function v(
   if (!x) throw new Error('keine Veranstaltung');
   return x;
 }
+
+describe('istAnmeldungArt – die eine Namensregel der Gruppenart', () => {
+  it('ohne Rand-Leerzeichen, Groß/Klein egal; anderes oder kein Text: nein', () => {
+    expect(istAnmeldungArt('Anmeldung')).toBe(true);
+    expect(istAnmeldungArt('  ANMELDUNG ')).toBe(true);
+    expect(istAnmeldungArt('Anmeldungen')).toBe(false);
+    expect(istAnmeldungArt(5)).toBe(false);
+    expect(istAnmeldungArt(null)).toBe(false);
+  });
+});
 
 describe('istVeranstaltung', () => {
   it('nur Untergruppen mit unserer Kennung', () => {

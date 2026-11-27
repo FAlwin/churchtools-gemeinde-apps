@@ -38,6 +38,18 @@ export interface CtGruppenfeld {
   options?: { id: string | number; name: string }[];
 }
 
+/**
+ * **Die Gruppenfelder je Nummer** aus `GET /groups/{id}/memberfields` – nur die eigenen Felder der Gruppe (`type: 'group'`),
+ * nicht die Personenfelder. Eine Stelle für die Liste (`gruppenfelderLaden`) und das Eintragen beim Öffnen (N3c).
+ */
+export function gruppenfelderAus(
+  roh: readonly { type?: string; field?: CtGruppenfeld }[] | null | undefined,
+): Map<number, CtGruppenfeld> {
+  const felder = new Map<number, CtGruppenfeld>();
+  for (const f of roh ?? []) if (f.type === 'group' && f.field) felder.set(f.field.id, f.field);
+  return felder;
+}
+
 /** Ein Mitglied, wie `GET /groups/{id}/members` es liefert (nur, was die Liste braucht). */
 export interface MitgliedRoh {
   personId?: number;

@@ -65,6 +65,18 @@ export async function mitgliedAnlegen(
   });
 }
 
+/**
+ * **Stand die Person schon in der Gruppe?** So lehnt ChurchTools `mitgliedAnlegen` ab: 403 mit `messageKey`
+ * `member.add.already-in-group` („Die Person ist bereits in der Gruppe“, gemessen M11 27.11.2026) – kein fehlendes Recht.
+ * `fehlerAus` lässt den Rumpf in `daten` stehen (er ist kein `error.forbidden…`).
+ */
+export function istSchonDrin(e: unknown): boolean {
+  if (!(e instanceof ApiError) || e.status !== 403) return false;
+  return (
+    (e.daten as { messageKey?: unknown } | undefined)?.messageKey === 'member.add.already-in-group'
+  );
+}
+
 /** Eine bestehende Mitgliedschaft ändern – `PATCH`, ändert nur das Geschickte, legt nichts an. */
 export async function mitgliedAendern(
   gruppe: number,

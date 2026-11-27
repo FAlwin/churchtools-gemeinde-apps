@@ -465,7 +465,11 @@ export class FalschesNachweisCt {
       const da = liste.find((x) => x.personId === person);
       if (methode === 'PUT') {
         // Wie ChurchTools: nur anlegen – ist die Person schon dabei, lehnt es ab.
-        if (da) throw new ApiError(403, 'member.add.already-in-group');
+        if (da)
+          throw new ApiError(403, 'Die Person ist bereits in der Gruppe', {
+            message: 'Die Person ist bereits in der Gruppe',
+            messageKey: 'member.add.already-in-group',
+          });
         if (!ignorieren)
           this.mitgliedSetzen(gruppe, {
             personId: person,

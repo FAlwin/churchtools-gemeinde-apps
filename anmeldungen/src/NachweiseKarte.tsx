@@ -19,6 +19,7 @@ import {
 } from '@shared/anmeldung/nachweisBedarf';
 import { aendereEinstellungen } from './einrichten';
 import { nachweisArtenKurz, type NachweisArtKurz } from './nachweisArten';
+import { nachweisArtNamenLesen } from './nachweisStandAblage';
 import { Karte, Zeile } from './VeranstaltungKarte';
 import { Fehler } from './Bearbeiten';
 import { useSpeichern } from './useSpeichern';
@@ -30,10 +31,12 @@ import v from './VeranstaltungSeite.module.scss';
 /**
  * **Karte „Nachweise“ in der Veranstaltung** (N3b, Entwurf `n-nachweise-v2`, Ansicht „Nachweise · AC 2027“): je
  * Nachweis-Art, ob und für wen die Veranstaltung sie braucht – „alle Angemeldeten“ oder „nur wenn …“ eine Frage des
- * Formulars so beantwortet wurde. Hier wird nur eingestellt; eingetragen wird in N3c, die Ampel kommt in N3d.
+ * Formulars so beantwortet wurde. Hier wird nur eingestellt; eingetragen wird beim Öffnen (N3c, `nachweisEintragen.ts`), die Ampel kommt in N3d.
  *
  * Die Arten kommen aus ChurchTools (`nachweisArtenKurz`). Was eingestellt ist, steht in den Einstellungen der
  * Veranstaltung (`nachweise`, E20) – auch für Arten, die diese Person nicht sieht: Sie bleiben beim Speichern unberührt.
+ * Eine normale Leitung sieht die eingeschränkten Nachweis-Gruppen nicht (gemessen M11, 27.11.2026); deren Namen kommen aus
+ * der Ablage „Nachweis-Stand“ (E35, geschrieben beim Öffnen durch Vertrauenspersonen und Admins), sonst „Nachweis-Art Nr. …“.
  */
 const FUER_WEN_TEXT =
   'Eingetragen wird, sobald eine Vertrauensperson oder ein Admin die Erweiterung öffnet. Wer schon in der Nachweis-Gruppe ist, bekommt keine neue Aufforderung.';
@@ -62,6 +65,11 @@ export function NachweiseKarte({
   const eingestellt = e.nachweise ?? [];
   const bekannt = new Set((arten ?? []).map((a) => a.id));
   const fremde = eingestellt.filter((b) => !bekannt.has(b.artGruppeId));
+  // E35: Arten, die diese Person nicht sieht (Leitungen sehen die eingeschränkten Gruppen nicht, M11) – Namen aus der Ablage.
+  const fremdeIds = arten ? fremde.map((b) => b.artGruppeId).join(',') : '';
+  const namen = useLaden(() => (fremdeIds ? nachweisArtNamenLesen() : null), [fremdeIds]);
+  const nameVon = (id: number) =>
+    (namen.stand.art === 'fertig' ? namen.stand.daten?.get(id) : undefined) ?? unbekannt(id);
 
   const zeile = (titel: string, b: NachweisBedarf | undefined) => {
     const problem = b ? nachweisProblemText(e, b) : null;
@@ -92,7 +100,12 @@ export function NachweiseKarte({
           </Zeile>
         )}
         {arten?.map((a) => zeile(a.name, nachweisBedarfVon(e, a.id)))}
-        {fremde.map((b) => zeile(unbekannt(b.artGruppeId), b))}
+        {fremde.map((b) => zeile(nameVon(b.artGruppeId), b))}
+        {namen.stand.art === 'fehler' && (
+          <Zeile titel="Namen der Arten">
+            konnten nicht gelesen werden · <TextKnopf onClick={namen.neu}>Nochmal</TextKnopf>
+          </Zeile>
+        )}
         {arten && arten.length === 0 && !fremde.length && (
           <Zeile titel="Nachweise">
             Es gibt noch keine Nachweis-Art, die du sehen kannst. Arten legst du auf der Seite{' '}

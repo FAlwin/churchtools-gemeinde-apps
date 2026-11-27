@@ -95,11 +95,46 @@ export function standAusWert(
   return { gruppe: a.gruppe, personen };
 }
 
-/** Unser Wert für diese Art – bei mehreren (zwei gleichzeitige erste Schreibvorgänge) der älteste. */
-function wertDerArt(werte: readonly Wert[], gruppe: number): Wert | null {
-  return (
-    [...werte].sort((a, b) => a.id - b.id).find((w) => standAusWert(w)?.gruppe === gruppe) ?? null
+/** Erkennt einen Wert einer Sorte (Stand oder Art-Angaben) und nennt seine Art – `null`: nicht von uns / andere Sorte. */
+type Leser = (w: Wert) => { gruppe: number } | null;
+
+/** Unser Wert dieser Sorte für diese Art – bei mehreren (zwei gleichzeitige erste Schreibvorgänge) der älteste. */
+function wertJeArt(werte: readonly Wert[], gruppe: number, lies: Leser): Wert | null {
+  return [...werte].sort((a, b) => a.id - b.id).find((w) => lies(w)?.gruppe === gruppe) ?? null;
+}
+
+const wertDerArt = (werte: readonly Wert[], gruppe: number) =>
+  wertJeArt(werte, gruppe, standAusWert);
+
+/**
+ * **Je Art einen Wert schreiben** – die eine Stelle für „nur Änderungen, danach nachlesen“ (Stand E26 und Art-Angaben E34/E35).
+ * `werte`: frisch gelesen. Gleicher Text → kein Aufruf. Fehlt nachgelesen etwas, wirft sie `fehler(502)`. Liefert die
+ * Nummern der Arten, die geschrieben wurden.
+ */
+async function jeArtSchreiben(
+  p: ModulPort,
+  modul: number,
+  kategorie: number,
+  werte: readonly Wert[],
+  soll: readonly { gruppe: number; text: string }[],
+  lies: Leser,
+  verweigert: string,
+): Promise<number[]> {
+  const geschrieben: number[] = [];
+  for (const s of soll) {
+    const da = wertJeArt(werte, s.gruppe, lies);
+    if (da?.value === s.text) continue;
+    if (da) await wertAendern(p, modul, kategorie, da.id, s.text, verweigert);
+    else await wertAnlegen(p, modul, kategorie, s.text, verweigert);
+    geschrieben.push(s.gruppe);
+  }
+  if (geschrieben.length === 0) return geschrieben;
+  const nachher = await werteLesen(p, modul, kategorie);
+  const fehlt = soll.filter(
+    (s) => geschrieben.includes(s.gruppe) && wertJeArt(nachher, s.gruppe, lies)?.value !== s.text,
   );
+  if (fehlt.length > 0) throw p.fehler(502, 'ChurchTools hat den Nachweis-Stand nicht übernommen.');
+  return geschrieben;
 }
 
 // ── Schreiben ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -121,21 +156,7 @@ export async function nachweisStandSchreiben(
 ): Promise<number[]> {
   const soll = arten.map((a) => ({ gruppe: a.gruppe, text: standWert(a.gruppe, a.eintraege) }));
   const werte = await werteLesen(p, modul, kategorie);
-  const geschrieben: number[] = [];
-  for (const s of soll) {
-    const da = wertDerArt(werte, s.gruppe);
-    if (da?.value === s.text) continue;
-    if (da) await wertAendern(p, modul, kategorie, da.id, s.text, verweigert);
-    else await wertAnlegen(p, modul, kategorie, s.text, verweigert);
-    geschrieben.push(s.gruppe);
-  }
-  if (geschrieben.length === 0) return geschrieben;
-  const nachher = await werteLesen(p, modul, kategorie);
-  const fehlt = soll.filter(
-    (s) => geschrieben.includes(s.gruppe) && wertDerArt(nachher, s.gruppe)?.value !== s.text,
-  );
-  if (fehlt.length > 0) throw p.fehler(502, 'ChurchTools hat den Nachweis-Stand nicht übernommen.');
-  return geschrieben;
+  return await jeArtSchreiben(p, modul, kategorie, werte, soll, standAusWert, verweigert);
 }
 
 // ── Lesen (Baustein für die Ampel, N3d) ─────────────────────────────────────────────────────────────────────────
@@ -165,6 +186,143 @@ export async function nachweisStandLesen(
       art: 'gelesen',
       personen: w ? standAusWert(w)!.personen : new Map<number, StandFuerLeitung>(),
     };
+  } catch (e) {
+    if (p.istKeinRecht(e)) return { art: 'nichtLesbar' };
+    throw e;
+  }
+}
+
+// ── Angaben je Art: Name (E35) und Merkzettel „schon eingetragen“ (E34) ─────────────────────────────────────────
+
+const ART_ANGABEN = 'nachweis-art';
+const ART_FASSUNG = 1;
+
+/**
+ * **Was die Erweiterung je Nachweis-Art neben dem Stand ablegt** (N3c) – ein eigener Wert je Art in derselben Kategorie
+ * (`{art: 'nachweis-art', fassung, gruppe, name, eingetragen}`; der Stand E26 bleibt unverändert, `inhaltAus` trennt die
+ * beiden an `art`):
+ *
+ * - `name` (E35): Leitungen sehen die eingeschränkten Nachweis-Gruppen nicht (M11 Punkt 1) – hier lesen sie den Namen.
+ * - `eingetragen` (E34): **je Veranstaltung**, wer dort den Nachweis brauchte und nachgelesen in der Nachweis-Gruppe stand
+ *   (von der Erweiterung eingetragen oder schon drin). Wer darauf steht und nicht mehr in der Gruppe ist, wurde von einer
+ *   Vertrauensperson ausgetragen und wird **für diese Veranstaltung** nicht wieder eingetragen. Für eine neue Veranstaltung
+ *   gilt der Zettel nicht (Kinderschutz: keine stille Dauer-Lücke). Einträge zu vorbeigegangenen Veranstaltungen fallen beim
+ *   nächsten Schreiben weg (§ 72a: keine Nummern auf Vorrat).
+ */
+export interface ArtAngaben {
+  gruppe: number;
+  name: string;
+  /** Veranstaltung → Personen (aufsteigend). */
+  eingetragen: Map<number, number[]>;
+}
+
+interface ArtAblage {
+  art: typeof ART_ANGABEN;
+  fassung: typeof ART_FASSUNG;
+  gruppe: number;
+  name: string;
+  eingetragen: Record<string, number[]>;
+}
+
+const ganzeZahl = (x: unknown): x is number => Number.isInteger(x) && (x as number) > 0;
+
+/** Der Wert für eine Art – Veranstaltungen und Personen sortiert (gleiche Angaben, gleicher Text). Wirft `StandZuLang`. */
+export function artAngabenWert(a: ArtAngaben): string {
+  const eingetragen: Record<string, number[]> = {};
+  for (const v of [...a.eingetragen.keys()].sort((x, y) => x - y)) {
+    const personen = [...new Set(a.eingetragen.get(v))].sort((x, y) => x - y);
+    if (personen.length) eingetragen[v] = personen;
+  }
+  const text = JSON.stringify({
+    art: ART_ANGABEN,
+    fassung: ART_FASSUNG,
+    gruppe: a.gruppe,
+    name: a.name,
+    eingetragen,
+  } satisfies ArtAblage);
+  if (text.length > MAX_ZEICHEN) throw new StandZuLang(a.gruppe, text.length);
+  return text;
+}
+
+/** Ein Wert als Angaben einer Art – `null`, wenn er nicht von uns ist oder etwas darin nicht passt. */
+export function artAngabenAusWert(w: Wert): ArtAngaben | null {
+  const a = inhaltAus<ArtAblage>(w, ART_ANGABEN, ART_FASSUNG);
+  if (!a || !ganzeZahl(a.gruppe) || typeof a.name !== 'string') return null;
+  if (!a.eingetragen || typeof a.eingetragen !== 'object') return null;
+  const eingetragen = new Map<number, number[]>();
+  for (const [k, v] of Object.entries(a.eingetragen)) {
+    const id = Number(k);
+    if (!ganzeZahl(id) || !Array.isArray(v) || !v.every(ganzeZahl)) return null;
+    eingetragen.set(id, v);
+  }
+  return { gruppe: a.gruppe, name: a.name, eingetragen };
+}
+
+/** Die Angaben aller Arten aus frisch gelesenen Werten (je Art der älteste Wert). */
+export function artAngabenAus(werte: readonly Wert[]): Map<number, ArtAngaben> {
+  const m = new Map<number, ArtAngaben>();
+  for (const w of [...werte].sort((a, b) => a.id - b.id)) {
+    const a = artAngabenAusWert(w);
+    if (a && !m.has(a.gruppe)) m.set(a.gruppe, a);
+  }
+  return m;
+}
+
+/** Eine Änderung an den Angaben einer Art. */
+export interface ArtAngabenAenderung {
+  gruppe: number;
+  name: string;
+  /** Neu auf den Merkzettel: Veranstaltung → Personen (nur nachgelesen bestätigte). */
+  dazu?: ReadonlyMap<number, readonly number[]>;
+  /**
+   * Die Veranstaltungen, die noch laufen – alle anderen fallen vom Merkzettel. Fehlt es (die Veranstaltungen wurden nicht
+   * gelesen), bleibt der Merkzettel, wie er ist.
+   */
+  laufend?: ReadonlySet<number>;
+}
+
+/**
+ * **Name und Merkzettel schreiben** – direkt davor frisch gelesen und mit dem Vorhandenen zusammengeführt (zwei Tabs oder zwei
+ * Vertrauenspersonen derselben Art löschen sich so kaum Einträge weg), nur bei Änderung, danach nachgelesen
+ * (`jeArtSchreiben`). Lesefehler werfen, bevor etwas geschrieben wird.
+ */
+export async function artAngabenAbgleichen(
+  p: ModulPort,
+  modul: number,
+  kategorie: number,
+  aenderungen: readonly ArtAngabenAenderung[],
+  verweigert: string,
+): Promise<number[]> {
+  const werte = await werteLesen(p, modul, kategorie);
+  const alt = artAngabenAus(werte);
+  const soll = aenderungen.map((x) => {
+    const eingetragen = new Map<number, number[]>();
+    for (const [v, l] of alt.get(x.gruppe)?.eingetragen ?? [])
+      if (!x.laufend || x.laufend.has(v)) eingetragen.set(v, [...l]);
+    for (const [v, l] of x.dazu ?? []) eingetragen.set(v, [...(eingetragen.get(v) ?? []), ...l]);
+    return {
+      gruppe: x.gruppe,
+      text: artAngabenWert({ gruppe: x.gruppe, name: x.name, eingetragen }),
+    };
+  });
+  return await jeArtSchreiben(p, modul, kategorie, werte, soll, artAngabenAusWert, verweigert);
+}
+
+/**
+ * **Die Namen der Arten für die Leitungen** (E35, Karte „Nachweise“): `gelesen` (auch leer – dann hat noch keine
+ * Vertrauensperson die Erweiterung geöffnet), `nichtLesbar` (kein Recht, Kategorie nicht zu sehen). Alles andere wirft.
+ */
+export async function artNamenLesen(
+  p: ModulPort,
+  modul: number,
+): Promise<{ art: 'gelesen'; namen: Map<number, string> } | { art: 'nichtLesbar' }> {
+  try {
+    const kategorie = await kategorieSuchen(p, modul, NACHWEIS_STAND_KATEGORIE.kuerzel);
+    if (kategorie === null) return { art: 'nichtLesbar' };
+    const namen = new Map<number, string>();
+    for (const [g, a] of artAngabenAus(await werteLesen(p, modul, kategorie)))
+      if (a.name.trim()) namen.set(g, a.name);
+    return { art: 'gelesen', namen };
   } catch (e) {
     if (p.istKeinRecht(e)) return { art: 'nichtLesbar' };
     throw e;

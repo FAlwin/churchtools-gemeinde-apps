@@ -12,6 +12,7 @@ import { NeueVeranstaltung } from './NeueVeranstaltung';
 import { ArchivSeite } from './ArchivSeite';
 import { NachweisSeite, type NachweisFilter } from './NachweisSeite';
 import { nachweisEinstieg } from './nachweisArten';
+import { nachweiseBeimOeffnen } from './nachweisEintragen';
 import { GemeindeFenster } from './GemeindeFenster';
 import { ErstEinrichten } from './ErstEinrichten';
 import { gemeindeEinstellungen } from './gemeinde';
@@ -69,8 +70,11 @@ export function App() {
   const [einstellungen, setEinstellungen] = useState(false);
   const [aenderung, setAenderungRoh] = useState<(Aenderung & { nr: number }) | null>(null);
   // Jede Änderung bekommt eine neue Leiste – auch wenn der Text gleich lautet („Preise gespeichert.“).
-  const setAenderung = (a: Aenderung | null) =>
-    setAenderungRoh((alt) => (a ? { ...a, nr: (alt?.nr ?? 0) + 1 } : null));
+  const setAenderung = useCallback(
+    (a: Aenderung | null) =>
+      setAenderungRoh((alt) => (a ? { ...a, nr: (alt?.nr ?? 0) + 1 } : null)),
+    [],
+  );
   /** Zählt hoch, wenn die offene Seite neu laden soll (nach „Rückgängig“). */
   const [stand, setStand] = useState(0);
   const zeitzone = gemeindeZeitzone();
@@ -108,6 +112,16 @@ export function App() {
   }, []);
 
   useEffect(laden, [laden]);
+
+  // N3c: Öffnet eine Vertrauensperson oder ein Admin die Erweiterung, trägt sie im Hintergrund ein, wer einen Nachweis braucht
+  // – einmal je Seite (`nachweiseBeimOeffnen` merkt sich den Lauf), sichtbar nur als stille Meldung.
+  const geladen = zustand.art === 'fertig';
+  useEffect(() => {
+    if (!geladen) return;
+    void nachweiseBeimOeffnen().then((text) => {
+      if (text) setAenderung({ text, rueckgaengig: null });
+    });
+  }, [geladen, setAenderung]);
 
   useEffect(() => {
     const folgen = () => setAnsicht(ansichtAusAdresse());

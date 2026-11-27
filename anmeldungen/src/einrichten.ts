@@ -37,7 +37,12 @@ import {
   zweckMitNeuemNamen,
   type Bezahlung,
 } from '@shared/anmeldung/bezahlung';
-import { LOGO_KENNUNG, belegungAus, istLogoGruppe } from '@shared/anmeldung/uebersicht';
+import {
+  LOGO_KENNUNG,
+  belegungAus,
+  istAnmeldungArt,
+  istLogoGruppe,
+} from '@shared/anmeldung/uebersicht';
 import { felderNeuZuordnen, systemfeldAnlage } from '@shared/anmeldung/felder';
 import { neueEinstellungen, type Vorlage } from '@shared/anmeldung/vorlagen';
 import {
@@ -106,7 +111,7 @@ function gruppe(id: number): Promise<GruppeRoh> {
  */
 export async function anmeldungsArt(): Promise<number | null> {
   const arten = await ctDaten<{ id: number; name: string }[]>('/group/grouptypes');
-  return arten.find((a) => a.name.trim().toLowerCase() === 'anmeldung')?.id ?? null;
+  return arten.find((a) => istAnmeldungArt(a.name))?.id ?? null;
 }
 
 function globaleRechte(): Promise<{

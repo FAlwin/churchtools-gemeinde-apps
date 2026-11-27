@@ -178,7 +178,8 @@ export interface NachweisArtKurz {
 /**
  * **Die Nachweis-Arten, die man sehen darf – nur Name und Nummer** (N3b). Anders als `nachweisArtenLesen` ohne die
  * Mitglieder je Gruppe (eine Anfrage je Art wäre hier nur Last). `[]`: es gibt keine Art (oder keine ist sichtbar – die
- * Gruppen sind „eingeschränkt“, `NACHWEIS_SICHTBARKEIT`); wirft bei jedem Lesefehler, damit „nicht lesbar“ nie wie „keine“
+ * Gruppen sind „eingeschränkt“, `NACHWEIS_SICHTBARKEIT`; eine normale Leitung sieht sie nicht, gemessen M11 27.11.2026 –
+ * die Namen stehen dann in der Ablage, `nachweisArtNamenLesen`); wirft bei jedem Lesefehler, damit „nicht lesbar“ nie wie „keine“
  * aussieht.
  */
 export async function nachweisArtenKurz(): Promise<NachweisArtKurz[]> {
@@ -220,10 +221,10 @@ export interface NachweiseSeite {
 
 /**
  * **Beim Öffnen durch einen Admin nachziehen** (N3a, E19/E22): fehlende Rechte der Leiter-Rolle (z. B. 10107 bei Arten von
- * vor N3a), die Ablage „Nachweis-Stand“ und das Leserecht für neue Träger von „Anmeldungen sehen“ – nur ergänzen. Ein Fehler
+ * vor N3a, „Gruppen eines Gruppentyps sehen“ seit N3c – auch beim Öffnen der Erweiterung, `nachweiseBeimOeffnen`), die Ablage „Nachweis-Stand“ und das Leserecht für neue Träger von „Anmeldungen sehen“ – nur ergänzen. Ein Fehler
  * stört die Seite nicht (er kommt beim nächsten Öffnen wieder dran); `true`, wenn alles steht.
  */
-async function adminNachziehen(): Promise<boolean> {
+export async function adminNachziehen(): Promise<boolean> {
   try {
     const g = await nachweisGrundlageSichern();
     await nachweisStandEinrichten(g.leiterRolle);

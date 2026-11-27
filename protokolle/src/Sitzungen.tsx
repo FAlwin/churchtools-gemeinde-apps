@@ -1,11 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { FehlerKasten } from '@ui/erweiterung/ErweiterungsSeite';
 import { fehlerMeldung, type Fehlermeldung } from '@ui/ct/fehlerMeldung';
-import { DatumKachel } from '@ui/bedienung/DatumKachel';
 import { TitelWahl } from '@ui/bedienung/TitelWahl';
-import { Icon } from '@ui/icons/icons';
-import { tagPunkt, datumText } from '@shared/ct/datum';
-import { gemeindeZeitzone, heuteImKalender, ortszeitAus, tagAusIso } from '@shared/ct/zeit';
+import { gemeindeZeitzone, heuteImKalender, tagAusIso } from '@shared/ct/zeit';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
 import { protokollSchluessel, type Sitzung } from '@shared/protokolle/sitzungen';
 import { naechsteNach } from '@shared/protokolle/planen';
@@ -33,9 +30,9 @@ import { Toast } from '@ui/fenster/Toast';
 import { useToast } from '@ui/fenster/useToast';
 import { loeschbar } from '@shared/protokolle/loeschen';
 import { ProtokollLoeschen } from './ProtokollLoeschen';
-import { kachelVon, uhrzeit } from './anzeige';
-import { Etikett } from '@ui/bedienung/Etikett';
 import { SitzungAnsicht } from './SitzungAnsicht';
+import { SitzungZeile } from './SitzungZeile';
+import { SitzungenAlle, ALLE } from './SitzungenAlle';
 import { ProtokollBeginnen } from './ProtokollBeginnen';
 import { ProtokollNachtragen } from './ProtokollNachtragen';
 import { NochOhneProtokoll } from './NochOhneProtokoll';
@@ -58,59 +55,6 @@ type Zustand =
   | { art: 'laedt' }
   | { art: 'fehler'; fehler: Fehlermeldung }
   | { art: 'fertig'; daten: GruppenSitzungen; aufgaben: Aufgabe[]; vorschlaege: Vorschlag[] };
-
-function SitzungZeile({
-  s,
-  vorschlaege = 0,
-  uebernommen = 0,
-  onOeffnen,
-}: {
-  s: Sitzung;
-  /** Offene Vorschläge für diese Sitzung (S5-4). */
-  vorschlaege?: number;
-  /** Übernommene Vorschläge für diese Sitzung – sie stehen nicht mehr in der Karte (W8c). */
-  uebernommen?: number;
-  onOeffnen: () => void;
-}) {
-  const k = kachelVon(s.beginn, gemeindeZeitzone());
-  const status = s.kopf?.status;
-  return (
-    <li>
-      <button type="button" className={styles.zeile} onClick={onOeffnen}>
-        <DatumKachel tag={k.tag} monat={k.monat} gedimmt={!s.kopf} />
-        <span className={styles.text}>
-          <b>{s.titel}</b>
-          <small>
-            {datumText(ortszeitAus(s.beginn, gemeindeZeitzone()).slice(0, 10))} ·{' '}
-            {uhrzeit(s.beginn, gemeindeZeitzone())}
-            {status === 'frei' && s.kopf?.freigabe
-              ? ` · freigegeben am ${tagPunkt(s.kopf.freigabe.am.slice(0, 10))}`
-              : ''}
-          </small>
-          {/* Unter dem Datum, nicht daneben – am Handy drückte das Schild den Titel zusammen. */}
-          {(vorschlaege > 0 || uebernommen > 0) && (
-            <span className={styles.vorschlaege}>
-              {vorschlaege > 0 && (
-                <Etikett ton="blau">
-                  {vorschlaege} {vorschlaege === 1 ? 'Vorschlag' : 'Vorschläge'} offen
-                </Etikett>
-              )}
-              {uebernommen > 0 && (
-                <Etikett ton="gruen">
-                  {uebernommen} {uebernommen === 1 ? 'Vorschlag' : 'Vorschläge'} übernommen
-                </Etikett>
-              )}
-            </span>
-          )}
-        </span>
-        {status === 'entwurf' && <Etikett ton="neutral">Entwurf</Etikett>}
-        {status === 'geplant' && <Etikett ton="neutral">geplant</Etikett>}
-        {status === 'frei' && <Etikett ton="gruen">freigegeben</Etikett>}
-        <Icon name="chev-right" size={18} />
-      </button>
-    </li>
-  );
-}
 
 /**
  * Von der Startseite (S3-3) oder der Suche (S3-4b) gewählt: diese Gruppe – und, wenn angegeben, gleich diese Sitzung
@@ -158,6 +102,10 @@ export function Sitzungen({
   const [gruppeId, setGruppeId] = useState<number | null>(
     auswahl?.gruppe ?? gruppen[0]?.id ?? null,
   );
+  // Ohne gewählte Gruppe (Sprung von Startseite/Suche) startet der Reiter mit „Alle Gruppen“ – bei nur einer Gruppe gibt
+  // es diese Ansicht nicht.
+  const [alleGruppen, setAlleGruppen] = useState(!auswahl && gruppen.length > 1);
+  const inAlle = alleGruppen && gruppen.length > 1;
   const [zustand, setZustand] = useState<Zustand>({ art: 'laedt' });
   const [offen, setOffen] = useState<Sitzung | null>(null);
   const [beginnt, setBeginnt] = useState<Sitzung | null>(null);
@@ -198,7 +146,7 @@ export function Sitzungen({
   const gruppe = gruppen.find((g) => g.id === gruppeId) ?? gruppen[0] ?? null;
 
   const laden = useCallback(() => {
-    if (!gruppe) return;
+    if (!gruppe || inAlle) return;
     setZustand({ art: 'laedt' });
     setOffen(null);
     // Das Ziel gilt für das Laden, das es vorfand: Läuft ein zweites Laden schon, bevor das erste fertig ist
@@ -218,14 +166,14 @@ export function Sitzungen({
       },
       (e: unknown) => setZustand({ art: 'fehler', fehler: fehlerMeldung(e) }),
     );
-  }, [modul, gruppe]);
+  }, [modul, gruppe, inAlle]);
 
   useEffect(laden, [laden]);
 
   // Still nachladen, ohne „Wird geladen …“: Der Editor bleibt offen (er hängt am Zustand „fertig“), nur „Kommend“ und
   // damit die nächste Sitzung sind danach frisch. Scheitert es, bleibt die alte Liste – das nächste Laden holt es nach.
   const nachladen = useCallback(() => {
-    if (!gruppe) return;
+    if (!gruppe || inAlle) return;
     Promise.all([
       ladeSitzungen(modul, gruppe, gemeindeZeitzone()),
       ladeMitarbeit(modul, gruppe),
@@ -243,7 +191,7 @@ export function Sitzungen({
       },
       () => {},
     );
-  }, [modul, gruppe]);
+  }, [modul, gruppe, inAlle]);
 
   // W16: Schreiben (Leitung und „Schreibt mit“) und Leitung sind zwei Fragen – die Regel steht in `@shared/protokolle/zugang`.
   // Schreiben: Editor, Protokoll beginnen/nachtragen/„Neues Protokoll“, Vorschläge übernehmen oder aufs nächste Mal.
@@ -443,6 +391,39 @@ export function Sitzungen({
   if (!gruppe)
     return (
       <p className={styles.ruhig}>Du bist in keiner Gruppe, die hier Protokolle führen kann.</p>
+    );
+
+  // Die Überschrift ist die Gruppenwahl – mit „Alle Gruppen“ obenan, wenn es mehrere Gruppen gibt.
+  const titelWahl = (
+    <TitelWahl
+      optionen={[
+        ...(gruppen.length > 1 ? [{ wert: ALLE, text: 'Alle Gruppen' }] : []),
+        ...gruppen.map((g) => ({ wert: String(g.id), text: g.name })),
+      ]}
+      wert={inAlle ? ALLE : String(gruppe.id)}
+      onWahl={(v) => {
+        setAlleGruppen(v === ALLE);
+        if (v !== ALLE) setGruppeId(Number(v));
+      }}
+    />
+  );
+
+  if (inAlle)
+    return (
+      <SitzungenAlle
+        modul={modul}
+        gruppen={gruppen}
+        ich={ich}
+        schreibbar={schreibbar}
+        titelWahl={titelWahl}
+        onOeffnen={(g, schluessel) => {
+          // Derselbe Weg wie der Sprung von Startseite und Suche: Gruppe wählen, das Laden öffnet die Sitzung (`wunsch`).
+          wunsch.current = schluessel;
+          setZuPunkt(null);
+          setGruppeId(g);
+          setAlleGruppen(false);
+        }}
+      />
     );
 
   if (
@@ -654,11 +635,7 @@ export function Sitzungen({
       {toast && <Toast message={toast} />}
       <div className={styles.kopf}>
         {/* Die Überschrift ist die Gruppenwahl (eine Gruppe: einfache Überschrift) – keine Leiste, die am Handy überläuft. */}
-        <TitelWahl
-          optionen={gruppen.map((g) => ({ wert: String(g.id), text: g.name }))}
-          wert={String(gruppe.id)}
-          onWahl={(v) => setGruppeId(Number(v))}
-        />
+        {titelWahl}
         {/* Ein grüner Knopf für alles, was etwas hinzufügt (R3/E14: „Immer wenn was Grünes kommt, ist es etwas hinzufügen“). */}
         {zustand.art === 'fertig' && (
           <HinzufuegenMenue label="Neu" titel="Neu" pfeil handy={handy} optionen={neuOptionen} />

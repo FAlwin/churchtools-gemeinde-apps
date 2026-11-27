@@ -120,7 +120,9 @@ beforeEach(() => {
 
 describe('Reiter „Sitzungen“ (S3-2)', () => {
   it('zeigt Kommend und Protokolle der ersten Gruppe', async () => {
-    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
+    render(
+      <Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} auswahl={{ gruppe: GRUPPEN[0].id }} />,
+    );
     const kommend = await screen.findByRole('region', { name: 'Kommend' });
     expect(within(kommend).getByText('Klausur')).toBeTruthy();
     const protokolle = screen.getByRole('region', { name: 'Protokolle' });
@@ -129,7 +131,9 @@ describe('Reiter „Sitzungen“ (S3-2)', () => {
   });
 
   it('Gruppe wechseln lädt deren Sitzungen', async () => {
-    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
+    render(
+      <Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} auswahl={{ gruppe: GRUPPEN[0].id }} />,
+    );
     await screen.findByText('Klausur');
     // Die Überschrift ist die Gruppenwahl (kein Segment mit einem Knopf je Gruppe mehr).
     fireEvent.click(screen.getByRole('button', { name: `Gruppe wählen: ${GRUPPEN[0].name}` }));
@@ -143,21 +147,27 @@ describe('Reiter „Sitzungen“ (S3-2)', () => {
 
   it('Hinweise: kein Kalender gewählt, Gruppentreffen nicht freigegeben', async () => {
     m.ladeSitzungen.mockResolvedValue({ ...DATEN, kalender: null, treffenNichtFreigegeben: true });
-    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
+    render(
+      <Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} auswahl={{ gruppe: GRUPPEN[0].id }} />,
+    );
     expect(await screen.findByText(/noch kein Kalender gewählt/)).toBeTruthy();
     expect(screen.getByText(/Gruppentreffen dieser Gruppe sind für dich/)).toBeTruthy();
   });
 
   it('vorübergehender Fehler: „Erneut versuchen“ – keine leere Liste', async () => {
     m.ladeSitzungen.mockRejectedValueOnce(new ApiError(503, 'weg'));
-    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
+    render(
+      <Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} auswahl={{ gruppe: GRUPPEN[0].id }} />,
+    );
     fireEvent.click(await screen.findByRole('button', { name: 'Erneut versuchen' }));
     expect(await screen.findByText('Klausur')).toBeTruthy();
     expect(screen.queryByText('Keine kommenden Sitzungen.')).toBeNull();
   });
 
   it('Protokoll öffnen: das Dokument aus den Teilen, Bereiche, zurück zur Liste', async () => {
-    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
+    render(
+      <Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} auswahl={{ gruppe: GRUPPEN[0].id }} />,
+    );
     fireEvent.click(await screen.findByText(/freigegeben am 15\.10\.2026/));
     expect(await screen.findByText('Andacht & Gebet')).toBeTruthy();
     expect(screen.getByRole('region', { name: /To-Dos/ })).toBeTruthy();
@@ -200,7 +210,9 @@ describe('Reiter „Sitzungen“ (S3-2)', () => {
         ...nov.werte.map((w) => JSON.parse(w) as L.GruppenSitzungen['teile'][number]),
       ],
     });
-    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
+    render(
+      <Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} auswahl={{ gruppe: GRUPPEN[0].id }} />,
+    );
     fireEvent.click(await screen.findByText('Novembersitzung'));
     expect(await screen.findByText('Rückblick')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Ansehen' }));
@@ -216,14 +228,18 @@ describe('Reiter „Sitzungen“ (S3-2)', () => {
   });
 
   it('Sitzung ohne Protokoll: sagt das', async () => {
-    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
+    render(
+      <Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} auswahl={{ gruppe: GRUPPEN[0].id }} />,
+    );
     fireEvent.click(await screen.findByText('Klausur'));
     expect(await screen.findByText(/gibt es noch kein Protokoll/)).toBeTruthy();
   });
 
   it('Teile fehlen (gerade gespeichert): Hinweis statt halbem Dokument', async () => {
     m.ladeSitzungen.mockResolvedValue({ ...DATEN, teile: DATEN.teile.slice(0, 0) });
-    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
+    render(
+      <Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} auswahl={{ gruppe: GRUPPEN[0].id }} />,
+    );
     fireEvent.click(await screen.findByText(/freigegeben am 15\.10\.2026/));
     expect(await screen.findByText(/nicht vollständig lesbar/)).toBeTruthy();
     expect(screen.queryByText('Andacht & Gebet')).toBeNull();
@@ -334,7 +350,15 @@ describe('Vorschläge (S5-4)', () => {
   };
 
   it('Mitglied schlägt für die nächste Sitzung vor – mit vollem Namen; sieht ihn mit Stand, ohne Leitungs-Knöpfe', async () => {
-    render(<Sitzungen ich={ICH} vollerName="Alwin Friesen" modul={24} gruppen={GRUPPEN} />);
+    render(
+      <Sitzungen
+        ich={ICH}
+        vollerName="Alwin Friesen"
+        modul={24}
+        gruppen={GRUPPEN}
+        auswahl={{ gruppe: GRUPPEN[0].id }}
+      />,
+    );
     await vorschlagen('Neue Lieder');
     await waitFor(() => expect(V.vorschlagEinreichen).toHaveBeenCalledTimes(1));
     const [ort, v] = vi.mocked(V.vorschlagEinreichen).mock.calls[0];
@@ -360,7 +384,9 @@ describe('Vorschläge (S5-4)', () => {
 
   it('ohne festgelegte Sitzung: „Nächste Sitzung (noch nicht festgelegt)“', async () => {
     m.ladeSitzungen.mockResolvedValue({ ...DATEN, kommend: [] });
-    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
+    render(
+      <Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} auswahl={{ gruppe: GRUPPEN[0].id }} />,
+    );
     await vorschlagen('Jahresplanung');
     expect(
       screen.getByRole('option', { name: /Nächste Sitzung \(noch nicht festgelegt\)/ }),
@@ -378,7 +404,15 @@ describe('Vorschläge (S5-4)', () => {
       todoVorschlaege: [],
       vorschlaege: [vorschlag('v1')],
     });
-    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} schreibbar={[60]} />);
+    render(
+      <Sitzungen
+        ich={ICH}
+        modul={24}
+        gruppen={GRUPPEN}
+        schreibbar={[60]}
+        auswahl={{ gruppe: GRUPPEN[0].id }}
+      />,
+    );
     const k = await karte();
     fireEvent.click(within(k).getByRole('button', { name: /Thema v1/ }));
     expect(within(k).queryByRole('button', { name: 'Zurückziehen' })).toBeNull();
@@ -398,7 +432,15 @@ describe('Vorschläge (S5-4)', () => {
       todoVorschlaege: [],
       vorschlaege: [vorschlag('v1')],
     });
-    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} schreibbar={[60]} />);
+    render(
+      <Sitzungen
+        ich={ICH}
+        modul={24}
+        gruppen={GRUPPEN}
+        schreibbar={[60]}
+        auswahl={{ gruppe: GRUPPEN[0].id }}
+      />,
+    );
     const k = await karte();
     expect(within(k).getByText('kommt ins Protokoll')).toBeTruthy();
     fireEvent.click(within(k).getByRole('button', { name: /Thema v1/ }));
@@ -439,7 +481,15 @@ describe('Vorschläge (S5-4)', () => {
     };
     const laden = (vorschlaege: Vorschlag[], schreibbar: number[] = [60]) => {
       m.ladeMitarbeit.mockResolvedValue({ aufgaben: [], todoVorschlaege: [], vorschlaege });
-      render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} schreibbar={schreibbar} />);
+      render(
+        <Sitzungen
+          ich={ICH}
+          modul={24}
+          gruppen={GRUPPEN}
+          schreibbar={schreibbar}
+          auswahl={{ gruppe: GRUPPEN[0].id }}
+        />,
+      );
     };
 
     it('Kurzform: Titel und erste Textzeile, Knöpfe und voller Text erst aufgeklappt – immer nur einer', async () => {
@@ -614,7 +664,13 @@ describe('Freigegeben (S6-1)', () => {
       kopf: { ...KOPF, status: 'entwurf' },
     });
     const r = render(
-      <Sitzungen ich={ICH} vollerName="Johann Becker" modul={24} gruppen={GRUPPEN} />,
+      <Sitzungen
+        ich={ICH}
+        vollerName="Johann Becker"
+        modul={24}
+        gruppen={GRUPPEN}
+        auswahl={{ gruppe: GRUPPEN[0].id }}
+      />,
     );
     fireEvent.click(await screen.findByText(/freigegeben am 15\.10\.2026/));
     expect(await screen.findByText('freigegeben am 15.10.2026 von Alwin Friesen')).toBeTruthy();
@@ -628,6 +684,7 @@ describe('Freigegeben (S6-1)', () => {
         modul={24}
         gruppen={GRUPPEN}
         schreibbar={[60]}
+        auswahl={{ gruppe: GRUPPEN[0].id }}
       />,
     );
     fireEvent.click(await screen.findByText(/freigegeben am 15\.10\.2026/));
@@ -658,7 +715,9 @@ describe('Freigegeben (S6-1)', () => {
       kommend: [{ ...PROTOKOLL, kopf: zurueck }],
       protokolle: [],
     });
-    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
+    render(
+      <Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} auswahl={{ gruppe: GRUPPEN[0].id }} />,
+    );
     fireEvent.click(await screen.findByText('Entwurf'));
     expect(
       await screen.findByText(
@@ -678,6 +737,7 @@ describe('Teilen / PDF (S6-3b)', () => {
         gemeinde="ECG Donrath"
         modul={24}
         gruppen={GRUPPEN}
+        auswahl={{ gruppe: GRUPPEN[0].id }}
       />,
     );
     fireEvent.click(await screen.findByText(/freigegeben am 15\.10\.2026/));
@@ -690,7 +750,15 @@ describe('Teilen / PDF (S6-3b)', () => {
   });
 
   it('ohne Protokoll kein Knopf', async () => {
-    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} schreibbar={[60]} />);
+    render(
+      <Sitzungen
+        ich={ICH}
+        modul={24}
+        gruppen={GRUPPEN}
+        schreibbar={[60]}
+        auswahl={{ gruppe: GRUPPEN[0].id }}
+      />,
+    );
     fireEvent.click(await screen.findByText('Klausur'));
     expect(await screen.findByText(/Für diese Sitzung gibt es noch kein Protokoll/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Teilen \/ PDF/ })).toBeNull();
@@ -709,7 +777,9 @@ describe('„Neu“ am Handy (R3)', () => {
 
   it('Handy: das schwebende Plus (kein Quadrat im Kopf), und es öffnet dasselbe Menü als Blatt', async () => {
     geraet(true);
-    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
+    render(
+      <Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} auswahl={{ gruppe: GRUPPEN[0].id }} />,
+    );
     await screen.findByRole('region', { name: 'Kommend' });
     const plus = screen.getByRole('button', { name: 'Neu' });
     expect(plus.className).toMatch(/plus/);
@@ -721,7 +791,9 @@ describe('„Neu“ am Handy (R3)', () => {
 
   it('Rechner/iPad: bleibt der grüne Knopf „Neu ⌄“ mit Menü', async () => {
     geraet(false);
-    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
+    render(
+      <Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} auswahl={{ gruppe: GRUPPEN[0].id }} />,
+    );
     await screen.findByRole('region', { name: 'Kommend' });
     const knopf = screen.getByRole('button', { name: 'Neu' });
     expect(knopf.className).toMatch(/(^|[\s_])neu([\s_]|$)/);
@@ -747,7 +819,15 @@ describe('Schreibt mit (W16)', () => {
     m.ladeSitzungen.mockResolvedValue({ ...DATEN, stufen: STUFEN });
   });
   const zeige = (gruppen: ProtokollGruppe[]) =>
-    render(<Sitzungen ich={ICH} modul={24} gruppen={gruppen} schreibbar={[60]} />);
+    render(
+      <Sitzungen
+        ich={ICH}
+        modul={24}
+        gruppen={gruppen}
+        schreibbar={[60]}
+        auswahl={{ gruppe: GRUPPEN[0].id }}
+      />,
+    );
 
   it('„Neu ⌄“: Neues Protokoll, nachtragen und vorschlagen – „Neue Sitzung“ nur die Leitung', async () => {
     const r = zeige(MITSCHREIBEN);

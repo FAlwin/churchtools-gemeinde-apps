@@ -704,8 +704,8 @@ ein Konto, das nur **eine** Gruppe sieht.
 **Das muss passieren:** Die Überschrift im Reiter **Sitzungen** ist der Knopf zur Gruppenwahl („Bildtechnik ▾“). Es gibt keine
 Leiste mit einem Knopf je Gruppe mehr, die Seite lässt sich am Handy nicht seitlich verschieben.
 
-1. Reiter **Sitzungen** öffnen: Oben steht der Name der Gruppe mit einem kleinen Pfeil nach unten, sonst nichts daneben.
-2. Auf die Überschrift tippen: Eine Liste mit allen Gruppen klappt unter ihr auf, die aktuelle hat ein **Häkchen** und ist
+1. Reiter **Sitzungen** öffnen: Oben steht **„Alle Gruppen“** mit einem kleinen Pfeil nach unten (daneben der Filter, TF-PROT-34), sonst nichts.
+2. Auf die Überschrift tippen: Eine Liste klappt unter ihr auf – **„Alle Gruppen“ obenan**, darunter alle Gruppen; die aktuelle hat ein **Häkchen** und ist
    fett. Der Pfeil zeigt nach oben.
 3. Eine andere Gruppe wählen: Die Liste schließt, die Überschrift nennt die neue Gruppe, darunter stehen deren Sitzungen.
 4. Wieder aufklappen und **Esc** drücken (am Rechner) oder daneben tippen: Die Liste schließt, die Gruppe bleibt.
@@ -713,12 +713,12 @@ Leiste mit einem Knopf je Gruppe mehr, die Seite lässt sich am Handy nicht seit
    **Seite** lässt sich nicht nach rechts schieben. Ein sehr langer Gruppenname bricht um.
 6. Mit der Tastatur: Tab bis zur Überschrift, Eingabe öffnet, Tab/Umschalt+Tab wandert durch die Gruppen, Eingabe wählt. Danach
    steht der Fokus wieder auf der Überschrift. Ein Screenreader liest „Gruppe wählen: …“.
-7. Mit dem Konto, das nur eine Gruppe sieht: Die Überschrift ist **kein** Knopf, kein Pfeil.
+7. Mit dem Konto, das nur eine Gruppe sieht: Die Überschrift ist **kein** Knopf, kein Pfeil – und es gibt kein „Alle Gruppen“ und keinen Filter.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `ui/bedienung/TitelWahl.tsx`, `ui/bedienung/TitelWahl.module.scss`, `protokolle/src/Sitzungen.tsx`
+- **Betrifft:** `ui/bedienung/TitelWahl.tsx`, `ui/bedienung/TitelWahl.module.scss`, `protokolle/src/Sitzungen.tsx`, `protokolle/src/SitzungenAlle.tsx`
 - **Automatisiert:** größtenteils – `ui/bedienung/TitelWahl.test.tsx` (öffnen, wählen, Häkchen, Esc und Tipp daneben, eine Möglichkeit = keine Schaltfläche), `protokolle/src/Sitzungen.test.tsx` (Gruppe wechseln lädt deren Sitzungen); wie es am Handy aussieht (Breite, Rand, Scrollen), nur am Gerät
 - **Historie:** 18.11.2026 (Anlass: Die Gruppen-Leiste mit sieben Knöpfen war am Handy 600 px breit und schob die ganze Seite seitlich; Alwin entschied sich für die Überschrift als Auswahlknopf, Variante A)
 
@@ -1274,5 +1274,38 @@ festlegen und ohne Leitungsrechte bei To-Dos.
 - **Betrifft:** `protokolle/src/useMitlesen.ts`, `protokolle/src/SitzungAnsicht.tsx`, `protokolle/src/ProtokollSchreiben.tsx`, `protokolle/src/Anwesenheit.tsx`, `protokolle/src/EditorBloecke.tsx`, `protokolle/src/Sitzungen.tsx`, `protokolle/src/ToDos.tsx`, `protokolle/src/Startseite.tsx`, `protokolle/src/Suche.tsx`, `protokolle/src/einrichten.ts`, `protokolle/src/lesen.ts`, `shared/protokolle/zugang.ts`, `shared/protokolle/einrichten.ts`, `shared/protokolle/anwesenheit.ts`, `shared/protokolle/festePunkte.ts`, `shared/protokolle/protokollBlatt.ts`, `shared/protokolle/gruppen.ts`, `protokolle/src/start.ts`, `shared/ct/gruppenRechteListe.ts`
 - **Automatisiert:** größtenteils – `useMitlesen.test.ts` (Takt, Pause, kein Doppelabruf, Fake-Timer), `ProtokollSchreiben.test.tsx` (Mitlesen im Editor, nur-Schnappschuss ist keine Eingabe, „Schreibt mit“ ohne Freigeben/Löschen/Ablehnen, Haken nach W9, Schnappschuss bei der Freigabe), `SitzungAnsicht.test.tsx` (Mitlesen in der Lese-Ansicht, kein Neuaufbau), `Anwesenheit.test.tsx` (403/503 → Schnappschuss, live gewinnt, Tipp schreibt und speichert, am Rückgängig-Verlauf vorbei), `shared/protokolle/anwesenheit.test.ts`, `protokollBlatt.test.ts`, `festePunkte.test.ts`, `zugang.test.ts`, `einrichten.test.ts` (beide), `lesen.test.ts`, `Sitzungen.test.tsx`, `ToDos.rechte.test.tsx`, `Startseite.test.tsx`, `Suche.test.tsx`, `FesterPunkt.test.tsx`, `start.test.ts` und `shared/ct/gruppenRechteListe.test.ts` („Gruppentreffen pflegen“ je Gruppe, v1.6.1); **nur von Hand:** echte Rechte in ChurchTools (10111 ohne 10124 reicht zum Eintragen), Mitlesen über zwei Geräte, Scrollposition am iPhone, Aussehen
 - **Historie:** 23.11.2026 (W16); 25.11.2026 Handtest: Schritte 1–4 und 9 bestanden, 5–8 nicht aussagekräftig (Rolle unbekannt → Fehler, behoben in v1.6.1, Zusatz zu Schritt 8); 26.11.2026 Handtest v1.8.0 (`index-BGLJFEbS.js`) in Gruppe 194 (Gruppe für Teilnehmer verborgen, also der Zusatz zu Schritt 8), Rolle „Teilnehmer“ auf „Schreibt mit“, als B per Simulation Spike Musiker: Schritt 5 („Neu ⌄“ ohne „Neue Sitzung“), 6 (Editor, „Mit KI füllen“, „Teilen / PDF“, kein Freigeben/Löschen/Bearbeiten; Vorschlag mit „Übernehmen“ und „Nächstes Mal“, ohne „Ablehnen“), 7 (nur das eigene To-Do abhakbar; Reiter To-Dos wie ein Mitglied, „Das mache ich“) und 8 (freigegeben: nur „Teilen / PDF“) bestanden. Nicht geprüft: Anwesend tippen (Gruppentreffen in 194 für B gesperrt, Anwesenheit aus dem Schnappschuss), „Protokoll beginnen“ (keine Sitzung ohne Protokoll), die Schritte 5–8 in einer sichtbaren Gruppe. Danach Rolle zurück, TEST-Vorschlag gelöscht. Am selben Abend in einer sichtbaren Gruppe nachgeholt (Gruppe 262, Typ Dienst; Rolle „Mitarbeiter“ auf „Schreibt mit“, B per Simulation Spike Musiker): Schritt 1 (Rolle bekommt 10111 „Gruppentreffen durchführen“, nicht 10124), 5 („Neu ⌄“ ohne „Neue Sitzung“; Gruppentreffen ohne Protokoll mit „Protokoll beginnen“, ohne „Bearbeiten“), 6 (Anwesenheit ohne Fehlermeldung, Anwesend/Abwesend tippen steht im ChurchTools-Gruppentreffen; „Rückgängig“ nimmt den zuletzt getippten Satz zurück, die Anwesenheit bleibt; Vorschlag mit „Übernehmen“ und „Nächstes Mal“, ohne „Ablehnen“; kein Freigeben/Löschen/Bearbeiten), 7 (Reiter To-Dos wie ein Mitglied, „Das mache ich“) und 8 (freigegeben: B nur „Teilen / PDF“, A „Freigabe zurücknehmen“ und „Löschen“; Anwesenheit gemerkt) bestanden. Danach Rollen auf den Stand vor dem Test, Kategorien und Gruppentreffen gelöscht. 27.11.2026 Schritt 10 (Gruppe 194 als Admin, nur angesehen): Sitzungen, Entwurf mit Anwesenheit, freigegebenes Protokoll, To-Dos, Start, Termine, Einstellungen samt Fenster „Gruppe“ – hell und dunkel, PC und 375 px: nichts läuft über den Rand (die Werkzeugleiste des Editors scrollt in sich). Dunkel per `body.dark` im Tab, weil die Test-Instanz auf hell steht. **Fund (dunkel):** Die Knöpfe „Anwesend“/„Abwesend“ haben dieselbe Farbe wie der Kasten der Anwesenheit (`--seg-track` = `--surface3` = #3f3f46) – man sieht nur die Beschriftung, keinen Knopf.
+
+</details>
+
+### TF-PROT-34 · Sitzungen: „Alle Gruppen“ mit Filter
+
+**Das brauchst du:** In der Test-Instanz mindestens **drei Gruppen**, die in Protokolle eingerichtet sind und die du sehen darfst, davon zwei mit einer kommenden
+Sitzung und einem freigegebenen Protokoll, dazu ein Rechner, ein Handy (oder das Browserfenster auf 390 px Breite) und – für Schritt 7 – ein zweites Gerät mit
+derselben Anmeldung.
+
+**Das muss passieren:** Der Reiter **Sitzungen** öffnet mit allen Gruppen in einer Liste, jede Zeile nennt ihre Gruppe, der Filter blendet Gruppen aus und
+merkt sich das – auf jedem Gerät.
+
+1. Reiter **Sitzungen** öffnen: Die Überschrift heißt **„Alle Gruppen“**, daneben steht der Knopf **Filter**. Zwei Karten: **Kommend** (früheste zuerst, Gruppen
+   gemischt) und **Protokolle** (neueste zuerst, höchstens 8, darunter ggf. **„Weitere Protokolle zeigen“**). Unter Datum und Uhrzeit jeder Zeile steht ein
+   blaues **Schild mit dem Gruppennamen**.
+2. Eine Zeile antippen: Die Seite wechselt in diese Gruppe und öffnet die Sitzung (Protokoll zum Lesen, Entwurf im Editor, wenn du schreiben darfst). **Zurück**
+   führt in die Liste dieser Gruppe – dort steht **kein** Gruppen-Schild und kein Filter.
+3. Über die Überschrift wieder **Alle Gruppen** wählen. **Filter** öffnen, bei einer Gruppe das Häkchen entfernen: Ihre Zeilen verschwinden aus **beiden** Karten, am
+   Filter steht eine **1**. Alle Häkchen entfernen: Beide Karten sagen „Der Filter blendet alle Gruppen aus.“
+4. „Weitere Protokolle zeigen“ antippen (nur bei mehr als 8): Alle Protokolle stehen da, der Knopf ist weg.
+5. **Neu ⌄** öffnen: Es gibt nur **Neues Protokoll** (kein Nachtragen, keine Sitzung festlegen, kein Vorschlagen). Im Fenster stehen nur Gruppen, in denen du
+   schreiben darfst; nach **Anlegen** öffnet sich der Editor in der gewählten Gruppe. Ohne Schreibrecht in irgendeiner Gruppe gibt es den Knopf nicht.
+6. Von der Startseite eine Gruppe oder eine Sitzung antippen (oder die Suche): Der Reiter öffnet gleich **diese** Gruppe, nicht „Alle Gruppen“.
+7. Am zweiten Gerät (gleiche Anmeldung) den Reiter öffnen, nachdem der Filter am ersten gesetzt wurde: Dieselben Gruppen sind ausgeblendet. Der Filter der
+   **To-Dos** ist davon unabhängig (er wurde nicht mitgeändert).
+8. Hell und dunkel, PC und 375 px: Überschrift, Filter und Schilder laufen nicht über den Rand; am Handy ist „Neu“ das schwebende Plus.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `protokolle/src/SitzungenAlle.tsx`, `protokolle/src/SitzungZeile.tsx`, `protokolle/src/Sitzungen.tsx`, `protokolle/src/Sitzungen.module.scss`, `protokolle/src/todoEinstellungen.ts`, `protokolle/src/useToDoEinstellungen.ts`, `shared/protokolle/sitzungen.ts`
+- **Automatisiert:** größtenteils – `protokolle/src/SitzungenAlle.test.tsx` (Start mit/ohne Auswahl, eine Gruppe, Sortierung, Schild nur in „Alle“, Filter in beiden Karten und gemerkt je Person, „Weitere Protokolle zeigen“, Tipp öffnet in der richtigen Gruppe, „Neu ⌄“, `pruefen` mit kaputten Werten), `protokolle/src/Sitzungen.test.tsx`; **nur von Hand:** Abgleich über zwei Geräte, Aussehen, „Anlegen“ aus „Alle Gruppen“ mit echtem ChurchTools
+- **Historie:** 27.11.2026 (Entwurf `sitzungen-alle-gruppen-v1` von Alwin abgenommen; Anlass: Der Reiter öffnete immer die erste Gruppe)
 
 </details>

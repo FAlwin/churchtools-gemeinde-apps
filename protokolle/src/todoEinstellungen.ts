@@ -18,6 +18,11 @@ export interface ToDoEinstellungen {
   sortierung: Sortierung;
   /** Meine Reihenfolge (Schlüssel `gruppe:id`), über alle Spalten – nur bei „Manuell“ benutzt. */
   reihenfolge: string[];
+  /**
+   * Gruppen, die der Reiter „Sitzungen“ in „Alle Gruppen“ ausblendet (Gruppen-IDs als Text). Eine **eigene** Einstellung –
+   * nicht `aus.gruppen` der To-Dos (Alwin 27.11.2026). Liegt in derselben Personen-Datei, damit sie auf allen Geräten gilt.
+   */
+  sitzungenAus: string[];
 }
 
 export const VORGABE: ToDoEinstellungen = {
@@ -26,6 +31,7 @@ export const VORGABE: ToDoEinstellungen = {
   aus: { gruppen: [], zustaendig: [] },
   sortierung: 'dringlichkeit',
   reihenfolge: [],
+  sitzungenAus: [],
 };
 
 const SORTIERUNGEN: readonly Sortierung[] = ['dringlichkeit', 'bis', 'alpha', 'manuell'];
@@ -41,4 +47,5 @@ export const pruefen: { [K in keyof ToDoEinstellungen]: (roh: unknown) => ToDoEi
   sortierung: (x) => (SORTIERUNGEN.includes(x as Sortierung) ? (x as Sortierung) : 'dringlichkeit'),
   // Höchstens 2000 Einträge – eine Reihenfolge, die endlos wächst, gehört nicht in die Datei.
   reihenfolge: (x) => texte(x).slice(-2000),
+  sitzungenAus: (x) => texte(x),
 };

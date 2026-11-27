@@ -342,17 +342,20 @@ wie schnell es dann tickt. Die Zahl im Tempo-Feld ändert sich dabei **nicht**; 
 ChurchTools.
 
 1. **6/8-Lied öffnen**, Tempo-Menü auf (Werkzeuge → Tempo). Unter **Schläge je Takt** stehen **Auto · 6 · 3 · 2**,
-   „Auto" ist gewählt. Darunter steht „klickt … ×/min".
+   „Auto" ist gewählt. Darunter steht „klickt … ×/min" – bei **Tempo 56** genau **56** (die Zahl
+   im Feld ist bei 6/8, 9/8, 12/8 der gefühlte Schlag, das punktierte Viertel, wie bei CCLI).
 2. Puls und Klick starten → **zwei** Schläge je Takt, nicht sechs, und die Eins fällt auf den
-   Taktanfang. Gegen ein Metronom prüfen.
-3. Auf **6** stellen → sechs Schläge je Takt, dreimal so schnell. Die Zeile darunter zeigt die neue
-   Rate; die Zahl im Tempo-Feld bleibt gleich.
+   Taktanfang. Gegen ein Metronom prüfen. Klick, Einzählen und Puls sind nicht grau.
+3. Auf **6** stellen → sechs Schläge je Takt, dreimal so schnell (bei 56: **168** ×/min), auf **3**
+   → 84 ×/min. Die Zahl im Tempo-Feld bleibt gleich. Ist die Rate außerhalb von 20–300, steht
+   unten „Zu langsam/schnell zum Klicken – andere Zählweise wählen".
 4. **Schnelles 4/4-Lied**: Dort stehen nur **Auto · 4 · 2**, der vierte Knopf trägt einen **Strich**
    und ist gesperrt – im 4/4 lässt sich nicht in Dreiern zählen.
 5. Im **3/4** ist es umgekehrt: 3 und 1 sind wählbar, der Zweier trägt den Strich.
-6. **Antippen:** Im 6/8 auf **2** stellen und in Zweien mittippen → im Feld erscheint das
-   **Dreifache** dessen, was du getippt hast, und „klickt …" nennt genau deine Tipp-Rate. Das ist
-   richtig: Gespeichert wird das Tempo des Lieds, gezählt hast du gröber.
+6. **Antippen:** Im 6/8 auf **Auto** lassen und im Takt der Dreiergruppen mittippen → im Feld
+   erscheint genau deine Tipp-Rate. Im **4/4** auf **2** stellen und in Zweien mittippen → im Feld
+   erscheint das **Doppelte**, „klickt …" nennt deine Tipp-Rate. Richtig so: Gespeichert wird das
+   Tempo des Lieds, gezählt hast du gröber.
 7. **Merken:** Umstellen, Lied verlassen, wieder öffnen → die Einstellung ist noch da. Bei einem
    anderen Lied gilt wieder dessen eigene.
 8. **Auf dem Handy im Querformat** das Menü öffnen → es passt auf den Bildschirm und lässt sich
@@ -365,7 +368,7 @@ ChurchTools.
 - **Priorität:** normal
 - **Betrifft:** `client/src/utils/metronome.ts`, `client/src/components/TempoMenu.tsx`, `client/src/utils/chartSettings.ts`, `client/src/hooks/useSongSettings.ts`, `client/src/pages/ChordChart.tsx`
 - **Automatisiert:** weitgehend – `metronome.test.ts` (`autoZaehlweise`, `moeglicheZaehlweisen`,
-  `gezaehltesTempo`, `taktRaster`), `TempoMenu.test.tsx` (Beschriftung mit der gezählten Zahl,
+  `gezaehltesTempo`, `gespeichertesTempo`, `taktRaster`), `TempoMenu.test.tsx` (Beschriftung mit der gezählten Zahl,
   Strich bei Unmöglichem, Klick-Rate immer sichtbar, Rückrechnung beim Antippen, das Wort
   „Grundschläge" kommt nirgends vor), `chartSettings.test.ts` (Speichern je Version, Unsinn
   verwerfen), `BlattKopf.test.tsx` (angezeigte vs. gepulste Zahl). **Von Hand bleibt die

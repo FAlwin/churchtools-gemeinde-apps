@@ -109,6 +109,18 @@ export function brauchtNachweis(
   return passtPerson(e, [filterZu(bedarf)!], zeile);
 }
 
+/**
+ * **Zählt diese Person für den Nachweis?** Die eine Regel „wer zählt“ (E21/E30) für das Eintragen beim Öffnen (N3c) und die Ampel
+ * der Leitung (N3d): nur aktive Teilnehmer (Wartende nicht), und nur wer laut `brauchtNachweis` den Nachweis braucht.
+ */
+export function zaehltFuerNachweis(
+  e: OeffentlicheEinstellungen,
+  bedarf: NachweisBedarf | undefined,
+  zeile: { x: ListenAnmeldung; p: ListenPerson },
+): boolean {
+  return zeile.p.status === 'aktiv' && brauchtNachweis(e, bedarf, zeile);
+}
+
 /** Der Satz hinter einer Art in der Karte: „alle Angemeldeten“, „nur wenn Bereich ist Gruppenleiter“. */
 export function nachweisBedarfSatz(e: OeffentlicheEinstellungen, b: NachweisBedarf): string {
   if (b.fuer === 'alle') return 'alle Angemeldeten';

@@ -29,6 +29,16 @@ import {
   ohneAnsicht,
 } from '@shared/anmeldung/ansichten';
 import { euroText } from '@shared/anmeldung/preis';
+import { tagPunkt } from '@shared/ct/datum';
+import {
+  ampelDerAnmeldung,
+  ampelDerPerson,
+  ampelTon,
+  ampelZelle,
+  nachweisArtVon,
+  type AmpelFall,
+} from '@shared/anmeldung/nachweisAmpel';
+import { nachweisLageBauen } from '@shared/anmeldung/nachweisAmpelLage';
 import { wartenTrotzPlatz } from '@shared/anmeldung/nachpruefung';
 import {
   anmeldungenAus,
@@ -69,9 +79,11 @@ import { AnsichtFenster, type AnsichtFensterArt } from './AnsichtFenster';
 import { SpaltenFenster } from './SpaltenFenster';
 import { leseZeilenOben, zeileUmschalten } from './zeilenOben';
 import { aendereEinstellungen } from './einrichten';
+import { nachweisAblageFuerLeitung } from './nachweisStandAblage';
 import { fehlerMeldung } from './zustand';
 import { anzahlText } from './anzeige';
 import { Etikett } from '@ui/bedienung/Etikett';
+import { useLaden } from '@ui/ct/useLaden';
 import type { Option } from '@ui/bedienung/OptionWaehlen';
 import { VonHandFenster } from './VonHandFenster';
 import { ZurueckFenster } from './ZurueckFenster';
@@ -96,6 +108,29 @@ export type MitgliederZustand =
   | { art: 'verboten' }
   | { art: 'fertig'; stand: GeladenerStand };
 
+/**
+ * **Eine Zelle der Nachweis-Spalte** (N3d): Etikett in der Farbe des Werts, „nicht nötig“ leise ohne Etikett, ein Wert, der noch
+ * nicht feststeht (der Stand lädt), als „…“. „Läuft vor Ende ab“ nennt beim Darüberfahren den Tag. Nie das Ergebnis.
+ */
+function AmpelZelle({ fall, leise }: { fall: AmpelFall | null; leise: string }) {
+  if (!fall) return <small className={leise}>…</small>;
+  const ton = ampelTon(fall.wert);
+  if (ton === null) return <small className={leise}>{ampelZelle(fall)}</small>;
+  const tag = fall.bis ? tagPunkt(fall.bis) : null;
+  const title = !tag
+    ? undefined
+    : fall.wert === 'abgelaufen'
+      ? `abgelaufen seit ${tag}`
+      : fall.wert === 'laeuftAb'
+        ? `gültig bis ${tag}`
+        : undefined;
+  return (
+    <Etikett ton={ton} title={title}>
+      {ampelZelle(fall)}
+    </Etikett>
+  );
+}
+
 function ZahlungPille({ x, kostet }: { x: ListenAnmeldung; kostet: boolean }) {
   if (!kostet || x.betragCent === null || x.betragCent <= 0) return null;
   if (x.bezahlt)
@@ -116,7 +151,7 @@ function ZahlungPille({ x, kostet }: { x: ListenAnmeldung; kostet: boolean }) {
 export function AnmeldungenReiter({
   id,
   veranstaltung,
-  e,
+  e: eRoh,
   maxPlaetze,
   warteliste,
   anmeldeschluss,
@@ -203,9 +238,29 @@ export function AnmeldungenReiter({
   const stand =
     zustand?.art === 'fertig' ? zustand.stand : zustand?.art === 'laedt' ? letzter.current : null;
   const liste = useMemo(
-    () => (stand ? anmeldungenAus(e, stand, stichtag) : []),
-    [e, stand, stichtag],
+    () => (stand ? anmeldungenAus(eRoh, stand, stichtag) : []),
+    [eRoh, stand, stichtag],
   );
+  // ── Die Ampel der Nachweise (N3d): der Stand aus der Ablage, einmal je Veranstaltung; die Lage hängt als Laufzeit-Feld an
+  // den Einstellungen, damit Spalten, Filter, Sortierung und Ansichten denselben Weg gehen wie bei jeder anderen Spalte. ──
+  const artenKey = (eRoh.nachweise ?? []).map((b) => b.artGruppeId).join(',');
+  const ablage = useLaden(
+    () =>
+      artenKey !== '' && !entwurf
+        ? nachweisAblageFuerLeitung(artenKey.split(',').map(Number))
+        : null,
+    [artenKey, entwurf],
+  );
+  const e = useMemo(() => {
+    if (artenKey === '') return eRoh;
+    const gelesen =
+      ablage.stand.art === 'fertig'
+        ? ablage.stand.daten
+        : ablage.stand.art === 'fehler'
+          ? 'nichtLesbar'
+          : 'laedt';
+    return { ...eRoh, nachweisLage: nachweisLageBauen(eRoh, liste, gelesen, heute) };
+  }, [eRoh, artenKey, liste, ablage.stand, heute]);
   const handy = useMedienAbfrage(HANDY_BREITE);
   // ── Die Fenster (`useFenster`) ──
   const {
@@ -277,7 +332,7 @@ export function AnmeldungenReiter({
   // ── Eigene Ansichten (U3) ──
   // Neu geladene Einstellungen lösen den lokalen Stand ab.
   const ansichten =
-    lokaleAnsichten && lokaleAnsichten.fuer === e ? lokaleAnsichten.liste : ansichtenAus(e);
+    lokaleAnsichten && lokaleAnsichten.fuer === eRoh ? lokaleAnsichten.liste : ansichtenAus(e);
   const eA: OeffentlicheEinstellungen = { ...e, ansichten };
   const aktiveAnsicht = filter.startsWith('ansicht:')
     ? ansichten.find((x) => `ansicht:${x.id}` === filter)
@@ -294,7 +349,7 @@ export function AnmeldungenReiter({
   const ansichtenAendern = (
     aendern: (x: OeffentlicheEinstellungen) => OeffentlicheEinstellungen,
   ) => {
-    setLokaleAnsichten({ fuer: e, liste: aendern(eA).ansichten ?? [] });
+    setLokaleAnsichten({ fuer: eRoh, liste: aendern(eA).ansichten ?? [] });
     if (!darf) return;
     setAnsichtFehler(null);
     aendereEinstellungen(id, aendern).then(onGespeichert, (x: unknown) =>
@@ -619,6 +674,17 @@ export function AnmeldungenReiter({
       case 'bezahlt':
         return <ZahlungPille x={x} kostet={z.kostet} />;
     }
+    if (nachweisArtVon(k) !== null)
+      return (
+        <AmpelZelle
+          fall={ampelDerAnmeldung(
+            e.nachweisLage,
+            k,
+            x.personen.map((p) => p.personId),
+          )}
+          leise={a.leise}
+        />
+      );
     const text = zellText(e, k, x);
     return text ? (
       <span className={a.kurzText} title={text}>
@@ -643,6 +709,8 @@ export function AnmeldungenReiter({
       case 'bezahlt':
         return zelle(k, y.x);
     }
+    if (nachweisArtVon(k) !== null)
+      return <AmpelZelle fall={ampelDerPerson(e.nachweisLage, k, y.p.personId)} leise={a.leise} />;
     const text = personZellText(e, k, y);
     return text ? (
       <span className={a.kurzText} title={text}>
@@ -736,6 +804,12 @@ export function AnmeldungenReiter({
         {ansichtFehler && (
           <p className={a.hinweisRot} role="alert">
             {ansichtFehler}
+          </p>
+        )}
+        {ablage.stand.art === 'fehler' && (
+          <p className={a.hinweisRot} role="alert">
+            Der Stand der Nachweise konnte nicht gelesen werden – die Spalte sagt „Stand nicht
+            lesbar“, nicht „fehlt“. <TextKnopf onClick={ablage.neu}>Nochmal</TextKnopf>
           </p>
         )}
 

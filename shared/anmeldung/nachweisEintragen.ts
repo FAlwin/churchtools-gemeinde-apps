@@ -33,7 +33,7 @@ import {
   type ListenAnmeldung,
   type MitgliedRoh,
 } from './liste';
-import { brauchtNachweis, nachweisBedarfVon } from './nachweisBedarf';
+import { nachweisBedarfVon, zaehltFuerNachweis } from './nachweisBedarf';
 import {
   NACHWEIS_STAND_KATEGORIE,
   nachweisEinstellungenLesen,
@@ -152,7 +152,7 @@ export function eintragPlan(
   const brauchen = new Set<number>();
   for (const x of anmeldungen)
     for (const p of x.personen)
-      if (p.status === 'aktiv' && brauchtNachweis(e, bedarf, { x, p })) brauchen.add(p.personId);
+      if (zaehltFuerNachweis(e, bedarf, { x, p })) brauchen.add(p.personId);
   const liste = [...brauchen].sort((a, b) => a - b);
   return {
     neu: liste.filter((p) => !drin.has(p) && !gemerkt.has(p)),

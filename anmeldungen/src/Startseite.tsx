@@ -218,6 +218,26 @@ function HinweisZeile({
       </KlickZeile>
     );
   }
+  if (h.art === 'nachweise') {
+    // N3d (E25): nur für die Leitung; die Zeile öffnet die Veranstaltung (freigegeben → Reiter „Anmeldungen“, dort die Spalte).
+    return (
+      <KlickZeile className={styles.zeile} onClick={() => onOeffnen(v.id)}>
+        <Kachel tag={v.tag} />
+        <div className={styles.mitte}>
+          <b>{v.name}</b>
+          <span className={styles.chips}>
+            <Etikett ton="rot">
+              {anzahlText(h.n, 'Person ohne gültigen Nachweis', 'Personen ohne gültigen Nachweis')}
+            </Etikett>
+          </span>
+          <small>
+            {gruppenName(v.gruppeId)} · Wer es ist, steht im Reiter „Anmeldungen“ in der Spalte des
+            Nachweises.
+          </small>
+        </div>
+      </KlickZeile>
+    );
+  }
   const text =
     h.art === 'freigabe'
       ? {

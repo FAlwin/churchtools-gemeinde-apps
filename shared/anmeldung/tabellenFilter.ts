@@ -15,6 +15,7 @@ import { frageAntwort, frageAntwortRoh, frageSchluessel, fragen } from './druckl
 import { kurzname, wahlAntworten } from './bedingungen';
 import { mehrfachAnzeigeTeile, type ListenAnmeldung, type ListenPerson } from './liste';
 import { spaltenKatalog, zahlAus } from './tabelle';
+import { AMPEL_TEXT, ampelDerPerson, nachweisArtVon, type AmpelWert } from './nachweisAmpel';
 
 export type { SpaltenFilter };
 
@@ -28,6 +29,9 @@ const frageZu = (e: OeffentlicheEinstellungen, spalte: string) =>
 
 /** **Wie eine Spalte gefiltert wird** – nach der Art der Frage bzw. der festen Spalte. */
 export function filterArt(e: OeffentlicheEinstellungen, spalte: string): FilterArt | null {
+  const art = nachweisArtVon(spalte);
+  if (art !== null)
+    return (e.nachweise ?? []).some((b) => b.artGruppeId === art) ? 'antworten' : null;
   switch (spalte) {
     case 'bezahlt':
     case 'status':
@@ -48,8 +52,32 @@ export function filterArt(e: OeffentlicheEinstellungen, spalte: string): FilterA
 const ANGEKREUZT = 'angekreuzt';
 const NICHT_ANGEKREUZT = 'nicht angekreuzt';
 
+/**
+ * **Die Antworten der Nachweis-Spalte** (N3d): fest, unabhängig von den geladenen Daten – sonst fielen gespeicherte Filter
+ * einer Ansicht (U3, `filterBereinigt`) weg, solange der Stand noch lädt. „Stand nicht lesbar“ und „Bedingung prüfen“ kommen
+ * dazu, wenn es sie in dieser Veranstaltung gibt.
+ */
+function nachweisAntworten(e: OeffentlicheEinstellungen, art: number): string[] {
+  const feste: AmpelWert[] = [
+    'fehlt',
+    'abgelaufen',
+    'nochNicht',
+    'laeuftAb',
+    'gueltig',
+    'nichtNoetig',
+  ];
+  const lage = e.nachweisLage?.arten.get(art);
+  return [
+    ...feste,
+    ...(lage?.nichtLesbar ? (['nichtLesbar'] as const) : []),
+    ...(lage?.bedingungKaputt ? (['bedingung'] as const) : []),
+  ].map((w) => AMPEL_TEXT[w]);
+}
+
 /** **Die Antworten zur Wahl** – in der Reihenfolge des Formulars (die freie Antwort unter ihrer Beschriftung, F3). */
 export function filterAntworten(e: OeffentlicheEinstellungen, spalte: string): string[] {
+  const art = nachweisArtVon(spalte);
+  if (art !== null) return nachweisAntworten(e, art);
   if (spalte === 'bezahlt') return ['bezahlt', 'offen'];
   if (spalte === 'status') return ['Platz', 'Warteliste'];
   const f = frageZu(e, spalte);
@@ -61,7 +89,7 @@ export function filterAntworten(e: OeffentlicheEinstellungen, spalte: string): s
 
 /** Steht die Spalte an der Person (Status, Alter, Fragen je Person)? Dann prüft der Filter je Person (E4). */
 export function personenSpalte(e: OeffentlicheEinstellungen, spalte: string): boolean {
-  if (spalte === 'status' || spalte === 'alter') return true;
+  if (spalte === 'status' || spalte === 'alter' || nachweisArtVon(spalte) !== null) return true;
   const f = frageZu(e, spalte);
   return !!f && e.formular.person.includes(f);
 }
@@ -130,6 +158,10 @@ function antwortenVon(
   if (spalte === 'bezahlt')
     return x.bezahlt && (x.betragCent ?? 0) > 0 ? ['bezahlt'] : x.zahlungOffen ? ['offen'] : [];
   if (spalte === 'status') return p ? [p.status === 'wartet' ? 'Warteliste' : 'Platz'] : [];
+  if (nachweisArtVon(spalte) !== null) {
+    const a = p ? ampelDerPerson(e.nachweisLage, spalte, p.personId) : null;
+    return a ? [AMPEL_TEXT[a.wert]] : [];
+  }
   const f = frageZu(e, spalte);
   if (!f) return [];
   const roh = frageAntwortRoh(e, f, x, p);

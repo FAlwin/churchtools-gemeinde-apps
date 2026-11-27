@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { neueEinstellungen } from './vorlagen';
 import {
   anmeldeLink,
+  letzterTagVon,
+  loeschDatum,
   mitGewaehltemTermin,
   ortszeitAus,
   terminAusCt,
@@ -238,5 +240,22 @@ describe('mitGewaehltemTermin (K1)', () => {
     expect(neu.terminVerschoben).toBeUndefined();
     expect(neu.loeschfristMonate).toBe(5);
     expect(mitGewaehltemTermin(e, null).termin).toBeNull();
+  });
+});
+
+describe('letzterTagVon (N3d): die eine Stelle für „bis wann geht es“', () => {
+  it('das Ende, sonst der Beginn – nur der Tag', () => {
+    expect(letzterTagVon({ beginn: '2026-11-20T10:00', ende: '2026-11-22T12:30' })).toBe(
+      '2026-11-22',
+    );
+    expect(letzterTagVon({ beginn: '2026-11-20T10:00', ende: null })).toBe('2026-11-20');
+  });
+  it('das Löschdatum rechnet ab demselben Tag (Ende, sonst Beginn)', () => {
+    const e = (ende: string | null) => ({
+      termin: { beginn: '2026-11-20T10:00', ende, ort: '', terminId: null },
+      loeschfristMonate: 3,
+    });
+    expect(loeschDatum(e('2026-11-30T12:00'))).toBe('2027-02-28');
+    expect(loeschDatum(e(null))).toBe('2027-02-20');
   });
 });

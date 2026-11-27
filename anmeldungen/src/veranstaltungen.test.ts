@@ -11,6 +11,12 @@ import {
 import type { MeineGruppe } from '@shared/ct/gruppen';
 import { neueEinstellungen } from '@shared/anmeldung/vorlagen';
 import { ladeUebersicht } from './veranstaltungen';
+import { nachweisHinweiseLesen } from './nachweisHinweis';
+
+// N3d: Wie gezählt wird, prüft `nachweisHinweis.test.ts`; hier zählt, WER gefragt wird und was daraus wird.
+vi.mock('./nachweisHinweis', () => ({
+  nachweisHinweiseLesen: vi.fn(() => Promise.resolve(new Map<number, number>())),
+}));
 
 /**
  * Lesen der Veranstaltungen (A2, #480) gegen eine nachgestellte ChurchTools-Instanz. Die Antworten haben
@@ -414,5 +420,88 @@ describe('ladeUebersicht', () => {
     const u = await ladeUebersicht([], JETZT);
     expect(u.einteilung).toEqual({ anstehend: [], entwuerfe: [], vorbei: [] });
     expect(gefragt).toEqual(['/groups/hierarchies']);
+  });
+});
+
+describe('N3d: Hinweis „ohne gültigen Nachweis“ – wer gefragt wird', () => {
+  const mitNachweis = (beginn: string, nachweise = true) =>
+    einstellungenAlsText({
+      ...neueEinstellungen('einfach'),
+      termin: { beginn, ende: null, ort: 'Saal', terminId: null },
+      nachweise: nachweise ? [{ artGruppeId: 61, fuer: 'alle' }] : undefined,
+    });
+  /** 12.10.2026 + 42 Tage = 23.11.: der letzte Tag des Fensters; 43 Tage = 24.11. */
+  function antworten(): Antworten {
+    const a = standard();
+    a['/groups/hierarchies'] = () =>
+      json(200, {
+        data: [
+          { groupId: 9, children: [70, 71, 72, 73, 75] },
+          { groupId: 7, children: [74] },
+        ],
+      });
+    a['/groups/9/children'] = () =>
+      json(200, {
+        data: [
+          kind(70, 'Genau 42 Tage', mitNachweis('2026-11-23T19:00')),
+          kind(71, 'Schon 43 Tage', mitNachweis('2026-11-24T19:00')),
+          kind(72, 'Ohne Nachweis', mitNachweis('2026-11-01T19:00', false)),
+          kind(73, 'Entwurf', mitNachweis('2026-11-01T19:00'), 2),
+          // Vorbei, Löschdatum erreicht, noch Anmeldungen: wird gezählt (A9-4), bekommt aber keinen Hinweis.
+          kind(75, 'Vorbei', mitNachweis('2026-06-01T19:00')),
+        ],
+      });
+    a['/groups/7/children'] = () =>
+      json(200, { data: [kind(74, 'Fremde Gruppe', mitNachweis('2026-11-01T19:00'))] });
+    a['/groups?ids[]=70&ids[]=71&ids[]=72&ids[]=73&ids[]=75&ids[]=74'] = () =>
+      seite([70, 71, 72, 73, 74, 75].map((id) => ({ id, settings: { maxMembers: 10 } })));
+    for (const id of [70, 71, 72, 74, 75]) {
+      a[`/groups/${id}/members`] = () => seite([mitglied('active', undefined, 32)]);
+      a[`/groups/${id}/members/routines`] = ROUTINEN_AN;
+      a[`/groups/${id}`] = GRUPPE;
+    }
+    return a;
+  }
+  const gefragt = () =>
+    vi
+      .mocked(nachweisHinweiseLesen)
+      .mock.calls.at(-1)?.[0]
+      .map((k) => k.id);
+
+  beforeEach(() => vi.mocked(nachweisHinweiseLesen).mockClear());
+
+  it('nur Leitung der Gruppe, anstehend, Nachweis eingeschaltet und höchstens 42 Tage bis zum Beginn', async () => {
+    ct(antworten());
+    await ladeUebersicht([LOBPREIS, TECHNIK], JETZT);
+    expect(gefragt()).toEqual([70]);
+  });
+
+  it('die gelesenen Mitglieder werden mitgegeben – kein zweites Lesen; die Rollen der Leitung ebenso', async () => {
+    const f = ct(antworten());
+    await ladeUebersicht([LOBPREIS, TECHNIK], JETZT);
+    const [k, leitung, heute] = vi.mocked(nachweisHinweiseLesen).mock.calls.at(-1)!;
+    expect(k[0].mitglieder).toHaveLength(1);
+    expect(leitung).toEqual(new Set([35]));
+    expect(heute).toBe('2026-10-12');
+    expect(f.filter((p) => p === '/groups/70/members')).toHaveLength(1);
+  });
+
+  it('die Zahl wird zum Hinweis – nur für die Leitung der Gruppe der Veranstaltung', async () => {
+    vi.mocked(nachweisHinweiseLesen).mockResolvedValueOnce(
+      new Map([
+        [70, 3],
+        [74, 5],
+      ]),
+    );
+    ct(antworten());
+    const u = await ladeUebersicht([LOBPREIS, TECHNIK], JETZT);
+    const h = u.hinweise.filter((x) => x.art === 'nachweise');
+    expect(h.map((x) => [x.v.id, x.n])).toEqual([[70, 3]]);
+  });
+
+  it('ohne Kandidaten bekommt der Leser eine leere Liste (und liest dann nichts)', async () => {
+    ct(standard());
+    await ladeUebersicht([LOBPREIS, TECHNIK], JETZT);
+    expect(gefragt()).toEqual([]);
   });
 });

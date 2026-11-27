@@ -3,7 +3,7 @@
  * nach – in der Form, die an der Test-Instanz gemessen wurde (12.10.2026) –, damit die Seite ohne Instanz
  * zu sehen und zu bedienen ist. Seit A3 merkt sich die Demo auch, was geschrieben wird (Anlegen,
  * Einrichten, Termine), bis die Seite neu geladen wird. `?demo=leer` zeigt „keine Gruppen",
- * `?demo=fehler` den Fehlerfall, `?demo=einrichten` die Erweiterung vor dem Einrichten (keine Formular-Adresse), `?demo=admin` einen Gruppen-Admin (verschieben, endgültig löschen), `?demo=vertrauen` eine Vertrauensperson der Nachweise ohne „Berechtigungen verwalten“ (sieht die Seite „Nachweise“, kann nichts anlegen). Seit N1b gibt es zwei Nachweis-Arten (Führungszeugnis, JuLeiCa), `#/nachweise` zeigt sie. Seit N3b zeigt die Lobpreisfreizeit (`#/v/46`, Vorbereiten) die Karte „Nachweise“ mit einer „Nur wenn“-Bedingung, der Worship-Workshop (`#/v/43`) eine kaputte. Seit N3c trägt die Demo beim Öffnen als Admin die Technik-Leute der Lobpreisfreizeit ins Führungszeugnis ein (stille Meldung), und die Art 99 heißt dank Ablage „Erste Hilfe“. Wird nie mitgebaut (siehe `main.tsx`).
+ * `?demo=fehler` den Fehlerfall, `?demo=einrichten` die Erweiterung vor dem Einrichten (keine Formular-Adresse), `?demo=admin` einen Gruppen-Admin (verschieben, endgültig löschen), `?demo=vertrauen` eine Vertrauensperson der Nachweise ohne „Berechtigungen verwalten“ (sieht die Seite „Nachweise“, kann nichts anlegen). Seit N1b gibt es zwei Nachweis-Arten (Führungszeugnis, JuLeiCa), `#/nachweise` zeigt sie. Seit N3b zeigt die Lobpreisfreizeit (`#/v/46`, Vorbereiten) die Karte „Nachweise“ mit einer „Nur wenn“-Bedingung, der Worship-Workshop (`#/v/43`) eine kaputte. Seit N3c trägt die Demo beim Öffnen als Admin die Technik-Leute der Lobpreisfreizeit ins Führungszeugnis ein (stille Meldung), und die Art 99 heißt dank Ablage „Erste Hilfe“. Seit N3d zeigt die Lobpreisfreizeit (`#/v/46`, Reiter „Anmeldungen“, je Person) die Spalte „Führungszeugnis“ mit allen Zuständen (Stand aus der Ablage), und die Startseite den Hinweis „3 Personen ohne gültigen Nachweis“ mit `?demo=vertrauen` (alle fünf Zustände: gültig, läuft vor Ende ab, fehlt, noch nicht angefordert, nicht nötig); wer als Admin öffnet (auch die Vorgabe der Demo), trägt die Technik-Leute beim Öffnen ein und schreibt den Stand neu – dann sieht die Ampel anders aus. Wird nie mitgebaut (siehe `main.tsx`).
  *
  * Die Beschreibungen entstehen mit `einstellungenAlsText` – wie im Betrieb.
  */
@@ -16,7 +16,7 @@ import {
   nachweisNotiz,
   nachweisSchritte,
 } from '@shared/anmeldung/nachweise';
-import { artAngabenWert } from '@shared/anmeldung/nachweisStandAblage';
+import { artAngabenWert, standWert } from '@shared/anmeldung/nachweisStandAblage';
 
 function beschreibung(
   beginn: string,
@@ -305,6 +305,8 @@ const FREIZEIT_PERSONEN = [
   [926, 'Mila', 'Engel', '2018-04-09'],
   [927, 'Ben', 'Engel', '2021-12-01'],
   [928, 'Lea', 'Fuchs', '1999-07-21'],
+  // N3d: Technik, ohne Eintrag in der Nachweis-Ablage – „noch nicht angefordert“.
+  [929, 'Felix', 'Gruber', '1996-03-12'],
 ].map(([id, firstName, lastName, birthday]) => ({
   id: id as number,
   firstName: firstName as string,
@@ -373,6 +375,18 @@ const familie = (seit: string) => ({
     [926, { 73: '0', 74: 'DEMO06', 79: '791' }],
     [927, { 73: '0', 74: 'DEMO06' }],
     [928, { 73: '0', 74: 'DEMO07', 75: 'Lea Fuchs', 76: '4-Bett-Zimmer', 78: '782' }],
+    [
+      929,
+      {
+        73: '0',
+        74: 'DEMO08',
+        75: 'Felix Gruber',
+        76: '2-Bett-Zimmer',
+        78: '781',
+        79: '792',
+        80: 'Tontechnik',
+      },
+    ],
   ].map(([id, werte]) => {
     const p = [...DEMO_PERSONEN, ...FREIZEIT_PERSONEN].find((x) => x.id === id)!;
     // Lea Fuchs wartet (R2: Filter „Status: Warteliste“ je Person).
@@ -1474,6 +1488,25 @@ const DATEN: {
       id: 2,
       dataCategoryId: 51,
       value: artAngabenWert({ gruppe: 99, name: 'Erste Hilfe', eingetragen: new Map() }),
+    },
+    // N3d: Der Stand des Führungszeugnisses (Art 61) für die Leitung der Lobpreisfreizeit – Technik: Maria gültig, Tom läuft vor
+    // dem Ende ab, Jonas Brenner fehlt, Felix steht nicht darin (noch nicht angefordert); wer nicht Technik ist, braucht es nicht.
+    {
+      id: 3,
+      dataCategoryId: 51,
+      value: standWert(
+        61,
+        new Map([
+          [901, isoTag(41, 3)],
+          [903, isoTag(40)],
+          [923, 'rot'],
+        ]),
+      ),
+    },
+    {
+      id: 4,
+      dataCategoryId: 51,
+      value: artAngabenWert({ gruppe: 61, name: 'Führungszeugnis', eingetragen: new Map() }),
     },
   ],
 };

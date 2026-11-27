@@ -24,6 +24,14 @@ import {
   type ListenPerson,
 } from './liste';
 import { altersregel, euroText, kannEtwasKosten } from './preis';
+import {
+  ampelDerAnmeldung,
+  ampelDerPerson,
+  ampelRang,
+  ampelZelle,
+  nachweisArtVon,
+  nachweisSpaltenKey,
+} from './nachweisAmpel';
 
 export interface TabellenSpalte {
   schluessel: string;
@@ -94,6 +102,14 @@ export function zellText(
     case 'betrag':
       return x.betragCent === null ? '' : euroText(x.betragCent);
   }
+  if (nachweisArtVon(schluessel) !== null) {
+    const f = ampelDerAnmeldung(
+      e.nachweisLage,
+      schluessel,
+      x.personen.map((p) => p.personId),
+    );
+    return f ? ampelZelle(f) : '';
+  }
   const f = frageVon(e, schluessel);
   return f ? (frageAntwort(e, f, x, null) ?? '') : '';
 }
@@ -117,6 +133,14 @@ function sortWert(
       return x.betragCent;
     case 'bezahlt':
       return x.betragCent === null || x.betragCent <= 0 ? null : x.bezahlt ? 1 : 0;
+  }
+  if (nachweisArtVon(schluessel) !== null) {
+    const a = ampelDerAnmeldung(
+      e.nachweisLage,
+      schluessel,
+      x.personen.map((p) => p.personId),
+    );
+    return a ? ampelRang(a.wert) : null;
   }
   const f = frageVon(e, schluessel);
   if (f && ZAHL_TYPEN.has(f.typ)) return zahlAus(frageAntwort(e, f, x, null));
@@ -298,6 +322,10 @@ export function personZellText(
     case 'betrag':
       return x.betragCent === null ? '' : euroText(x.betragCent);
   }
+  if (nachweisArtVon(schluessel) !== null) {
+    const f = ampelDerPerson(e.nachweisLage, schluessel, p.personId);
+    return f ? ampelZelle(f) : '';
+  }
   return teilnehmerZelle(e, schluessel, x, p);
 }
 
@@ -318,6 +346,10 @@ function personSortWert(
     case 'betrag':
     case 'bezahlt':
       return sortWert(e, schluessel, z.x);
+  }
+  if (nachweisArtVon(schluessel) !== null) {
+    const a = ampelDerPerson(e.nachweisLage, schluessel, z.p.personId);
+    return a ? ampelRang(a.wert) : null;
   }
   const f = jedeFrage(e, schluessel);
   if (f && ZAHL_TYPEN.has(f.typ)) return zahlAus(frageAntwort(e, f, z.x, z.p));
@@ -411,6 +443,20 @@ export interface GezeigteSpalte extends TabellenSpalte {
 }
 
 /**
+ * **Die Nachweis-Spalten** (N3d): je eingeschalteter Art (`e.nachweise`) eine – mit dem Namen aus der Ablage (E35), solange der
+ * noch fehlt „Nachweis-Art Nr. …“ wie in der Karte. Sie stehen je Anmeldung und je Person (dort der Wert der Person, hier der
+ * schlechteste der Anmeldung).
+ */
+function nachweisSpalten(e: OeffentlicheEinstellungen): TabellenSpalte[] {
+  return (e.nachweise ?? []).map((b) =>
+    spalte(
+      nachweisSpaltenKey(b.artGruppeId),
+      e.nachweisLage?.arten.get(b.artGruppeId)?.name ?? `Nachweis-Art Nr. ${b.artGruppeId}`,
+    ),
+  );
+}
+
+/**
  * **Welche Spalten es gibt.** Je Anmeldung: Name, Nr., Personen, jede Frage der Anmeldung, Betrag und Bezahlt (nur
  * wenn etwas kosten kann), Angemeldet am. Je Person: Vor- und Nachname, Status, aus dem Katalog der Druckliste
  * (`teilnehmerSpalten`) Alter, Geburtsdatum, jede Frage der Person, „Angemeldet von“ und Nr., dann die Fragen der
@@ -436,6 +482,7 @@ export function spaltenKatalog(
       ...anmeldungsFragen(e).map(frageSpalte),
       ...geld,
       spalte('am', 'Angemeldet am'),
+      ...nachweisSpalten(e),
     ];
   const druck = teilnehmerSpalten(e);
   const ausDruck = (k: string) =>
@@ -451,6 +498,7 @@ export function spaltenKatalog(
     ...ausDruck('nr'),
     ...anmeldungsFragen(e).map(frageSpalte),
     ...geld,
+    ...nachweisSpalten(e),
   ];
 }
 

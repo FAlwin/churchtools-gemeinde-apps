@@ -204,3 +204,35 @@ von einer Vertrauensperson ausgetragen wurde, kommt für dieselbe Veranstaltung 
 - **Historie:** N3c (27.11.2026, Entscheidungsliste E18, E34–E37, Messung M11)
 
 </details>
+
+### TF-ANM-08 · Nachweise: Ampel für die Leitung
+
+**Das brauchst du:** Eine freigegebene Veranstaltung mit eingeschalteter Nachweis-Art (Tage bis zum Beginn: höchstens 42), dazu
+fünf Mitarbeitende: einer mit gültigem Nachweis (gültig bis nach dem letzten Tag), einer, dessen Nachweis **vor dem letzten
+Tag** endet, einer ohne Nachweis (in der Nachweis-Gruppe, noch nichts eingesehen), einer, der noch nicht in der Nachweis-Gruppe
+steht, und einer, der den Nachweis nicht braucht. Ein Konto als **Leitung** der Veranstaltung (keine Vertrauensperson), mit dem
+Recht „Anmeldungen sehen“ – und ein zweites Leitungs-Konto ohne dieses Recht. Die Vertrauensperson oder ein Admin muss die
+Erweiterung einmal geöffnet haben (schreibt den Stand).
+
+**Das muss passieren:** Im Reiter **Anmeldungen** steht eine Spalte mit dem Namen der Art: grün „gültig bis MM/JJJJ“, blau „läuft
+vor Ende ab“, rot „fehlt“, grau „noch nicht angefordert“, bei dem Fünften leise „nicht nötig“. Nie das Ergebnis der Einsicht.
+Auf der Startseite steht bei „Braucht deine Aufmerksamkeit“ „3 Personen ohne gültigen Nachweis“ (nur für die Leitung).
+
+1. Reiter **Anmeldungen**, **Je Person**: die fünf Zustände wie oben. Mit der Maus über „läuft vor Ende ab“: der Tag steht dabei.
+2. Über den Trichter im Spaltenkopf nach „fehlt“ filtern: nur diese Person bleibt. Als Ansicht speichern, Seite neu laden: die
+   Ansicht filtert noch.
+3. Auf den Spaltenkopf tippen: sortiert, wer Aufmerksamkeit braucht, zuerst. **Spalten** → die Spalte aus- und wieder einblenden.
+4. **Je Anmeldung**: die Spalte zeigt den schlechtesten Wert der Personen einer Anmeldung.
+5. Das Konto ohne „Anmeldungen sehen“: Die Spalte sagt **„Stand nicht lesbar“** – nie „fehlt“; auf der Startseite kein Hinweis.
+6. Startseite: Die Zeile „n Personen ohne gültigen Nachweis“ öffnet die Veranstaltung. Eine Veranstaltung, die erst in mehr als
+   42 Tagen beginnt, zeigt keinen Hinweis; eine vergangene ebenfalls nicht.
+7. Die Druckliste enthält die Spalte nicht.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/anmeldung/nachweisAmpel.ts`, `shared/anmeldung/nachweisAmpelLage.ts`, `shared/anmeldung/tabelle.ts`, `shared/anmeldung/tabellenFilter.ts`, `shared/anmeldung/nachweisStandAblage.ts`, `anmeldungen/src/AnmeldungenReiter.tsx`, `anmeldungen/src/nachweisHinweis.ts`, `anmeldungen/src/veranstaltungen.ts`, `anmeldungen/src/Startseite.tsx`
+- **Automatisiert:** ja – `nachweisAmpel.test.ts` (Regel, Grenzen, Erzeuger), `nachweisAmpelLage.test.ts` (Lage, 42/43 Tage), `nachweisSpalte.test.ts` (Katalog, Zellen, Sortierung, Filter, Ansichten), `nachweisHinweis.test.ts`, `veranstaltungen.test.ts`, `AnmeldungenReiter.nachweise.test.tsx`, `nachweisAblageFuerLeitung.test.ts`, `Startseite.test.tsx`; im Browser mit der Demo (`?demo=vertrauen`) durchgeklickt. Von Hand bleibt der Weg gegen echtes ChurchTools (Rechte, Stand aus der Ablage)
+- **Historie:** N3d (27.11.2026, Entscheidungsliste E24, E25, E38–E43)
+
+</details>

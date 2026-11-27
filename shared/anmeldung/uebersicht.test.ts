@@ -312,6 +312,59 @@ describe('aufmerksamkeit', () => {
       { art: 'zahlungen', v: offen, offen: 2 },
     ]);
   });
+  describe('N3d: Personen ohne gültigen Nachweis (E25)', () => {
+    const veranst = (id: number, gruppeId = 9) =>
+      v(roh(id, `V${id}`, termin('2026-11-01T10:00'), { gruppeId }), {
+        aktiv: 5,
+        wartend: 0,
+        unbezahlt: null,
+      });
+    it('nur für die Leitung der Gruppe – für alle anderen wäre es Lärm', () => {
+      const meine = veranst(1);
+      const fremde = veranst(2, 7);
+      const h = aufmerksamkeit(
+        [meine, fremde],
+        [],
+        LEITUNG,
+        HEUTE,
+        new Set(),
+        new Map(),
+        new Map([
+          [1, 3],
+          [2, 4],
+        ]),
+      );
+      expect(h).toEqual([{ art: 'nachweise', v: meine, n: 3 }]);
+    });
+    it('nur wo es Personen gibt (0 und fehlender Eintrag: kein Hinweis)', () => {
+      const a = veranst(1);
+      const b = veranst(2);
+      expect(
+        aufmerksamkeit([a, b], [], LEITUNG, HEUTE, new Set(), new Map(), new Map([[1, 0]])),
+      ).toEqual([]);
+    });
+    it('Vergangenes und Entwürfe bekommen keinen Hinweis, auch wenn eine Zahl dasteht', () => {
+      const alt = v(roh(3, 'Alt', termin('2026-09-01T10:00')), {
+        aktiv: 5,
+        wartend: 0,
+        unbezahlt: null,
+      });
+      const entwurf = v(roh(4, 'Plan', null, { statusId: 2, gruppeId: 9 }));
+      const h = aufmerksamkeit(
+        [alt, entwurf],
+        [],
+        LEITUNG,
+        HEUTE,
+        new Set(),
+        new Map(),
+        new Map([
+          [3, 2],
+          [4, 2],
+        ]),
+      );
+      expect(h.map((x) => x.art)).toEqual(['freigabe']);
+    });
+  });
   it('unlesbare Einstellungen stehen ganz oben', () => {
     const e = v(roh(1, 'Plan', null, { statusId: 2 }));
     const h = aufmerksamkeit([e], [{ id: 5, name: 'Kaputt', gruppeId: 9 }], LEITUNG);

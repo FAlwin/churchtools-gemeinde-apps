@@ -284,6 +284,9 @@ async function aufnehmen(browser) {
     // Seit E5c-1c (#1031) heißt der Reiter „Verfügbarkeit“ und hat je Termin Ja · Vielleicht · Nein statt des Hakens.
     await knopf('Verfügbarkeit').click();
     await p(1200);
+    // Seit V-3 (#1172) öffnet „Verfügbarkeit“ mit „Abwesenheiten“; Ja · Vielleicht · Nein stehen unter „Zusagen“.
+    await knopf('Zusagen').click();
+    await p(1200);
     await page
       .getByRole('button', { name: /^Vielleicht – / })
       .nth(2)

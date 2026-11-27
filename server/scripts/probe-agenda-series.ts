@@ -163,6 +163,7 @@ async function main(): Promise<void> {
   if (!SCHREIBEN) return;
 
   const csrf = ((await ruf('GET', '/csrftoken')).json as { data?: string }).data ?? '';
+  if (process.argv.includes('--serie-rumpf')) return serieRumpfMessen(a0, csrf);
   const punkte = () =>
     a0.items.map((it, i) => ({ id: it.id, ...agendaItemWritePayload(it, { position: i }) }));
   const probe = `Probe-Serie ${new Date().toISOString().slice(11, 19)}`;
@@ -195,6 +196,40 @@ async function main(): Promise<void> {
   });
   console.log(`4 Zurücksetzen:   PUT ${r.status}`);
   console.log('                 ', stand(await ablaufLesen(EVENT_ID)));
+}
+
+/**
+ * **Welcher Rumpf setzt die Serie?** (`--serie-rumpf`, 27.11.2026, für „Predigtserie im Dienstplaner“): Der Dienstplaner
+ * soll die Serie OHNE `items` schreiben – mitgeschickte Punkte ersetzen laut API-Beschreibung die ganze Liste und
+ * überschrieben eine Änderung, die jemand anders gerade macht. Gemessen werden: nur Kopf + Serie, Serie ohne Kalender,
+ * leer, Leerzeichen am Rand, 100/101 Zeichen; zuletzt der alte Stand zurück. Punkte und Grenze müssen unverändert bleiben.
+ */
+async function serieRumpfMessen(a0: Ablauf, csrf: string): Promise<void> {
+  const pfad = `/events/${EVENT_ID}/agenda`;
+  const kopf = { calendarId: a0.calendarId };
+  const punkteVorher = a0.items.map((i) => i.id).join(',');
+  const schritte: [string, Record<string, unknown>][] = [
+    ['1 Kopf + Serie:  ', { ...kopf, series: 'Probe-Serie A' }],
+    ['2 nur Serie:     ', { series: 'Probe-Serie B' }],
+    ['3 Rand-Leerz.:   ', { ...kopf, series: '  Probe C  ' }],
+    ['4 leer "":       ', { ...kopf, series: '' }],
+    ['5 100 Zeichen:   ', { ...kopf, series: 'ä'.repeat(100) }],
+    ['6 101 Zeichen:   ', { ...kopf, series: 'x'.repeat(101) }],
+    ['7 null:          ', { ...kopf, series: null }],
+    ['8 Zurücksetzen:  ', { ...kopf, series: a0.series ?? null }],
+  ];
+  for (const [text, rumpf] of schritte) {
+    const r = await ruf('PUT', pfad, csrf, rumpf);
+    const nach = await ablaufLesen(EVENT_ID);
+    const fehler = r.status >= 400 ? ` · ${JSON.stringify(r.json).slice(0, 160)}` : '';
+    const s = typeof nach.series === 'string' ? `len=${nach.series.length} ` : '';
+    const gleich =
+      nach.items.map((i) => i.id).join(',') === punkteVorher &&
+      nach.eventStartPosition === a0.eventStartPosition;
+    console.log(
+      `${text} PUT ${r.status} · ${s}series=${JSON.stringify(nach.series ?? null).slice(0, 40)} · Punkte+Grenze ${gleich ? 'gleich' : 'GEÄNDERT'}${fehler}`,
+    );
+  }
 }
 
 main().catch((e: unknown) => {

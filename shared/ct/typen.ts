@@ -104,10 +104,16 @@ export interface CtAgenda {
    * Ebenso bei Vorlagen (`PUT /agendatemplates/{id}`, gemessen 27.11.2026): Umsortieren, Grenze, Umbenennen
    * (`{ name, calendarId }`) und Ersetzen lassen sie stehen. Nur „Neue Vorlage“/„Als Vorlage“ (`POST`) schreiben `null` –
    * eine neue Vorlage übernimmt die Serie eines Termins bewusst nicht.
+   * **Setzen** (gemessen 27.11.2026 an Test-Termin 160, `probe-agenda-series.ts --serie-rumpf`): `PUT …/agenda` mit nur
+   * `{ series }` genügt (200, ohne `calendarId`, ohne `items` – Punkte und Grenze bleiben). ChurchTools kürzt Leerzeichen
+   * am Rand, `""` wird `null`, höchstens 100 Zeichen (101 → 400). Freitext – eine Liste vorhandener Serien gibt es nicht.
+   * Der Dienstplaner schreibt sie über `serieSetzen` (`schreibKern.ts`).
    */
   series?: string | null;
   /** In ChurchTools abgeschlossen (`…/agenda/lock`) – dann verweigert ChurchTools jedes Ändern. */
   isLocked?: boolean;
+  /** Die Termine, die sich diesen Ablauf teilen (verknüpfte Termine) – mehr als einer: eine Serie gilt für alle. */
+  eventIds?: number[];
 }
 
 export interface CtAgendaItem {

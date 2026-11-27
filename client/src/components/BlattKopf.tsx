@@ -6,11 +6,14 @@ import { VollbildKopfKnopf } from './VollbildKnopf';
 import { Icon } from '@ui/icons/icons';
 import { KopfKnopf, KopfZurueck } from '@ui/bedienung/KopfKnopf';
 import {
+  KNAPP_KURZWORT,
+  KNAPP_NUR_SYMBOL,
   WERKZEUG_KURZ,
   WERKZEUG_NAME,
   kopfAufbau,
   type KopfAufbau,
   verfuegbareWerkzeuge,
+  werkzeugeKnapp,
   type WerkzeugId,
 } from '../utils/werkzeuge';
 import styles from './BlattKopf.module.scss';
@@ -156,11 +159,14 @@ export function BlattKopf({
 
   // ── breit oder kompakt: laufend gemessen ──
   const [aufbau, setAufbau] = useState<KopfAufbau>('breit');
+  const [knapp, setKnapp] = useState(false);
   useLayoutEffect(() => {
     const el = kopfRef.current;
     if (!el) return;
-    const messen = () =>
+    const messen = () => {
       setAufbau(kopfAufbau({ breite: el.clientWidth, hoehe: window.innerHeight }));
+      setKnapp(werkzeugeKnapp(el.clientWidth));
+    };
     messen();
     window.addEventListener('resize', messen);
     const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(messen);
@@ -174,6 +180,9 @@ export function BlattKopf({
   // Ohne Titelzeile (Zurück und Vollbild als Symbol in der Zeile der Leiste): kompakt und flach.
   const ohneTitelzeile = aufbau !== 'breit';
   const flach = aufbau === 'flach';
+  // Variante A: Nur im breiten Aufbau – Trennlinie, Fläche unter den Werkzeugen und (am iPad hochkant) knappe Beschriftung.
+  const breit = aufbau === 'breit';
+  const werkzeugKnapp = breit && knapp;
 
   // ── Unterkante für die Fenster darunter: im Liedblatt (relativ) und für Schwebendes (Bildschirm) ──
   useLayoutEffect(() => {
@@ -262,7 +271,13 @@ export function BlattKopf({
         : { label: WERKZEUG_NAME[id], kurz: WERKZEUG_KURZ[id] };
   const knoepfe = (
     <div
-      className={kompakt ? styles.raster : styles.knoepfe}
+      className={
+        kompakt
+          ? styles.raster
+          : breit
+            ? `${styles.knoepfe} ${styles.knoepfeFlaeche}`
+            : styles.knoepfe
+      }
       style={
         kompakt ? { gridTemplateColumns: `repeat(${werkzeuge.length}, minmax(0, 1fr))` } : undefined
       }
@@ -270,17 +285,22 @@ export function BlattKopf({
     >
       {werkzeuge.map((id) => {
         const { label, kurz } = beschriftung(id);
+        // Knapp (iPad hochkant): „Aussehen“ nur als „Aa“, „Notizen von …“ als „Notizen“ – der volle Name bleibt im Tooltip
+        // und für Screenreader. Beim Ansehen fremder Notizen bleibt die Beschriftung, wie sie ist (führt wieder heraus).
+        const kurzesWort =
+          werkzeugKnapp && KNAPP_KURZWORT.includes(id) && !(id === 'team' && viewing);
         return (
           <KopfKnopf
             key={id}
             onClick={aktion[id]}
-            label={label}
+            label={kurzesWort ? kurz : label}
+            title={label}
             kurz={kurz}
             raster={kompakt}
             // Werkzeuge einer Werkzeugzeile sind still (R2, B8) – am iPad/Rechner. Am Handy (kompakt, flach) behalten sie
             // ihren Rahmen: Das Handy quer ist breiter als die Grenze des Stylesheets, dort wäre ein stiller Knopf rahmenlos (R12).
             still={aufbau === 'breit'}
-            nurSymbol={flach}
+            nurSymbol={flach || (werkzeugKnapp && KNAPP_NUR_SYMBOL.includes(id))}
             symbol={werkzeugSymbol(id, drawMode, kompakt)}
             aktiv={
               (id === 'tempo' && tempoAktiv) ||
@@ -358,6 +378,9 @@ export function BlattKopf({
           )}
           {leiste}
           {kompakt && vollbild}
+          {breit && werkzeuge.length > 0 && (
+            <span className={styles.werkzeugTrenner} aria-hidden="true" />
+          )}
           {knoepfe}
           {flach && vollbild}
         </div>

@@ -67,6 +67,25 @@
   flex: 0 0 auto;
 }
 
+// Breit (iPad, Rechner), Variante A „Reiterleiste“ (27.11.2026): Die Werkzeuge stehen gemeinsam auf einer leicht
+// abgesetzten Fläche (`--seg-track`, die Schiene der Umschalter – `--surface3` ist im Hellen die Seitenfarbe und nähme
+// sich auf der weißen Karte kaum ab). Die Knöpfe bleiben still (R2); hellblau (offen/aktiv/Maus) liegt auf der Fläche.
+.knoepfeFlaeche {
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--r-ctrl);
+  background: var(--seg-track);
+}
+
+// Senkrechte Linie zwischen Liedleiste und Werkzeugen – man sieht, wo die Lieder enden und die Werkzeuge beginnen.
+.werkzeugTrenner {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 24px;
+  margin: 0 4px;
+  background: var(--track-off);
+}
+
 // Handy: alle Knöpfe gleich breit in einer Reihe unter der Leiste (Spaltenzahl setzt `BlattKopf`).
 .raster {
   display: grid;

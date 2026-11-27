@@ -12,6 +12,7 @@ export function NachbarKnopf({
   label,
   zeit,
   titel,
+  wer,
   onClick,
   disabled,
   haupt,
@@ -25,6 +26,8 @@ export function NachbarKnopf({
   /** Zeile mit Zeit/Dauer des Nachbarn (klein, grau) – optional. */
   zeit?: string;
   titel?: string;
+  /** Die Zuständigen des Nachbarn (klein, grau, einzeilig) – nur in der Punkt-Ansicht. */
+  wer?: string;
   onClick: (() => void) | undefined;
   /** Ohne Angabe gesperrt, wenn es keinen `onClick` gibt. */
   disabled?: boolean;
@@ -50,6 +53,7 @@ export function NachbarKnopf({
       </span>
       {zeit && <span className={styles.nachbarZeit}>{zeit}</span>}
       {titel && <span className={styles.nachbarTitel}>{titel}</span>}
+      {wer && <span className={styles.nachbarWer}>{wer}</span>}
     </button>
   );
 }

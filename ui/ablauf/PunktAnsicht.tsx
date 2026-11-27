@@ -12,7 +12,7 @@
  * (`AblaufListe onPunkt`) ihr Ziel und den Aufrufern die Überlagerung.
  */
 import { useEffect } from 'react';
-import { itemLabel, zeitPlus, type AblaufZeile } from '@shared/ct/ablaufZeile';
+import { itemLabel, zeitPlus, zustaendigeText, type AblaufZeile } from '@shared/ct/ablaufZeile';
 import type { InfoGruppe } from '@shared/types/index';
 import { Icon } from '../icons/icons';
 import { BodyPortal } from '../fenster/BodyPortal';
@@ -34,10 +34,13 @@ function dauerText(min: number): string {
   return min === 1 ? '1 Minute' : `${min} Minuten`;
 }
 
-/** Die Zeile eines Nachbarn für „Davor“ / „Danach“: „10:00 · 4 min“ und der Titel. */
-function nachbarZeile(p: AblaufZeile): { zeit: string; titel: string } {
+/**
+ * Die Zeile eines Nachbarn für „Davor“ / „Danach“: „10:00 · 4 min“, der Titel und – wie die Karte der ChurchTools-App
+ * (27.11.2026) – die Zuständigen.
+ */
+function nachbarZeile(p: AblaufZeile): { zeit: string; titel: string; wer: string } {
   const teile = [p.weggelassen ? null : p.time, p.durationMin ? `${p.durationMin} min` : null];
-  return { zeit: teile.filter(Boolean).join(' · '), titel: itemLabel(p) };
+  return { zeit: teile.filter(Boolean).join(' · '), titel: itemLabel(p), wer: zustaendigeText(p) };
 }
 
 interface InhaltProps {
@@ -188,6 +191,7 @@ function Nachbar({
       label={art === 'davor' ? 'DAVOR' : 'DANACH'}
       zeit={z?.zeit}
       titel={z?.titel}
+      wer={z?.wer}
       onClick={onClick}
       ariaLabel={art === 'davor' ? 'Davor' : 'Danach'}
     />

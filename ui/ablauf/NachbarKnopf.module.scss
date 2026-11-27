@@ -36,6 +36,14 @@
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
+.nachbarWer {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--text2);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .nachbarTitel {
   max-width: 100%;
   overflow: hidden;

@@ -147,6 +147,17 @@ describe('Einzelansicht – breit (iPad/Rechner): dieselbe Seite wie am Handy', 
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
   });
 
+  it('Davor/Danach nennen wie die ChurchTools-App auch die Zuständigen des Nachbarn (27.11.2026)', () => {
+    handy(false);
+    render(<Seite />);
+    oeffne('„Lied – Halleluja“ ansehen');
+    // Danach: Begrüßung mit Ben Test und dem offenen Dienst „Ton“; davor: Countdown ohne Zuständige – keine leere Zeile.
+    expect(screen.getByRole('button', { name: 'Danach' }).textContent).toContain('Ben Test, Ton');
+    const davor = screen.getByRole('button', { name: 'Davor' });
+    expect(davor.textContent).toContain('Countdown');
+    expect(davor.querySelectorAll('span')).toHaveLength(3);
+  });
+
   it('← → blättern wie Davor/Danach, am Rand tut die Taste nichts', () => {
     handy(false);
     render(<Seite />);

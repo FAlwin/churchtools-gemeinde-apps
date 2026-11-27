@@ -2,7 +2,9 @@
  * **Was die Startseite des Dienstplaners zeigt** (Bauplan E3-3, Entwurf v17) – aus derselben
  * Terminliste wie der Reiter „Termine“ (`termine.ts`), ohne eigene Abfrage:
  *
- * - **Als Nächstes**: der nächste Termin, der noch nicht vorbei und nicht abgesagt ist,
+ * - **Als Nächstes**: der nächste Termin, der noch nicht vorbei und nicht abgesagt ist und **für dich zählt** – du hast dort
+ *   einen Dienst oder eine Anfrage, oder er hat Plätze in einer Dienstgruppe, die du planst (`geplant`, dieselbe Quelle wie
+ *   „Planen“, #1195). Gibt es keinen, steht der nächste Termin überhaupt da,
  * - **Für dich offen**: deine Anfragen (angefragt, noch nicht zugesagt) – und zehn Minuten lang, was du eben beantwortet
  *   hast (mit „Rückgängig“, E7-1),
  * - **Deine nächsten Dienste**: zugesagt, ohne den Termin oben, höchstens vier,
@@ -54,7 +56,7 @@ export function startUebersicht(
   },
 ): StartUebersicht {
   const kommend = zeilen.filter((z) => !z.abgesagt && Date.parse(z.ende) >= o.jetzt.getTime());
-  const naechster = kommend[0] ?? null;
+  const naechster = kommend.find((z) => z.meine.length > 0 || z.geplant > 0) ?? kommend[0] ?? null;
   const offen: DienstAmTermin[] = [];
   const zugesagt: DienstAmTermin[] = [];
   for (const termin of kommend) {

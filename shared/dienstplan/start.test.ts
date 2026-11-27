@@ -76,6 +76,60 @@ describe('startUebersicht', () => {
   });
 });
 
+describe('startUebersicht – „Als Nächstes“ zählt für mich (#1195)', () => {
+  it('ein späterer eigener Termin schlägt einen früheren fremden', () => {
+    const z = [
+      zeile(1, 'Jugend', '2026-10-16'),
+      zeile(2, 'Gottesdienst', '2026-10-18', { meine: [mein('Ton', true)] }),
+    ];
+    expect(startUebersicht(z, O).naechster?.id).toBe(2);
+  });
+
+  it('eine Anfrage zählt wie ein Dienst', () => {
+    const z = [
+      zeile(1, 'Jugend', '2026-10-16'),
+      zeile(2, 'Gottesdienst', '2026-10-18', { meine: [mein('Ton', false)] }),
+    ];
+    expect(startUebersicht(z, O).naechster?.id).toBe(2);
+  });
+
+  it('Plätze in einer Dienstgruppe, die man plant (`geplant`), zählen auch ohne eigenen Dienst', () => {
+    const z = [
+      zeile(1, 'Jugend', '2026-10-16'),
+      zeile(2, 'Gottesdienst', '2026-10-18', { geplant: 3, frei: 1, freiNachGruppe: { 3: 1 } }),
+    ];
+    expect(startUebersicht(z, O).naechster?.id).toBe(2);
+  });
+
+  it('abgesagte und vergangene Termine mit eigenem Dienst zählen nicht', () => {
+    const z = [
+      zeile(1, 'Vorbei', '2026-10-14', {
+        ende: '2026-10-14T11:00:00Z',
+        meine: [mein('Ton', true)],
+      }),
+      zeile(2, 'Abgesagt', '2026-10-15', { abgesagt: true, meine: [mein('Ton', true)] }),
+      zeile(3, 'Jugend', '2026-10-16'),
+    ];
+    expect(startUebersicht(z, O).naechster?.id).toBe(3);
+  });
+
+  it('kein Termin, der für mich zählt: Rückfall auf den nächsten Termin überhaupt', () => {
+    const z = [zeile(1, 'Jugend', '2026-10-16'), zeile(2, 'Gebetsabend', '2026-10-17')];
+    expect(startUebersicht(z, O).naechster?.id).toBe(1);
+  });
+
+  it('„nächste Dienste“ lässt genau den Termin oben aus – auch wenn ein früherer fremder Termin davor liegt', () => {
+    const z = [
+      zeile(1, 'Jugend', '2026-10-15'),
+      zeile(2, 'A', '2026-10-16', { meine: [mein('Ton', true)] }),
+      zeile(3, 'B', '2026-10-17', { meine: [mein('Licht', true)] }),
+    ];
+    const u = startUebersicht(z, O);
+    expect(u.naechster?.id).toBe(2);
+    expect(u.naechsteDienste.map((d) => d.termin.id)).toEqual([3]);
+  });
+});
+
 describe('bisDahin', () => {
   it('heute, morgen, in N Tagen', () => {
     expect(bisDahin('2026-10-14', '2026-10-14')).toBe('heute');

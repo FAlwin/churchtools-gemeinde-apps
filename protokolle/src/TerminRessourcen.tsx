@@ -2,18 +2,21 @@ import { useMemo, type ReactNode } from 'react';
 import type { Eintrag } from '@shared/protokolle/termine';
 import {
   begrenzeLauf,
-  buchungHinzu,
+  buchungUmschalten,
+  gemeinsamerStatus,
   LAUF_VORSCHLAEGE,
   NACHLAUF_MAX,
-  ressourceText,
   STATUS_AUSWAHL,
   statusFuer,
+  ressourceText,
+  statusFuerAlle,
   VORLAUF_MAX,
   type Buchung,
   type BuchungsStatus,
   type Ressource,
 } from '@shared/protokolle/terminRessourcen';
 import { nachlaufZeit, vorlaufZeit } from '@shared/protokolle/terminRessourcenZeit';
+import { MehrfachWahl, type MehrfachGruppe } from '@ui/bedienung/MehrfachWahl';
 import { TextKnopf } from '@ui/bedienung/TextKnopf';
 import { ZeilenKnopf } from '@ui/bedienung/ZeilenKnopf';
 import type { Fehlermeldung } from '@ui/ct/fehlerMeldung';
@@ -103,19 +106,38 @@ interface Props {
 
 /**
  * **Der Reiter „Ressourcen“ des ChurchTools-Dialogs „Termin erstellen“** (W15-2): oben **Vorlauf** und **Nachlauf** als Vorgabe
- * (mit der errechneten Uhrzeit), dann die **Ressource** zum Hinzufügen und die Tabelle **Vorhandene Buchungen** – je Zeile
+ * (mit der errechneten Uhrzeit), dann die **Ressourcen** zum Anhaken (`MehrfachWahl`, mehrere auf einmal) und die Tabelle **Vorhandene Buchungen** – je Zeile
  * eigener Vorlauf und Nachlauf, Status (nur mit Recht wählbar) und ✕. Bei Ressourcen mit mehr als einem Stück (Stühle) kommt
  * die **Anzahl** dazu. Die Regeln stehen in `@shared/protokolle/terminRessourcen`.
  */
 export function TerminRessourcen(p: Props) {
   const { e, deaktiviert: aus } = p;
   const nachId = useMemo(() => new Map(p.ressourcen.map((r) => [r.id, r])), [p.ressourcen]);
+  const gebucht = useMemo(() => new Set(e.buchungen.map((b) => b.ressource)), [e.buchungen]);
+  // Die Ressourcen nach Typ – die Reihenfolge kommt sortiert aus `ressourcenAus`.
   const gruppen = useMemo(() => {
-    const m = new Map<string, Ressource[]>();
-    for (const r of p.ressourcen) m.set(r.typ, [...(m.get(r.typ) ?? []), r]);
-    return [...m];
+    const m = new Map<string, MehrfachGruppe<number>>();
+    for (const r of p.ressourcen) {
+      const g = m.get(r.typ) ?? { titel: r.typ, optionen: [] };
+      m.set(r.typ, {
+        ...g,
+        optionen: [
+          ...g.optionen,
+          {
+            wert: r.id,
+            text: r.name,
+            name: ressourceText(r),
+            zusatz: r.anzahl > 1 ? `(${r.anzahl})` : undefined,
+          },
+        ],
+      });
+    }
+    return [...m.values()];
   }, [p.ressourcen]);
-  const frei = (r: Ressource) => !e.buchungen.some((b) => b.ressource === r.id);
+  // „Status für alle“ nur, wenn es mehr als eine Buchung gibt und mindestens eine davon verwaltbar ist.
+  const mitStatusFuerAlle =
+    e.buchungen.length > 1 && e.buchungen.some((b) => p.verwaltbar.has(b.ressource));
+  const fuerAlle = gemeinsamerStatus(e.buchungen, p.verwaltbar);
 
   const aendern = (ressource: number, teil: Partial<Buchung>) =>
     p.onAendern({
@@ -239,41 +261,27 @@ export function TerminRessourcen(p: Props) {
         />
         <span className={styles.zeit}>{nachlaufZeit(e, e.nachlauf)}</span>
       </Reihe>
-      <Reihe label="Ressource">
-        <select
-          className={formular.eingabe}
-          value=""
-          disabled={aus || p.laedt || !p.ressourcen.length}
-          onChange={(ev) => {
-            const r = nachId.get(Number(ev.target.value));
+      <Reihe label="Ressourcen" gruppe>
+        <MehrfachWahl
+          gruppen={gruppen}
+          gewaehlt={gebucht}
+          titel="Ressourcen wählen"
+          platzhalter="Ressourcen wählen …"
+          laedt={p.laedt ? 'wird geladen …' : undefined}
+          deaktiviert={aus}
+          feldKlasse={formular.eingabe}
+          onUmschalten={(id) => {
+            const r = nachId.get(id);
             if (r)
               p.onAendern({
                 ...e,
-                buchungen: buchungHinzu(e.buchungen, r, {
+                buchungen: buchungUmschalten(e.buchungen, r, {
                   vorlauf: e.vorlauf,
                   nachlauf: e.nachlauf,
                 }),
               });
           }}
-        >
-          <option value="">{p.laedt ? 'wird geladen …' : 'Ressource wählen …'}</option>
-          {gruppen.map(([typ, liste]) => {
-            const offen = liste.filter(frei);
-            if (!offen.length) return null;
-            const optionen = offen.map((r) => (
-              <option key={r.id} value={r.id}>
-                {ressourceText(r)}
-              </option>
-            ));
-            return typ ? (
-              <optgroup key={typ} label={typ}>
-                {optionen}
-              </optgroup>
-            ) : (
-              optionen
-            );
-          })}
-        </select>
+        />
       </Reihe>
       {p.fehler && (
         <p className={styles.leise} role="alert">
@@ -281,6 +289,28 @@ export function TerminRessourcen(p: Props) {
         </p>
       )}
       <h3 className={styles.titel}>Vorhandene Buchungen</h3>
+      {mitStatusFuerAlle && (
+        <label className={styles.fuerAlle}>
+          <span>Status für alle</span>
+          <select
+            className={`${formular.eingabe} ${styles.statusWahl}`}
+            value={fuerAlle ?? ''}
+            disabled={aus}
+            onChange={(ev) => {
+              const neu = Number(ev.target.value);
+              if (neu === 1 || neu === 2 || neu === 3)
+                p.onAendern({ ...e, buchungen: statusFuerAlle(e.buchungen, neu, p.verwaltbar) });
+            }}
+          >
+            {fuerAlle === null && <option value="">Verschieden</option>}
+            {STATUS_AUSWAHL.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {e.buchungen.length ? (
         <table className={styles.tabelle}>
           <thead>

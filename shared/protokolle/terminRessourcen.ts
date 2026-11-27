@@ -131,6 +131,46 @@ export function buchungHinzu(
 }
 
 /**
+ * **Ein Häkchen in der Liste „Ressourcen wählen“** (Alwin, 27.11.2026: mehrere auf einmal statt jede einzeln): gebucht →
+ * die Buchung fällt weg, sonst kommt sie mit den Vorgaben oben dazu (`buchungHinzu`).
+ */
+export function buchungUmschalten(
+  buchungen: readonly Buchung[],
+  ressource: Ressource,
+  vorgabe: { vorlauf: number; nachlauf: number },
+): Buchung[] {
+  return buchungen.some((b) => b.ressource === ressource.id)
+    ? buchungen.filter((b) => b.ressource !== ressource.id)
+    : buchungHinzu(buchungen, ressource, vorgabe);
+}
+
+/**
+ * **„Status für alle“** (Alwin, 27.11.2026): setzt den Status jeder Buchung, deren Ressource die Person verwalten darf. Die
+ * anderen bleiben, wie `statusFuer` es sagt – ohne Recht immer „Wartet auf Bestätigung“.
+ */
+export function statusFuerAlle(
+  buchungen: readonly Buchung[],
+  status: BuchungsStatus,
+  verwaltbar: ReadonlySet<number>,
+): Buchung[] {
+  return buchungen.map((b) =>
+    verwaltbar.has(b.ressource) ? { ...b, status: statusFuer(status, true) } : b,
+  );
+}
+
+/**
+ * Der Status, den **alle verwaltbaren** Buchungen gemeinsam haben – `null`, wenn sie verschieden sind oder keine dabei ist.
+ * Daran zeigt die Auswahl „Status für alle“, was gerade gilt.
+ */
+export function gemeinsamerStatus(
+  buchungen: readonly Buchung[],
+  verwaltbar: ReadonlySet<number>,
+): BuchungsStatus | null {
+  const stati = new Set(buchungen.filter((b) => verwaltbar.has(b.ressource)).map((b) => b.status));
+  return stati.size === 1 ? [...stati][0] : null;
+}
+
+/**
  * **Buchungen auf das beschränken, was die Person darf**: nur buchbare Ressourcen (jede einmal), Status ohne Verwalten-Recht
  * auf 1, Zeiten in den Grenzen der Schnittstelle. Die eine Stelle dafür – beim Anwenden einer Termin-Vorlage.
  */

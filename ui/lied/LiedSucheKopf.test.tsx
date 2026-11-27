@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { LiedSucheKopf } from './LiedSucheKopf';
 
@@ -57,5 +57,36 @@ describe('LiedSucheKopf', () => {
       />,
     );
     expect(screen.queryByRole('button')).toBeNull();
+  });
+});
+
+/**
+ * Autofokus nur mit Maus (Alwin am iPad, 27.11.2026): Am Finger-Gerät ginge beim Öffnen von „Lied verknüpfen“ sofort die
+ * Tastatur auf und verdeckte die Liederliste. `matchMedia` ist in jsdom nicht vorhanden – hier mit der Abfrage
+ * `(pointer: coarse)` nachgestellt.
+ */
+describe('LiedSucheKopf – Autofokus', () => {
+  const fokusMit = (grob: boolean) => {
+    vi.stubGlobal('matchMedia', (abfrage: string) => ({
+      matches: abfrage === '(pointer: coarse)' ? grob : false,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }));
+    render(<LiedSucheKopf eingabe="" onEingabe={onEingabe} autoFocus />);
+    return document.activeElement === screen.getByPlaceholderText(/Lied oder Autor/);
+  };
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('am Rechner (feiner Zeiger) steht der Cursor sofort im Feld', () => {
+    expect(fokusMit(false)).toBe(true);
+  });
+
+  it('am iPad/Handy (Finger) bleibt der Fokus draußen – die Tastatur öffnet erst der Tipp', () => {
+    expect(fokusMit(true)).toBe(false);
+  });
+
+  it('ohne autoFocus-Wunsch nie ein Fokus', () => {
+    render(<LiedSucheKopf eingabe="" onEingabe={onEingabe} />);
+    expect(document.activeElement).toBe(document.body);
   });
 });

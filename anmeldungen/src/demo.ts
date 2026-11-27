@@ -3,7 +3,7 @@
  * nach – in der Form, die an der Test-Instanz gemessen wurde (12.10.2026) –, damit die Seite ohne Instanz
  * zu sehen und zu bedienen ist. Seit A3 merkt sich die Demo auch, was geschrieben wird (Anlegen,
  * Einrichten, Termine), bis die Seite neu geladen wird. `?demo=leer` zeigt „keine Gruppen",
- * `?demo=fehler` den Fehlerfall, `?demo=einrichten` die Erweiterung vor dem Einrichten (keine Formular-Adresse), `?demo=admin` einen Gruppen-Admin (verschieben, endgültig löschen), `?demo=vertrauen` eine Vertrauensperson der Nachweise ohne „Berechtigungen verwalten“ (sieht die Seite „Nachweise“, kann nichts anlegen). Seit N1b gibt es zwei Nachweis-Arten (Führungszeugnis, JuLeiCa), `#/nachweise` zeigt sie. Seit N3b zeigt die Lobpreisfreizeit (`#/v/46`, Vorbereiten) die Karte „Nachweise“ mit einer „Nur wenn“-Bedingung, der Worship-Workshop (`#/v/43`) eine kaputte. Wird nie mitgebaut (siehe `main.tsx`).
+ * `?demo=fehler` den Fehlerfall, `?demo=einrichten` die Erweiterung vor dem Einrichten (keine Formular-Adresse), `?demo=admin` einen Gruppen-Admin (verschieben, endgültig löschen), `?demo=vertrauen` eine Vertrauensperson der Nachweise ohne „Berechtigungen verwalten“ (sieht die Seite „Nachweise“, kann nichts anlegen). Seit N1b gibt es zwei Nachweis-Arten (Führungszeugnis, JuLeiCa), `#/nachweise` zeigt sie. Seit N3b zeigt die Lobpreisfreizeit (`#/v/46`, Vorbereiten) die Karte „Nachweise“ mit einer „Nur wenn“-Bedingung, der Worship-Workshop (`#/v/43`) eine kaputte. Seit N3c trägt die Demo beim Öffnen als Admin die Technik-Leute der Lobpreisfreizeit ins Führungszeugnis ein (stille Meldung), und die Art 99 heißt dank Ablage „Erste Hilfe“. Wird nie mitgebaut (siehe `main.tsx`).
  *
  * Die Beschreibungen entstehen mit `einstellungenAlsText` – wie im Betrieb.
  */
@@ -16,6 +16,7 @@ import {
   nachweisNotiz,
   nachweisSchritte,
 } from '@shared/anmeldung/nachweise';
+import { artAngabenWert } from '@shared/anmeldung/nachweisStandAblage';
 
 function beschreibung(
   beginn: string,
@@ -875,7 +876,9 @@ export function demoStarten(fall: string): void {
     }
     if (pfad === '/permissions/global') {
       // `?demo=admin`: Gruppen-Admin (darf verschieben und endgültig löschen).
-      const churchdb = fall === 'admin' ? { 'administer groups': true } : {};
+      // N3c: Die Demo-Person leitet „Führungszeugnis“ – mit „Gruppen eines Gruppentyps sehen“ für „Anmeldung“ (5).
+      const churchdb =
+        fall === 'admin' ? { 'administer groups': true } : { 'view groups of grouptype': [5] };
       // „Berechtigungen verwalten“ (Nachweise einrichten) – nur nicht für `?demo=vertrauen`.
       const churchcore =
         fall === 'vertrauen'
@@ -900,6 +903,14 @@ export function demoStarten(fall: string): void {
                 { authId: 2026, key: 'create custom data' },
                 { authId: 2027, key: 'edit custom data' },
                 { authId: 2028, key: 'delete custom data' },
+              ],
+            },
+            // N3c: das Kernrecht „Gruppen eines Gruppentyps sehen“ (Test-Instanz 1108).
+            {
+              key: 'churchgroup',
+              name: 'Gruppen',
+              permissions: [
+                { authId: 1108, key: 'view groups of grouptype', valueType: 'multiple' },
               ],
             },
           ],
@@ -1030,7 +1041,15 @@ export function demoStarten(fall: string): void {
       const liste = nachweisMitglieder.get(Number(r[1])) ?? [];
       const da = liste.find((x) => x.personId === Number(r![2]));
       if (m === 'PUT') {
-        if (da) return antwort({ message: 'member.add.already-in-group' }, 403);
+        // Wie ChurchTools (M11): 403 mit `messageKey`, Text „Die Person ist bereits in der Gruppe“.
+        if (da)
+          return antwort(
+            {
+              message: 'Die Person ist bereits in der Gruppe',
+              messageKey: 'member.add.already-in-group',
+            },
+            403,
+          );
         liste.push({
           personId: Number(r[2]),
           groupTypeRoleId: Number(body.groupTypeRoleId),
@@ -1449,6 +1468,12 @@ const DATEN: {
         neuePersonen: { statusId: 2, campusId: 0, departmentId: 1 },
         formularAdresse: 'https://anmeldung.beispiel.de/',
       }),
+    },
+    // N3c/E35: Die Art 99 (im Worship-Workshop eingeschaltet) sieht in der Demo niemand – ihr Name steht in der Ablage.
+    {
+      id: 2,
+      dataCategoryId: 51,
+      value: artAngabenWert({ gruppe: 99, name: 'Erste Hilfe', eingetragen: new Map() }),
     },
   ],
 };

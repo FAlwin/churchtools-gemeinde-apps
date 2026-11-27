@@ -152,7 +152,19 @@ export async function modulRechtHolen(
   /** Standard: alle Definitionen; für globale Rechte der Kernmodule (z. B. `churchgroup`): `…?scope=global`. */
   pfad = '/permissions/definitions',
 ): Promise<SollRecht> {
-  const roh = await port.holen<unknown>(pfad);
+  return modulRechtVerlangen(await port.holen<unknown>(pfad), modul, recht, name);
+}
+
+/**
+ * Wie `modulRechtHolen`, aber mit schon gelesenen Definitionen (`roh`) – wer mehrere Rechte daraus braucht, liest sie nur
+ * einmal (N3c: „‚Anmeldungen‘ sehen“ und „Gruppen eines Gruppentyps sehen“ für die Leiter-Rolle der Nachweise).
+ */
+export function modulRechtVerlangen(
+  roh: unknown,
+  modul: string,
+  recht: string,
+  name: string,
+): SollRecht {
   if (roh === null || typeof roh !== 'object')
     throw new GruppenartFehler(
       'unlesbar',

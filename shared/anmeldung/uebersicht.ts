@@ -97,6 +97,13 @@ export function istLogoGruppe(beschreibung: string | null | undefined): boolean 
 }
 
 /**
+ * **Ist das die Gruppenart „Anmeldung“?** Je Gemeinde eine andere Nummer, darum über den Namen – ohne Leerzeichen am Rand,
+ * Groß/Klein egal. Die eine Regel für `anmeldungsArt` (Anlegen) und das Recht der Vertrauenspersonen (N3c, `leiterSoll`).
+ */
+export const istAnmeldungArt = (name: unknown): boolean =>
+  typeof name === 'string' && name.trim().toLocaleLowerCase('de') === 'anmeldung';
+
+/**
  * Ist die Untergruppe überhaupt eine Veranstaltung der Anmeldungen? An den Einstellungen in der Beschreibung –
  * oder, mit `artId`, an der Gruppenart „Anmeldung“ (dann auch, wenn die Einstellungen fehlen). Logo-Gruppen
  * haben dieselbe Art, sind aber keine Veranstaltung.

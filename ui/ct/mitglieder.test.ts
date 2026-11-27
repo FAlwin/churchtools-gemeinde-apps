@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from './fehler';
 import { _bremseLoesen, _vergissCsrf } from './verbindung';
 import {
+  istSchonDrin,
   mitgliedAendern,
   mitgliedAnlegen,
   mitgliedEntfernen,
@@ -112,5 +113,43 @@ describe('Mitgliedschaft lesen (#848)', () => {
   it('oder nichts: ein vorübergehender Fehler ist NICHT „nicht dabei“ – er wirft', async () => {
     antwort = () => json(503, {});
     await expect(mitgliedOderNichts(7, 42)).rejects.toBeInstanceOf(ApiError);
+  });
+});
+
+describe('istSchonDrin – „Die Person ist bereits in der Gruppe“ (M11)', () => {
+  /** Der Rumpf, wie ChurchTools ihn am 27.11.2026 geschickt hat. */
+  const SCHON_DRIN = {
+    message: 'Die Person ist bereits in der Gruppe',
+    messageKey: 'member.add.already-in-group',
+  };
+  const fehlerBeimAnlegen = async () => {
+    try {
+      await mitgliedAnlegen(341, 382, { groupTypeRoleId: 53, groupMemberStatus: 'active' });
+    } catch (e) {
+      return e;
+    }
+    throw new Error('kein Fehler');
+  };
+
+  it('403 mit messageKey `member.add.already-in-group`: ja (durch die echte Verbindung, nicht von Hand gebaut)', async () => {
+    antwort = () => json(403, SCHON_DRIN);
+    expect(istSchonDrin(await fehlerBeimAnlegen())).toBe(true);
+  });
+
+  it('403 „kein Recht“ (error.forbidden…), anderer Status, anderer Schlüssel: nein', async () => {
+    antwort = () =>
+      json(403, {
+        message: 'Du darfst zu dieser Gruppe keine Gruppenmitglieder hinzufügen.',
+        messageKey: 'error.forbidden.add.group.member',
+      });
+    expect(istSchonDrin(await fehlerBeimAnlegen())).toBe(false);
+    // Ein anderes 403 mit eigenem Schlüssel (kein error.forbidden…) ist auch nicht „schon drin“.
+    antwort = () => json(403, { message: 'Gruppe ist voll', messageKey: 'member.add.group.full' });
+    expect(istSchonDrin(await fehlerBeimAnlegen())).toBe(false);
+    antwort = () => json(400, SCHON_DRIN);
+    expect(istSchonDrin(await fehlerBeimAnlegen())).toBe(false);
+    antwort = () => json(403, { message: 'Die Person ist bereits in der Gruppe' });
+    expect(istSchonDrin(await fehlerBeimAnlegen())).toBe(false);
+    expect(istSchonDrin(new Error('member.add.already-in-group'))).toBe(false);
   });
 });

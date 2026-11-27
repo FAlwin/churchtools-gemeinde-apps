@@ -10,6 +10,7 @@ import { kategorieSuchen } from '@shared/ct/modulDaten';
 import { NACHWEIS_STAND_KATEGORIE } from '@shared/anmeldung/nachweise';
 import { personStand, standFuerLeitung } from '@shared/anmeldung/nachweisStand';
 import {
+  artNamenLesen,
   nachweisStandSchreiben,
   standAblageSichern,
   type StandEintraege,
@@ -34,8 +35,11 @@ export async function nachweisStandEinrichten(leiterRolle: number): Promise<void
   }
 }
 
+/** Was der Stand einer Art braucht: ihre Nummer, Einstellungen und die gelesenen Personen. */
+type ArtFuerStand = Pick<NachweisArtMitPersonen, 'id' | 'einstellungen' | 'personen'>;
+
 /** Der Stand je Person einer Art für `heute` – `null`, wenn die Personen nicht gelesen wurden oder die Art nicht fertig ist. */
-export function standDerArt(a: NachweisArtMitPersonen, heute: string): StandEintraege | null {
+export function standDerArt(a: ArtFuerStand, heute: string): StandEintraege | null {
   if (a.personen === null || a.einstellungen === null) return null;
   return new Map(
     a.personen.map((p) => [
@@ -52,7 +56,7 @@ export function standDerArt(a: NachweisArtMitPersonen, heute: string): StandEint
  * Admin. Fehler wirft sie – der Aufrufer entscheidet, dass die Seite daran nicht scheitert.
  */
 export async function nachweisStandAktualisieren(
-  arten: readonly NachweisArtMitPersonen[],
+  arten: readonly ArtFuerStand[],
   heute: string,
 ): Promise<number[]> {
   const liste = arten.flatMap((a) => {
@@ -64,4 +68,14 @@ export async function nachweisStandAktualisieren(
   const kategorie = await kategorieSuchen(modulPort, modul, NACHWEIS_STAND_KATEGORIE.kuerzel);
   if (kategorie === null) return [];
   return await nachweisStandSchreiben(modulPort, modul, kategorie, liste, VERWEIGERT);
+}
+
+/**
+ * **Die Namen der Nachweis-Arten aus der Ablage** (E35) – für Leitungen, die die eingeschränkten Gruppen nicht sehen (M11).
+ * `null`: nicht lesbar (kein Recht, Ablage fehlt); eine leere Liste heißt, dass noch keine Vertrauensperson und kein Admin
+ * die Erweiterung geöffnet hat. Wirft bei vorübergehenden Fehlern.
+ */
+export async function nachweisArtNamenLesen(): Promise<Map<number, string> | null> {
+  const r = await artNamenLesen(modulPort, await modulId(WER));
+  return r.art === 'gelesen' ? r.namen : null;
 }

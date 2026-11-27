@@ -4,6 +4,11 @@ import { ANMELDUNGEN_RECHTE, FalschesCt } from '../ct/gruppenart.testutil';
 import { NACHWEIS_STAND_KATEGORIE } from './nachweise';
 import {
   StandZuLang,
+  artAngabenAbgleichen,
+  artAngabenAus,
+  artAngabenAusWert,
+  artAngabenWert,
+  artNamenLesen,
   nachweisStandLesen,
   nachweisStandSchreiben,
   standAblageSichern,
@@ -303,5 +308,152 @@ describe('standAblageSichern (Admin, E22)', () => {
     expect(ct.kategorien.filter((k) => k.shorty === NACHWEIS_STAND_KATEGORIE.kuerzel)).toHaveLength(
       1,
     );
+  });
+});
+
+describe('Angaben je Art: Name (E35) und Merkzettel (E34)', () => {
+  const KAT = 124;
+  beforeEach(() => {
+    ct.kategorien = [{ id: KAT, shorty: NACHWEIS_STAND_KATEGORIE.kuerzel, name: 'Nachweis-Stand' }];
+  });
+  const wert = (id: number, value: string) => ({ id, dataCategoryId: KAT, value });
+  const angaben = (gruppe: number, name: string, eingetragen: [number, number[]][] = []) =>
+    artAngabenWert({ gruppe, name, eingetragen: new Map(eingetragen) });
+
+  it('hin und zurück; sortiert – gleiche Angaben, gleicher Text; leere Veranstaltungen fallen weg', () => {
+    const a = artAngabenWert({
+      gruppe: 61,
+      name: 'Führungszeugnis',
+      eingetragen: new Map([
+        [501, [20, 10, 10]],
+        [500, [11]],
+        [502, []],
+      ]),
+    });
+    expect(a).toBe(
+      angaben(61, 'Führungszeugnis', [
+        [500, [11]],
+        [501, [10, 20]],
+      ]),
+    );
+    expect(artAngabenAusWert(wert(1, a))).toEqual({
+      gruppe: 61,
+      name: 'Führungszeugnis',
+      eingetragen: new Map([
+        [500, [11]],
+        [501, [10, 20]],
+      ]),
+    });
+  });
+
+  it('fremd, Stand-Wert oder kaputt: null – Stand und Angaben stören sich nicht', () => {
+    expect(artAngabenAusWert(wert(1, standWert(61, new Map([[10, 'offen']]))))).toBeNull();
+    expect(standAusWert(wert(1, angaben(61, 'X')))).toBeNull();
+    expect(artAngabenAusWert(wert(1, '{"art":"nachweis-art","fassung":1,"gruppe":61}'))).toBeNull();
+    expect(
+      artAngabenAusWert(
+        wert(
+          1,
+          '{"art":"nachweis-art","fassung":1,"gruppe":61,"name":"X","eingetragen":{"500":[0]}}',
+        ),
+      ),
+    ).toBeNull();
+    expect(artAngabenAusWert(wert(1, 'kein JSON'))).toBeNull();
+  });
+
+  it('zu lang: StandZuLang – nie gekürzt', () => {
+    const viele = Array.from({ length: 2000 }, (_, i) => 100000 + i);
+    expect(() => angaben(61, 'X', [[500, viele]])).toThrow(StandZuLang);
+  });
+
+  it('abgleichen: neu angelegt, nachgelesen; zweiter Lauf ohne Änderung schreibt nichts', async () => {
+    const dazu = new Map([[500, [10, 11]]]);
+    expect(
+      await artAngabenAbgleichen(ct.modulPort, MODUL, KAT, [{ gruppe: 61, name: 'FZ', dazu }], V),
+    ).toEqual([61]);
+    expect(artAngabenAus(ct.werte).get(61)?.eingetragen).toEqual(new Map([[500, [10, 11]]]));
+    const vorher = ct.aufrufe.length;
+    expect(
+      await artAngabenAbgleichen(ct.modulPort, MODUL, KAT, [{ gruppe: 61, name: 'FZ', dazu }], V),
+    ).toEqual([]);
+    expect(ct.aufrufe.length).toBe(vorher);
+  });
+
+  it('abgleichen führt mit dem frisch Gelesenen zusammen (anderer Tab war schneller) – nichts geht verloren', async () => {
+    ct.werte.push(wert(800, angaben(61, 'FZ', [[500, [10]]])));
+    await artAngabenAbgleichen(
+      ct.modulPort,
+      MODUL,
+      KAT,
+      [{ gruppe: 61, name: 'FZ', dazu: new Map([[500, [11]]]) }],
+      V,
+    );
+    expect(artAngabenAus(ct.werte).get(61)?.eingetragen.get(500)).toEqual([10, 11]);
+    expect(ct.schreibende('PUT').map((a) => a.pfad.split('/').pop())).toEqual(['800']);
+  });
+
+  it('nur laufende Veranstaltungen bleiben; ohne `laufend` bleibt der Zettel, wie er ist; Name ändert sich mit', async () => {
+    ct.werte.push(
+      wert(
+        800,
+        angaben(61, 'Alt', [
+          [400, [7]],
+          [500, [10]],
+        ]),
+      ),
+    );
+    await artAngabenAbgleichen(ct.modulPort, MODUL, KAT, [{ gruppe: 61, name: 'Neu' }], V);
+    expect(artAngabenAus(ct.werte).get(61)).toMatchObject({ name: 'Neu' });
+    expect([...artAngabenAus(ct.werte).get(61)!.eingetragen.keys()]).toEqual([400, 500]);
+    await artAngabenAbgleichen(
+      ct.modulPort,
+      MODUL,
+      KAT,
+      [{ gruppe: 61, name: 'Neu', laufend: new Set([500]) }],
+      V,
+    );
+    expect([...artAngabenAus(ct.werte).get(61)!.eingetragen.keys()]).toEqual([500]);
+  });
+
+  it('andere Arten und der Stand bleiben unberührt', async () => {
+    ct.werte.push(
+      wert(800, angaben(62, 'JuLeiCa')),
+      wert(801, standWert(61, new Map([[10, 'offen']]))),
+    );
+    await artAngabenAbgleichen(ct.modulPort, MODUL, KAT, [{ gruppe: 61, name: 'FZ' }], V);
+    expect(ct.schreibende('PUT')).toEqual([]);
+    expect(ct.werte.find((w) => w.id === 800)?.value).toBe(angaben(62, 'JuLeiCa'));
+    expect(ct.werte.find((w) => w.id === 801)?.value).toBe(standWert(61, new Map([[10, 'offen']])));
+  });
+
+  it('Werte nicht lesbar (503): wirft, bevor geschrieben wird', async () => {
+    ct.werteLesenScheitert = 503;
+    await expect(
+      artAngabenAbgleichen(ct.modulPort, MODUL, KAT, [{ gruppe: 61, name: 'FZ' }], V),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(ct.aufrufe).toEqual([]);
+  });
+
+  it('„Erfolg“, der nichts übernimmt: nachgelesen → 502', async () => {
+    ct.ignoriere = ['POST /custommodules'];
+    await expect(
+      artAngabenAbgleichen(ct.modulPort, MODUL, KAT, [{ gruppe: 61, name: 'FZ' }], V),
+    ).rejects.toMatchObject({ status: 502 });
+  });
+
+  it('Namen lesen: gelesen (auch leer), nicht lesbar (Kategorie unsichtbar / 403), vorübergehend wirft', async () => {
+    expect(await artNamenLesen(ct.modulPort, MODUL)).toEqual({ art: 'gelesen', namen: new Map() });
+    ct.werte.push(wert(800, angaben(61, 'Führungszeugnis')), wert(801, angaben(62, ' ')));
+    expect(await artNamenLesen(ct.modulPort, MODUL)).toEqual({
+      art: 'gelesen',
+      namen: new Map([[61, 'Führungszeugnis']]),
+    });
+    ct.werteLesenScheitert = 403;
+    expect(await artNamenLesen(ct.modulPort, MODUL)).toEqual({ art: 'nichtLesbar' });
+    ct.werteLesenScheitert = 503;
+    await expect(artNamenLesen(ct.modulPort, MODUL)).rejects.toMatchObject({ status: 503 });
+    ct.werteLesenScheitert = null;
+    ct.kategorien = [];
+    expect(await artNamenLesen(ct.modulPort, MODUL)).toEqual({ art: 'nichtLesbar' });
   });
 });

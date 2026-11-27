@@ -8,6 +8,7 @@ import { ApiError } from '@ui/ct/fehler';
 import { personenRoh } from '@ui/ct/personen';
 import {
   abgesagteIds,
+  gruppenfelderAus,
   mitgliederstandAus,
   type CtGruppenfeld,
   type Mitgliederstand,
@@ -55,12 +56,9 @@ async function personenLaden(ids: number[]): Promise<Map<number, PersonDaten>> {
 
 /** **Die Gruppenfelder einer Veranstaltung** (je Nummer) – für die Liste und die Anmeldung von Hand (A7-4). */
 export async function gruppenfelderLaden(id: number): Promise<Map<number, CtGruppenfeld>> {
-  const roh = await ctDaten<{ type?: string; field?: CtGruppenfeld }[]>(
-    `/groups/${id}/memberfields`,
+  return gruppenfelderAus(
+    await ctDaten<{ type?: string; field?: CtGruppenfeld }[]>(`/groups/${id}/memberfields`),
   );
-  const felder = new Map<number, CtGruppenfeld>();
-  for (const f of roh) if (f.type === 'group' && f.field) felder.set(f.field.id, f.field);
-  return felder;
 }
 
 /**

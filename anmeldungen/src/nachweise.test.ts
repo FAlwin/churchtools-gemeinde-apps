@@ -239,3 +239,63 @@ describe('nachweisGrundlageSichern', () => {
     expect((e as Error).message).toContain('nicht beide Rollen');
   });
 });
+
+describe('N3c: „Gruppen eines Gruppentyps sehen“ für „Anmeldung“ an der Leiter-Rolle (nach M11)', () => {
+  /** Die Definitionen mit dem Kernrecht (Test-Instanz: churchgroup / view groups of grouptype = 1108) – gelesen, nicht abgeschrieben. */
+  const SEHEN_ID = 1108;
+  const ANMELDUNG = 5;
+  const mitKernrecht = (authId = SEHEN_ID) => {
+    const d = falsch.definitionen as { modules: unknown[] };
+    falsch.definitionen = {
+      modules: [
+        ...d.modules,
+        {
+          key: 'churchgroup',
+          permissions: [{ authId, key: 'view groups of grouptype', valueType: 'multiple' }],
+        },
+      ],
+    };
+  };
+  const mitAnmeldungArt = () =>
+    falsch.typen.unshift({ id: ANMELDUNG, name: ' Anmeldung ', sortKey: 5 });
+
+  it('Sichern ergänzt das Recht mit der Gruppenart „Anmeldung“ als Einschränkung (PUT dataId [5], nachgelesen 5)', async () => {
+    mitKernrecht();
+    mitNachweisArt(LEITER_ALLE(), alsRechte(NACHWEIS_TEILNEHMER_RECHTE));
+    mitAnmeldungArt();
+    await nachweisGrundlageSichern();
+    expect(falsch.schreibende('PUT').map((a) => a.json)).toEqual([
+      { authId: SEHEN_ID, dataId: [ANMELDUNG] },
+    ]);
+    expect(falsch.rechte.get(56)).toContainEqual({ authId: SEHEN_ID, dataId: ANMELDUNG });
+    // nie an der Teilnehmer-Rolle
+    expect(falsch.rechte.get(53)?.some((r) => r.authId === SEHEN_ID)).toBe(false);
+  });
+
+  it('Lesen: fehlt es, fehlt ein Recht; steht es (mit der richtigen Gruppenart), fehlt nichts', async () => {
+    mitKernrecht();
+    mitNachweisArt(LEITER_ALLE(), alsRechte(NACHWEIS_TEILNEHMER_RECHTE));
+    mitAnmeldungArt();
+    expect((await nachweisGrundlageLesen()).rechtFehlt).toBe(true);
+    falsch.rechte.set(56, [...LEITER_ALLE(), { authId: SEHEN_ID, dataId: 3 }]);
+    expect((await nachweisGrundlageLesen()).rechtFehlt).toBe(true);
+    falsch.rechte.set(56, [...LEITER_ALLE(), { authId: SEHEN_ID, dataId: ANMELDUNG }]);
+    expect((await nachweisGrundlageLesen()).rechtFehlt).toBe(false);
+  });
+
+  it('die Nummer kommt per Schlüssel aus den Definitionen (andere Instanz, andere Nummer)', async () => {
+    mitKernrecht(4242);
+    mitNachweisArt(LEITER_ALLE(), alsRechte(NACHWEIS_TEILNEHMER_RECHTE));
+    mitAnmeldungArt();
+    await nachweisGrundlageSichern();
+    expect(falsch.rechte.get(56)).toContainEqual({ authId: 4242, dataId: ANMELDUNG });
+  });
+
+  it('ohne Gruppenart „Anmeldung“: das Recht fällt weg – kein Fehler, kein dauerndes „fehlt“', async () => {
+    mitKernrecht();
+    mitNachweisArt(LEITER_ALLE(), alsRechte(NACHWEIS_TEILNEHMER_RECHTE));
+    expect((await nachweisGrundlageLesen()).rechtFehlt).toBe(false);
+    await nachweisGrundlageSichern();
+    expect(falsch.aufrufe).toEqual([]);
+  });
+});

@@ -7,6 +7,7 @@ import { einstellungen } from '@shared/anmeldung/senden.testdaten';
 import { ApiError } from '@ui/ct/fehler';
 import * as Arten from './nachweisArten';
 import * as Einrichten from './einrichten';
+import * as Ablage from './nachweisStandAblage';
 import { NachweiseKarte } from './NachweiseKarte';
 
 /**
@@ -22,7 +23,12 @@ vi.mock('./einrichten', async (original) => ({
   ...(await original<typeof import('./einrichten')>()),
   aendereEinstellungen: vi.fn(),
 }));
+vi.mock('./nachweisStandAblage', async (original) => ({
+  ...(await original<typeof import('./nachweisStandAblage')>()),
+  nachweisArtNamenLesen: vi.fn(),
+}));
 const arten = vi.mocked(Arten);
+const ablage = vi.mocked(Ablage);
 const einrichten = vi.mocked(Einrichten);
 
 const FZ = { id: 61, name: 'Führungszeugnis', fertig: true };
@@ -44,6 +50,7 @@ beforeEach(() => {
   gespeichert = null;
   frisch = (e) => e;
   arten.nachweisArtenKurz.mockResolvedValue([FZ, JU]);
+  ablage.nachweisArtNamenLesen.mockReset().mockResolvedValue(new Map());
   einrichten.aendereEinstellungen.mockImplementation(async (_id, aendern) => {
     gespeichert = aendern(frisch(einstellungen()));
     return gespeichert;
@@ -109,6 +116,37 @@ describe('Karte', () => {
   it('eingeschaltete Art, die diese Person nicht sieht: bleibt sichtbar (mit Nummer)', async () => {
     zeigen(mit({ artGruppeId: 99, fuer: 'alle' }));
     expect(await screen.findByText('Nachweis-Art Nr. 99')).toBeTruthy();
+  });
+
+  it('E35: …mit ihrem Namen aus der Ablage, wenn eine Vertrauensperson ihn hingeschrieben hat', async () => {
+    ablage.nachweisArtNamenLesen.mockResolvedValue(new Map([[99, 'Erste Hilfe']]));
+    zeigen(mit({ artGruppeId: 99, fuer: 'alle' }));
+    expect(await screen.findByText('Erste Hilfe')).toBeTruthy();
+    expect(screen.queryByText('Nachweis-Art Nr. 99')).toBeNull();
+  });
+
+  it('E35: Ablage nicht lesbar (null) oder noch leer: die Nummer, kein Fehler', async () => {
+    ablage.nachweisArtNamenLesen.mockResolvedValue(null);
+    zeigen(mit({ artGruppeId: 99, fuer: 'alle' }));
+    expect(await screen.findByText('Nachweis-Art Nr. 99')).toBeTruthy();
+    await waitFor(() => expect(ablage.nachweisArtNamenLesen).toHaveBeenCalled());
+    expect(screen.queryByText(/Namen der Arten/)).toBeNull();
+  });
+
+  it('E35: Lesefehler (vorübergehend) ist nicht „kein Name“: Hinweis mit „Nochmal“', async () => {
+    ablage.nachweisArtNamenLesen.mockRejectedValueOnce(new ApiError(503, 'weg'));
+    ablage.nachweisArtNamenLesen.mockResolvedValueOnce(new Map([[99, 'Erste Hilfe']]));
+    zeigen(mit({ artGruppeId: 99, fuer: 'alle' }));
+    expect(await screen.findByText('Namen der Arten')).toBeTruthy();
+    expect(screen.getByText('Nachweis-Art Nr. 99')).toBeTruthy();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Nochmal' }).at(-1)!);
+    expect(await screen.findByText('Erste Hilfe')).toBeTruthy();
+  });
+
+  it('E35: alle eingeschalteten Arten sichtbar – die Ablage wird gar nicht gelesen', async () => {
+    zeigen(mit({ artGruppeId: 61, fuer: 'alle' }));
+    expect(await screen.findByText('Führungszeugnis')).toBeTruthy();
+    expect(ablage.nachweisArtNamenLesen).not.toHaveBeenCalled();
   });
 
   it('kaputte Bedingung: Hinweis in der Karte statt stillem Bruch', async () => {

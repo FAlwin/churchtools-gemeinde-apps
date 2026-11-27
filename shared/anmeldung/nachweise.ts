@@ -10,7 +10,7 @@
  * `actionData` eines Ablauf-Schritts nicht (gemessen N0) – ein falscher Feldname fiele erst im echten Lauf auf.
  */
 import { z } from 'zod';
-import type { GruppenartVorgabe, SollRecht } from '../ct/gruppenart';
+import { modulRechtAus, type GruppenartVorgabe, type SollRecht } from '../ct/gruppenart';
 import { textEntpacken, textPacken } from '../ct/packen';
 import { STUFE_NACHWEIS } from './felder';
 import { BESCHREIBUNG_MAX } from './formular';
@@ -65,6 +65,33 @@ export const NACHWEIS_MODULRECHT = {
   recht: 'view',
   name: '„Anmeldungen“ sehen',
 } as const;
+
+/**
+ * **„Gruppen eines Gruppentyps sehen“ für die Gruppenart „Anmeldung“** an der Leiter-Rolle (Alwin nach M11, 27.11.2026, Weg b):
+ * Ohne es liefert ChurchTools einer Vertrauensperson die Mitglieder einer Veranstaltung still als **leere Liste** (200, kein
+ * 403) – „Eintragen beim Öffnen“ (N3c) fände nie jemanden. Folge: Vertrauenspersonen sehen alle Anmeldegruppen samt
+ * Teilnehmern, **nicht** deren Antworten (`fields: []`, M11) – darum trägt bei „Nur wenn …“ nur ein Admin ein.
+ *
+ * Die `authId` kommt per Schlüssel aus `/permissions/definitions` (Test-Instanz: 1108), die Einschränkung (`dataId`) ist die
+ * Nummer der Gruppenart „Anmeldung“ dieser Gemeinde (Test-Instanz: 5). Gesetzt wird `dataId: [5]` (`rechteErgaenzenAn`),
+ * nachgelesen steht `dataId: 5` (gemessen 27.11.2026).
+ */
+export const NACHWEIS_ANMELDUNGEN_SEHEN = {
+  modul: 'churchgroup',
+  recht: 'view groups of grouptype',
+  name: 'Gruppen eines Gruppentyps sehen („Anmeldung“)',
+} as const;
+
+/** Das Recht als `SollRecht` – `null`, wenn ChurchTools es nicht kennt oder es die Gruppenart „Anmeldung“ nicht gibt. */
+export function nachweisAnmeldungenSehen(
+  definitionen: unknown,
+  anmeldungTyp: number | null,
+): SollRecht | null {
+  if (anmeldungTyp === null) return null;
+  const { modul, recht, name } = NACHWEIS_ANMELDUNGEN_SEHEN;
+  const authId = modulRechtAus(definitionen, modul, recht);
+  return authId === null ? null : { authId, name, dataId: anmeldungTyp };
+}
 
 /**
  * Das eine Recht der **Teilnehmer-Rolle** (Alwin nach Messung M6, 19.11.2026): „Gruppeninfos sehen“ (10102, Stufe 1). Ohne

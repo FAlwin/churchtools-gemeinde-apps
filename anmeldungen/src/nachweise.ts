@@ -1,6 +1,6 @@
 /**
  * **Die Grundlage für Nachweise in ChurchTools** (Etappe F, N1a; Oberfläche folgt in N1b): die Gruppenart „Nachweis“ samt
- * Rechte an ihrer Leiter-Rolle (sechs in der Gruppe, dazu das Modulrecht „‚Anmeldungen‘ sehen“). Lesen und Sichern trennt, was ein Mensch ohne Recht noch sehen darf:
+ * Rechte an ihrer Leiter-Rolle (sechs in der Gruppe, dazu das Modulrecht „‚Anmeldungen‘ sehen“ und „Gruppen eines Gruppentyps sehen“ für „Anmeldung“). Lesen und Sichern trennt, was ein Mensch ohne Recht noch sehen darf:
  *
  * - `nachweisGrundlageLesen` schreibt nie. Die Rechte der Rolle liest sie nur, wenn man „Berechtigungen verwalten“ hat
  *   (`churchcore: administer persons`, über `rechteAus` wie überall) – sonst `rechtFehlt: null`. **Nicht lesbar ist nicht
@@ -20,7 +20,7 @@ import {
   gruppenartAnlegen,
   gruppenartRollen,
   gruppenartSuchen,
-  modulRechtHolen,
+  modulRechtVerlangen,
   listeHolen,
   rechteErgaenzen,
   type CtPort,
@@ -29,23 +29,36 @@ import {
 } from '@shared/ct/gruppenart';
 import {
   istNachweisArt,
+  nachweisAnmeldungenSehen,
   NACHWEIS_ART,
   NACHWEIS_LEITER_RECHTE,
   NACHWEIS_MODULRECHT,
   NACHWEIS_TEILNEHMER_RECHTE,
 } from '@shared/anmeldung/nachweise';
+import { istAnmeldungArt } from '@shared/anmeldung/uebersicht';
 
 const port = (): CtPort =>
   ctPortMit('Dir fehlt in ChurchTools das Recht dafür (Berechtigungen verwalten).');
 
 /**
  * Die Soll-Rechte der Leiter-Rolle – **die eine Stelle**, an der sie entstehen (Lesen und Sichern nutzen beide sie): die
- * gruppeninternen aus `NACHWEIS_LEITER_RECHTE` plus das Modulrecht „‚Anmeldungen‘ sehen“, dessen Nummer aus den
- * Definitionen kommt. Wirft, wenn ChurchTools das Recht nicht kennt.
+ * gruppeninternen aus `NACHWEIS_LEITER_RECHTE`, das Modulrecht „‚Anmeldungen‘ sehen“ und (N3c, nach M11) „Gruppen eines
+ * Gruppentyps sehen“ für die Gruppenart „Anmeldung“ – beide Nummern aus den Definitionen (einmal gelesen), die Gruppenart je
+ * Gemeinde über ihren Namen. Gibt es die Gruppenart „Anmeldung“ nicht, fehlt nur dieses eine Recht (es gibt dann auch nichts
+ * zu sehen). Wirft, wenn ChurchTools „‚Anmeldungen‘ sehen“ nicht kennt.
  */
 async function leiterSoll(p: CtPort): Promise<SollRecht[]> {
   const { modul, recht, name } = NACHWEIS_MODULRECHT;
-  return [...NACHWEIS_LEITER_RECHTE, await modulRechtHolen(p, modul, recht, name)];
+  const [definitionen, anmeldung] = await Promise.all([
+    p.holen<unknown>('/permissions/definitions'),
+    gruppenartSuchen(p, istAnmeldungArt),
+  ]);
+  const sehen = nachweisAnmeldungenSehen(definitionen, anmeldung.id);
+  return [
+    ...NACHWEIS_LEITER_RECHTE,
+    modulRechtVerlangen(definitionen, modul, recht, name),
+    ...(sehen ? [sehen] : []),
+  ];
 }
 
 export interface NachweisGrundlage {

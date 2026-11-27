@@ -1,8 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@ui/ct/fehler';
+import * as V from '@ui/ct/verbindung';
 import { ChurchToolsBremst, fehlerAus, verbindungEinrichten } from '@ui/ct/verbindung';
+import * as Kern from '@shared/anmeldung/nachweisEintragen';
 import type { EintragErgebnis } from '@shared/anmeldung/nachweisEintragen';
+import * as Gruppenart from '@shared/ct/gruppenart';
 import * as Nachweise from './nachweise';
+import * as Arten from './nachweisArten';
+import * as Einrichten from './einrichten';
+import * as Personen from './nachweisPersonen';
+import * as Ablage from './nachweisStandAblage';
 import {
   SPERRE,
   _vergissLauf,
@@ -20,7 +27,43 @@ vi.mock('./nachweise', async (original) => ({
   ...(await original<typeof import('./nachweise')>()),
   nachweisGrundlageLesen: vi.fn(),
 }));
+vi.mock('./nachweisArten', async (original) => ({
+  ...(await original<typeof import('./nachweisArten')>()),
+  adminNachziehen: vi.fn(),
+}));
+vi.mock('./einrichten', async (original) => ({
+  ...(await original<typeof import('./einrichten')>()),
+  anmeldungsArt: vi.fn(),
+  leitungsRollen: vi.fn(),
+}));
+vi.mock('./nachweisPersonen', async (original) => ({
+  ...(await original<typeof import('./nachweisPersonen')>()),
+  nachweisPersonenLesen: vi.fn(),
+}));
+vi.mock('./nachweisStandAblage', async (original) => ({
+  ...(await original<typeof import('./nachweisStandAblage')>()),
+  nachweisStandAktualisieren: vi.fn(),
+}));
+vi.mock('@shared/ct/gruppenart', async (original) => ({
+  ...(await original<typeof import('@shared/ct/gruppenart')>()),
+  gruppenartRollen: vi.fn(),
+}));
+vi.mock('@shared/anmeldung/nachweisEintragen', async (original) => ({
+  ...(await original<typeof import('@shared/anmeldung/nachweisEintragen')>()),
+  nachweiseEintragen: vi.fn(),
+}));
+vi.mock('@ui/ct/verbindung', async (original) => ({
+  ...(await original<typeof import('@ui/ct/verbindung')>()),
+  ctDaten: vi.fn(),
+}));
 const nachweise = vi.mocked(Nachweise);
+const arten = vi.mocked(Arten);
+const einrichten = vi.mocked(Einrichten);
+const personen = vi.mocked(Personen);
+const ablage = vi.mocked(Ablage);
+const gruppenart = vi.mocked(Gruppenart);
+const kern = vi.mocked(Kern);
+const verbindung = vi.mocked(V);
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -140,5 +183,98 @@ describe('nachweiseBeimOeffnen – einmal je Seite, nie doppelt', () => {
     nachweise.nachweisGrundlageLesen.mockRejectedValue(new ApiError(503, 'weg'));
     expect(await nachweiseBeimOeffnen()).toBeNull();
     expect(console.warn).toHaveBeenCalled();
+  });
+});
+
+describe('nachweiseBeimOeffnen – der Lauf drumherum (Admin nachziehen, Stand danach)', () => {
+  const EINST = { gueltigJahre: 5, ab: 'ausstellung', betreff: 'B', text: 'T' } as const;
+  const art = (id: number) => ({ id, name: `Art ${id}`, einstellungen: { ...EINST } });
+  const ergebnis = (x: Partial<EintragErgebnis> = {}): EintragErgebnis => ({
+    arten: [art(61), art(62)],
+    neu: new Map(),
+    verweigert: [],
+    abbruch: null,
+    ...x,
+  });
+  const grundlage = (darfEinrichten: boolean, rechtFehlt: boolean | null) =>
+    nachweise.nachweisGrundlageLesen.mockResolvedValue({ typId: 11, rechtFehlt, darfEinrichten });
+
+  beforeEach(() => {
+    vi.stubGlobal('navigator', {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    arten.adminNachziehen.mockReset().mockResolvedValue(true);
+    einrichten.anmeldungsArt.mockReset().mockResolvedValue(5);
+    einrichten.leitungsRollen.mockReset().mockResolvedValue(new Set([35]));
+    gruppenart.gruppenartRollen.mockReset().mockResolvedValue({ leiter: 56, teilnehmer: 53 });
+    verbindung.ctDaten.mockReset().mockResolvedValue({ id: 368 });
+    personen.nachweisPersonenLesen.mockReset().mockResolvedValue([]);
+    ablage.nachweisStandAktualisieren.mockReset().mockResolvedValue([]);
+    kern.nachweiseEintragen.mockReset().mockResolvedValue(ergebnis());
+  });
+
+  it('Admin mit fehlendem Recht: zieht nach, bevor eingetragen wird; Kontext aus ChurchTools', async () => {
+    grundlage(true, true);
+    await nachweiseBeimOeffnen();
+    expect(arten.adminNachziehen).toHaveBeenCalledTimes(1);
+    expect(kern.nachweiseEintragen).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        ich: 368,
+        admin: true,
+        nachweisTyp: 11,
+        leiterRolle: 56,
+        teilnehmerRolle: 53,
+        anmeldungTyp: 5,
+        leitung: new Set([35]),
+      }),
+    );
+  });
+
+  it('nichts fehlt oder kein Admin: kein Nachziehen', async () => {
+    grundlage(true, false);
+    await nachweiseBeimOeffnen();
+    _vergissLauf();
+    grundlage(false, true);
+    await nachweiseBeimOeffnen();
+    expect(arten.adminNachziehen).not.toHaveBeenCalled();
+    expect(kern.nachweiseEintragen).toHaveBeenCalledTimes(2);
+  });
+
+  it('Neue: Stand nur für die Arten mit Neuen, aus frischer Lesung; Meldung zählt die Neuen', async () => {
+    grundlage(false, false);
+    const leute = [{ personId: 10 }] as never;
+    personen.nachweisPersonenLesen.mockResolvedValue(leute);
+    kern.nachweiseEintragen.mockResolvedValue(ergebnis({ neu: new Map([[61, [10]]]) }));
+    expect(await nachweiseBeimOeffnen()).toBe('1 Person zum Nachweis angemeldet.');
+    expect(personen.nachweisPersonenLesen).toHaveBeenCalledTimes(1);
+    expect(personen.nachweisPersonenLesen).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 61 }),
+      53,
+    );
+    expect(ablage.nachweisStandAktualisieren).toHaveBeenCalledWith(
+      [expect.objectContaining({ id: 61, personen: leute })],
+      expect.any(String),
+    );
+  });
+
+  it('keine Neuen: kein Stand geschrieben', async () => {
+    grundlage(false, false);
+    await nachweiseBeimOeffnen();
+    expect(personen.nachweisPersonenLesen).not.toHaveBeenCalled();
+    expect(ablage.nachweisStandAktualisieren).not.toHaveBeenCalled();
+  });
+
+  it('Stand scheitert: die Meldung kommt trotzdem (eingetragen ist eingetragen)', async () => {
+    grundlage(false, false);
+    kern.nachweiseEintragen.mockResolvedValue(ergebnis({ neu: new Map([[61, [10, 11]]]) }));
+    ablage.nachweisStandAktualisieren.mockRejectedValue(new ApiError(503, 'weg'));
+    expect(await nachweiseBeimOeffnen()).toBe('2 Personen zum Nachweis angemeldet.');
+  });
+
+  it('ohne Gruppenart „Anmeldung“ oder Rollen: kein Lauf', async () => {
+    grundlage(false, false);
+    einrichten.anmeldungsArt.mockResolvedValue(null);
+    expect(await nachweiseBeimOeffnen()).toBeNull();
+    expect(kern.nachweiseEintragen).not.toHaveBeenCalled();
   });
 });

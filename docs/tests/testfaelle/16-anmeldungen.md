@@ -146,7 +146,7 @@ Konto ohne Recht zum Bearbeiten.
 **Das muss passieren:** Im Bereich **Vorbereiten** steht die Karte **Nachweise** mit einer Zeile je Art („alle
 Angemeldeten“, „nur wenn Bereich ist …“ oder „aus“). Im Fenster **Nachweise · Veranstaltung** lässt sich je Art einstellen,
 für wen sie gilt; nach dem Speichern gilt es auch nach dem Neuladen, **Rückgängig** stellt den Stand davor her. Eingetragen
-wird noch niemand – das kommt erst mit dem Öffnen durch eine Vertrauensperson (N3c).
+wird erst, wenn eine Vertrauensperson oder ein Admin die Erweiterung öffnet (TF-ANM-07).
 
 1. **Vorbereiten** öffnen: Die Karte **Nachweise** zeigt jede Art, die du sehen darfst, mit „aus“, solange nichts eingestellt ist.
 2. **Bearbeiten**, **Führungszeugnis** einschalten, **Alle Angemeldeten** lassen, **Speichern**: Die Karte zeigt „alle Angemeldeten“,
@@ -167,5 +167,40 @@ wird noch niemand – das kommt erst mit dem Öffnen durch eine Vertrauensperson
 - **Betrifft:** `anmeldungen/src/NachweiseKarte.tsx`, `anmeldungen/src/VeranstaltungSeite.tsx`, `anmeldungen/src/nachweisArten.ts`, `shared/anmeldung/nachweisBedarf.ts`, `shared/anmeldung/formular.ts`
 - **Automatisiert:** ja – `nachweisBedarf.test.ts` (wer braucht den Nachweis: je Person/Kontakt, Mehrfachauswahl, Ankreuzen, freie Antwort, kaputte Bedingung, Umbenennen, Speichern/Lesen), `NachweiseKarte.test.tsx`, `VeranstaltungSeite.test.tsx` und `einrichten.test.ts` (Kopie, Umbenennen beim Speichern der Frage); von Hand bleiben die Sicht eines Kontos ohne Recht in ChurchTools und das Handy
 - **Historie:** N3b (27.11.2026, Entwurf `n-nachweise-v2`, Entscheidungsliste E20, E27 ff.)
+
+</details>
+
+### TF-ANM-07 · Nachweise: Eintragen beim Öffnen
+
+**Das brauchst du:** Eine freigegebene Veranstaltung, die noch läuft, mit eingeschalteter Nachweis-Art – einmal **„Alle
+Angemeldeten“**, einmal **„Nur wenn …“** (z. B. „Mitarbeit mit Kindern? ist Ja“); darin zwei aktive Anmeldungen (eine mit
+„Ja“, eine mit „Nein“) und eine auf der Warteliste. Dazu ein Konto, das Vertrauensperson der Art ist (kein Admin), und ein
+Admin-Konto. Echte Mails gehen raus – nur Testpersonen mit eigenen Adressen nehmen.
+
+**Das muss passieren:** Öffnet die Vertrauensperson die Erweiterung, stehen bei „Alle“ die aktiven Teilnehmer in der
+Nachweis-Gruppe (nicht die Wartenden, nicht die Leitung) und bekommen die Aufforderung; unten erscheint leise „2 Personen zum
+Nachweis angemeldet.“ „Nur wenn …“ trägt nur ein Admin ein, und nur die passenden. Niemand wird doppelt eingetragen, und wer
+von einer Vertrauensperson ausgetragen wurde, kommt für dieselbe Veranstaltung nicht wieder hinein.
+
+1. Als Vertrauensperson die Erweiterung öffnen: unten „2 Personen zum Nachweis angemeldet.“ In ChurchTools stehen beide in der
+   Nachweis-Gruppe, die Wartende nicht; beide haben die Mail „Bitte Nachweis vorlegen“ und die Einladung.
+2. Seite neu laden: keine Meldung, niemand doppelt, keine neue Mail.
+3. Die Veranstaltung mit „Nur wenn …“: Als Vertrauensperson geöffnet, wird dort niemand eingetragen. Als Admin geöffnet: nur
+   die Person mit „Ja“.
+4. In ChurchTools eine eingetragene Person aus der Nachweis-Gruppe entfernen, Erweiterung neu öffnen: Sie wird für diese
+   Veranstaltung nicht wieder eingetragen. Meldet sie sich zu einer neuen Veranstaltung mit derselben Art an, wird sie dort
+   wieder eingetragen.
+5. Die Erweiterung in zwei Tabs gleichzeitig öffnen: höchstens einmal die Meldung, niemand doppelt.
+6. Als Leitung der Veranstaltung (keine Vertrauensperson) **Vorbereiten** öffnen: Die Karte **Nachweise** zeigt die Art mit
+   ihrem Namen (nicht „Nachweis-Art Nr. …“), sobald einmal eine Vertrauensperson oder ein Admin die Erweiterung geöffnet hat.
+7. Fehlt einer Vertrauensperson das Recht, die Anmeldungen zu sehen (vor dem ersten Öffnen durch einen Admin): unten der
+   Hinweis „Dir fehlt noch ein Recht zum Eintragen …“, eingetragen wird nichts.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/anmeldung/nachweisEintragen.ts`, `shared/anmeldung/nachweisStandAblage.ts`, `anmeldungen/src/nachweisEintragen.ts`, `anmeldungen/src/App.tsx`, `anmeldungen/src/nachweise.ts`, `anmeldungen/src/NachweiseKarte.tsx`, `ui/ct/mitglieder.ts`
+- **Automatisiert:** ja – `nachweisEintragen.test.ts` (Kern: wer zählt, Merkzettel, Fehlerzweige 403/429/5xx, Obergrenze, Pause mit Fake-Timern; Erweiterung: Fehlerarten aus `fehlerAus`, Meldung, einmal je Seite, Sperre), `nachweisStandAblage.test.ts` (Name und Merkzettel), `nachweise.test.ts` (Recht an der Leiter-Rolle), `NachweiseKarte.test.tsx` (Namen), `mitglieder.test.ts` („schon drin“); echt gelaufen gegen die Test-Instanz (27.11.2026, Skript mit dem Kern des Zweigs). Von Hand bleiben die zwei Tabs, die Meldung im Browser und die Karte als Leitung
+- **Historie:** N3c (27.11.2026, Entscheidungsliste E18, E34–E37, Messung M11)
 
 </details>

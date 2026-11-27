@@ -35,10 +35,10 @@ export async function nachweisStandEinrichten(leiterRolle: number): Promise<void
   }
 }
 
-/** Der Stand je Person einer Art für `heute` – `null`, wenn die Personen nicht gelesen wurden oder die Art nicht fertig ist. */
 /** Was der Stand einer Art braucht: ihre Nummer, Einstellungen und die gelesenen Personen. */
 type ArtFuerStand = Pick<NachweisArtMitPersonen, 'id' | 'einstellungen' | 'personen'>;
 
+/** Der Stand je Person einer Art für `heute` – `null`, wenn die Personen nicht gelesen wurden oder die Art nicht fertig ist. */
 export function standDerArt(a: ArtFuerStand, heute: string): StandEintraege | null {
   if (a.personen === null || a.einstellungen === null) return null;
   return new Map(

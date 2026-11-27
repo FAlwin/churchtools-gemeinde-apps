@@ -69,7 +69,7 @@ export function PersonAufnehmen({
               <>
                 <PersonBild
                   name={ganzerName(p)}
-                  bild={null}
+                  bild={p.bild ?? null}
                   initialen={`${p.vor.charAt(0)}${p.nach.charAt(0)}`.toUpperCase()}
                   groesse={24}
                 />

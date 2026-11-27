@@ -125,7 +125,7 @@ export interface Nachbau {
     bild?: { id: number; name: string; imageUrl: string };
   }[];
   /** Personen für `GET /search` und `GET /persons?ids[]` (Feld „Im Auftrag von“). */
-  personen: { id: number; vor: string; nach: string }[];
+  personen: { id: number; vor: string; nach: string; bild?: string }[];
   /** `POST /files/appointment_image/{id}` antwortet mit diesem Fehler – `angelegt`: das Bild ist trotzdem gespeichert. */
   bildFehler: AnlegeFehler | null;
   /** `POST /files/appointment_image/{id}` sagt „200“, speichert aber nichts. */
@@ -609,7 +609,7 @@ export function nachbauStarten(): Nachbau {
       return json(200, {
         data: s.personen
           .filter((p) => ids.includes(p.id))
-          .map((p) => ({ id: p.id, firstName: p.vor, lastName: p.nach })),
+          .map((p) => ({ id: p.id, firstName: p.vor, lastName: p.nach, imageUrl: p.bild ?? null })),
       });
     }
     // Das Bild eines Termins (gemessen 26.11.2026): multipart `files[]`, Antwort „200“ mit den Dateien; ein zweites ersetzt das erste.

@@ -812,6 +812,30 @@ describe('Reiter „Kalender“ wie in ChurchTools (W15-1)', () => {
     fireEvent.click(within(tagsReihe).getByRole('button', { name: '+ Hinzufügen' }));
     await within(tagsReihe).findByLabelText('Tag hinzufügen');
     expect(within(tagsReihe).queryByLabelText('Neuer Tag')).toBeNull();
+    expect(within(tagsReihe).queryByText(/Tags vorhanden|keine Termin-Tags/)).toBeNull();
+  });
+
+  it('gibt es keine Tags (und kein Recht, welche anzulegen), sagt die Zeile das – statt leer zu bleiben', async () => {
+    zeigen();
+    await karte();
+    const f = await fensterOeffnen('Heiligabend, 16 Uhr');
+    const tagsReihe = within(f).getByRole('group', { name: 'Tags' });
+    fireEvent.click(within(tagsReihe).getByRole('button', { name: '+ Hinzufügen' }));
+    await within(tagsReihe).findByText('In ChurchTools gibt es noch keine Termin-Tags.');
+    expect(within(tagsReihe).queryByLabelText('Tag hinzufügen')).toBeNull();
+  });
+
+  it('ist der einzige Tag gewählt, heißt es „Keine weiteren Tags vorhanden.“', async () => {
+    ct.tags.push({ id: 3, name: 'Jugend' });
+    zeigen();
+    await karte();
+    const f = await fensterOeffnen('Heiligabend, 16 Uhr');
+    const tagsReihe = within(f).getByRole('group', { name: 'Tags' });
+    fireEvent.click(within(tagsReihe).getByRole('button', { name: '+ Hinzufügen' }));
+    fireEvent.change(await within(tagsReihe).findByLabelText('Tag hinzufügen'), {
+      target: { value: '3' },
+    });
+    await within(tagsReihe).findByText('Keine weiteren Tags vorhanden.');
   });
 
   describe('Als Vorlage speichern', () => {

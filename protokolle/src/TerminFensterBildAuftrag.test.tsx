@@ -145,6 +145,25 @@ describe('Im Auftrag von', () => {
     expect(ct.mails).toEqual([]);
   });
 
+  it('die Vorschläge zeigen das Profilbild aus ChurchTools – ohne Bild die Initialen', async () => {
+    ct.personen = [
+      { ...BEN, bild: 'https://ct.test/images/ben.jpg' },
+      { id: 51, vor: 'Bea', nach: 'Ohne' },
+    ];
+    zeigen();
+    const f = await fenster();
+    fireEvent.change(await within(f).findByRole('combobox', { name: 'Im Auftrag von' }), {
+      target: { value: 'Be' },
+    });
+    const mitBild = await within(f).findByRole('option', { name: 'Ben Test A2' });
+    expect(mitBild.querySelector('img')?.getAttribute('src')).toBe(
+      'https://ct.test/images/ben.jpg',
+    );
+    const ohne = within(f).getByRole('option', { name: /Bea Ohne/ });
+    expect(ohne.querySelector('img')).toBeNull();
+    expect(within(ohne).getByText('BO')).toBeTruthy();
+  });
+
   it('Vorlage mit „Im Auftrag von“: der Name wird nachgeladen und steht im Feld', async () => {
     ct.vorlagen = [
       {
@@ -347,6 +366,8 @@ describe('Bild', () => {
     const f = await fenster();
     await bildWaehlen(f);
     await within(f).findByText(/schon „Heiligabend“/);
+    // Das Fenster sagt, dass das Bild nicht mitgeht – nicht still verlieren.
+    within(f).getByText(/das gewählte Bild wird dabei nicht hochgeladen/);
     await speichern(f, 'Verknüpfen');
     await waitFor(() => expect(onFertig).toHaveBeenCalled());
     expect(bildPosts()).toEqual([]);

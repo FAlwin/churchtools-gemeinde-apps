@@ -89,7 +89,7 @@ export function TerminImAuftrag({
         <>
           <PersonBild
             name={volleName(p)}
-            bild={null}
+            bild={p.bild ?? null}
             initialen={`${p.vor.charAt(0)}${p.nach.charAt(0)}`.toUpperCase()}
             groesse={28}
           />

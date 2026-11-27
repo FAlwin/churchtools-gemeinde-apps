@@ -79,7 +79,8 @@ const KEINE: readonly number[] = [];
  *
  * **Im Auftrag von** (`TerminImAuftrag`) macht die gewählte Person zum Einlader der Besprechungsanfrage – dann bekomme auch ich eine Mail
  * (`mailsAnAndere(eingeladen, imAuftrag ?? ich)`). Das **Bild** (`TerminBildFeld`) liegt hier als Datei im Zustand (nicht im `Eintrag`), geht nach dem
- * Anlegen hoch (`terminLegen`, bei „Nur verknüpfen“ nie) und wird danach nachgelesen; fehlt es, steht es in der Meldung wie eine fehlende Buchung.
+ * Anlegen hoch (`terminLegen`, bei „Nur verknüpfen“ nie – das Fenster sagt es dann, auch nach einer unklaren Antwort) und wird
+ * danach nachgelesen; fehlt es, steht es in der Meldung wie eine fehlende Buchung.
  *
  * Nach dem Anlegen kommt der Vermerk „im Kalender“. Scheitert nur der Vermerk, steht der Termin trotzdem – dann bleibt
  * das Fenster mit „Nochmal vermerken“ offen (wiederholt nur den Vermerk, legt nichts doppelt an). Fehlt nach dem Anlegen eine
@@ -518,6 +519,12 @@ export function TerminFenster({
                 Trotzdem neu anlegen
               </label>
             </div>
+          )}
+          {verknuepfen && bild && (
+            <p className={felder.hinweis} role="status">
+              Du verknüpfst einen vorhandenen Termin – das gewählte Bild wird dabei nicht
+              hochgeladen. Füge es danach in ChurchTools am Termin hinzu.
+            </p>
           )}
           {aktiverReiter === 'anfragen' && verknuepfen && (
             <p className={felder.hinweis} role="status">

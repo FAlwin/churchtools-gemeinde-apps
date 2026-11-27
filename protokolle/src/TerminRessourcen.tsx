@@ -22,7 +22,11 @@ import { Reihe } from './TerminFormular';
 import formular from './TerminFormular.module.scss';
 import styles from './TerminRessourcen.module.scss';
 
-/** Zahl + „min“ + Auswahlpfeil mit Vorschlägen – wie Vorlauf/Nachlauf im ChurchTools-Dialog. Frei tippbar. */
+/**
+ * Zahl + „min“ + Auswahl „Vorschlag“ – wie Vorlauf/Nachlauf im ChurchTools-Dialog. Frei tippbar. Die Auswahl steht danach
+ * wieder auf „Vorschlag“, der gewählte Wert landet im Zahlenfeld. Bis 27.11.2026 war sie ein leerer Pfeil ohne Text –
+ * Alwin: nicht intuitiv, nach der Wahl „kommt da nichts“.
+ */
 function LaufFeld({
   name,
   wert,
@@ -59,7 +63,7 @@ function LaufFeld({
           if (ev.target.value !== '') onAendern(Number(ev.target.value));
         }}
       >
-        <option value="" />
+        <option value="">Vorschlag</option>
         {LAUF_VORSCHLAEGE.filter((v) => v <= max).map((v) => (
           <option key={v} value={v}>
             {v} min
@@ -282,8 +286,8 @@ export function TerminRessourcen(p: Props) {
           <thead>
             <tr>
               <th scope="col">Ressource</th>
-              <th scope="col">Vorlauf</th>
-              <th scope="col">Nachlauf</th>
+              <th scope="col">Vorlauf (min)</th>
+              <th scope="col">Nachlauf (min)</th>
               <th scope="col">Status</th>
               <th scope="col">
                 <span className={styles.nurVorleser}>Entfernen</span>

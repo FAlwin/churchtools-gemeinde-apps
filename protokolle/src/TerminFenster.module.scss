@@ -10,6 +10,12 @@
   font-size: 13.5px;
   line-height: 1.4;
   overflow-wrap: anywhere;
+
+  // Unter den Reitern (oder der Auswahl „Bereich“) mit Abstand – mit -6px lag die blaue Linie des gewählten Reiters auf
+  // dem Kasten (Alwin, 27.11.2026). Ohne Reiter bleibt er dicht unter dem Fensterkopf.
+  &:not(:first-child) {
+    margin-top: 12px;
+  }
 }
 
 // Vorlagen-Spalte links, Formular rechts – am Handy untereinander (die Vorlagen sind dann eine Auswahl oben).

@@ -2,12 +2,21 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BlockNoteEditor, type PartialBlock } from '@blocknote/core';
-import { ableiten, fremdeTypen, textAus, type Block } from '@shared/protokolle/dokument';
+import {
+  ableiten,
+  BLOCK,
+  fremdeTypen,
+  textAus,
+  themenreiheIds,
+  type Block,
+} from '@shared/protokolle/dokument';
 import { dokumentAusTeilen, teileBauen } from '@shared/protokolle/speicher';
 import { STANDARD_VORLAGEN, startDokument } from '@shared/protokolle/vorlagen';
 import { aufgabenIdsSetzen, EDITOR_TYPEN, schema, TABELLEN } from './editorSchema';
 import { farbWert } from './farben';
 import { festenPunktEinfuegen } from './festenPunktEinfuegen';
+import { reiheAnbieten, reiheEinfuegen } from './reiheEinfuegen';
+import type { ReiheKontextWert } from './themenreiheKontext';
 import { tabelleEinfuegen } from './tabelleEinfuegen';
 import { ProtokollAnsicht } from './ProtokollAnsicht';
 import { aushaengen, einhaengen } from './editorTest.testutil';
@@ -47,6 +56,7 @@ const PROTOKOLL: Block[] = [
   { id: 'a1', type: 'aufgabe', props: { aufgabe: 'todo-1' }, content: 'Termine eintragen' },
   { id: 't1', type: 'termin', props: { datum: '2026-12-24' }, content: 'Heiligabend' },
   { id: 'v1', type: 'verweis', props: { art: 'letztes-protokoll' } },
+  { id: 'r1', type: BLOCK.themenreihe, props: { reihe: 'reihe-1' } },
   { id: 'q1', type: 'quote', content: 'Zitat' },
   { id: 'd1', type: 'divider' },
   {
@@ -256,5 +266,52 @@ describe('Editor-Schema gegen Ableitung, Speicher und Ansicht', () => {
       ['paragraph', '', null],
       ['paragraph', '', null],
     ]);
+  });
+
+  it('Reihe einfügen: neu eingefügt (kein Typwechsel), an die Stelle einer leeren Zeile oder dahinter', () => {
+    const e = editorMit([
+      { id: 'a', type: 'paragraph', content: 'Text' },
+      { id: 'leer', type: 'paragraph' },
+    ]);
+    einhaengen(e);
+    reiheEinfuegen(e, 'reihe-neu', 'a');
+    const arten = () => (e.document as Block[]).map((b) => [b.type, b.props?.reihe ?? null]);
+    // Hinter „Text“ – der Absatz bleibt Text, die leere Zeile bleibt unten.
+    expect(arten()).toEqual([
+      ['paragraph', null],
+      [BLOCK.themenreihe, 'reihe-neu'],
+      ['paragraph', null],
+      ['paragraph', null],
+    ]);
+    expect(themenreiheIds(e.document as Block[])).toEqual(['reihe-neu']);
+    // In einer leeren Zeile tritt der Block an ihre Stelle.
+    reiheEinfuegen(e, 'reihe-zwei', 'leer');
+    expect(themenreiheIds(e.document as Block[])).toEqual(['reihe-neu', 'reihe-zwei']);
+    expect((e.document as Block[]).filter((b) => b.id === 'leer')).toEqual([]);
+  });
+
+  it('Reihe anbieten: erst das Fenster – der Block entsteht erst nach dem Speichern, ohne Recht gar nicht', () => {
+    const e = editorMit([{ id: 'a', type: 'paragraph', content: 'Text' }]);
+    einhaengen(e);
+    const neu = vi.fn();
+    const kontext = (darfBauen: boolean): ReiheKontextWert => ({
+      reihen: new Map(),
+      stand: 'leer',
+      darfBauen,
+      bearbeiten: vi.fn(),
+      uebertragen: vi.fn(),
+      neu,
+      neuLaden: vi.fn(),
+    });
+    reiheAnbieten(e, kontext(false));
+    reiheAnbieten(e, null);
+    expect(neu).not.toHaveBeenCalled();
+    reiheAnbieten(e, kontext(true));
+    expect(neu).toHaveBeenCalledTimes(1);
+    // Fenster geöffnet, aber noch nicht gespeichert: nichts im Dokument.
+    expect(themenreiheIds(e.document as Block[])).toEqual([]);
+    // „Speichern“ im Fenster ruft `fertig` – jetzt entsteht der Block.
+    (neu.mock.calls[0][0] as (id: string) => void)('reihe-x');
+    expect(themenreiheIds(e.document as Block[])).toEqual(['reihe-x']);
   });
 });

@@ -68,15 +68,36 @@ function nachbau(events: Record<number, FrischesEvent>) {
         ? new NichtUebernommen('die Infos')
         : new ApiError(status, meldung),
   };
-  const port: UebertragenPort = {
-    event: async (id) => {
-      log.push(`event ${id}`);
-      if (fehlerBeiLesen.has(id)) throw fehlerBeiLesen.get(id);
-      return ct[id];
-    },
-    speichern: (id, neu, gesehen) => infosSpeichern(infosPort, id, neu, gesehen),
+  // Wie viele Aufrufe gleichzeitig laufen – ChurchTools bremst (429), darum immer nur einer.
+  let laeuft = 0;
+  let hoechstens = 0;
+  const einzeln = async <T>(f: () => Promise<T>): Promise<T> => {
+    hoechstens = Math.max(hoechstens, ++laeuft);
+    try {
+      await Promise.resolve();
+      return await f();
+    } finally {
+      laeuft--;
+    }
   };
-  return { ct, log, port, fehlerBeiSchreiben, fehlerBeiLesen, dazwischen };
+  const port: UebertragenPort = {
+    event: (id) =>
+      einzeln(async () => {
+        log.push(`event ${id}`);
+        if (fehlerBeiLesen.has(id)) throw fehlerBeiLesen.get(id);
+        return ct[id];
+      }),
+    speichern: (id, neu, gesehen) => einzeln(() => infosSpeichern(infosPort, id, neu, gesehen)),
+  };
+  return {
+    ct,
+    log,
+    port,
+    fehlerBeiSchreiben,
+    fehlerBeiLesen,
+    dazwischen,
+    gleichzeitig: () => hoechstens,
+  };
 }
 
 const EVENT = (
@@ -116,6 +137,7 @@ describe('ladeEventLagen', () => {
       { kalender: [4], ich: 1 },
     );
     expect(n.log).toEqual(['event 10', 'event 11', 'event 12']);
+    expect(n.gleichzeitig()).toBe(1);
   });
 
   it('leitet das Recht aus Kalender und Termin-Admins des frischen Events ab', async () => {
@@ -162,6 +184,7 @@ describe('uebertragen', () => {
       'schreibe 12',
       'lies 12',
     ]);
+    expect(n.gleichzeitig()).toBe(1);
     expect(n.ct[10].description).toBe(`Treffpunkt 19 Uhr\n\n${abschnitt(reihe, 0)}`);
     expect(n.ct[11].description).toBe(abschnitt(reihe, 1));
   });

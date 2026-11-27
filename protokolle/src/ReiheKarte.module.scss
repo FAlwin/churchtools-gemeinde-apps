@@ -124,4 +124,11 @@
     padding: 2px 0;
     border: 0;
   }
+
+  // Ohne Spaltenköpfe sagt die Beschriftung vor dem Wert, was es ist.
+  .tabelle td[data-label]::before {
+    content: attr(data-label) ': ';
+    color: var(--text2);
+    font-size: 12.5px;
+  }
 }

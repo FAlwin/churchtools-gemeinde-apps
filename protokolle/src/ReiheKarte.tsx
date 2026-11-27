@@ -74,10 +74,12 @@ export function ReiheKarte({ reiheId }: { reiheId: string }) {
                     )}
                   </div>
                 </td>
-                <td>{z.thema || <span className={styles.leer}>–</span>}</td>
-                <td>{z.wer?.name || <span className={styles.leer}>–</span>}</td>
-                <td>{z.bibelstelle || <span className={styles.leer}>–</span>}</td>
-                <td>{z.notiz || <span className={styles.leer}>–</span>}</td>
+                <td data-label="Thema">{z.thema || <span className={styles.leer}>–</span>}</td>
+                <td data-label="Wer">{z.wer?.name || <span className={styles.leer}>–</span>}</td>
+                <td data-label="Bibelstelle">
+                  {z.bibelstelle || <span className={styles.leer}>–</span>}
+                </td>
+                <td data-label="Notiz">{z.notiz || <span className={styles.leer}>–</span>}</td>
               </tr>
             ))}
           </tbody>

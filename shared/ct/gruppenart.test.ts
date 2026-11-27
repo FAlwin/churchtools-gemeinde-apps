@@ -10,6 +10,9 @@ import {
   modulRechtAus,
   modulRechtHolen,
   rechteErgaenzen,
+  rechteErgaenzenAn,
+  rechtTraegerAus,
+  rechtTraegerLesen,
 } from './gruppenart';
 import { FalschesCt } from './gruppenart.testutil';
 
@@ -136,16 +139,16 @@ describe('fehlendeRechte', () => {
       s.map(({ authId, dataId }) => ({ authId, dataId }));
     expect(fehlendeRechte(alle(NACHWEIS_LEITER_RECHTE), NACHWEIS_LEITER_RECHTE)).toEqual([]);
     expect(fehlendeRechte(alle(LEITER_RECHTE), LEITER_RECHTE)).toEqual([]);
-    // Gruppeninfos/Mitglieder sehen (Stufe 1) haben beide; es fehlen die Feld-Rechte und die Folgeaufgaben.
+    // Gruppeninfos/Mitglieder sehen (Stufe 1) haben beide; es fehlen die Feld-Rechte, die Folgeaufgaben und „Gruppenmitglieder hinzufügen“.
     expect(
       fehlendeRechte(alle(LEITER_RECHTE), NACHWEIS_LEITER_RECHTE).map((r) => r.authId),
-    ).toEqual([10126, 10133, 10110]);
+    ).toEqual([10126, 10133, 10110, 10107]);
   });
 });
 
 /**
  * Der Baustein wird mit **einem** Recht geprüft – unabhängig davon, welche Rechte eine App verlangt (die Nachweis-Leiter
- * haben seit N1b fünf; das prüfen die Tests der Anmeldungen gegen `NACHWEIS_LEITER_RECHTE`).
+ * haben seit N3a sechs; das prüfen die Tests der Anmeldungen gegen `NACHWEIS_LEITER_RECHTE`).
  */
 const EIN_RECHT = [{ authId: 10110, name: 'Follow-ups durchführen', dataId: null }] as const;
 
@@ -241,5 +244,91 @@ describe('modulRechtAus / modulRechtHolen', () => {
     await expect(modulRechtHolen(kaputt, 'anmeldungen', 'view', 'x')).rejects.toMatchObject({
       art: 'unlesbar',
     });
+  });
+});
+
+describe('rechteErgaenzenAn (N3a): dieselbe Mechanik für Status, Gruppenrolle und Person', () => {
+  it('schreibt und liest am Pfad des Ziels nach – je Art', async () => {
+    for (const art of ['status', 'group_role', 'person'] as const) {
+      const ct = new FalschesCt();
+      await rechteErgaenzenAn(
+        ct.port,
+        { art, id: 4 },
+        [{ authId: 2021, dataId: 9, name: 'x' }],
+        'y',
+      );
+      expect(ct.schreibende('PUT')).toEqual([
+        { methode: 'PUT', pfad: `/permissions/${art}/4`, json: { authId: 2021, dataId: [9] } },
+      ]);
+      expect(ct.rechteAn.get(`${art}:4`)).toEqual([{ authId: 2021, dataId: 9 }]);
+    }
+  });
+
+  it('geschluckt: nichtUebernommen; vorhandenes am Ziel: kein PUT', async () => {
+    const ct = new FalschesCt();
+    ct.ignoriere = ['PUT /permissions'];
+    const e = await rechteErgaenzenAn(
+      ct.port,
+      { art: 'person', id: 1 },
+      [{ authId: 2025, dataId: 9, name: 'Daten sehen' }],
+      'der Person 1',
+    ).catch((x: unknown) => x);
+    expect(e).toMatchObject({ art: 'nichtUebernommen', was: '„Daten sehen“' });
+    const ct2 = new FalschesCt();
+    ct2.rechteAn.set('person:1', [{ authId: 2025, dataId: 9 }]);
+    await rechteErgaenzenAn(
+      ct2.port,
+      { art: 'person', id: 1 },
+      [{ authId: 2025, dataId: 9, name: 'a' }],
+      'b',
+    );
+    expect(ct2.aufrufe).toEqual([]);
+  });
+});
+
+describe('rechtTraegerAus / rechtTraegerLesen (assignment-summary)', () => {
+  const summary = (assignments: Record<string, unknown>) => ({
+    authId: 2020,
+    dataId: null,
+    effectivePersonCount: 3,
+    assignments: { statuses: [], groupTypes: [], groups: [], persons: [], ...assignments },
+  });
+
+  it('alle vier Quellen als Ziel – je Rolle eines, doppelte einmal', () => {
+    expect(
+      rechtTraegerAus(
+        summary({
+          statuses: [{ statusId: 2, personCount: 5 }],
+          groupTypes: [{ groupTypeId: 11, groupTypeRoleIds: [56, 57], personCount: 2 }],
+          groups: [
+            { groupId: 17, groupRoleIds: [91], personCount: 1 },
+            { groupId: 18, groupRoleIds: [91], personCount: 1 },
+          ],
+          persons: [{ personId: 1 }],
+        }),
+      ),
+    ).toEqual([
+      { art: 'status', id: 2 },
+      { art: 'group_type_role', id: 56 },
+      { art: 'group_type_role', id: 57 },
+      { art: 'group_role', id: 91 },
+      { art: 'person', id: 1 },
+    ]);
+  });
+
+  it('niemand: leere Liste; unbekannte Gestalt: null (nicht „niemand“)', () => {
+    expect(rechtTraegerAus(summary({}))).toEqual([]);
+    expect(rechtTraegerAus({ authId: 2020 })).toBeNull();
+    expect(rechtTraegerAus(summary({ persons: null }))).toBeNull();
+    expect(rechtTraegerAus(null)).toBeNull();
+  });
+
+  it('Lesen: unbekannte Gestalt wirft „unlesbar“', async () => {
+    const ct = new FalschesCt();
+    ct.summaryKaputt = true;
+    await expect(rechtTraegerLesen(ct.port, 2020)).rejects.toMatchObject({ art: 'unlesbar' });
+    ct.summaryKaputt = false;
+    ct.rechteAn.set('person:1', [{ authId: 2020, dataId: null }]);
+    expect(await rechtTraegerLesen(ct.port, 2020)).toEqual([{ art: 'person', id: 1 }]);
   });
 });

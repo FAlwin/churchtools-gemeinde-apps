@@ -35,9 +35,9 @@ const E: NachweisEinstellungen = {
 const ART = { name: 'Führungszeugnis', ...E };
 
 describe('Rechte der Leiter-Rolle', () => {
-  it('genau fünf: Infos, Mitglieder, Felder sehen und bearbeiten, Follow-ups', () => {
+  it('genau sechs: Infos, Mitglieder, Felder sehen und bearbeiten, Follow-ups, Mitglieder hinzufügen (E19)', () => {
     expect(NACHWEIS_LEITER_RECHTE.map((r) => r.authId).sort()).toEqual(
-      [10101, 10102, 10110, 10126, 10133].sort(),
+      [10101, 10102, 10107, 10110, 10126, 10133].sort(),
     );
   });
 
@@ -53,6 +53,8 @@ describe('Rechte der Leiter-Rolle', () => {
     expect(r(10102)?.dataId).toBe(1);
     expect(r(10101)?.dataId).toBe(1);
     expect(r(10110)?.dataId).toBeNull();
+    // M10: 10107 ohne Stufe gesetzt – mit einer Stufe stünde nachgelesen eine andere Zeile da.
+    expect(r(10107)?.dataId).toBeNull();
   });
 });
 

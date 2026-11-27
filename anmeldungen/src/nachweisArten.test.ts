@@ -7,6 +7,7 @@ import {
   NACHWEIS_ABLAUF_NAME,
   NACHWEIS_FELDER,
   NACHWEIS_LEITER_RECHTE,
+  NACHWEIS_STAND_KATEGORIE,
   NACHWEIS_TEILNEHMER_RECHTE,
   nachweisEinstellungenLesen,
   nachweisFeldAnlage,
@@ -36,6 +37,10 @@ vi.mock('@ui/ct/verbindung', () => ({
   ctAlleSeiten: vi.fn(),
 }));
 const ct = vi.mocked(V);
+/** Der Datenspeicher (Ablage „Nachweis-Stand“, N3a) läuft über denselben ersetzten Anschluss. */
+vi.mock('@ui/ct/modulPort', async () =>
+  (await import('./nachweisArten.testutil')).modulPortImTest(),
+);
 
 let falsch: FalschesNachweisCt;
 
@@ -109,13 +114,14 @@ describe('Anlegen einer neuen Nachweis-Art', () => {
     });
   });
 
-  it('Rechte: die fünf der Leiter-Rolle plus das Modulrecht „Anmeldungen sehen“, an der Teilnehmer-Rolle nur „Gruppeninfos sehen“ (M6)', async () => {
+  it('Rechte: die sechs der Leiter-Rolle plus das Modulrecht „Anmeldungen sehen“, an der Teilnehmer-Rolle nur „Gruppeninfos sehen“ (M6)', async () => {
     await nachweisArtSichern(EINGABE, ICH);
     // Die Nummer des Modulrechts kommt aus den Definitionen des falschen ChurchTools (nicht abgeschrieben).
     const modulId = (
       falsch.basis.definitionen as { modules: { permissions: { authId: number }[] }[] }
     ).modules[0].permissions[0].authId;
-    expect(falsch.basis.rechte.get(54)).toEqual([
+    // Danach (Schritt „stand“, N3a) die vier Rechte an der Ablage „Nachweis-Stand“ – eigener Test unten.
+    expect(falsch.basis.rechte.get(54)?.slice(0, NACHWEIS_LEITER_RECHTE.length + 1)).toEqual([
       ...NACHWEIS_LEITER_RECHTE.map(({ authId, dataId }) => ({ authId, dataId })),
       { authId: modulId, dataId: null },
     ]);
@@ -126,6 +132,26 @@ describe('Anlegen einer neuen Nachweis-Art', () => {
     expect(NACHWEIS_TEILNEHMER_RECHTE).toEqual([
       { authId: 10102, name: 'Gruppeninfos sehen', dataId: 1 },
     ]);
+  });
+
+  it('Schritt „stand“ (N3a): Ablage „Nachweis-Stand“ angelegt, die Leiter-Rolle darf dort sehen, anlegen, ändern', async () => {
+    const erg = await nachweisArtSichern(EINGABE, ICH);
+    expect(erg.erledigt.at(-1)).toBe('stand');
+    const k = falsch.basis.kategorien.find((x) => x.shorty === NACHWEIS_STAND_KATEGORIE.kuerzel)!;
+    expect(k).toBeDefined();
+    const anKategorie = (falsch.basis.rechte.get(54) ?? []).filter((r) => r.dataId === k.id);
+    expect(anKategorie).toHaveLength(4);
+    // Die Vertrauenspersonen haben „Anmeldungen sehen“ (Rolle 54) – sie stehen also selbst unter den Trägern.
+    expect(falsch.schreibend('PUT /permissions/person')).toEqual([]);
+  });
+
+  it('scheitert der Schritt „stand“, steht die Art – das Ergebnis nennt genau diesen Schritt', async () => {
+    falsch.basis.summaryKaputt = true;
+    const erg = await nachweisArtSichern(EINGABE, ICH);
+    expect(erg.erledigt).toEqual(NACHWEIS_SCHRITTE.filter((x) => x !== 'stand'));
+    expect(erg.fehler).toBeInstanceOf(ApiError);
+    expect((erg.fehler as ApiError).status).toBe(502);
+    expect(erg.gruppeId).toBe(gruppeDerArt().id);
   });
 
   it('Felder: drei, Stufe aus der Konstante, nicht im Anmeldeformular', async () => {

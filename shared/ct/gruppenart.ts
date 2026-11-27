@@ -235,17 +235,29 @@ export function fehlendeRechte<S extends { authId: number; dataId: number | null
 }
 
 /**
- * Ergänzt, was an der Rolle fehlt (`PUT /permissions/group_type_role/{rolle}` je Recht), und **liest nach**. Fehlt danach
- * noch etwas, wirft sie `nichtUebernommen` mit den Namen. Entzieht nie etwas.
+ * Wo ein Recht hängt – die vier Domänen, an die ChurchTools globale Rechte vergibt (`PUT /permissions/{art}/{id}`, OpenAPI der
+ * Test-Instanz 27.11.2026): Status, Gruppenart-Rolle, Rolle in einer Gruppe, Person. Alle vier lesen sich gleich
+ * (`GET /permissions/{art}/{id}` → Zeilen mit `authId`, `dataId`, `isInherited`; gemessen N3a).
  */
-export async function rechteErgaenzen(
+export interface RechtZiel {
+  art: 'status' | 'group_type_role' | 'group_role' | 'person';
+  id: number;
+}
+
+export const zielSchluessel = (z: RechtZiel): string => `${z.art}:${z.id}`;
+
+/**
+ * Ergänzt, was am Ziel fehlt (`PUT /permissions/{art}/{id}` je Recht), und **liest nach**. Fehlt danach noch etwas, wirft
+ * sie `nichtUebernommen` mit den Namen. Entzieht nie etwas. `name`: wie das Ziel in Meldungen heißt.
+ */
+export async function rechteErgaenzenAn(
   port: CtPort,
-  rolleId: number,
+  ziel: RechtZiel,
   soll: readonly SollRecht[],
-  rolleName = 'Leiter',
+  name: string,
 ): Promise<void> {
-  const pfad = `/permissions/group_type_role/${rolleId}`;
-  const was = `Die Rechte der Rolle „${rolleName}“`;
+  const pfad = `/permissions/${ziel.art}/${ziel.id}`;
+  const was = `Die Rechte ${name}`;
   const vorher = await listeHolen<RechtRoh>(port, pfad, was);
   for (const r of fehlendeRechte(vorher, soll))
     await port.schicken(pfad, 'PUT', {
@@ -261,4 +273,62 @@ export async function rechteErgaenzen(
       namen,
     );
   }
+}
+
+/** Ergänzt, was an der Gruppenart-Rolle fehlt – `rechteErgaenzenAn` mit `group_type_role`. */
+export async function rechteErgaenzen(
+  port: CtPort,
+  rolleId: number,
+  soll: readonly SollRecht[],
+  rolleName = 'Leiter',
+): Promise<void> {
+  await rechteErgaenzenAn(
+    port,
+    { art: 'group_type_role', id: rolleId },
+    soll,
+    `der Rolle „${rolleName}“`,
+  );
+}
+
+// ── Wer hat ein Recht? ─────────────────────────────────────────────────────────────────────────────────────────
+
+const zahlen = (l: unknown): number[] =>
+  Array.isArray(l) ? l.map(ctId).filter((x): x is number => x !== null) : [];
+
+/**
+ * **Die Träger eines globalen Rechts** aus `GET /permissions/global/auths/{authId}/assignment-summary` (ausgepackt; gemessen
+ * M8 20.11.2026, Form laut OpenAPI): Status, Gruppenart-Rollen, Rollen in Gruppen, Personen – je als `RechtZiel`. **Nicht
+ * darin** (OpenAPI): Standardrechte für alle Angemeldeten, öffentliche Rechte und Super-Admins – die zählen nur in
+ * `effectivePersonCount`. `null`: Antwort in unbekannter Gestalt (nicht „niemand“).
+ */
+export function rechtTraegerAus(summary: unknown): RechtZiel[] | null {
+  const a = (summary as { assignments?: Record<string, unknown> } | null)?.assignments;
+  if (!a || typeof a !== 'object') return null;
+  const { statuses, groupTypes, groups, persons } = a;
+  if (![statuses, groupTypes, groups, persons].every(Array.isArray)) return null;
+  const ziele: RechtZiel[] = [];
+  for (const s of statuses as { statusId?: unknown }[])
+    for (const id of zahlen([s?.statusId])) ziele.push({ art: 'status', id });
+  for (const g of groupTypes as { groupTypeRoleIds?: unknown }[])
+    for (const id of zahlen(g?.groupTypeRoleIds)) ziele.push({ art: 'group_type_role', id });
+  for (const g of groups as { groupRoleIds?: unknown }[])
+    for (const id of zahlen(g?.groupRoleIds)) ziele.push({ art: 'group_role', id });
+  for (const p of persons as { personId?: unknown }[])
+    for (const id of zahlen([p?.personId])) ziele.push({ art: 'person', id });
+  const gesehen = new Set<string>();
+  return ziele.filter((z) => !gesehen.has(zielSchluessel(z)) && gesehen.add(zielSchluessel(z)));
+}
+
+/** Die Träger des Rechts `authId` – liest `assignment-summary`; unbekannte Gestalt wirft `unlesbar`. */
+export async function rechtTraegerLesen(port: CtPort, authId: number): Promise<RechtZiel[]> {
+  const ziele = rechtTraegerAus(
+    await port.holen<unknown>(`/permissions/global/auths/${authId}/assignment-summary`),
+  );
+  if (ziele === null)
+    throw new GruppenartFehler(
+      'unlesbar',
+      'Wer das Recht hat, ließ sich nicht nachlesen.',
+      'Die Träger des Rechts',
+    );
+  return ziele;
 }

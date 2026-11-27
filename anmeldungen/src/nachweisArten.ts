@@ -59,6 +59,7 @@ import { absenderAus } from './ablaeufe';
 import { gemeindeLogo, personName, type MitgliedRoh } from './einrichten';
 import { optionenVon, spalteSpeichern, type CtFeld } from './formularFelder';
 import { nachweisGrundlageLesen, nachweisGrundlageSichern } from './nachweise';
+import { nachweisStandAktualisieren, nachweisStandEinrichten } from './nachweisStandAblage';
 import { einsichtNachziehen } from './nachweisEinsicht';
 import { nachweisPersonenLesen, type NachweisArtMitPersonen } from './nachweisPersonen';
 
@@ -190,22 +191,48 @@ export interface NachweiseSeite {
   arten: NachweisArtMitPersonen[];
 }
 
+/**
+ * **Beim Öffnen durch einen Admin nachziehen** (N3a, E19/E22): fehlende Rechte der Leiter-Rolle (z. B. 10107 bei Arten von
+ * vor N3a), die Ablage „Nachweis-Stand“ und das Leserecht für neue Träger von „Anmeldungen sehen“ – nur ergänzen. Ein Fehler
+ * stört die Seite nicht (er kommt beim nächsten Öffnen wieder dran); `true`, wenn alles steht.
+ */
+async function adminNachziehen(): Promise<boolean> {
+  try {
+    const g = await nachweisGrundlageSichern();
+    await nachweisStandEinrichten(g.leiterRolle);
+    return true;
+  } catch (e) {
+    console.warn('Nachweise: Rechte oder Ablage „Nachweis-Stand“ nicht nachgezogen', e);
+    return false;
+  }
+}
+
 /** Alles für die Seite „Nachweise“. */
 export async function nachweiseSeiteLaden(): Promise<NachweiseSeite> {
-  const grundlage = await nachweisGrundlageLesen();
-  if (grundlage.typId === null) return { grundlage, arten: [] };
+  let grundlage = await nachweisGrundlageLesen();
+  const typId = grundlage.typId;
+  if (typId === null) return { grundlage, arten: [] };
+  if (grundlage.darfEinrichten && (await adminNachziehen()))
+    grundlage = { ...grundlage, rechtFehlt: false };
   // Wer nicht alles einrichten darf, sieht nur die Arten, die er leitet – samt Personen (Entwurf N2, abgenommen 20.11.2026).
   const ich = grundlage.darfEinrichten ? null : (await ichLaden()).personId;
   const meine = (a: NachweisArt) =>
     grundlage.darfEinrichten || a.vertrauen?.some((p) => p.personId === ich) === true;
-  let arten = (await artenMitPersonen(grundlage.typId, meine)).filter(meine);
+  let arten = (await artenMitPersonen(typId, meine)).filter(meine);
   // Nachziehen (N2b): „Erneut einsehen“ auf „Gültig bis“ legen, wo es abweicht – nur verschieben, Fehler stören nicht.
   // Höchstens einmal neu lesen, und nur, wenn etwas verschoben wurde.
   const heute = heuteImKalender();
   let geaendert = 0;
   for (const a of arten)
     if (a.personen) geaendert += await einsichtNachziehen(a, a.personen, heute);
-  if (geaendert > 0) arten = (await artenMitPersonen(grundlage.typId, meine)).filter(meine);
+  if (geaendert > 0) arten = (await artenMitPersonen(typId, meine)).filter(meine);
+  // N3a: den Stand für die Leitungen schreiben (nur Änderungen) – auch nach „Einsicht festhalten“, denn danach lädt die Seite
+  // neu. Ein Fehler stört die Seite nicht; nichts wird dabei gelöscht.
+  try {
+    await nachweisStandAktualisieren(arten, heute);
+  } catch (e) {
+    console.warn('Nachweise: Stand für die Leitungen nicht geschrieben', e);
+  }
   return { grundlage, arten };
 }
 
@@ -257,6 +284,7 @@ export const NACHWEIS_SCHRITTE = [
   'leitung',
   'ablauf',
   'antrag',
+  'stand',
 ] as const;
 export type NachweisSchrittName = (typeof NACHWEIS_SCHRITTE)[number];
 
@@ -268,6 +296,7 @@ export const NACHWEIS_SCHRITT_TEXT: Record<NachweisSchrittName, string> = {
   leitung: 'Vertrauenspersonen',
   ablauf: 'Ablauf (Aufforderung, Einladung, Folgeaufgaben)',
   antrag: 'Antrag als Bescheinigung (Vorlage, Inhalt, Rolle Teilnehmer)',
+  stand: 'Ablage „Nachweis-Stand“ für die Leitungen der Veranstaltungen (mit Leserechten)',
 };
 
 /** Was ein Bild im Antrag beim Speichern ist: neu gewählt, so lassen wie in ChurchTools, oder keins. */
@@ -995,6 +1024,9 @@ export async function nachweisArtSichern(
       merke: (nr) => (erg.vorlageId = nr),
     });
     erg.erledigt.push('antrag');
+    // N3a: die Ablage für die Leitungen – ein eigener Schritt, damit ein Fehler dort klar benannt ist (die Art steht dann schon).
+    await nachweisStandEinrichten(grundlage.leiterRolle);
+    erg.erledigt.push('stand');
     erg.befund = await nachweisArtBefund(id, grundlage.leiterRolle, grundlage.teilnehmerRolle);
   } catch (x) {
     erg.fehler = x;

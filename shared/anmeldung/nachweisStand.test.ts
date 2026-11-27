@@ -23,6 +23,7 @@ import {
   nachweisGueltigBis,
   personStand,
   plusJahre,
+  standFuerLeitung,
   standRang,
   standText,
   standTon,
@@ -549,5 +550,43 @@ describe('einsichtFolgeTexte', () => {
     expect(einsichtFolgeTexte(p, E, 'ohne', null)[1]).toBe(
       'Die Aufgabe „Einsicht nehmen“ wird erledigt.',
     );
+  });
+});
+
+describe('Stand für die Leitung (N3a, E26): nur „gültig bis“, offen oder rot – nie das Ergebnis', () => {
+  /** Über die eine Regel: Person → `personStand` → `standFuerLeitung`. */
+  const leitung = (p: PersonAngaben) => standFuerLeitung(stand(p));
+  const ruecksprache = { ergebnis: 'eintrag' as const };
+
+  it('gültig, läuft ab, abgelaufen: der Tag „gültig bis“ aus dem Stand', () => {
+    for (const tage of [LAEUFT_AB_TAGE + 1, LAEUFT_AB_TAGE, -1]) {
+      const p = mitAblauf(tage);
+      expect(leitung(p)).toBe(personStand(p, E, HEUTE).gueltigBis);
+      expect(leitung(p)).toBe(plusTage(HEUTE, tage));
+    }
+  });
+
+  it('Rücksprache mit Datum: rot, NICHT „gültig bis“ (sonst sähe die Leitung grün)', () => {
+    const p = mitAblauf(LAEUFT_AB_TAGE + 100, ruecksprache);
+    expect(personStand(p, E, HEUTE).gueltigBis).not.toBeNull();
+    expect(leitung(p)).toBe('rot');
+  });
+
+  it('Rücksprache ohne Einsicht ist ebenfalls rot', () => {
+    expect(leitung(person(ruecksprache))).toBe('rot');
+  });
+
+  it('fehlt (Aufgabe älter als 4 Wochen): rot – derselbe Wert wie Rücksprache, rot verrät kein Ergebnis', () => {
+    const p = person({ aufgabe: { seit: plusTage(HEUTE, -(FEHLT_NACH_TAGEN + 1)) } });
+    expect(stand(p).art).toBe('fehlt');
+    expect(leitung(p)).toBe(leitung(person(ruecksprache)));
+  });
+
+  it('angefordert, noch keine Aufgabe, Angaben unvollständig: offen', () => {
+    expect(leitung(person({ aufgabe: { seit: HEUTE } }))).toBe('offen');
+    expect(leitung(person())).toBe('offen');
+    const unvollstaendig = person({ eingesehenAm: '2026-01-01' });
+    expect(stand(unvollstaendig).art).toBe('unvollstaendig');
+    expect(leitung(unvollstaendig)).toBe('offen');
   });
 });

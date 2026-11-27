@@ -464,8 +464,8 @@ describe('Fenster „Nachweis-Art“', () => {
     expect(await screen.findByText(/Noch nicht alles geschrieben/)).toBeTruthy();
     const stand = screen.getByRole('list', { name: 'Stand' });
     expect(within(stand).getAllByText(/steht in ChurchTools/)).toHaveLength(5);
-    // Der Ablauf ist gescheitert, der Antrag danach nicht mehr erreicht worden.
-    expect(within(stand).getAllByText(/fehlt noch/)).toHaveLength(2);
+    // Der Ablauf ist gescheitert, Antrag und Ablage „Nachweis-Stand“ (N3a) danach nicht mehr erreicht worden.
+    expect(within(stand).getAllByText(/fehlt noch/)).toHaveLength(3);
 
     fireEvent.click(screen.getByRole('button', { name: 'Nochmal' }));
     await waitFor(() => expect(arten.nachweisArtSichern).toHaveBeenCalledTimes(2));

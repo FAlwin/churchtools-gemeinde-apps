@@ -5,10 +5,14 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { BlattKopf } from './BlattKopf';
 import {
   KOMPAKT_UNTER_BREITE,
+  KNAPP_KURZWORT,
+  KNAPP_NUR_SYMBOL,
+  KNAPP_UNTER_BREITE,
   KOMPAKT_UNTER_HOEHE,
   kopfAufbau,
   leistenTipp,
   verfuegbareWerkzeuge,
+  werkzeugeKnapp,
 } from '../utils/werkzeuge';
 import type { HeadInfoPart } from '../utils/activeSongView';
 
@@ -286,6 +290,87 @@ describe('BlattKopf – kompakt (Handy)', () => {
     expect(raster.style.gridTemplateColumns).toBe('repeat(4, minmax(0, 1fr))');
     const notizen = screen.getByRole('button', { name: 'Notizen von …' });
     expect(notizen.textContent).toBe('Notizen');
+  });
+});
+
+describe('BlattKopf – breit: Trennlinie, Fläche und knappe Beschriftung (Variante A)', () => {
+  /** Kopfbreite setzen; die Höhe bleibt die des Fensters (jsdom 768 → nicht flach). */
+  const breite = (px: number) =>
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(px);
+
+  it('iPad hochkant: „Aussehen“ nur als Symbol „Aa“, „Notizen von …“ als „Notizen“ – voller Name im Tooltip', () => {
+    breite(KNAPP_UNTER_BREITE - 1);
+    zeige({ canUseGlobalNotes: true });
+    const aussehen = screen.getByRole('button', { name: 'Aussehen' });
+    expect(aussehen.textContent).toBe('Aa');
+    const notizen = screen.getByRole('button', { name: 'Notizen von …' });
+    expect(notizen.textContent).toBe('Notizen');
+    expect(notizen.getAttribute('title')).toBe('Notizen von …');
+    // Tempo und Anmerken behalten ihr Wort.
+    expect(screen.getByRole('button', { name: 'Tempo' }).textContent).toContain('Tempo');
+    expect(screen.getByRole('button', { name: 'Anmerken' }).textContent).toContain('Anmerken');
+  });
+
+  it('Rechner und iPad quer: volle Namen', () => {
+    breite(KNAPP_UNTER_BREITE);
+    zeige({ canUseGlobalNotes: true });
+    expect(screen.getByRole('button', { name: 'Aussehen' }).textContent).toBe('AaAussehen');
+    expect(screen.getByRole('button', { name: 'Notizen von …' }).textContent).toBe('Notizen von …');
+  });
+
+  it('beim Ansehen fremder Notizen bleibt der Weg zurück beschriftet', () => {
+    breite(900);
+    zeige({ canUseGlobalNotes: true, viewing: true });
+    expect(
+      screen.getByRole('button', { name: 'Zurück zu den eigenen Notizen' }).textContent,
+    ).toContain('Zurück zu den eigenen Notizen');
+  });
+
+  it('die Grenze liegt zwischen iPad hochkant (≤ 1032 pt) und Rechner/iPad quer (≥ 1180)', () => {
+    expect(werkzeugeKnapp(1032)).toBe(true);
+    expect(werkzeugeKnapp(744)).toBe(true);
+    expect(werkzeugeKnapp(1180)).toBe(false);
+    expect(werkzeugeKnapp(1600)).toBe(false);
+    expect(werkzeugeKnapp(0)).toBe(false);
+    // Knapp gilt nur im breiten Aufbau: Die Grenze liegt darüber, das Handy (kompakt) kommt nie dorthin.
+    expect(kopfAufbau({ breite: KNAPP_UNTER_BREITE - 1, hoehe: 1366 })).toBe('breit');
+    expect(KNAPP_UNTER_BREITE).toBeGreaterThan(KOMPAKT_UNTER_BREITE);
+  });
+
+  it('die knappen Werkzeuge gibt es wirklich und tragen ein Kurzwort bzw. Symbol', () => {
+    const alle = verfuegbareWerkzeuge({
+      zeigtDokument: false,
+      ansehen: false,
+      gezoomt: true,
+      teamNotizen: true,
+    });
+    for (const id of [...KNAPP_NUR_SYMBOL, ...KNAPP_KURZWORT]) expect(alle).toContain(id);
+  });
+
+  it('breit: Trennlinie vor den Werkzeugen und gemeinsame Fläche; kompakt und flach: keine von beiden', () => {
+    const { container, unmount } = zeige();
+    expect(container.querySelector('[class*="werkzeugTrenner"]')).not.toBeNull();
+    expect(
+      (container.querySelector('[data-tour="chart-werkzeuge"]') as HTMLElement).className,
+    ).toMatch(/knoepfeFlaeche/);
+    unmount();
+    breite(374);
+    const k = zeige();
+    expect(k.container.querySelector('[class*="werkzeugTrenner"]')).toBeNull();
+    expect(
+      (k.container.querySelector('[data-tour="chart-werkzeuge"]') as HTMLElement).className,
+    ).not.toMatch(/knoepfeFlaeche/);
+    k.unmount();
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(812);
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(390);
+    const f = zeige();
+    expect(f.container.querySelector('[class*="werkzeugTrenner"]')).toBeNull();
+  });
+
+  it('Handy: das Raster behält „Aussehen“ als Wort (die Kürzung gilt nur breit)', () => {
+    breite(374);
+    zeige({ canUseGlobalNotes: true });
+    expect(screen.getByRole('button', { name: 'Aussehen' }).textContent).toContain('Aussehen');
   });
 });
 

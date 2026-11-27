@@ -47,6 +47,24 @@ export const WERKZEUG_KURZ: Record<WerkzeugId, string> = {
 };
 
 /**
+ * **Knappe Werkzeuge am iPad hochkant** (Variante A „Reiterleiste“, Alwin 27.11.2026): Im breiten Aufbau teilen sich Lieder und
+ * Werkzeuge EINE Zeile – je kürzer die Werkzeuge, desto mehr Lieder sind zu sehen. Unter dieser Kopfbreite zeigt „Aussehen“
+ * nur das Symbol „Aa“ und „Notizen von …“ nur „Notizen“. Gemessen an der Kopfbreite wie `kopfAufbau`: ein iPad hochkant
+ * (744–1032 pt) ist knapp, ein Rechnerfenster ab ~1200 px und das iPad quer (≥ 1180 pt) behalten die vollen Namen.
+ * `title` und `aria-label` behalten immer den vollen Namen.
+ */
+export const KNAPP_UNTER_BREITE = 1100;
+/** Welche Werkzeuge knapp nur ihr Symbol zeigen … */
+export const KNAPP_NUR_SYMBOL: readonly WerkzeugId[] = ['aussehen'];
+/** … und welche nur ihr Kurzwort (`WERKZEUG_KURZ`). */
+export const KNAPP_KURZWORT: readonly WerkzeugId[] = ['team'];
+
+/** Ist der breite Kopf so schmal, dass die Werkzeuge knapp beschriftet werden? Ohne Messung (0, jsdom): nein. */
+export function werkzeugeKnapp(breite: number): boolean {
+  return breite > 0 && breite < KNAPP_UNTER_BREITE;
+}
+
+/**
  * **Kopfkarte des Liedblatts: breit oder kompakt?** (Scheibe B1, Entscheidung Alwin 28.10.2026)
  *
  * - **breit** (iPad quer UND hochkant, Rechner): Titelzeile mit Zurück, Termin und Vollbild; darunter Lied-Leiste

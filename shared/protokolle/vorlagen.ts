@@ -123,13 +123,16 @@ function ohneFest(props: Record<string, unknown>): Record<string, unknown> {
 /** Das Dokument einer neuen Sitzung aus einer Vorlage – jeder Block mit neuer ID, feste Aufgaben noch ungespeichert. */
 export function startDokument(vorlage: Vorlage, neueId: () => string): Block[] {
   const kopie = mitNeuenIds(vorlage.bloecke, neueId);
+  // Ein Reihe-Block gehört zu EINER Reihe in „Mitarbeit“ (`props.reihe`) – eine Kopie hinge an derselben. Wie die To-Do-IDs
+  // wird er nicht übernommen (die Reihe der letzten Sitzung bleibt dort, wo sie geplant wurde).
+  const ohneReihe = (liste: Block[]): Block[] => liste.filter((b) => b.type !== BLOCK.themenreihe);
   const leeren = (b: Block): Block => ({
     ...b,
     ...(b.type === BLOCK.aufgabe ? { props: { ...b.props, aufgabe: '' } } : {}),
     ...(b.type === BLOCK.verweis && b.props ? { props: ohneFest(b.props) } : {}),
-    children: (b.children ?? []).map(leeren),
+    children: ohneReihe(b.children ?? []).map(leeren),
   });
-  return kopie.map(leeren);
+  return ohneReihe(kopie).map(leeren);
 }
 
 /**

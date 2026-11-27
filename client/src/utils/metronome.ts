@@ -17,12 +17,11 @@ export const DEFAULT_BEATS_PER_BAR = 4;
 export const COUNT_IN_BARS = 2;
 
 /**
- * Schläge je Takt aus der Taktart-Angabe.
+ * Taktart-Angabe in Zähler und Nenner zerlegen; `null`, wenn sie fehlt oder Unsinn ist.
  *
- * Genommen wird der Zähler: „3/4" → 3. Zusammengesetzte Taktarten wie „6/8" ergeben damit 6 statt
- * der musikalisch üblichen 2 – bewusst so gelassen: Ein zu feiner Klick ist unangenehm, aber
- * verständlich; ein falsch geratener wäre schlimmer. Wer 6/8 in Zweiern fühlt, nimmt den Klick eben
- * als Achtel.
+ * Genommen wird für die Schläge je Takt (`beatsPerBar`) der Zähler: „3/4" → 3. Zusammengesetzte
+ * Taktarten wie „6/8" ergeben damit 6 GRUNDSCHLÄGE (Achtel) je Takt – gefühlt sind es 2 (zwei
+ * punktierte Viertel), und genau so wird sie per Vorschlag (`autoZaehlweise`) auch geklickt.
  */
 export function taktartTeile(
   timeSig: string | null | undefined,
@@ -64,9 +63,34 @@ export const ZAEHLWEISEN = [1, 2, 3] as const;
  * Umschalter – eine Vermutung, die man nicht kommen sieht, ist schlimmer als eine Einstellung.
  */
 export function autoZaehlweise(timeSig: string | null | undefined): number {
+  return istZusammengesetzt(timeSig) ? 3 : 1;
+}
+
+/**
+ * Zusammengesetzte Achteltaktart (6/8, 9/8, 12/8)? Nenner 8, Zähler über 3 und durch 3 teilbar.
+ *
+ * **Hier liegt die EINE Regel, die dem gespeicherten Tempo seine Bedeutung gibt** (siehe
+ * `grundschlaegeJeSchlag`) – `autoZaehlweise` und die Tempo-Umrechnung hängen beide an ihr.
+ */
+export function istZusammengesetzt(timeSig: string | null | undefined): boolean {
   const t = taktartTeile(timeSig);
-  if (!t) return 1;
-  return t.nenner === 8 && t.zaehler > 3 && t.zaehler % 3 === 0 ? 3 : 1;
+  return t !== null && t.nenner === 8 && t.zaehler > 3 && t.zaehler % 3 === 0;
+}
+
+/**
+ * Wie viele Grundschläge (Taktart-Zählzeiten, bei 6/8 also Achtel) hat EIN gespeicherter Schlag?
+ *
+ * Die gespeicherte Tempo-Zahl meint den **gefühlten Schlag**, so wie CCLI/SongSelect ihn angibt:
+ * bei 6/8, 9/8, 12/8 das punktierte Viertel (= 3 Achtel), sonst die notierte Zählzeit (= 1).
+ * Ein „6/8, 56 BPM" sind also 56 punktierte Viertel = 168 Achtel je Minute. Entschieden von Alwin
+ * am 27.11.2026 nach „klickt 19 ×/min" bei „Gewagte Liebe" (6/8, 56): Als Achtel gelesen wären es
+ * 56 Achtel gewesen, in Dreiergruppen 19 – zu langsam zum Klicken, alles gesperrt.
+ *
+ * Die Zählweise ist weiterhin persönlich und steht nicht in ChurchTools – der Faktor hängt nur an
+ * der Taktart, nie an ihr.
+ */
+export function grundschlaegeJeSchlag(timeSig: string | null | undefined): number {
+  return istZusammengesetzt(timeSig) ? 3 : 1;
 }
 
 /**
@@ -107,16 +131,35 @@ export function gezaehlteSchlaegeProTakt(
 }
 
 /**
- * Das Tempo, in dem geklickt und gepulst wird.
+ * Das Tempo, in dem geklickt und gepulst wird (Schläge je Minute).
  *
- * Die gespeicherte Zahl meint IMMER die Grundschläge (die notierte Zählzeit) – sie bedeutet damit
+ * Die gespeicherte Zahl meint den gefühlten Schlag (`grundschlaegeJeSchlag`) – sie bedeutet damit
  * für jeden dasselbe, unabhängig davon, wie er zählt. Die Zählweise ist eine persönliche Sache und
  * steht nicht in ChurchTools; hinge die gespeicherte Zahl an ihr, hätte dasselbe Lied für zwei
- * Leute unterschiedliche Tempi.
+ * Leute unterschiedliche Tempi. Erst werden die Grundschläge je Minute gerechnet, dann durch die
+ * Zählweise geteilt: 6/8, 56 → 168 Achtel; in Dreiergruppen 56, in Paaren 84, einzeln 168.
  */
-export function gezaehltesTempo(bpm: number | null, zaehlweise: number): number | null {
+export function gezaehltesTempo(
+  bpm: number | null,
+  zaehlweise: number,
+  timeSig: string | null | undefined,
+): number | null {
   if (bpm === null || zaehlweise < 1) return bpm;
-  return bpm / zaehlweise;
+  return (bpm * grundschlaegeJeSchlag(timeSig)) / zaehlweise;
+}
+
+/**
+ * Umkehrung von `gezaehltesTempo`: aus dem gezählten Tempo (z. B. mitgetippt) die Zahl, die
+ * gespeichert wird. **Die einzige Stelle**, die das zurückrechnet – das Tempo-Menü ruft sie auf,
+ * statt selbst mit der Zählweise zu multiplizieren.
+ */
+export function gespeichertesTempo(
+  gezaehlt: number,
+  zaehlweise: number,
+  timeSig: string | null | undefined,
+): number {
+  if (zaehlweise < 1) return gezaehlt;
+  return (gezaehlt * zaehlweise) / grundschlaegeJeSchlag(timeSig);
 }
 
 /**
@@ -191,7 +234,7 @@ export function countInDone(
 }
 
 /**
- * Alles, was Puls und Klick brauchen – aus dem gespeicherten Tempo, der Taktart und der gewählten
+ * Alles, was Puls und Klick brauchen – aus dem gespeicherten Tempo (gefühlter Schlag), der Taktart und der gewählten
  * Zählweise. **Die einzige Stelle, an der diese drei Werte zusammen entstehen.**
  *
  * Vorher standen die drei Ableitungen einzeln im Liederheft. Jede für sich war richtig, aber keine
@@ -216,7 +259,7 @@ export function taktRaster(
   const zaehlweise = wirksameZaehlweise(gewaehlteZaehlweise, timeSig);
   return {
     zaehlweise,
-    klickTempo: gezaehltesTempo(bpm, zaehlweise),
+    klickTempo: gezaehltesTempo(bpm, zaehlweise, timeSig),
     schlaegeProTakt: gezaehlteSchlaegeProTakt(timeSig, zaehlweise),
   };
 }

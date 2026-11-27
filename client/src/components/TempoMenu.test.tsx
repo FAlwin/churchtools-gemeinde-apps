@@ -326,9 +326,23 @@ describe('TempoMenu – Schläge je Takt', () => {
   });
 
   it('nennt sie auch bei gröberer Zählweise – dort weicht sie vom Feld ab', () => {
-    zeige({ liedTempo: 120, timeSig: '6/8', zaehlweise: 3 });
-    expect(feld().value).toBe('120');
-    expect(screen.getByText('klickt 40 ×/min')).toBeTruthy();
+    zeige({ liedTempo: 56, timeSig: '6/8', zaehlweise: 1 });
+    expect(feld().value).toBe('56');
+    expect(screen.getByText('klickt 168 ×/min')).toBeTruthy();
+  });
+
+  it('klickt bei 6/8 mit 56 in Auto genau 56 ×/min – und der Ton ist nutzbar', () => {
+    // Gewagte Liebe: früher „klickt 19 ×/min" und alles gesperrt.
+    zeige({ liedTempo: 56, timeSig: '6/8', zaehlweise: null });
+    expect(screen.getByText('klickt 56 ×/min')).toBeTruthy();
+    expect(knopf('An').hasAttribute('disabled')).toBe(false);
+    expect(knopf('Klick starten').hasAttribute('disabled')).toBe(false);
+    expect(knopf('Einzählen').hasAttribute('disabled')).toBe(false);
+  });
+
+  it('zeigt bei 6/8 mit 56 in Paaren 84 ×/min', () => {
+    zeige({ liedTempo: 56, timeSig: '6/8', zaehlweise: 2 });
+    expect(screen.getByText('klickt 84 ×/min')).toBeTruthy();
   });
 
   it('sagt es, wenn gar kein Tempo eingestellt ist', () => {
@@ -342,22 +356,31 @@ describe('TempoMenu – Schläge je Takt', () => {
     expect(document.body.textContent).not.toContain('Grundschläge');
   });
 
-  it('rechnet ein angetipptes Tempo auf Grundschläge zurück', () => {
-    // In Dreiergruppen mitgetippt: 1000 ms Abstand sind 60 GEZÄHLTE Schläge – gespeichert gehören
-    // die Grundschläge, also 180. Ohne die Rückrechnung stünde ein Drittel des richtigen Tempos in
-    // ChurchTools.
+  it('rechnet ein angetipptes Tempo auf den gespeicherten Schlag zurück', () => {
+    // 1000 ms Abstand = 60 gezählte Schläge. Im 6/8 in Dreiergruppen (= gefühlter Schlag) gehört
+    // 60 gespeichert, in Paaren 40, einzeln (Achtel) 20.
     zeige({ liedTempo: 60, timeSig: '6/8', zaehlweise: 3 });
     tippen(MIN_TIPPS, 1000);
-    expect(feld().value).toBe('180');
+    expect(feld().value).toBe('60');
+  });
+
+  it('rechnet auch in Paaren und im 4/4 in Halben zurück', () => {
+    zeige({ liedTempo: 90, timeSig: '6/8', zaehlweise: 2 });
+    tippen(MIN_TIPPS, 1000);
+    expect(feld().value).toBe('40');
+  });
+
+  it('speichert bei Halben im 4/4 das Doppelte', () => {
+    zeige({ liedTempo: 90, timeSig: '4/4', zaehlweise: 2 });
+    tippen(MIN_TIPPS, 1000);
+    expect(feld().value).toBe('120');
   });
 
   it('begrenzt auf die GESPEICHERTE Zahl, nicht auf die gezählte', () => {
-    // 500 ms in Dreiergruppen wären 360 Grundschläge – über der Obergrenze. Gedeckelt wird der Wert,
-    // der nach ChurchTools geht und dort geprüft wird; in Dreiergruppen sind damit höchstens
-    // 100 gezählte Schläge je Minute erreichbar. Das ist gewollt: Die Grenze bewacht die Zahl, die
-    // andere später zu sehen bekommen.
-    zeige({ liedTempo: 60, timeSig: '6/8', zaehlweise: 3 });
-    tippen(MIN_TIPPS, 500);
+    // 200 ms = 300 gezählte Schläge; im 4/4 in Halben wären das 600 gespeichert – über der
+    // Obergrenze. Gedeckelt wird die Zahl, die nach ChurchTools geht.
+    zeige({ liedTempo: 60, timeSig: '4/4', zaehlweise: 2 });
+    tippen(MIN_TIPPS, 200);
     expect(feld().value).toBe(String(MAX_BPM));
   });
 
@@ -367,11 +390,24 @@ describe('TempoMenu – Schläge je Takt', () => {
     expect(feld().value).toBe('120');
   });
 
-  it('sperrt den Ton, wenn das GEZÄHLTE Tempo zu langsam wird', () => {
-    // 30 Grundschläge in Dreiergruppen = 10 gezählte je Minute – darunter pulst nichts mehr.
-    zeige({ liedTempo: 30, timeSig: '6/8', zaehlweise: 3 });
+  it('sperrt den Ton, wenn das GEZÄHLTE Tempo zu langsam wird – und sagt es', () => {
+    // 30 gespeichert im 4/4 in Halben = 15 gezählte je Minute – darunter pulst nichts mehr.
+    zeige({ liedTempo: 30, timeSig: '4/4', zaehlweise: 2 });
     expect(knopf('An').hasAttribute('disabled')).toBe(true);
+    expect(screen.getByText('Zu langsam zum Klicken – andere Zählweise wählen')).toBeTruthy();
     // Das Einstellen bleibt frei – sonst käme man aus dem Zustand nicht heraus.
     expect(knopf('Tempo erhöhen').hasAttribute('disabled')).toBe(false);
+  });
+
+  it('sagt es auch, wenn es zu schnell zum Klicken ist', () => {
+    // 6/8 mit 150 punktierten Vierteln = 450 Achtel je Minute einzeln gezählt.
+    zeige({ liedTempo: 150, timeSig: '6/8', zaehlweise: 1 });
+    expect(knopf('An').hasAttribute('disabled')).toBe(true);
+    expect(screen.getByText('Zu schnell zum Klicken – andere Zählweise wählen')).toBeTruthy();
+  });
+
+  it('zeigt den Klick-Hinweis nicht, wenn der Ton geht', () => {
+    zeige({ liedTempo: 56, timeSig: '6/8', zaehlweise: null });
+    expect(document.body.textContent).not.toContain('zum Klicken');
   });
 });

@@ -3,6 +3,7 @@ import { MAX_BPM, MIN_BPM, isPulsable } from '../utils/bpmPulse';
 import { tempoAusTipps } from '../utils/tapTempo';
 import {
   gezaehlteSchlaegeProTakt,
+  gespeichertesTempo,
   gezaehltesTempo,
   moeglicheZaehlweisen,
   wirksameZaehlweise,
@@ -63,10 +64,9 @@ const START_OHNE_TEMPO = 120;
 /**
  * Auf den erlaubten Bereich begrenzen. Die Grenzen kommen aus `@shared/tempo`.
  *
- * Gedeckelt wird der Wert, der GESPEICHERT wird – die Grundschläge –, nicht das gezählte Tempo:
- * Genau diese Zahl prüft auch der Server, und genau sie bekommen später andere zu sehen. In
- * Dreiergruppen sind damit höchstens 100 gezählte Schläge je Minute erreichbar (300 ÷ 3); das ist
- * musikalisch reichlich und macht die Grenze nicht von einer persönlichen Einstellung abhängig.
+ * Gedeckelt wird der Wert, der GESPEICHERT wird – der gefühlte Schlag –, nicht das gezählte Tempo:
+ * Genau diese Zahl prüft auch der Server, und genau sie bekommen später andere zu sehen. Die Grenze
+ * hängt so nicht von einer persönlichen Einstellung ab.
  */
 function begrenzen(bpm: number): number {
   return Math.min(MAX_BPM, Math.max(MIN_BPM, Math.round(bpm)));
@@ -92,7 +92,7 @@ export function TempoMenu({
 
   const zw = wirksameZaehlweise(zaehlweise, timeSig);
   const moeglich = moeglicheZaehlweisen(timeSig);
-  const gezaehlt = gezaehltesTempo(gilt, zw);
+  const gezaehlt = gezaehltesTempo(gilt, zw, timeSig);
 
   // Die Tipp-Zeitpunkte sind KEIN Zustand: Sie lösen kein Neuzeichnen aus, das ermittelte Tempo
   // schon. In einer Ref bleiben sie über Renders erhalten, ohne bei jedem Tipp zu rendern.
@@ -141,10 +141,9 @@ export function TempoMenu({
   const antippen = () => {
     tipps.current = [...tipps.current, performance.now()].slice(-16);
     const t = tempoAusTipps(tipps.current);
-    // Getippt wird in GEZÄHLTEN Schlägen – wer in Dreiergruppen mittippt, meint punktierte Viertel.
-    // Gespeichert werden aber die Grundschläge, deshalb hier zurückgerechnet. Ohne das stünde nach
-    // dem Mittippen eines 6/8-Stücks ein Drittel des richtigen Tempos in ChurchTools.
-    if (t !== null) setzen(t * zw);
+    // Getippt wird in GEZÄHLTEN Schlägen, gespeichert wird der gefühlte Schlag (bei 6/8 das
+    // punktierte Viertel) – die Umkehrung steht in `gespeichertesTempo`, nicht hier.
+    if (t !== null) setzen(gespeichertesTempo(t, zw, timeSig));
   };
 
   const zuruecksetzen = () => {
@@ -178,11 +177,13 @@ export function TempoMenu({
   /** Was unter der Trennlinie steht. Immer EINE Zeile, damit der Rahmen nicht springt. */
   const hinweis = fehler
     ? fehler
-    : !darfSpeichern
-      ? 'Zum Ändern in ChurchTools fehlt dir die Berechtigung – der Wert gilt nur hier.'
-      : abweichend
-        ? 'Speichern setzt das Tempo in ChurchTools – für alle, die dieses Lied öffnen.'
-        : 'Puls und Klick gelten nur für dich – gespeichert wird davon nichts.';
+    : gezaehlt !== null && !tonMoeglich
+      ? `Zu ${gezaehlt < MIN_BPM ? 'langsam' : 'schnell'} zum Klicken – andere Zählweise wählen`
+      : !darfSpeichern
+        ? 'Zum Ändern in ChurchTools fehlt dir die Berechtigung – der Wert gilt nur hier.'
+        : abweichend
+          ? 'Speichern setzt das Tempo in ChurchTools – für alle, die dieses Lied öffnen.'
+          : 'Puls und Klick gelten nur für dich – gespeichert wird davon nichts.';
 
   return (
     <>

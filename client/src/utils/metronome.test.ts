@@ -10,8 +10,11 @@ import {
   einzaehlStart,
   erstesSchlagAb,
   gezaehlteSchlaegeProTakt,
+  gespeichertesTempo,
   gezaehltesTempo,
+  grundschlaegeJeSchlag,
   isAccent,
+  istZusammengesetzt,
   moeglicheZaehlweisen,
   taktRaster,
   taktartTeile,
@@ -210,18 +213,62 @@ describe('gezaehlteSchlaegeProTakt – die Länge des Takts', () => {
   });
 });
 
-describe('gezaehltesTempo – die Zahl bedeutet immer Grundschläge', () => {
-  it('teilt das Grundtempo durch die Zählweise', () => {
-    expect(gezaehltesTempo(120, 3)).toBe(40);
-    expect(gezaehltesTempo(160, 2)).toBe(80);
+describe('gezaehltesTempo – die Zahl meint den gefühlten Schlag', () => {
+  it('lässt außerhalb zusammengesetzter Taktarten nur durch die Zählweise teilen', () => {
+    expect(gezaehltesTempo(120, 1, '4/4')).toBe(120);
+    expect(gezaehltesTempo(160, 2, '4/4')).toBe(80);
+    expect(gezaehltesTempo(90, 1, '3/4')).toBe(90);
+    expect(gezaehltesTempo(100, 1, null)).toBe(100);
   });
 
-  it('lässt es bei Einzelschlägen unverändert', () => {
-    expect(gezaehltesTempo(120, 1)).toBe(120);
+  it('nimmt bei 6/8, 9/8, 12/8 die Zahl als punktiertes Viertel (Gewagte Liebe: 56)', () => {
+    for (const t of ['6/8', '9/8', '12/8']) {
+      // Auto = Dreiergruppen: es klickt genau die gespeicherte Zahl.
+      expect(gezaehltesTempo(56, autoZaehlweise(t), t)).toBe(56);
+      // Achtel einzeln: dreimal so schnell. In Paaren: anderthalbmal.
+      expect(gezaehltesTempo(56, 1, t)).toBe(168);
+      expect(gezaehltesTempo(56, 2, t)).toBe(84);
+    }
   });
 
   it('kommt mit fehlendem Tempo zurecht', () => {
-    expect(gezaehltesTempo(null, 3)).toBeNull();
+    expect(gezaehltesTempo(null, 3, '6/8')).toBeNull();
+  });
+});
+
+describe('zusammengesetzte Taktarten – EINE Regel für Vorschlag und Tempo', () => {
+  it('erkennt genau 6/8, 9/8, 12/8', () => {
+    for (const t of ['6/8', '9/8', '12/8']) expect(istZusammengesetzt(t)).toBe(true);
+    for (const t of ['3/8', '7/8', '4/4', '3/4', '6/4', '2/2', 'Unsinn', null]) {
+      expect(istZusammengesetzt(t)).toBe(false);
+    }
+  });
+
+  it('der Faktor folgt derselben Regel wie der Vorschlag', () => {
+    for (const t of ['6/8', '9/8', '12/8', '3/8', '7/8', '4/4', '3/4', null]) {
+      expect(grundschlaegeJeSchlag(t)).toBe(autoZaehlweise(t));
+    }
+  });
+});
+
+describe('gespeichertesTempo – Umkehrung von gezaehltesTempo', () => {
+  it('gibt dem Antippen die gespeicherte Zahl zurück', () => {
+    // 6/8 in Dreiergruppen mit 56 mitgetippt → 56 gespeichert (nicht 168).
+    expect(gespeichertesTempo(56, 3, '6/8')).toBe(56);
+    expect(gespeichertesTempo(168, 1, '6/8')).toBe(56);
+    expect(gespeichertesTempo(84, 2, '6/8')).toBe(56);
+    // 4/4 in Halben mit 60 mitgetippt → 120.
+    expect(gespeichertesTempo(60, 2, '4/4')).toBe(120);
+    expect(gespeichertesTempo(100, 1, '3/4')).toBe(100);
+  });
+
+  it('ist zu gezaehltesTempo umkehrbar – für jede Taktart und jede Zählweise', () => {
+    for (const t of ['6/8', '9/8', '12/8', '4/4', '3/4', '7/8', null]) {
+      for (const z of [1, 2, 3]) {
+        const g = gezaehltesTempo(72, z, t) as number;
+        expect(gespeichertesTempo(g, z, t)).toBeCloseTo(72, 9);
+      }
+    }
   });
 });
 
@@ -263,19 +310,45 @@ describe('wirksameZaehlweise – eine Regel, nicht zwei', () => {
 
 describe('taktRaster – die drei Werte entstehen an EINER Stelle', () => {
   it('leitet bei 6/8 ohne Wahl Dreiergruppen ab', () => {
-    // 120 Achtel, in Dreiergruppen: 40 gezählte Schläge, zwei je Takt.
-    expect(taktRaster(120, '6/8', null)).toEqual({
+    // 56 punktierte Viertel: es klickt 56 ×/min, zwei Schläge je Takt (Gewagte Liebe).
+    expect(taktRaster(56, '6/8', null)).toEqual({
       zaehlweise: 3,
-      klickTempo: 40,
+      klickTempo: 56,
       schlaegeProTakt: 2,
     });
   });
 
   it('folgt der Wahl, auch gegen den Vorschlag', () => {
-    expect(taktRaster(120, '6/8', 1)).toEqual({
+    expect(taktRaster(56, '6/8', 1)).toEqual({
       zaehlweise: 1,
-      klickTempo: 120,
+      klickTempo: 168,
       schlaegeProTakt: 6,
+    });
+    expect(taktRaster(56, '6/8', 2)).toEqual({
+      zaehlweise: 2,
+      klickTempo: 84,
+      schlaegeProTakt: 3,
+    });
+  });
+
+  it('rechnet 9/8 und 12/8 wie 6/8', () => {
+    expect(taktRaster(60, '9/8', null)).toEqual({
+      zaehlweise: 3,
+      klickTempo: 60,
+      schlaegeProTakt: 3,
+    });
+    expect(taktRaster(60, '12/8', null)).toEqual({
+      zaehlweise: 3,
+      klickTempo: 60,
+      schlaegeProTakt: 4,
+    });
+  });
+
+  it('lässt 3/4 unverändert', () => {
+    expect(taktRaster(90, '3/4', null)).toEqual({
+      zaehlweise: 1,
+      klickTempo: 90,
+      schlaegeProTakt: 3,
     });
   });
 

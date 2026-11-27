@@ -2,7 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@ui/ct/fehler';
 import { _bremseLoesen, _vergissCsrf } from '@ui/ct/verbindung';
 import { terminStand } from '@shared/dienstplan/plan';
-import { ladeTermin, ladeTermine, ladeZeitraum, TERMIN_VERWEIGERT } from './ladeTermine';
+import {
+  ladeRohTermine,
+  ladeTermin,
+  ladeTermine,
+  ladeZeitraum,
+  TERMIN_VERWEIGERT,
+} from './ladeTermine';
 import type { Start } from './start';
 import { startFuer } from './start.testutil';
 
@@ -174,5 +180,65 @@ describe('ladeTermin (Termin-Ansicht, E6-1b)', () => {
     const e = (await ladeTermin(START, 7, 'Europe/Berlin').catch((x: unknown) => x)) as ApiError;
     expect(e.status).toBe(403);
     expect(e.message).toBe(TERMIN_VERWEIGERT);
+  });
+});
+
+describe('Termine ohne sichtbaren Platz (Jugend-Fund, 27.11.2026)', () => {
+  // Wie ChurchTools einem liefert, der die Dienstgruppe nicht sehen darf: das Event, aber ohne Plätze.
+  const LEER = {
+    id: 8,
+    name: 'Jugend',
+    startDate: '2026-10-23T17:00:00Z',
+    endDate: '2026-10-23T19:00:00Z',
+    eventServices: [],
+  };
+  const NUR_EIGENER = {
+    id: 9,
+    name: 'Jugend-Special',
+    startDate: '2026-10-30T17:00:00Z',
+    endDate: '2026-10-30T19:00:00Z',
+    eventServices: [{ serviceId: 6, personId: 1, name: 'Alwin', isAccepted: true }],
+  };
+  const ALLE = { data: [...TERMINE.data, LEER, NUR_EIGENER] };
+  const ADMIN: Start = startFuer({
+    rechte: { ...START.rechte, sichtbareDienstgruppen: null, planbareDienstgruppen: null },
+  });
+  const jetzt = new Date('2026-10-13T12:00:00Z');
+
+  it('Liste und Matrix: der leere Termin fehlt, Termine mit Platz und mit nur eigenem Platz bleiben', async () => {
+    ct(() => json(200, ALLE));
+    const d = await ladeTermine(START, 16, 'Europe/Berlin', jetzt);
+    expect(d.zeilen.map((z) => z.id)).toEqual([7, 9]);
+    expect(d.plan.spalten.map((s) => s.id)).toEqual([7, 9]);
+  });
+
+  it('ein gewählter Zeitraum (Planen) ebenso', async () => {
+    ct(() => json(200, ALLE));
+    const d = await ladeZeitraum(START, '2026-10-01', '2026-10-31', 'Europe/Berlin');
+    expect(d.zeilen.map((z) => z.id)).toEqual([7, 9]);
+    expect(d.plan.spalten.map((s) => s.id)).toEqual([7, 9]);
+  });
+
+  it('wer alle Dienstgruppen sieht (z. B. Admin): der leere Termin bleibt – dort lassen sich Dienste einschalten', async () => {
+    ct(() => json(200, ALLE));
+    const d = await ladeTermine(ADMIN, 16, 'Europe/Berlin', jetzt);
+    expect(d.zeilen.map((z) => z.id)).toEqual([7, 8, 9]);
+    expect(d.plan.spalten.map((s) => s.id)).toEqual([7, 8, 9]);
+  });
+
+  it('Verfügbarkeit (ladeRohTermine): dieselbe Regel', async () => {
+    ct(() => json(200, ALLE));
+    expect((await ladeRohTermine(START, '2026-10-01', '2026-11-01')).map((t) => t.id)).toEqual([
+      7, 9,
+    ]);
+    expect((await ladeRohTermine(ADMIN, '2026-10-01', '2026-11-01')).map((t) => t.id)).toEqual([
+      7, 8, 9,
+    ]);
+  });
+
+  it('ein einzelner Termin (Link, Termin-Ansicht) bleibt wie er ist – auch ohne Platz', async () => {
+    ct(() => json(200, { data: LEER }));
+    const d = await ladeTermin(START, 8, 'Europe/Berlin');
+    expect(d.zeilen.map((z) => z.id)).toEqual([8]);
   });
 });

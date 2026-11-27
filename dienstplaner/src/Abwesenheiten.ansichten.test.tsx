@@ -284,7 +284,7 @@ describe('Zusagen: nur Termine mit Diensten einer Zusagen-Gruppe, mit Schild', (
     expect(screen.queryByText('Gebetsabend')).toBeNull();
     expect(screen.queryByRole('button', { name: /^Ja – Gottesdienst, So, 15\.11\./ })).toBeNull();
     // Der Aufruf geht über den einen Lader und fragt nur den gezeigten Zeitraum.
-    expect(rohe).toHaveBeenCalledWith('2026-11-04', '2026-12-02');
+    expect(rohe).toHaveBeenCalledWith(START, '2026-11-04', '2026-12-02');
     // Die Erwartung kommt aus der Regel selbst, nicht aus Literalen.
     const erwartet = zusagenTermine(ROH, (sid) => START.dienste.get(sid)?.dienstgruppeId, [MUSIK]);
     expect([...erwartet.keys()]).toEqual([1]);

@@ -2,7 +2,9 @@
 
 > **Stand: v2.0.0 (27.11.2026, „Abfragen und Verfügbarkeit“: Planer starten je Dienstgruppe eine Abfrage mit Frist, den Stand sehen sie laufend, ChurchTools erinnert alle Offenen automatisch (einmal unter „Einstellungen“ einrichten); der Reiter „Wann kann ich?“ heißt jetzt „Verfügbarkeit“ – je Dienstgruppe wird entweder „Ja · Vielleicht · Nein“ je Termin oder „Nur abwesend“ gefragt, bei „Nur abwesend“ meldet man nur Abwesenheiten und drückt „Fertig“; Planen und „Vertretung suchen“ richten sich danach; „Einstellungen“ ist eine eigene Seite mit Speicherleiste; der Mailtext passt zur Art der Abfrage; leere Datumsfelder am iPad/iPhone wieder normal hoch. v1.1.1, 25.11.2026: wer einen Termin öffnet, den ChurchTools ihm nicht zeigt, liest das jetzt so – statt der Regel fürs Planen. v1.1.0, 24.11.2026, „Live-Ansicht 2“: die Live-Ansicht wie ein Moderationsbildschirm – was jetzt dran ist, Zeitkonto auf die Sekunde, „Ende voraussichtlich“ mit „Warum“, ± je Punkt, Fehlklick-Schutz (zurück innerhalb von 30 Sekunden = alte Zeit läuft weiter), drei Betriebsarten unter „Einstellungen“, nach dem Gottesdienst ein Rückblick mit „Ø bisher“, „Meine Anzeige“ je Person auf allen Geräten, „Live“ am Termintag direkt auf der Startseite; dazu der Punkt im Ablauf als ganze Seite am iPad und Mac. v1.0.0, 21.11.2026: „Vertretung suchen“: wer seinen zugesagten Dienst nicht machen kann, sagt ab und fragt das Team mit einem Klick; wer zuerst „Übernehmen“ drückt, hat den Dienst – ohne Planer; dazu die Infos der Dienstgruppen im Ablauf beim Bearbeiten direkt in der Zelle ändern. v0.13.0, 20.11.2026: „Pause wirkt“: wer in der Personenliste einer Dienstgruppe pausiert, wird für diese Dienstgruppe nicht erinnert und vom Zauberstab nicht vorgeschlagen. v0.12.0, 20.11.2026: „Ruhige Bedienung“: „Planen“, „Dienste“ und „Wann kann ich?“ mit einer Werkzeugzeile und ⋯-Menü, Reiter unterstrichen, Ablauf wie in der Musik-App – Tipp auf den Punkt zeigt alle Infos, kein Stift an der Zeile, „Bearbeiten“/„Fertig“ –, „Neu anlegen“ am Handy als schwebendes grünes Plus, Auswahlen am Handy als Fenster; dazu die **Personenliste** in „Planen → Personen“ – anzeigen und bearbeiten: Reihenfolge, Tags, Pause. v0.11.1, 20.11.2026: „Planen“ zeigt jeden Dienst, den man planen darf, auch ohne Platz – zum Einschalten, auch am Handy. v0.11.0, 19.11.2026: „Erinnern“ – Mail an alle, die noch nicht geantwortet haben; „Plan teilen“ in drei Ansichten – Termine, Personen, Je Person; Platzzahl auch mit Entwürfen ändern. v0.10.0: „Wann kann ich?“ – Ja, Vielleicht oder Nein je Termin, die Antworten in „Personen“, „Wer kann?“ und beim Zauberstab).** Was die Reiter können:
 >
-> - **Start:** „Als Nächstes“ (dein nächster Dienst mit Team, Liedern, Musik-App), offene Anfragen zum Beantworten,
+> - **Start:** „Als Nächstes“ (der nächste Termin, der für dich zählt: du hast dort einen Dienst oder eine Anfrage, oder er hat
+>   Plätze in einer Dienstgruppe, die du planst – sonst der nächste Termin überhaupt; mit Team, Liedern, Musik-App; die
+>   „Live“-Ansicht am Termintag gehört zu diesem Termin), offene Anfragen zum Beantworten,
 >   deine nächsten Dienste, Abwesenheiten; für Planer die freien Plätze der nächsten 6 Wochen – eine Gruppe antippen
 >   öffnet Planen mit nur dieser Gruppe und diesen 6 Wochen (nur für diesen Besuch). Datum oder Titel eines Termins
 >   führen direkt in die Termin-Ansicht.
@@ -104,6 +106,13 @@ deren Sitzung. **Ein eigenes Rechte-System gibt es nicht.**
 | Vorlagen-Pflege                    | Ablaufvorlagen bearbeiten (E10)        | Recht „Ablaufvorlagen bearbeiten“ (`edit agenda templates`) für den Kalender der Vorlage |
 | Planer mit Entwürfen               | Entwürfe einer Gruppe eintragen        | Rechte auf die Kategorie „Entwürfe <Gruppe>“ (s. u.)                                     |
 | Admin („Berechtigungen verwalten“) | Erinnerungen in ChurchTools einrichten | Recht „Berechtigungen verwalten“ (`churchcore: administer persons`) – Schritt 13 unten   |
+
+**Dienstkategorie nicht „für alle sichtbar“ (z. B. „Jugend“):** Wer die Dienstgruppe nicht sehen darf, bekommt das Event aus dem
+Gemeindekalender von ChurchTools trotzdem, aber **ohne Plätze** (`eventServices: []`; gemessen 27.11.2026, Test-Instanz). Der Dienstplaner
+zeigt einen Termin ohne einen einzigen Platz deshalb **nicht** – weder in Start, Dienste und Planen noch in der Verfügbarkeit
+(`shared/dienstplan/leereTermine.ts`, angewandt in `ladeRohTermine`). **Ausnahme:** Wer alle Dienstgruppen sieht (z. B. Admins,
+`siehtAlleDienstgruppen`), sieht auch leere Termine – dort lassen sich in Planen Dienste einschalten. Ein einzelner Termin, den man über
+einen Link öffnet, bleibt davon unberührt.
 
 Gemessen an der Test-Instanz (08. und 13.10.2026). Alle drei Wege gelten seit E3-4 (eine Regel:
 `darfDienstPlanen`). Der Reiter „Planen“ erscheint für globale Planer und Gruppenleitungen; wer nur Admin

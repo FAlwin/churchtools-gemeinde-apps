@@ -428,6 +428,13 @@ export function TerminFormular(p: Props) {
                   }}
                 />
               )}
+              {freieTags.length === 0 && !p.tagsVerwalten && (
+                <p className={styles.leise}>
+                  {e.tags.length
+                    ? 'Keine weiteren Tags vorhanden.'
+                    : 'In ChurchTools gibt es noch keine Termin-Tags.'}
+                </p>
+              )}
             </>
           ) : (
             <TextKnopf disabled={aus} onClick={() => setTagsAuf(true)}>

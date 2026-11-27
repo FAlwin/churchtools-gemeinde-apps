@@ -1303,7 +1303,15 @@ describe('O6: Leitung und Mitglieder', () => {
 
   it('aufnehmen: Suche, „schon dabei“ gesperrt, Standardrolle, nachgelesen – Rückgängig löscht die neue Mitgliedschaft', async () => {
     suche.mockResolvedValue([
-      { personId: 5, vor: 'Emil', nach: 'Ernst', geburtstag: null, email: null, adresse: null },
+      {
+        personId: 5,
+        vor: 'Emil',
+        nach: 'Ernst',
+        geburtstag: null,
+        email: null,
+        adresse: null,
+        bild: 'https://ct.test/emil.jpg',
+      },
       { personId: 1, vor: 'Alwin', nach: 'Friesen', geburtstag: null, email: null, adresse: null },
     ]);
     await technikOeffnen();
@@ -1313,7 +1321,11 @@ describe('O6: Leitung und Mitglieder', () => {
     fireEvent.change(screen.getByRole('searchbox', { name: 'Name' }), { target: { value: 'Em' } });
     fireEvent.click(knopf('Suchen'));
     const gefunden = await screen.findByRole('list', { name: 'Gefunden' });
+    // Treffer zeigen das Profilbild aus ChurchTools, ohne Bild die Initialen.
+    const emil = within(gefunden).getByRole('button', { name: /Emil Ernst/ });
+    expect(emil.querySelector('img')?.getAttribute('src')).toBe('https://ct.test/emil.jpg');
     const alwin = within(gefunden).getByRole('button', { name: /Alwin Friesen/ });
+    expect(alwin.querySelector('img')).toBeNull();
     expect((alwin as HTMLButtonElement).disabled).toBe(true);
     expect(alwin.textContent).toContain('schon dabei');
     fireEvent.click(within(gefunden).getByRole('button', { name: /Emil Ernst/ }));

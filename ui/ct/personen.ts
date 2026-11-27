@@ -14,6 +14,8 @@ export interface PersonRoh {
   lastName?: string;
   email?: string | null;
   birthday?: string | null;
+  /** Profilbild – `null`, wenn die Person keins hat. */
+  imageUrl?: string | null;
   /** Adresse (F4b) – nur, wenn man sie sehen darf. */
   street?: string | null;
   zip?: string | null;
@@ -43,6 +45,8 @@ export interface Gefunden {
   email: string | null;
   /** Straße, PLZ, Ort aus dem Profil (F4c) – `null`, wenn leer oder nicht zu sehen. */
   adresse: AdresseAntwort | null;
+  /** Profilbild für die Vorschlagsliste – `null` ohne Bild (dann Initialen). */
+  bild?: string | null;
 }
 
 interface TrefferRoh {
@@ -61,6 +65,7 @@ const gefunden = (p: PersonRoh): Gefunden => ({
   geburtstag: p.birthday || null,
   email: p.email || null,
   adresse: adresseVonPerson(p),
+  bild: p.imageUrl?.trim() || null,
 });
 
 /** **Personen suchen** – ohne Archivierte, in der Reihenfolge von ChurchTools. */

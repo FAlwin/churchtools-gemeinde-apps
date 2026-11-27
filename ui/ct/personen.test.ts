@@ -44,9 +44,25 @@ describe('personenSuchen', () => {
         geburtstag: null,
         email: null,
         adresse: { strasse: 'Hauptstr. 4', plz: '53797', ort: 'Lohmar' },
+        bild: null,
       },
     ]);
     expect(daten).toHaveBeenCalledWith('/persons?ids[]=152&ids[]=99&limit=2');
+  });
+
+  it('das Profilbild kommt mit (`imageUrl`), ein leeres zählt als keins', async () => {
+    daten.mockImplementation((pfad: string) =>
+      Promise.resolve(
+        pfad.startsWith('/search')
+          ? [{ domainIdentifier: '1' }, { domainIdentifier: '2' }]
+          : [
+              { id: 1, firstName: 'Ann', lastName: 'Bild', imageUrl: 'https://ct.test/a.jpg' },
+              { id: 2, firstName: 'Bo', lastName: 'Leer', imageUrl: '  ' },
+            ],
+      ),
+    );
+    const t = await personenSuchen('Test');
+    expect(t.map((p) => p.bild)).toEqual(['https://ct.test/a.jpg', null]);
   });
 
   it('unter zwei Zeichen wird nicht gesucht', async () => {

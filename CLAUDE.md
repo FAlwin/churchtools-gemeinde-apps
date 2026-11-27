@@ -955,6 +955,10 @@ npm run dev:server # Backend (Health-Endpoint) -> http://localhost:3001
 
 ## Stand & nächster Schritt
 
+- **`protokolle-v1.9.0` (27.11.2026):** Reiter „Sitzungen“ startet mit „Alle Gruppen“ (#1192); im Fenster „In Kalender
+  eintragen“ mehrere Ressourcen per Häkchen (`ui/bedienung/MehrfachWahl`, neuer Baustein) und „Status für alle“ (#1194);
+  Auswahlfelder mit dem Mixin `auswahlpfeil` (in Protokolle global über `main.scss`), „Vorschlag“ neben Vorlauf/Nachlauf,
+  Reiterlinie nicht mehr über dem Kasten „Aus …“ (#1193). „Alle Gruppen“ ohne eigene Abnahme veröffentlicht (Alwin).
 - **`dienstplan-v2.0.0` (27.11.2026) = Abfragen und Verfügbarkeit.** Die zurückgestellte Etappe „Abfragen“ (Frist, Stand, automatische Erinnerungen über die Hilfsgruppe + ChurchTools-Routine, „Einrichten …“) geht mit Entwurf V „Verfügbarkeit“ (V-1–V-6, Mailtext je Art, „Vertretung suchen“ bei „Nur abwesend“ #1183) zusammen raus – Alwin hat sie damit freigegeben, als Major wegen der stark geänderten Bedienung. Abnahme `dienstplaner-test-27.11v7` (Vertretung suchen als Anna, Technik auf „Nur abwesend“). Nicht am Gerät durchgespielt: eine laufende Abfrage mit „Fertig“ (verschickt echte Mails).
 - **`protokolle-v1.8.2` (27.11.2026):** Kleinkram aus den Handtests (#1189): Tags-Zeile sagt „keine (weiteren) Termin-Tags“
   statt leer zu bleiben; Personensuche liefert `bild` (aus `imageUrl`) – „Im Auftrag von“ und Organigramm „Person aufnehmen“

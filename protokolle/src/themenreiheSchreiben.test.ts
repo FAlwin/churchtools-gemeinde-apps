@@ -68,6 +68,16 @@ describe('themenreiheSpeichern', () => {
     );
   });
 
+  it('verschwunden und der Stand sieht aus wie der gesehene: trotzdem nicht still neu angelegt', async () => {
+    const erste = await themenreiheSpeichern(ORT, reihe(), null, 1, AM);
+    for (const w of werteVon(ct, KAT)) w.value = '{}';
+    // Gleiche Person, gleiche Zeit, gleicher Inhalt: der Vergleich mit dem gesehenen Stand allein träfe nichts.
+    await expect(themenreiheSpeichern(ORT, reihe(), erste, 1, AM)).rejects.toBeInstanceOf(
+      ReiheGeaendert,
+    );
+    expect(gespeichert()).toEqual([]);
+  });
+
   it('ChurchTools nimmt sie nicht an (201, aber nichts gespeichert): Fehler', async () => {
     ct.schluckeWert = () => true;
     await expect(themenreiheSpeichern(ORT, reihe(), null, 1, AM)).rejects.toThrow(

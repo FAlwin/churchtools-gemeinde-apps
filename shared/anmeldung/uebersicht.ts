@@ -17,7 +17,7 @@ import {
   type TerminAngabe,
 } from './formular';
 import { anmeldungenAus, listenZahlen, mitgliederstandAus, type MitgliedRoh } from './liste';
-import { loeschDatum } from './termin';
+import { letzterTagVon, loeschDatum } from './termin';
 import { wartenTrotzPlatz } from './nachpruefung';
 import { preisKurz } from './preis';
 
@@ -126,8 +126,7 @@ export function phaseVon(statusId: number, termin: TerminAngabe | null, heute: s
   if (statusId === 2) return 'entwurf';
   if (statusId !== 1) return 'vorbei';
   if (!termin) return 'anstehend';
-  const letzterTag = (termin.ende ?? termin.beginn).slice(0, 10);
-  return letzterTag < heute ? 'vorbei' : 'anstehend';
+  return letzterTagVon(termin) < heute ? 'vorbei' : 'anstehend';
 }
 
 /**
@@ -243,7 +242,9 @@ export type Hinweis =
   /** A9-4 (D3): Anmeldungen gelöscht, die Antworten stehen noch im Verlauf. `darf`: endgültig löschen (D4). */
   | { art: 'endgueltig'; v: Veranstaltung; seit: string; darf: boolean }
   /** A9-5 (F1): freigegeben, aber ohne Abläufe – keine eigene Bestätigung, nie gelöscht. `darf`: Routinen verwalten (F3). */
-  | { art: 'einrichten'; v: Veranstaltung; darf: boolean };
+  | { art: 'einrichten'; v: Veranstaltung; darf: boolean }
+  /** N3d (E25): ab 6 Wochen vor Beginn `n` verschiedene Personen ohne gültigen Nachweis – nur für die Leitung. */
+  | { art: 'nachweise'; v: Veranstaltung; n: number };
 
 /**
  * **„Braucht deine Aufmerksamkeit“**, wie im Entwurf:
@@ -256,6 +257,8 @@ export type Hinweis =
  * - A9-5 (F1, F3): freigegeben ohne Abläufe → „Mails und Löschen einrichten“ – für alle in der Gruppe; den Knopf
  *   bekommt, wer Routinen verwalten darf (`einrichten`: Veranstaltung → darf). Wer die Veranstaltungen ohne Abläufe sind,
  *   fragt der Aufrufer ChurchTools (`ablaeufeFehlen`).
+ * - N3d (E25): `nachweise` = Veranstaltung → Zahl der Personen ohne gültigen Nachweis (nur > 0; das Fenster „ab 6 Wochen vor
+ *   Beginn“ entscheidet, wer hineinkommt, `imHinweisFenster`) – **nur für die Leitung**, nur anstehend.
  * Sonst ist vorbei vorbei: dort gibt es keine Hinweise.
  */
 export function aufmerksamkeit(
@@ -265,6 +268,7 @@ export function aufmerksamkeit(
   heute = '',
   loeschbar: ReadonlySet<number> = new Set(),
   einrichten: ReadonlyMap<number, boolean> = new Map(),
+  nachweise: ReadonlyMap<number, number> = new Map(),
 ): Hinweis[] {
   const out: Hinweis[] = kaputt.map((k) => ({ art: 'kaputt' as const, ...k }));
   for (const v of [...liste].sort(frueherZuerst)) {
@@ -287,6 +291,9 @@ export function aufmerksamkeit(
       out.push({ art: 'nachruecken', v, frei, wartend });
     }
     if (unbezahlt && leitungIn.has(v.gruppeId)) out.push({ art: 'zahlungen', v, offen: unbezahlt });
+    const ohneNachweis = nachweise.get(v.id);
+    if (ohneNachweis && leitungIn.has(v.gruppeId))
+      out.push({ art: 'nachweise', v, n: ohneNachweis });
   }
   return out;
 }

@@ -22,6 +22,7 @@ import { ausBase64url, base64url } from '../ct/packen';
 export { alterAm } from '../ct/datum';
 import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';
 import type { PreisRegeln } from './preis';
+import type { NachweisLage } from './nachweisAmpel';
 import { STANDARD_BEZAHLUNG, ZWECK_MAX, type Bezahlung } from './bezahlung';
 import { mitVorgaben, vorlageVon } from './gestaltung';
 import {
@@ -731,6 +732,11 @@ export interface OeffentlicheEinstellungen {
    * Bei „wie frühere Veranstaltung“ mitkopiert.
    */
   nachweise?: NachweisBedarf[];
+  /**
+   * **Nur zur Laufzeit, nie gespeichert** (N3d, nicht im Schema): die Ampel der Leitung je Art und Person. Die Tabelle der
+   * Anmeldungen hängt sie an, damit Spalten, Filter und Sortierung denselben Weg gehen wie bei jeder Spalte.
+   */
+  nachweisLage?: NachweisLage;
   /**
    * **Kopiert von** (A9-2a): die Veranstaltung, aus der diese mit „Wie eine frühere Veranstaltung“ entstand. Beim
    * Freigeben übernimmt die Erweiterung von dort den eigenen Mailtext (er steht in deren Routinen, die nicht mitkopiert

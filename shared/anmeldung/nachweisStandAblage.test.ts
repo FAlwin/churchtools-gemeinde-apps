@@ -9,6 +9,7 @@ import {
   artAngabenAusWert,
   artAngabenWert,
   artNamenLesen,
+  nachweisAblageLesen,
   nachweisStandLesen,
   nachweisStandSchreiben,
   standAblageSichern,
@@ -455,5 +456,77 @@ describe('Angaben je Art: Name (E35) und Merkzettel (E34)', () => {
     ct.werteLesenScheitert = null;
     ct.kategorien = [];
     expect(await artNamenLesen(ct.modulPort, MODUL)).toEqual({ art: 'nichtLesbar' });
+  });
+});
+
+describe('nachweisAblageLesen – Stand und Namen in EINER Lesung (N3d)', () => {
+  const KAT = 100;
+  const eingerichtet = () => {
+    ct.kategorien = [{ id: KAT, shorty: 'nachweis-stand', name: 'Nachweis-Stand' }];
+    ct.werte = [
+      { id: 1, dataCategoryId: KAT, value: standWert(61, new Map([[10, '2030-01-01']])) },
+      { id: 2, dataCategoryId: KAT, value: standWert(62, new Map([[11, 'rot']])) },
+      {
+        id: 3,
+        dataCategoryId: KAT,
+        value: artAngabenWert({ gruppe: 61, name: 'Führungszeugnis', eingetragen: new Map() }),
+      },
+      {
+        id: 4,
+        dataCategoryId: KAT,
+        value: artAngabenWert({ gruppe: 63, name: 'JuLeiCa', eingetragen: new Map() }),
+      },
+    ];
+  };
+
+  it('der Stand der gefragten Arten und die Namen aller Arten; eine Art ohne Wert ist leer, nicht „nicht lesbar“', async () => {
+    eingerichtet();
+    expect(await nachweisAblageLesen(ct.modulPort, MODUL, [61, 62, 64])).toEqual({
+      art: 'gelesen',
+      staende: new Map([
+        [61, new Map([[10, '2030-01-01']])],
+        [62, new Map([[11, 'rot']])],
+        [64, new Map()],
+      ]),
+      namen: new Map([
+        [61, 'Führungszeugnis'],
+        [63, 'JuLeiCa'],
+      ]),
+    });
+  });
+
+  it('die Kategorie wird einmal gesucht und einmal gelesen – nicht je Art (429-Lehre)', async () => {
+    eingerichtet();
+    const pfade: string[] = [];
+    const port = ct.modulPort;
+    await nachweisAblageLesen(
+      {
+        ...port,
+        daten: (pfad: string) => {
+          pfade.push(pfad);
+          return port.daten(pfad);
+        },
+      },
+      MODUL,
+      [61, 62, 63, 64],
+    );
+    expect(pfade).toHaveLength(2);
+  });
+
+  it('nicht lesbar: Kategorie unsichtbar oder 403; vorübergehend (503) wirft – nie ein leerer Stand', async () => {
+    expect(await nachweisAblageLesen(ct.modulPort, MODUL, [61])).toEqual({ art: 'nichtLesbar' });
+    eingerichtet();
+    ct.werteLesenScheitert = 403;
+    expect(await nachweisAblageLesen(ct.modulPort, MODUL, [61])).toEqual({ art: 'nichtLesbar' });
+    ct.werteLesenScheitert = 503;
+    await expect(nachweisAblageLesen(ct.modulPort, MODUL, [61])).rejects.toMatchObject({
+      status: 503,
+    });
+  });
+
+  it('ohne gefragte Arten: nur die Namen (so liest `artNamenLesen`)', async () => {
+    eingerichtet();
+    const r = await nachweisAblageLesen(ct.modulPort, MODUL, []);
+    expect(r).toMatchObject({ art: 'gelesen', staende: new Map() });
   });
 });

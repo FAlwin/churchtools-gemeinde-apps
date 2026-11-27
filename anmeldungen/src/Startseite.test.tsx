@@ -169,6 +169,36 @@ describe('Startseite (A2, #480)', () => {
     expect(namen).toEqual(expect.arrayContaining(['Lobpreisabend', 'Freizeit', 'Workshop']));
   });
 
+  it('N3d: „n Personen ohne gültigen Nachweis“ – eine Zeile je Veranstaltung der Leitung, ein Klick öffnet sie', () => {
+    const u = uebersicht();
+    const liste = [...u.einteilung.anstehend];
+    const frei = liste.find((x) => x.id === 40)!;
+    const freizeit = liste.find((x) => x.id === 46)!;
+    const grundkurs = liste.find((x) => x.id === 52)!; // Technik: keine Leitung
+    const oeffnen = zeigen({
+      ...u,
+      hinweise: aufmerksamkeit(
+        [frei, freizeit, grundkurs],
+        [],
+        new Set([9]),
+        HEUTE,
+        new Set(),
+        new Map(),
+        new Map([
+          [40, 1],
+          [46, 3],
+          [52, 4],
+        ]),
+      ),
+    });
+    const bereich = within(abschnitt('Braucht deine Aufmerksamkeit'));
+    expect(bereich.getByText('1 Person ohne gültigen Nachweis')).toBeTruthy();
+    expect(bereich.getByText('3 Personen ohne gültigen Nachweis')).toBeTruthy();
+    expect(bereich.queryByText('4 Personen ohne gültigen Nachweis')).toBeNull();
+    fireEvent.click(bereich.getByText('3 Personen ohne gültigen Nachweis'));
+    expect(oeffnen).toHaveBeenCalledWith(46);
+  });
+
   it('nachrücken ohne Platzgrenze: „Plätze frei“ ohne Zahl; gezählt werden wartende Personen', () => {
     const liste = [
       v(

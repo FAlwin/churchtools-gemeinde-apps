@@ -137,6 +137,14 @@ export function terminZeile(e: Pick<OeffentlicheEinstellungen, 'termin'>): strin
 }
 
 /**
+ * **Der letzte Tag der Veranstaltung** (`YYYY-MM-DD`, Ortszeit der Gemeinde): das Ende, sonst der Beginn – die eine Stelle
+ * dafür (Phase „vorbei“, Löschdatum, Nachweis-Ampel N3d).
+ */
+export function letzterTagVon(termin: Pick<TerminAngabe, 'beginn' | 'ende'>): string {
+  return (termin.ende ?? termin.beginn).slice(0, 10);
+}
+
+/**
  * **Das Löschdatum** (A9-3a): Ende des Termins (ohne Ende: der Beginn) plus die Frist in Monaten, als `JJJJ-MM-TT` –
  * nur so nimmt ChurchTools es im Warte-Schritt (gemessen 28.10.2026). Gibt es den Tag im Zielmonat nicht (31.01. + 1),
  * gilt der letzte. Ohne Termin: `null` – dann wird nicht gelöscht. Steht hier (nicht in `ablaeufe.ts`), damit das
@@ -147,7 +155,7 @@ export function loeschDatum(
   e: Pick<OeffentlicheEinstellungen, 'termin' | 'loeschfristMonate'>,
 ): string | null {
   if (!e.termin) return null;
-  const tag = (e.termin.ende ?? e.termin.beginn).slice(0, 10);
+  const tag = letzterTagVon(e.termin);
   const ziel = monatPlus(tag.slice(0, 7), e.loeschfristMonate);
   const gleicherTag = `${ziel}-${tag.slice(8, 10)}`;
   const letzter = letzterTag(ziel);

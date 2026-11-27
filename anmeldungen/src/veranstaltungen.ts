@@ -46,6 +46,9 @@ import {
   reparieren,
 } from './einrichten';
 import { loeschDatum } from '@shared/anmeldung/termin';
+import { imHinweisFenster } from '@shared/anmeldung/nachweisAmpelLage';
+import type { MitgliedRoh } from '@shared/anmeldung/liste';
+import { nachweisHinweiseLesen, type HinweisKandidat } from './nachweisHinweis';
 /** Gleichzeitige Anfragen – schont ChurchTools (#300), die Bremse in der Verbindung greift zusätzlich. */
 const PARALLEL = 3;
 
@@ -165,13 +168,20 @@ export async function ladeUebersicht(
     (x) => phaseVon(x.r.statusId, x.e.termin, heute) === 'anstehend' || abgelaufenKandidat(x),
   );
   const leitung = zuZaehlen.length ? await leitungsRollen() : new Set<number>();
+  const leitungIn = new Set(gruppen.filter((g) => g.leitung).map((g) => g.id));
+  // N3d (E25): Wo die Leitung den Hinweis „ohne gültigen Nachweis“ braucht, bleiben die gelesenen Mitglieder liegen.
+  const nachweisKandidaten: HinweisKandidat[] = [];
   await mapLimit(zuZaehlen, PARALLEL, async ({ r, e: einstellungen }) => {
     try {
-      const mitglieder = await ctAlleSeiten<Parameters<typeof belegungAus>[0][number]>(
-        `/groups/${r.id}/members`,
-        200,
-      );
+      const mitglieder = await ctAlleSeiten<MitgliedRoh>(`/groups/${r.id}/members`, 200);
       belegung.set(r.id, belegungAus(mitglieder, einstellungen, leitung, heute));
+      if (
+        leitungIn.has(r.gruppeId) &&
+        phaseVon(r.statusId, einstellungen.termin, heute) === 'anstehend' &&
+        einstellungen.nachweise?.length &&
+        imHinweisFenster(einstellungen.termin, heute)
+      )
+        nachweisKandidaten.push({ id: r.id, e: einstellungen, mitglieder });
     } catch (e) {
       // Kein Recht ist dauerhaft und betrifft nur diese Zeile; alles andere kann vorübergehend sein → werfen.
       if (e instanceof ApiError && e.status === 403) belegung.set(r.id, null);
@@ -234,10 +244,11 @@ export async function ladeUebersicht(
     },
   );
 
-  const leitungIn = new Set(gruppen.filter((g) => g.leitung).map((g) => g.id));
+  // N3d: Personen ohne gültigen Nachweis – wirft nie (ohne Hinweis lieber als ohne Übersicht).
+  const nachweise = await nachweisHinweiseLesen(nachweisKandidaten, leitung, heute);
   return {
     einteilung: einteilen(liste),
-    hinweise: aufmerksamkeit(liste, kaputt, leitungIn, heute, loeschbar, einrichten),
+    hinweise: aufmerksamkeit(liste, kaputt, leitungIn, heute, loeschbar, einrichten, nachweise),
     offen,
     verborgen,
   };

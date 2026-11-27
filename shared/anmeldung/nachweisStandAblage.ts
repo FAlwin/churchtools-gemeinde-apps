@@ -178,14 +178,43 @@ export async function nachweisStandLesen(
   modul: number,
   gruppe: number,
 ): Promise<StandGelesen> {
+  const r = await nachweisAblageLesen(p, modul, [gruppe]);
+  return r.art === 'gelesen'
+    ? { art: 'gelesen', personen: r.staende.get(gruppe)! }
+    : { art: 'nichtLesbar' };
+}
+
+/**
+ * **Alles, was die Leitung aus der Ablage braucht, in EINER Lesung** (N3d): der Stand der Arten `gruppen` (je Art Person →
+ * Wert; eine Art ohne Wert ist leer, nicht „nicht lesbar“) und die Namen aller Arten (E35). Die Kategorie wird einmal gesucht
+ * und einmal gelesen – nicht je Art (429-Lehre). `nichtLesbar`: kein Recht oder Kategorie nicht zu sehen; alles andere
+ * (Netz, Drosselung, 5xx) wirft.
+ */
+export type NachweisAblage =
+  | {
+      art: 'gelesen';
+      staende: Map<number, Map<number, StandFuerLeitung>>;
+      namen: Map<number, string>;
+    }
+  | { art: 'nichtLesbar' };
+
+export async function nachweisAblageLesen(
+  p: ModulPort,
+  modul: number,
+  gruppen: readonly number[],
+): Promise<NachweisAblage> {
   try {
     const kategorie = await kategorieSuchen(p, modul, NACHWEIS_STAND_KATEGORIE.kuerzel);
     if (kategorie === null) return { art: 'nichtLesbar' };
-    const w = wertDerArt(await werteLesen(p, modul, kategorie), gruppe);
-    return {
-      art: 'gelesen',
-      personen: w ? standAusWert(w)!.personen : new Map<number, StandFuerLeitung>(),
-    };
+    const werte = await werteLesen(p, modul, kategorie);
+    const staende = new Map<number, Map<number, StandFuerLeitung>>();
+    for (const g of gruppen) {
+      const w = wertDerArt(werte, g);
+      staende.set(g, w ? standAusWert(w)!.personen : new Map<number, StandFuerLeitung>());
+    }
+    const namen = new Map<number, string>();
+    for (const [g, a] of artAngabenAus(werte)) if (a.name.trim()) namen.set(g, a.name);
+    return { art: 'gelesen', staende, namen };
   } catch (e) {
     if (p.istKeinRecht(e)) return { art: 'nichtLesbar' };
     throw e;
@@ -316,17 +345,8 @@ export async function artNamenLesen(
   p: ModulPort,
   modul: number,
 ): Promise<{ art: 'gelesen'; namen: Map<number, string> } | { art: 'nichtLesbar' }> {
-  try {
-    const kategorie = await kategorieSuchen(p, modul, NACHWEIS_STAND_KATEGORIE.kuerzel);
-    if (kategorie === null) return { art: 'nichtLesbar' };
-    const namen = new Map<number, string>();
-    for (const [g, a] of artAngabenAus(await werteLesen(p, modul, kategorie)))
-      if (a.name.trim()) namen.set(g, a.name);
-    return { art: 'gelesen', namen };
-  } catch (e) {
-    if (p.istKeinRecht(e)) return { art: 'nichtLesbar' };
-    throw e;
-  }
+  const r = await nachweisAblageLesen(p, modul, []);
+  return r.art === 'gelesen' ? { art: 'gelesen', namen: r.namen } : { art: 'nichtLesbar' };
 }
 
 // ── Einrichten (Admin) ──────────────────────────────────────────────────────────────────────────────────────────

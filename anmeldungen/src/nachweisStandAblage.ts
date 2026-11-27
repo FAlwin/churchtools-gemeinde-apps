@@ -11,8 +11,10 @@ import { NACHWEIS_STAND_KATEGORIE } from '@shared/anmeldung/nachweise';
 import { personStand, standFuerLeitung } from '@shared/anmeldung/nachweisStand';
 import {
   artNamenLesen,
+  nachweisAblageLesen,
   nachweisStandSchreiben,
   standAblageSichern,
+  type NachweisAblage,
   type StandEintraege,
 } from '@shared/anmeldung/nachweisStandAblage';
 import { uebersetzt } from './nachweise';
@@ -78,4 +80,22 @@ export async function nachweisStandAktualisieren(
 export async function nachweisArtNamenLesen(): Promise<Map<number, string> | null> {
   const r = await artNamenLesen(modulPort, await modulId(WER));
   return r.art === 'gelesen' ? r.namen : null;
+}
+
+/**
+ * **Alles für die Ampel der Leitung in einer Lesung** (N3d): der Stand der Arten `gruppen` und die Namen der Arten. Ohne
+ * „Anmeldungen sehen“ findet man das Modul gar nicht (`modulSuchen` → 404, gemessen N3a) – das ist „nicht lesbar“, nicht ein
+ * Fehler. Netz, Drosselung und 5xx werfen (vorübergehend ist nicht leer).
+ */
+export async function nachweisAblageFuerLeitung(
+  gruppen: readonly number[],
+): Promise<NachweisAblage> {
+  let modul: number;
+  try {
+    modul = await modulId(WER);
+  } catch (e) {
+    if (modulPort.istNichtGefunden(e) || modulPort.istKeinRecht(e)) return { art: 'nichtLesbar' };
+    throw e;
+  }
+  return await nachweisAblageLesen(modulPort, modul, gruppen);
 }

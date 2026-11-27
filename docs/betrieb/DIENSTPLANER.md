@@ -18,7 +18,13 @@
 >   Ablauf-Kopf, Ziehen, „An diesem Termin weglassen“, „Ablauf anlegen“ als leises gestricheltes Feld, „Neu aufsetzen …“ im **⋯-Menü**;
 >   **seit „Ruhige Bedienung“ B8 (21.11.2026) wie in der Musik-App:** der Kopf in Stufen – beim Ansehen **Live**, **Musik-App**, **⋯**
 >   (Spalten wählen, Ablauf zeigen) und **Bearbeiten**; im Bearbeiten grünes **Eintrag hinzufügen**, **⋯** (Als Vorlage …,
->   Neu aufsetzen …) und blaues **Fertig**; der **Stift an jeder Zeile entfällt** – die Zeile antippen öffnet „Punkt bearbeiten“), die Dienste des Termins, **Infos & Dateien**
+>   Neu aufsetzen …) und blaues **Fertig**; der **Stift an jeder Zeile entfällt** – die Zeile antippen öffnet „Punkt bearbeiten“).
+>   **Predigtserie** (seit 27.11.2026, wie in der ChurchTools-App): steht als leise Zeile über dem Ablauf, wenn eine gesetzt ist; im
+>   Bearbeiten steht die Zeile immer da („keine“) und öffnet ein Fenster mit Freitext (höchstens 100 Zeichen, leer = keine
+>   Serie). Teilen sich mehrere Termine einen Ablauf, gilt die Serie für alle. Sie steht auch in **Ablauf zeigen** und im
+>   **Termin-PDF**; eine neue Vorlage übernimmt sie nicht. Ist der Ablauf in ChurchTools **abgeschlossen**, steht ein **Schloss**
+>   neben „Ablauf“ – dann lässt sich auch die Serie nicht ändern. Die Punkt-Seite nennt unter **Davor / Danach** auch die
+>   Zuständigen des Nachbarn. Weiter: die Dienste des Termins, **Infos & Dateien**
 >   (i, Büroklammer), **Live** (Folgen bzw. Steuern wie die Live-Agenda von ChurchTools), **Teilen** = Termin-Blatt
 >   als PDF, Sprung in die Musik-App. **Lieder** im Punkt-Fenster wie in der Musik-App: anderes Lied wählen (Suche,
 >   Häufigkeit, Zuletzt), „Verknüpfung aufheben“, „Neues Lied“ samt SongSelect und Notenblatt-Editor – mit dem Recht,

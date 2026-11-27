@@ -186,6 +186,21 @@ describe('Ansicht „Alle Gruppen“', () => {
     ]);
   });
 
+  it('Kommend: ein begonnenes Protokoll von gestern steht drin – wie in der Gruppe, nicht erst ab heute', async () => {
+    const offen = protokoll('alt', '2020-05-05T17:00:00Z', 'Offener Entwurf');
+    const entwurf: Sitzung = {
+      ...offen,
+      kopf: { ...offen.kopf!, status: 'entwurf', freigabe: null },
+    };
+    m.ladeUebersicht.mockResolvedValue([
+      uebersicht(LEITUNG, sitzungen([entwurf, L_JAHR], [])),
+      uebersicht(JUGEND, sitzungen([J_TREFF], [])),
+    ]);
+    render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
+    await screen.findByText('Jahresplanung');
+    expect(zeilen('Kommend')).toEqual(['Offener Entwurf', 'Jahresplanung', 'Jugendtreff']);
+  });
+
   it('jede Zeile trägt ihre Gruppe als Etikett – in der Einzelgruppen-Ansicht keins', async () => {
     const r = render(<Sitzungen ich={ICH} modul={24} gruppen={GRUPPEN} />);
     await screen.findByText('Klausur Leitung');

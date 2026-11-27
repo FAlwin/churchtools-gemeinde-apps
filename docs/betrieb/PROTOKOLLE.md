@@ -253,7 +253,7 @@ vergangene gibt es zwei Wege (nur für die Leitung, Mitglieder sehen beides nich
 die Liste aller Gruppen auf, die aktuelle trägt ein Häkchen. Wer nur eine Gruppe sieht, sieht eine einfache Überschrift.
 
 **„Alle Gruppen“ (27.11.2026):** Oben in der Liste steht **„Alle Gruppen“** – und der Reiter startet damit (ein Sprung von der Startseite oder der Suche öffnet
-weiter gleich die Gruppe). Zwei Karten: **Kommend** (alle Gruppen gemischt, früheste zuerst – dieselben wie „Nächste Sitzungen“ auf der Startseite) und
+weiter gleich die Gruppe). Zwei Karten: **Kommend** (alle Gruppen gemischt, früheste zuerst – dieselben wie „Kommend“ in der einzelnen Gruppe, also auch begonnene Protokolle von früher; anders als „Nächste Sitzungen“ auf der Startseite, die erst ab heute zählt) und
 **Protokolle** (freigegeben, neueste zuerst, erst 8, dann „Weitere Protokolle zeigen“). Jede Zeile trägt die Gruppe als Etikett; ein Tipp wechselt in die Gruppe
 und öffnet die Sitzung. Der **Filter** neben der Überschrift blendet Gruppen aus (gemerkt je Person, auf allen Geräten). „Neu ⌄“ bietet dort nur „Neues Protokoll“
 (mit Gruppenwahl im Fenster); Nachtragen, Nächste Sitzung festlegen, Vorschläge und „Noch ohne Protokoll“ gibt es nur in einer einzelnen Gruppe.

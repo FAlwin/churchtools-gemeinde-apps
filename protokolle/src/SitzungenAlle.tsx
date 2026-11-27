@@ -5,9 +5,9 @@ import { FilterKnopf } from '@ui/bedienung/FilterKnopf';
 import { HinzufuegenMenue, type Option } from '@ui/bedienung/OptionWaehlen';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import { TextKnopf } from '@ui/bedienung/TextKnopf';
-import { gemeindeZeitzone, heuteImKalender } from '@shared/ct/zeit';
+import { gemeindeZeitzone } from '@shared/ct/zeit';
 import type { ProtokollGruppe } from '@shared/protokolle/gruppen';
-import { naechsteSitzungen, protokollSchluessel } from '@shared/protokolle/sitzungen';
+import { protokollSchluessel } from '@shared/protokolle/sitzungen';
 import { darfSchreibenIn } from '@shared/protokolle/zugang';
 import { ladeUebersicht, type GruppenUebersicht } from './lesen';
 import { ProtokollNeu } from './ProtokollNeu';
@@ -31,7 +31,7 @@ type Zustand =
  * Protokolle aller Gruppen in je einer Liste, jede Zeile mit dem Namen ihrer Gruppe. Ein Tipp wechselt in die Gruppe und
  * öffnet die Sitzung (`onOeffnen`, derselbe Weg wie der Sprung von Startseite und Suche). Der Filter blendet Gruppen
  * aus, die einen nicht betreffen – gemerkt je Person auf allen Geräten (`sitzungenAus`). Geladen wird wie auf der
- * Startseite (`ladeUebersicht`), sortiert wie dort „Nächste Sitzungen“ (`naechsteSitzungen`).
+ * Startseite (`ladeUebersicht`), „Kommend“ enthält wie in der Gruppe auch begonnene Protokolle aus der Vergangenheit.
  */
 export function SitzungenAlle({
   modul,
@@ -73,11 +73,11 @@ export function SitzungenAlle({
 
   const ue = zustand.art === 'fertig' ? zustand.uebersicht : [];
   const imBlick = ue.filter((u) => !aus.includes(String(u.gruppe.id)));
-  const kommend = naechsteSitzungen(
-    imBlick.map((u) => ({ gruppe: u.gruppe, kommend: u.sitzungen.kommend })),
-    heuteImKalender(new Date(), gemeindeZeitzone()),
-    gemeindeZeitzone(),
-  );
+  // „Kommend“ wie in der Gruppe (`sitzungenOrdnen`), nur gemischt: auch begonnene Protokolle von gestern – NICHT
+  // `naechsteSitzungen` der Startseite, das schneidet ab heute ab und ließe einen offenen Entwurf hier verschwinden.
+  const kommend = imBlick
+    .flatMap((u) => u.sitzungen.kommend.map((sitzung) => ({ gruppe: u.gruppe, sitzung })))
+    .sort((a, b) => Date.parse(a.sitzung.beginn) - Date.parse(b.sitzung.beginn));
   const protokolle = imBlick
     .flatMap((u) => u.sitzungen.protokolle.map((sitzung) => ({ gruppe: u.gruppe, sitzung })))
     .sort((a, b) => Date.parse(b.sitzung.beginn) - Date.parse(a.sitzung.beginn));

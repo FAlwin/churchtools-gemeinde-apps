@@ -170,3 +170,51 @@ Kante). Die Notenseite bleibt weiß.
 - **Historie:** #565
 
 </details>
+
+### TF-KOPF-05 · Am iPad steht der Kopf unter dem milchigen Band
+
+**Das brauchst du:** Ein iPad mit iPadOS 26 oder neuer, die Musik-App vom **Home-Bildschirm** (nicht im Safari-Tab).
+
+**Das muss passieren:** Seit iPadOS 26 legt auch das iPad oben ein milchiges Band über die installierte App. Jeder
+Kopf ohne Reiter beginnt unterhalb davon und ist im Ruhezustand **scharf** – Knöpfe und Überschrift wirken nicht
+verschwommen. Erst beim Scrollen läuft der Inhalt unter das Band und wird dort weich (so gewollt).
+
+1. App vom Home-Bildschirm starten, **Termine** → einen Termin öffnen. Der Kopf mit **‹ Termine**, der Überschrift
+   und den Knöpfen rechts steht deutlich unter Uhr und Akku und ist scharf.
+2. **Bearbeiten** tippen: Der Kopf mit „Eintrag hinzufügen“, „Abschließen“, „Fertig“ ist ebenfalls scharf.
+3. Ein Lied öffnen: Der Kopf des Liedblatts ist scharf, das Lied-Menü und „Aussehen“ öffnen direkt darunter.
+4. Zurück zu den Reitern **Termine**/**Lieder**: Die Reiter oben sind scharf und stehen ebenfalls unter dem Band.
+5. Gegenprobe im Safari-Tab: Dort gibt es kein Band, der Kopf steht knapp unter der Adressleiste.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `ui/design/_variables.scss`, `client/src/components/SeitenKopf.module.scss`, `ui/bedienung/ReiterLeiste.module.scss`
+- **Automatisiert:** teilweise – `ui/design/reiterObenRand.test.ts` (eine Unterkante `--band-unten` für Köpfe und Reiter, keine Geräte-Ausnahme); von Hand bleibt, ob es am Gerät scharf aussieht
+- **Historie:** #931, #932 (Reiter), #1174 (Köpfe ohne Reiter, Alwin am iPad 26.11.2026)
+
+</details>
+
+### TF-KOPF-06 · Leere Datumsfelder sind am iPhone und iPad normal hoch
+
+**Das brauchst du:** Ein iPhone oder iPad (Safari oder installierte App), in der Musik-App das Recht für die
+Lied-Statistik; im Dienstplaner das Planer-Recht.
+
+**Das muss passieren:** Ein Datumsfeld ohne Datum ist so hoch wie dasselbe Feld mit Datum – kein flacher Strich.
+Ein gewähltes Datum steht senkrecht mittig im Feld.
+
+1. Musik-App, **Lieder** → **Häufigkeit**: **Von** und **Bis** sind leer und so hoch wie der Knopf **Alle** daneben.
+2. In **Von** ein Datum wählen: Das Feld bleibt gleich hoch, das Datum steht mittig. Mit **Alle** wieder leeren –
+   die Höhe bleibt.
+3. Dienstplaner (ab dem Release nach dienstplan-v1.1.1): **Planen → ⋯ → Abfrage …** – leere Datumsfelder sind normal
+   hoch. **Planen → Personen** → eine Person → Feld „bis“ leer: ebenfalls normal hoch.
+4. Protokolle: To-Do öffnen, Feld **Bis** leer und gefüllt – gleich hoch, Datum mittig.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `ui/design/_mixins.scss`, `ui/lied/SongStatsBar.module.scss`, `dienstplaner/src/AbfrageFenster.module.scss`, `dienstplaner/src/PersonFenster.module.scss`, `protokolle/src/Fensterfelder.module.scss`
+- **Automatisiert:** teilweise – `ui/design/datumsfeld.test.ts` (Regel im Baustein `datumsfeld`); das Layout prüft jsdom nicht, gemessen im iPad-Simulator (iOS 27.2)
+- **Historie:** #1103 (Datum mittig), #1182 (leere Felder, Alwin am iPad 26.11.2026)
+
+</details>

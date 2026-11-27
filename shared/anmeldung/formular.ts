@@ -34,6 +34,7 @@ import {
   bedingungenAufraeumen,
   feldSichtbar,
   festeAntworten,
+  kurzname,
   wahlAntworten,
   type AntwortBedingung,
   type Bedingung,
@@ -513,7 +514,7 @@ export function ctZusatzSpalten(
         ? [
             {
               schluessel: `${x.id}.summe`,
-              name: `${x.kurz?.trim() || x.frage} – Summe ${summe.name.trim()}`,
+              name: `${kurzname(x)} – Summe ${summe.name.trim()}`,
               fieldTypeCode: 'number' as const,
             },
           ]

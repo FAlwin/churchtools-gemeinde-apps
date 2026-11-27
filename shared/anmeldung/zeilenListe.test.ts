@@ -297,6 +297,29 @@ describe('listeEinstellungFehler – Baukasten', () => {
       { spalten: [{ id: 'a', name: 'A', art: 'text', summe: true }], max: 10 },
       /nur bei Zahl-Spalten/,
     ],
+    [
+      '21 Antworten (wie das Schema)',
+      {
+        spalten: [
+          {
+            id: 'a',
+            name: 'Farbe',
+            art: 'auswahl',
+            antworten: Array.from({ length: 21 }, (_, i) => `F${i}`),
+          },
+        ],
+        max: 10,
+      },
+      /höchstens 20 Antworten/,
+    ],
+    [
+      'Antwort mit 256 Zeichen (wie das Schema)',
+      {
+        spalten: [{ id: 'a', name: 'Farbe', art: 'auswahl', antworten: ['rot', 'x'.repeat(256)] }],
+        max: 10,
+      },
+      /länger als 255 Zeichen/,
+    ],
     ['0 Zeilen', { ...standardListe(), max: 0 }, /1 bis 50/],
     ['51 Zeilen', { ...standardListe(), max: 51 }, /1 bis 50/],
   ])('%s', (_, l, fehler) => expect(listeEinstellungFehler(l)).toMatch(fehler));

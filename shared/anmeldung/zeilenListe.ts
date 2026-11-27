@@ -120,6 +120,11 @@ export function listeEinstellungFehler(l: ListeEinstellung | undefined): string 
     (s) => s.art === 'auswahl' && (s.antworten ?? []).filter((a) => a.trim()).length < 2,
   );
   if (wenig) return `Bitte bei „${wenig.name.trim()}“ mindestens zwei Antworten eintragen.`;
+  // Dieselben Grenzen wie das Schema (`listeSchema`) – sonst ginge das Feld durch und das Speichern scheiterte erst am Ende.
+  const viele = l.spalten.find((s) => (s.antworten ?? []).length > AUSWAHL_MAX);
+  if (viele) return `Bei „${viele.name.trim()}“ gehen höchstens ${AUSWAHL_MAX} Antworten.`;
+  const lang = l.spalten.find((s) => (s.antworten ?? []).some((a) => a.length > ANTWORT_MAX));
+  if (lang) return `Bei „${lang.name.trim()}“ ist eine Antwort länger als ${ANTWORT_MAX} Zeichen.`;
   if (l.spalten.some((s) => s.summe && s.art !== 'zahl'))
     return 'Eine Summe gibt es nur bei Zahl-Spalten.';
   if (l.spalten.filter((s) => s.summe).length > 1) return 'Nur eine Spalte kann eine Summe zeigen.';

@@ -33,7 +33,7 @@ import {
 import { STANDARD_BEZAHLUNG } from './bezahlung';
 import { mitVorgaben } from './gestaltung';
 import { neueEinstellungen } from './vorlagen';
-import { moeglicheQuellen } from './bedingungen';
+import { kurzname, moeglicheQuellen } from './bedingungen';
 
 /** Formular-Modell (#474). Die ChurchTools-Regeln dahinter sind in A0 an der Test-Instanz gemessen. */
 
@@ -584,6 +584,14 @@ describe('Liste mit Zeilen (F6a)', () => {
     const ohneSumme = liste();
     ohneSumme.liste!.spalten[1].summe = false;
     expect(ctZusatzSpalten(ohneSumme).map((z) => z.schluessel)).toEqual(['inv.daten']);
+  });
+
+  it('Summen-Spalte ohne Kurzname: die Frage, gekürzt wie überall (`kurzname`)', () => {
+    const lang = liste({
+      frage: 'Was bringst du alles privat mit ins Zeltlager und auf die Fahrt?',
+    });
+    expect(kurzname(lang)).toMatch(/…$/);
+    expect(ctZusatzSpalten(lang)[1].name).toBe(`${kurzname(lang)} – Summe Wert`);
   });
 
   it('zusatzSchluessel: alle weiteren Spalten eines Felds in ctFelder – auch alte', () => {

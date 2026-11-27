@@ -236,3 +236,31 @@ Auf der Startseite steht bei „Braucht deine Aufmerksamkeit“ „3 Personen oh
 - **Historie:** N3d (27.11.2026, Entscheidungsliste E24, E25, E38–E43)
 
 </details>
+
+### TF-ANM-09 · Formular: Liste mit Zeilen im Baukasten
+
+**Das brauchst du:** Die Erweiterung in der Entwicklung (`npm run dev`, Demo `?demo`) – bis F6b gibt es den Baustein nur dort.
+Eine Veranstaltung, deren Formular du bearbeiten darfst (Demo: „Worship-Workshop“, dort steht schon „Was bringst du privat
+mit?“).
+
+**Das muss passieren:** Unter „Eigene Fragen“ gibt es die Kachel **„Liste mit Zeilen“**. Im Feld lassen sich Spalten benennen,
+als Text/Zahl/Auswahl einstellen, verschieben und löschen; eine Zahl-Spalte bekommt Einheit und „Summe zeigen“ (immer nur
+eine). Die Vorschau darunter zeigt, wie Gäste die Liste sehen. Am Computer ist sie eine Tabelle, am Handy eine Karte je Eintrag.
+
+1. Kachel antippen: Die Liste kommt mit „Was“ (Text) und „Anzahl“ (Zahl), höchstens 10 Zeilen.
+2. „+ Spalte hinzufügen“ dreimal: „Neue Spalte“, „Neue Spalte 2“, … – nach fünf Spalten steht „höchstens 5 Spalten“.
+3. Bei einer zweiten Zahl-Spalte „Summe zeigen“ anhaken: der Haken der ersten verschwindet.
+4. Zwei Spalten gleich benennen: roter Hinweis am Feld, nichts wird gespeichert; umbenennen → „… gespeichert“.
+5. **Vorschau**: In die Liste tippen, eine Zeile nur halb ausfüllen, **Verbindlich anmelden**: Die halbe Zeile ist rot markiert,
+   darunter „Zeile 1: … fehlt“; eine leere Zeile hält nichts auf. Die Summe zählt nur vollständige Zeilen.
+6. Fenster schmal (375 px): je Eintrag eine Karte mit beschrifteten Feldern, Zahlen zu zweit nebeneinander.
+7. Gebaute Erweiterung (Test-ZIP): **keine** Kachel „Liste mit Zeilen“ und kein Fragetyp dieses Namens.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/anmeldung/zeilenListe.ts`, `shared/anmeldung/formular.ts`, `anmeldungen/src/ListeBearbeiten.tsx`, `anmeldungen/src/bausteinFrei.ts`, `anmeldungen/src/formularFelder.ts`, `ui/anmeldeformular/ListeEingabe.tsx`
+- **Automatisiert:** ja – `zeilenListe.test.ts` (Regel), `formular.test.ts` (Prüfung, Ablage, Schema), `einrichten.test.ts` (Spalten in ChurchTools), `senden.test.ts` (Absenden gesperrt bis F6b), `Baukasten.test.tsx` (Kachel, Fragetyp, Bearbeiten, gebaute Erweiterung), `ListeEingabe.test.tsx`; im Browser mit der Demo durchgeklickt (Computer, 375 px, hell/dunkel). Von Hand bleibt der Weg gegen echtes ChurchTools – mit F6b
+- **Historie:** F6a (27.11.2026, Messung M9, Entscheidungsliste E44–E51)
+
+</details>

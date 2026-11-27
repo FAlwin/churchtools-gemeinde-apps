@@ -1203,3 +1203,132 @@
   color: var(--p-accent-text);
   text-decoration: underline;
 }
+
+// ── F6a: Liste mit Zeilen (Entwurf `f6-liste-v1`) – schmal je Eintrag eine Karte, breit eine Zeilen-Tabelle ──────────
+.pv .liste {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.pv .listeKopf {
+  display: none;
+}
+.pv .listeZeile {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px 10px;
+  border: 1px solid var(--p-line);
+  border-radius: calc(var(--p-r) * 0.7);
+  padding: 10px 12px 12px;
+  position: relative;
+}
+.pv .listeNr {
+  grid-column: 1 / -1;
+  font-size: 0.82em;
+  font-weight: 700;
+  color: var(--p-muted);
+  padding-right: 32px;
+}
+// Text und Auswahl volle Breite, Zahlen zu zweit nebeneinander.
+.pv .listeZelle {
+  grid-column: 1 / -1;
+}
+.pv .listeZelle[data-art='zahl'] {
+  grid-column: auto;
+}
+.pv .listeZelle.bad select {
+  border-color: var(--p-err) !important;
+}
+.pv .listeWeg {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: none;
+  color: var(--p-muted);
+  cursor: pointer;
+  border-radius: calc(var(--p-r) * 0.5);
+}
+.pv .listeWeg:focus-visible {
+  outline: 2px solid var(--p-text);
+  outline-offset: 1px;
+}
+.pv .listeFuss {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+.pv .listeFuss .addbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.5em 0.9em;
+}
+.pv .listeFuss .addbtn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.pv .listeSumme {
+  margin-left: auto;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.pv .listeFehler {
+  display: block;
+}
+.pv .nurBreit {
+  display: none;
+}
+@container pv (min-width: 600px) {
+  .pv .liste {
+    gap: 6px;
+  }
+  .pv .listeKopf,
+  .pv .listeZeile {
+    display: grid;
+    grid-template-columns: 2em var(--liste-spalten) 32px;
+    gap: 8px;
+    align-items: center;
+  }
+  .pv .listeKopf {
+    font-size: 0.82em;
+    font-weight: 700;
+    color: var(--p-muted);
+  }
+  .pv .listeZeile {
+    border: 0;
+    padding: 0;
+  }
+  .pv .listeNr {
+    grid-column: auto;
+    padding-right: 0;
+    text-align: right;
+  }
+  .pv .listeZelle,
+  .pv .listeZelle[data-art='zahl'] {
+    grid-column: auto;
+  }
+  // Breit steht der Name der Spalte in der Kopfzeile – die Beschriftung bleibt für Vorleseprogramme.
+  .pv .listeZelle label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .pv .listeWeg {
+    position: static;
+  }
+  .pv .nurBreit {
+    display: inline;
+  }
+  .pv .nurSchmal {
+    display: none;
+  }
+}

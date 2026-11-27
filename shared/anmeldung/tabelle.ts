@@ -24,6 +24,7 @@ import {
   type ListenPerson,
 } from './liste';
 import { altersregel, euroText, kannEtwasKosten } from './preis';
+import { zahlText } from './feldwert';
 import {
   ampelDerAnmeldung,
   ampelDerPerson,
@@ -193,8 +194,6 @@ function zaehlbar(liste: ListenAnmeldung[]): ListenAnmeldung[] {
   const mit = liste.filter((x) => mitPlatz(x).length > 0);
   return mit.length > 0 ? mit : liste;
 }
-
-const zahlText = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 2 });
 
 /** **Die Summe einer Frage** nach ihrer Art (Entscheidung 3, 29.10.2026); `wer` zählt bei Auswahl je Antwort. */
 export function frageSumme(

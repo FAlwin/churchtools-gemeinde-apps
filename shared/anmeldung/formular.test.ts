@@ -15,6 +15,8 @@ import {
   traegtEinstellungen,
   alterAm,
   ctAblage,
+  ctZusatzSpalten,
+  zusatzSchluessel,
   einstellungenAlsText,
   einstellungenLesen,
   feldFehler,
@@ -31,6 +33,7 @@ import {
 import { STANDARD_BEZAHLUNG } from './bezahlung';
 import { mitVorgaben } from './gestaltung';
 import { neueEinstellungen } from './vorlagen';
+import { kurzname, moeglicheQuellen } from './bedingungen';
 
 /** Formular-Modell (#474). Die ChurchTools-Regeln dahinter sind in A0 an der Test-Instanz gemessen. */
 
@@ -517,5 +520,101 @@ describe('lange Antworten (F5a)', () => {
 
   it('256 Zeichen nicht – schon das Speichern lehnt sie ab', () => {
     expect(() => einstellungenAlsText(mitAntwort(256))).toThrow();
+  });
+});
+
+// ── F6a: Liste mit Zeilen im Formular-Modell ──
+describe('Liste mit Zeilen (F6a)', () => {
+  const liste = (extra: Partial<Feld> = {}): Feld =>
+    eigen('liste', 'Was bringst du mit?', {
+      id: 'inv',
+      liste: {
+        spalten: [
+          { id: 'a', name: 'Gegenstand', art: 'text' },
+          { id: 'b', name: 'Wert', art: 'zahl', einheit: '€', summe: true },
+        ],
+        max: 10,
+      },
+      ...extra,
+    });
+  const mitListe = (f: Feld): OeffentlicheEinstellungen => {
+    const e = neueEinstellungen('einfach');
+    e.formular.anmeldung.splice(2, 0, f);
+    return e;
+  };
+  const antwortenMit = (w: unknown) => ({
+    anmeldung: { name: { vor: 'A', nach: 'B' }, mail: 'a@b.de', priv: true, inv: w as never },
+    personen: [{ pname: { vor: 'A', nach: 'B' } }],
+  });
+
+  it('pruefeAntworten: angefangene Zeile hält auch bei „freiwillig“ auf – Pfad je Zelle', () => {
+    const e = mitListe(liste());
+    expect(pruefeAntworten(e.formular, antwortenMit({ zeilen: [{ a: 'Zelt' }] }))).toEqual([
+      'anmeldung.inv.0.b',
+    ]);
+    expect(pruefeAntworten(e.formular, antwortenMit({ zeilen: [{}] }))).toEqual([]);
+  });
+
+  it('pruefeAntworten: Pflicht ohne vollständige Zeile → das Feld selbst', () => {
+    const e = mitListe(liste({ zustand: 'pflicht' }));
+    expect(pruefeAntworten(e.formular, antwortenMit(undefined))).toEqual(['anmeldung.inv']);
+    expect(
+      pruefeAntworten(e.formular, antwortenMit({ zeilen: [{ a: 'Zelt', b: '150' }] })),
+    ).toEqual([]);
+  });
+
+  it('feldFehler und pruefeFormular kennen die Regeln der Spalten', () => {
+    expect(feldFehler(liste())).toBeNull();
+    expect(feldFehler(liste({ liste: undefined }))).toMatch(/mindestens eine Spalte/);
+    expect(pruefeFormular(mitListe(liste({ liste: { spalten: [], max: 10 } })).formular)).toEqual([
+      '„Was bringst du mit?“: Bitte mindestens eine Spalte anlegen.',
+    ]);
+  });
+
+  it('ctAblage: lesbarer langer Text; weitere Spalten „(Daten)“ und – mit Summe – ein Zahl-Feld (E1)', () => {
+    expect(ctAblage(liste())).toEqual({
+      ort: 'gruppenfeld',
+      fieldTypeCode: 'textarea',
+      optionen: [],
+    });
+    expect(ctZusatzSpalten(liste({ kurz: 'Inventar' }))).toEqual([
+      { schluessel: 'inv.daten', name: 'Was bringst du mit? (Daten)', fieldTypeCode: 'textarea' },
+      { schluessel: 'inv.summe', name: 'Inventar – Summe Wert', fieldTypeCode: 'number' },
+    ]);
+    const ohneSumme = liste();
+    ohneSumme.liste!.spalten[1].summe = false;
+    expect(ctZusatzSpalten(ohneSumme).map((z) => z.schluessel)).toEqual(['inv.daten']);
+  });
+
+  it('Summen-Spalte ohne Kurzname: die Frage, gekürzt wie überall (`kurzname`)', () => {
+    const lang = liste({
+      frage: 'Was bringst du alles privat mit ins Zeltlager und auf die Fahrt?',
+    });
+    expect(kurzname(lang)).toMatch(/…$/);
+    expect(ctZusatzSpalten(lang)[1].name).toBe(`${kurzname(lang)} – Summe Wert`);
+  });
+
+  it('zusatzSchluessel: alle weiteren Spalten eines Felds in ctFelder – auch alte', () => {
+    expect(
+      zusatzSchluessel({ inv: 1, 'inv.daten': 2, 'inv.summe': 3, inv2: 4, 'f1.frei': 5 }, 'inv'),
+    ).toEqual(['inv.daten', 'inv.summe']);
+  });
+
+  it('die Spalten überleben Speichern und Lesen der Einstellungen (Schema)', () => {
+    const e = mitListe(liste({ kurz: 'Inventar' }));
+    expect(einstellungenLesen(einstellungenAlsText(e))).toEqual(e);
+  });
+
+  it('keine Quelle einer Bedingung, keine freie Antwort', () => {
+    const f = liste();
+    const ziel = eigen('text', 'Danach', { id: 'z' });
+    const e = mitListe(f);
+    e.formular.anmeldung.splice(3, 0, ziel);
+    // Davor steht auch Telefon (Text) – das taugt als Quelle, die Liste nicht.
+    expect(moeglicheQuellen(e.formular, ziel).map((x) => x.id)).not.toContain('inv');
+    expect(moeglicheQuellen(e.formular, ziel).length).toBeGreaterThan(0);
+    expect(feldFehler({ ...f, frei: { name: 'Sonstiges', textfeld: 'auf' } })).toMatch(
+      /nur bei Auswahlfragen/,
+    );
   });
 });

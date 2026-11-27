@@ -5,6 +5,7 @@ import { freiGewaehlt, freiMitText, freiName } from '@shared/anmeldung/freieAntw
 import { hinweisTeile } from '@shared/anmeldung/hinweisLinks';
 import { datumText } from '@shared/ct/datum';
 import { AdresseEingabe, ErziehungsEingabe, UnterschriftEingabe } from './Bausteine';
+import { ListeEingabe } from './ListeEingabe';
 import s from './AnmeldeFormular.module.scss';
 
 function Pflicht({ f }: { f: Feld }) {
@@ -102,6 +103,20 @@ export function FeldEingabe({
           </span>
         )}
       </div>
+    );
+
+  // F6a: Liste mit Zeilen (`ListeEingabe.tsx`).
+  if (f.typ === 'liste')
+    return (
+      <ListeEingabe
+        feld={f}
+        wert={wert}
+        onWert={onWert}
+        pfad={pfad}
+        fehler={fehler}
+        gesperrt={gesperrt}
+        zusatz={zusatz}
+      />
     );
 
   // A6-2b: zusammengesetzte Bausteine (`Bausteine.tsx`).

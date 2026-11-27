@@ -1625,3 +1625,100 @@
     font-weight: 400;
   }
 }
+
+// ── F6a: Liste mit Zeilen bearbeiten (Entwurf `f6-liste-v1`, Ansicht „Baukasten“) ──
+.listeBearb {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.listeTitel {
+  margin: 4px 0 0;
+  font-size: 0.82em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--p-muted, #5b6b70);
+}
+.listeSpalte {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) auto minmax(0, 1.6fr) auto;
+  align-items: center;
+  gap: 6px 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--p-line, #dde5e6);
+
+  input:not([type='checkbox']),
+  select {
+    font: inherit;
+    font-size: 0.93em;
+    color: inherit;
+    min-width: 0;
+    border: 1px solid var(--p-line, #dde5e6);
+    border-radius: var(--r-ctrl);
+    background: var(--p-card, #fff);
+    padding: 6px 8px;
+  }
+}
+.listeZusatz {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
+}
+.listeEinheit {
+  width: 6em;
+}
+.listeAntworten {
+  flex: 1;
+}
+.listeSumme {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.87em;
+  white-space: nowrap;
+}
+.listeWerkzeug {
+  display: inline-flex;
+  gap: 4px;
+
+  // Die Knöpfe (`ZeilenKnopf`) stehen auf dem Papier des Formulars – in dessen Farben, nicht in denen der Erweiterung
+  // (im dunklen Design wären sie sonst schwarze Kästen auf hellem Grund).
+  button {
+    background: none;
+    border-color: var(--p-line, #dde5e6);
+    color: var(--p-muted, #5b6b70);
+  }
+}
+.listeMax {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.93em;
+
+  input {
+    font: inherit;
+    width: 4.5em;
+    color: inherit;
+    border: 1px solid var(--p-line, #dde5e6);
+    border-radius: var(--r-ctrl);
+    background: var(--p-card, #fff);
+    padding: 6px 8px;
+  }
+}
+.listeVorschauTitel {
+  margin: 6px 0 0;
+  font-size: 0.82em;
+  font-weight: 700;
+  color: var(--p-muted, #5b6b70);
+}
+.listeVorschau {
+  pointer-events: none;
+}
+// Schmal (Handy-Ansicht des Baukastens oder kleines Fenster): Name und Art oben, Zusatz und Werkzeug darunter.
+@container pv (max-width: 560px) {
+  .listeSpalte {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}

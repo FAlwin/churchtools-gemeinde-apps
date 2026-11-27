@@ -34,6 +34,7 @@ import {
   bedingungenAufraeumen,
   feldSichtbar,
   festeAntworten,
+  kurzname,
   wahlAntworten,
   type AntwortBedingung,
   type Bedingung,
@@ -47,6 +48,14 @@ import {
   kannFrei,
 } from './freieAntwort';
 import { adresseAus, type AdresseAntwort } from './adresse';
+import {
+  listePruefen,
+  listeEinstellungFehler,
+  summenSpalte,
+  type ListeAntwort,
+  type ListeEinstellung,
+  listeSchema,
+} from './zeilenListe';
 
 export type Feldtyp =
   | 'name'
@@ -72,7 +81,9 @@ export type Feldtyp =
   // F2a: Beginn eines neuen Schritts (Seitenumbruch, Klick-Runden 7/8) – ein Text-Baustein mit Namen.
   | 'schritt'
   // F4: Straße, PLZ, Ort – Personenfelder in ChurchTools (`adresse.ts`).
-  | 'adresse';
+  | 'adresse'
+  // F6: Liste mit Zeilen (`zeilenListe.ts`).
+  | 'liste';
 
 /**
  * **Nur Text, keine Frage** – Hinweistext, Zwischenüberschrift, Trennlinie (A5). Keine Antwort, keine Spalte in
@@ -110,6 +121,8 @@ export interface Feld {
   kurz?: string;
   /** **Freie Antwort** (F3) – die letzte Antwort einer Auswahl, mit Textfeld je nach Frage (`freieAntwort.ts`). */
   frei?: FreieAntwort;
+  /** **Liste mit Zeilen** (F6): Spalten und Höchstzahl Zeilen (`zeilenListe.ts`) – nur bei `typ: 'liste'`. */
+  liste?: ListeEinstellung;
 }
 
 /** Die freie Antwort einer Auswahlfrage (F3, Klick-Runde 9). */
@@ -141,6 +154,8 @@ export const BAUSTEINE: { typ: Feldtyp; name: string; gruppe: 'frage' | 'gestalt
   { typ: 'multi', name: 'Mehrere Antworten', gruppe: 'frage' },
   { typ: 'date', name: 'Datum', gruppe: 'frage' },
   { typ: 'number', name: 'Zahl', gruppe: 'frage' },
+  // F6a: bis F6b nur in Entwicklung/Demo zu sehen (`bausteinFrei` in der Erweiterung) – Absenden fehlt noch.
+  { typ: 'liste', name: 'Liste mit Zeilen', gruppe: 'frage' },
   { typ: 'ueberschrift', name: 'Überschrift', gruppe: 'gestaltung' },
   { typ: 'info', name: 'Hinweistext', gruppe: 'gestaltung' },
   { typ: 'trenner', name: 'Trennlinie', gruppe: 'gestaltung' },
@@ -253,6 +268,7 @@ export type Antwort =
   | ErziehungsAntwort
   | UnterschriftAntwort
   | AdresseAntwort
+  | ListeAntwort
   | undefined;
 
 /** Die Antwort als „Erziehungsberechtigte“ – oder leer, wenn sie etwas anderes ist. */
@@ -302,6 +318,12 @@ export function pruefeAntworten(f: Formular, a: Antworten): string[] {
     if (nurText(x.typ) || x.typ === 'price' || x.zustand === 'aus') return;
     if (x.typ === 'email' && typeof wert === 'string' && wert.trim() && !mailGueltig(wert)) {
       fehlt.push(pfad);
+      return;
+    }
+    // F6: Angefangene Zeilen und eine zu lange Liste halten auch bei „freiwillig“ auf (`zeilenListe.ts`).
+    if (x.typ === 'liste') {
+      for (const teil of listePruefen(x.liste, wert, x.zustand === 'pflicht'))
+        fehlt.push(teil ? `${pfad}.${teil}` : pfad);
       return;
     }
     if (x.zustand !== 'pflicht') return;
@@ -368,6 +390,10 @@ export function feldFehler(x: Feld): string | null {
     x.antworten.filter((s) => s.trim()).length < 2
   )
     return 'Bitte mindestens zwei Antworten eintragen.';
+  if (x.typ === 'liste') {
+    const fehlt = listeEinstellungFehler(x.liste);
+    if (fehlt) return fehlt;
+  }
   if (x.frei) {
     if (!kannFrei(x)) return 'Eine freie Antwort gibt es nur bei Auswahlfragen.';
     const name = x.frei.name.trim();
@@ -456,8 +482,10 @@ export function ctAblage(x: Feld): CtAblage {
       return { ort: 'gruppenfeld', fieldTypeCode: 'text', optionen: [] };
     // A6-2b: Erziehungsberechtigte lesbar als Text („Erna Muster, 0151 …“); bei der Unterschrift „✓ Erna Muster,
     // 15.10.2026“ – die Striche liegen in einer zweiten Spalte (`ctZusatzSpalten`).
+    // F6: auch die Liste – lesbar („Gegenstand · Anzahl …“, eine Zeile je Eintrag); die Zeilen in „(Daten)“.
     case 'textarea':
     case 'erziehungsberechtigte':
+    case 'liste':
       return { ort: 'gruppenfeld', fieldTypeCode: 'textarea', optionen: [] };
     case 'unterschrift':
       return { ort: 'gruppenfeld', fieldTypeCode: 'text', optionen: [] };
@@ -474,9 +502,25 @@ export function ctAblage(x: Feld): CtAblage {
  */
 export function ctZusatzSpalten(
   x: Feld,
-): { schluessel: string; name: string; fieldTypeCode: 'textarea' | 'text' }[] {
+): { schluessel: string; name: string; fieldTypeCode: 'textarea' | 'text' | 'number' }[] {
   if (x.typ === 'unterschrift')
     return [{ schluessel: `${x.id}.daten`, name: `${x.frage} (Daten)`, fieldTypeCode: 'textarea' }];
+  // F6 (E1): die Zeilen in fester Form – und mit „Summe zeigen“ ein Zahl-Feld, in ChurchTools sortier- und filterbar.
+  if (x.typ === 'liste') {
+    const summe = x.liste ? summenSpalte(x.liste) : null;
+    return [
+      { schluessel: `${x.id}.daten`, name: `${x.frage} (Daten)`, fieldTypeCode: 'textarea' },
+      ...(summe
+        ? [
+            {
+              schluessel: `${x.id}.summe`,
+              name: `${kurzname(x)} – Summe ${summe.name.trim()}`,
+              fieldTypeCode: 'number' as const,
+            },
+          ]
+        : []),
+    ];
+  }
   if (freiMitText(x))
     return [
       {
@@ -486,6 +530,15 @@ export function ctZusatzSpalten(
       },
     ];
   return [];
+}
+
+/**
+ * **Die Schlüssel aller weiteren Spalten eines Felds**, die in `ctFelder` stehen (`<Feld-ID>.daten`, `.frei`, `.summe`) –
+ * auch solche, die das Feld heute nicht mehr hat (Summe ausgeschaltet, freie Antwort entfernt, anderer Fragetyp). Die
+ * EINE Stelle für „was gehört noch zu diesem Feld?“ beim Speichern, Löschen und Ändern des Fragetyps.
+ */
+export function zusatzSchluessel(ctFelder: Record<string, number>, feldId: string): string[] {
+  return Object.keys(ctFelder).filter((k) => k.startsWith(`${feldId}.`));
 }
 
 /**
@@ -823,6 +876,8 @@ const feldSchema = z.object({
     'schritt',
     // Seit F4. Dasselbe: Paket und Erweiterung zusammen hochladen.
     'adresse',
+    // Seit F6a. Dasselbe.
+    'liste',
   ]),
   frage: z.string().max(200),
   hilfe: z.string().max(400),
@@ -837,6 +892,8 @@ const feldSchema = z.object({
   frei: z
     .object({ name: z.string().max(ANTWORT_MAX), textfeld: z.enum(['auf', 'immer', 'ohne']) })
     .optional(),
+  // Seit F6a. Dasselbe.
+  liste: listeSchema.optional(),
 });
 // Farben nur in Hex-Schreibweise – sie landen in einem style-Attribut.
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/);

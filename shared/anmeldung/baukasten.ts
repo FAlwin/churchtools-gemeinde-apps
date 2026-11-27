@@ -5,6 +5,7 @@
  */
 import { standardFormular, type Feld, type Feldtyp, type Formular } from './formular';
 import { amEnde } from './bedingungen';
+import { standardListe } from './zeilenListe';
 
 export type Bereich = keyof Formular;
 
@@ -193,6 +194,8 @@ export function bausteinFeld(typ: Feldtyp, id: string): Feld {
     trenner: '',
     // F2c: Der Name ist Pflicht (`feldFehler`) – vorbelegt, beim Einfügen markiert zum Überschreiben.
     schritt: 'Neuer Schritt',
+    // F6a: mit zwei Spalten („Was“, „Anzahl“) und höchstens 10 Zeilen (`standardListe`).
+    liste: 'Neue Liste',
   };
   return {
     id,
@@ -203,6 +206,7 @@ export function bausteinFeld(typ: Feldtyp, id: string): Feld {
     zustand: 'freiwillig',
     antworten:
       typ === 'radio' || typ === 'select' || typ === 'multi' ? ['Antwort 1', 'Antwort 2'] : [],
+    ...(typ === 'liste' ? { liste: standardListe() } : {}),
   };
 }
 

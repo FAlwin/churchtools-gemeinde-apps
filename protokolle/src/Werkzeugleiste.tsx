@@ -12,6 +12,8 @@ import type { ProtokollEditor } from './editorSchema';
 import { kannRuecken, ruecken } from './einruecken';
 import { farbWert, MARKIER_FARBEN, type FarbArt } from './farben';
 import { FESTE } from './festenPunktEinfuegen';
+import { reiheAnbieten } from './reiheEinfuegen';
+import { ReiheKontext } from './themenreiheKontext';
 import { FestePunkteKontext } from './festePunkteKontext';
 import { festenPunktAnbieten } from './fruehesProtokoll';
 import { PunkteOrdnen } from './PunkteOrdnen';
@@ -330,6 +332,7 @@ export function Werkzeugleiste({ editor }: { editor: ProtokollEditor }) {
   const handy = useMedienAbfrage(HANDY_BREITE);
   const thema = useThema();
   const feste = useContext(FestePunkteKontext);
+  const reihe = useContext(ReiheKontext);
   // Die obersten Blöcke, wie sie beim Öffnen von „Punkte ordnen“ waren – `null`: Fenster zu.
   const [ordnen, setOrdnen] = useState<Block[] | null>(null);
   const z = useEditorState({
@@ -533,6 +536,16 @@ export function Werkzeugleiste({ editor }: { editor: ProtokollEditor }) {
               }}
             />
           ))}
+          {reihe?.darfBauen && (
+            <MenuePunkt
+              icon="liste"
+              text="Reihe"
+              onKlick={() => {
+                zu();
+                reiheAnbieten(editor, reihe);
+              }}
+            />
+          )}
           <MenuePunkt
             icon="tabelle"
             text="Tabelle"

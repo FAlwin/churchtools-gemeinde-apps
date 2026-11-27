@@ -23,6 +23,12 @@ import {
   teilSetzen,
 } from '@shared/protokolle/aufgaben';
 import { neuerTerminStand } from '@shared/protokolle/terminStand';
+import {
+  abschnitt,
+  neueThemenreihe,
+  neueZeile,
+  type ReiheZeile,
+} from '@shared/protokolle/themenreihe';
 import { praefix } from '@shared/protokolle/tabellenZeile';
 import { neuerToDoVorschlag, vorschlagAblehnen } from '@shared/protokolle/todoVorschlag';
 import { plusTage } from '@shared/ct/datum';
@@ -112,6 +118,15 @@ function protokollWerte(
         children: [],
       }),
     ),
+    // Baustein „Reihe“ (Jona-Reihe der Jugend) – die Reihe selbst liegt in „Mitarbeit“.
+    {
+      id: 'd-reihe-p',
+      type: 'heading',
+      props: { level: 1 },
+      content: [{ type: 'text', text: 'Themenreihe Januar/Februar', styles: {} }],
+      children: [],
+    },
+    { id: 'd-reihe', type: 'themenreihe', props: { reihe: DEMO_REIHE.id }, children: [] },
     {
       // Eine Terminliste mit einer Info-Zeile und einer Unterzeile (W13).
       id: 'd-tab',
@@ -167,6 +182,9 @@ function protokollWerte(
       content: t('Anmeldung zur Freizeit öffnet'),
       children: [],
     },
+    // Ein freigegebenes Protokoll mit der Reihe: Die Reihe lässt sich trotzdem bearbeiten und übertragen (sie liegt in „Mitarbeit“).
+    { id: 's-p4', type: 'heading', props: { level: 1 }, content: t('Jugend'), children: [] },
+    { id: 's-r1', type: 'themenreihe', props: { reihe: DEMO_REIHE.id }, children: [] },
   ];
   const werte: string[] = [
     JSON.stringify({
@@ -325,6 +343,122 @@ const ANFRAGEN: Record<string, { person: { domainIdentifier: string }; state: st
     { person: { domainIdentifier: '23' }, state: 'pending' },
   ],
 };
+
+/**
+ * **Reihe in Events** (Baustein „Reihe“): eine Jona-Reihe der Jugend mit fünf Abenden – über die Erzeuger gebaut. Die Events
+ * dazu zeigen jeden Zustand des Fensters „In Events übertragen“: neu (mit Handtext in den Infos, der stehen bleibt), geändert
+ * (alter Abschnitt), aktuell, ohne Recht (Kalender 9 hat kein „edit events“) und ohne Event (27.01. – Events liegen daneben).
+ * Erfundene Namen.
+ */
+const ABEND = (id: string, datum: string, extra: Partial<ReiheZeile>): ReiheZeile => ({
+  ...neueZeile(id, datum),
+  ...extra,
+});
+const demoReihe = (alt = false) =>
+  neueThemenreihe({
+    id: 'demo-reihe-jona',
+    gruppe: 11,
+    name: 'Jona – Gott gibt nicht auf',
+    von: 1,
+    am: '2026-11-25T20:00:00Z',
+    zeilen: [
+      ABEND('ra', '2027-01-13', {
+        eventId: 7001,
+        eventTitel: 'Jugendabend',
+        thema: alt ? 'Weglaufen' : 'Weglaufen vor Gott',
+        wer: { personId: 1, name: 'Alwin Friesen' },
+        bibelstelle: 'Jona 1',
+      }),
+      ABEND('rb', '2027-01-20', {
+        eventId: 7002,
+        eventTitel: 'Jugendabend',
+        thema: 'Im Bauch des Fisches',
+        wer: { personId: 7, name: 'Johann Becker' },
+        bibelstelle: 'Jona 2',
+        notiz: 'Lobpreis Team B, danach Spieleabend',
+      }),
+      ABEND('rc', '2027-01-27', {
+        thema: 'Zweite Chance',
+        wer: { personId: null, name: 'Sarah M.' },
+        bibelstelle: 'Jona 3,1–5',
+      }),
+      ABEND('rd', '2027-02-03', {
+        eventId: 7004,
+        eventTitel: 'Jugendabend',
+        thema: 'Ganz Ninive kehrt um',
+        wer: { personId: 19, name: 'Peter Wiens' },
+        bibelstelle: 'Jona 3,6–10',
+        notiz: 'Gast: Jugendreferent',
+      }),
+      ABEND('re', '2027-02-10', {
+        eventId: 7005,
+        eventTitel: 'Jugendabend',
+        thema: 'Gott gibt nicht auf',
+        wer: { personId: 7, name: 'Johann Becker' },
+        bibelstelle: 'Jona 4',
+      }),
+    ],
+  });
+const DEMO_REIHE = demoReihe();
+/** Ein Event, wie `GET /events/{id}` es liefert – nur die Felder, die die Reihe liest. */
+interface DemoEvent {
+  id: number;
+  name: string;
+  startDate: string;
+  description: string;
+  isCanceled: boolean;
+  kalender: number;
+}
+const DEMO_JUGEND_EVENTS = (): DemoEvent[] => [
+  {
+    id: 7001,
+    name: 'Jugendabend',
+    startDate: '2027-01-13T18:30:00Z',
+    description: abschnitt(demoReihe(true), 0),
+    isCanceled: false,
+    kalender: 4,
+  },
+  {
+    id: 7002,
+    name: 'Jugendabend',
+    startDate: '2027-01-20T18:30:00Z',
+    description: 'Treffpunkt ab 19 Uhr im Jugendraum.',
+    isCanceled: false,
+    kalender: 4,
+  },
+  {
+    id: 7004,
+    name: 'Jugendabend',
+    startDate: '2027-02-03T18:30:00Z',
+    description: '',
+    isCanceled: false,
+    kalender: 9,
+  },
+  {
+    id: 7005,
+    name: 'Jugendabend',
+    startDate: '2027-02-10T18:30:00Z',
+    description: abschnitt(DEMO_REIHE, 4),
+    isCanceled: false,
+    kalender: 4,
+  },
+  {
+    id: 7006,
+    name: 'Teenkreis',
+    startDate: '2027-01-26T17:00:00Z',
+    description: '',
+    isCanceled: false,
+    kalender: 4,
+  },
+  {
+    id: 7007,
+    name: 'Jugendleitung',
+    startDate: '2027-01-28T18:30:00Z',
+    description: '',
+    isCanceled: false,
+    kalender: 4,
+  },
+];
 
 const DEMO_AUFGABE = statusSetzen(
   neueAufgabe({
@@ -738,6 +872,8 @@ interface Speicher {
   events: { id: number; appointmentId: number; startDate: string; eventTemplateId: number }[];
   /** Gruppen, die ChurchTools für Anmeldungen anlegt (W15-5) – von `POST …/appointments` angelegt, von `GET /groups` gelesen. */
   gruppen: { id: number; name: string; groupTypeId: number; terminId: number }[];
+  /** Events der Jugend für den Baustein „Reihe“ – `GET`/`PUT /events/{id}` (nur `description` und `isCanceled` ändern sich). */
+  jugendEvents: DemoEvent[];
 }
 
 /**
@@ -875,6 +1011,7 @@ function speicherAnlegen(fall: string): Speicher {
                 JEDER_AUFGABE,
                 ...W8B_LEITUNG,
                 ...DEMO_VORSCHLAEGE,
+                DEMO_REIHE,
                 // W14: „Bibel-Action-Tag“ steht schon im Gemeindeleitung-Kalender (ganztägig).
                 neuerTerminStand(
                   { gruppe: 11, sitzung: DEMO_TERMIN_DRIN.sitzung, block: DEMO_TERMIN_DRIN.block },
@@ -937,6 +1074,7 @@ function speicherAnlegen(fall: string): Speicher {
     buchungen: [],
     events: [],
     gruppen: [],
+    jugendEvents: DEMO_JUGEND_EVENTS(),
   };
 }
 
@@ -972,6 +1110,17 @@ const ROLLEN: Record<number, { id: number; nameTranslated: string; isLeader: boo
     { id: 1902, nameTranslated: 'Teilnehmer', isLeader: false },
   ],
 };
+
+/** Ein Event, wie ChurchTools es liefert. */
+const eventAntwort = (e: DemoEvent) => ({
+  id: e.id,
+  name: e.name,
+  startDate: e.startDate,
+  description: e.description === '' ? null : e.description,
+  isCanceled: e.isCanceled,
+  calendar: { domainType: 'calendar', domainIdentifier: String(e.kalender) },
+  adminIds: [],
+});
 
 type Antwort = { status: number; data?: unknown; meta?: unknown } | null;
 
@@ -1103,16 +1252,41 @@ function antwort(
     const bis = abfrage.get('to') ?? '9999';
     return {
       status: 200,
-      data: s.events
-        .filter((x) => x.startDate.slice(0, 10) >= von && x.startDate.slice(0, 10) <= bis)
-        .map((x) => ({
-          id: x.id,
-          name: 'Event',
-          appointmentId: x.appointmentId,
-          startDate: x.startDate,
-          isCanceled: false,
-        })),
+      data: [
+        ...s.events
+          .filter((x) => x.startDate.slice(0, 10) >= von && x.startDate.slice(0, 10) <= bis)
+          .map((x) => ({
+            id: x.id,
+            name: 'Event',
+            appointmentId: x.appointmentId,
+            startDate: x.startDate,
+            isCanceled: false,
+          })),
+        ...s.jugendEvents
+          .filter((x) => x.startDate.slice(0, 10) >= von && x.startDate.slice(0, 10) <= bis)
+          .map(eventAntwort),
+      ],
     };
+  }
+  // Ein Event lesen und die Infos ändern (Baustein „Reihe“): wie ChurchTools nur mit Recht für den Kalender (403 sonst);
+  // ohne `isCanceled` im Rumpf würde eine Absage zurückgesetzt – das macht die Demo genauso.
+  const eventZiel = /^\/api\/events\/(\d+)$/.exec(pfad);
+  if (eventZiel) {
+    const e = s.jugendEvents.find((x) => x.id === Number(eventZiel[1]));
+    if (!e) return { status: 404, data: { message: 'Event nicht gefunden' } };
+    if (methode === 'PUT') {
+      if (e.kalender !== 4)
+        return {
+          status: 403,
+          data: {
+            message: 'Dafür fehlt dir das Recht.',
+            translatedMessage: 'Dafür fehlt dir das Recht.',
+          },
+        };
+      e.description = typeof rumpf.description === 'string' ? rumpf.description : '';
+      e.isCanceled = rumpf.isCanceled === true;
+    }
+    return { status: 200, data: eventAntwort(e) };
   }
   if (pfad === '/api/resources') return { status: 200, data: DEMO_RESSOURCEN };
   if (pfad === '/api/resourcetypes') return { status: 200, data: DEMO_RESSOURCEN_TYPEN };

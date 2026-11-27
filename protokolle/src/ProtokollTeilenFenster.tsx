@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useContext, useMemo } from 'react';
 import { useLaden } from '@ui/ct/useLaden';
 import { Sheet } from '@ui/fenster/Sheet';
 import { PdfKnoepfe, PdfStandUndVorschau } from '@ui/teilen/pdfFenster';
@@ -13,6 +13,7 @@ import type { Block } from '@shared/protokolle/dokument';
 import { letztesProtokoll } from '@shared/protokolle/festePunkte';
 import type { KopfMitVerlauf } from '@shared/protokolle/freigabe';
 import { protokollBlatt } from '@shared/protokolle/protokollBlatt';
+import { ReiheKontext } from './themenreiheKontext';
 import type { Sitzung } from '@shared/protokolle/sitzungen';
 import { anwesenheitLesen } from './anwesenheitSchreiben';
 import { papierFarbe } from './farben';
@@ -114,6 +115,8 @@ function BlattFenster({
   daten,
 }: ProtokollTeilenProps & { daten: Daten }) {
   const stand = useStand();
+  // Die Reihen, die der Bildschirm dahinter schon geladen hat (`ReiheAnbieter`) – ohne sie steht im PDF „ließ sich nicht laden“.
+  const themenreihen = useContext(ReiheKontext)?.reihen;
   const blatt = useMemo(
     () =>
       protokollBlatt({
@@ -126,6 +129,7 @@ function BlattFenster({
         kopf,
         dokument,
         aufgaben,
+        themenreihen,
         name: nameAusListe(daten.mitglieder, { person: ich.person, name: ich.name }),
         heute: heuteImKalender(),
         protokolle,
@@ -143,6 +147,7 @@ function BlattFenster({
       kopf,
       dokument,
       aufgaben,
+      themenreihen,
       protokolle,
       naechste,
       zeitzone,

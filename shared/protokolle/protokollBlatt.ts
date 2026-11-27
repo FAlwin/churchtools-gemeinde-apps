@@ -47,6 +47,7 @@ import {
 import { festeAufgabenAus, festesProtokollAus, offeneVonFrueher } from './festePunkte';
 import { freigabeVermerk, zurueckText, type KopfMitVerlauf } from './freigabe';
 import type { Sitzung } from './sitzungen';
+import { zeilenSortiert, type Themenreihe } from './themenreihe';
 import { hatArt, OHNE_ART, ohneKennzeichen, type ZeilenArt } from './tabellenZeile';
 
 // ── Eingang ──────────────────────────────────────────────────────────────────
@@ -69,6 +70,8 @@ export interface ProtokollQuelle {
   dokument: readonly Block[];
   /** Alle To-Dos der Gruppe. */
   aufgaben: readonly Aufgabe[];
+  /** Die Reihen der Gruppe nach ID (Baustein „Reihe“, `props.reihe`) – fehlt sie, steht dort „nicht geladen“. */
+  themenreihen?: ReadonlyMap<string, Themenreihe>;
   /** Name einer Person aus der Mitgliederliste – `null`, wenn man sie nicht sieht. */
   name: ((person: number) => string | null) | null;
   /** `JJJJ-MM-TT` in der Zeitzone der Gemeinde. */
@@ -369,6 +372,32 @@ function frueheresKasten(b: Block, q: ProtokollQuelle): KastenZeile[] {
   return [{ absaetze: [[fett(s.titel), grau(` vom ${tagVon(s.beginn, q.zeitzone)}${frei}`)]] }];
 }
 
+/**
+ * **Der Baustein „Reihe“** als grauer Kasten: Name der Reihe, darunter je Abend eine Zeile „13.01.2027 · Thema · Wer ·
+ * Bibelstelle“ (nach Datum). Die Notizen und der Stand der Events gehören nicht aufs Papier.
+ */
+function reiheKasten(b: Block, q: ProtokollQuelle): KastenZeile[] {
+  const id = b.props?.reihe;
+  const r = typeof id === 'string' ? q.themenreihen?.get(id) : undefined;
+  if (!r) return [{ absaetze: [[grau('Reihe – ließ sich nicht laden.')]] }];
+  return [
+    { absaetze: [[fett(`Reihe „${r.name}“`)]] },
+    ...zeilenSortiert(r.zeilen).map((z) => ({
+      absaetze: [
+        [
+          { text: z.datum ? `${tagPunkt(z.datum)}  ` : '', stil: 'fett' as const },
+          {
+            text: [z.thema, z.wer?.name, z.bibelstelle]
+              .filter((x) => x && x.trim() !== '')
+              .join(' · '),
+          },
+        ],
+      ],
+      eingerueckt: true,
+    })),
+  ];
+}
+
 function festerPunkt(b: Block, q: ProtokollQuelle): KastenZeile[] {
   // Je Art ausdrücklich – eine unbekannte Art wird nicht als eine bekannte gezeigt (wie `FesterPunkt`).
   const art = b.props?.art;
@@ -495,6 +524,8 @@ function teilAus(
       return { art: 'linie', einzug };
     case BLOCK.verweis:
       return { art: 'kasten', zeilen: festerPunkt(b, q), einzug };
+    case BLOCK.themenreihe:
+      return { art: 'kasten', zeilen: reiheKasten(b, q), einzug };
     default:
       // Absatz – und jeder unbekannte Block: sein Text bleibt sichtbar. Leere Absätze sind nur Abstand.
       return hatText ? { art: 'text', absaetze, einzug } : null;

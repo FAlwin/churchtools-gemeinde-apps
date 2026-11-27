@@ -55,6 +55,8 @@ export const BLOCK = {
   beschluss: 'beschluss',
   termin: 'termin',
   verweis: 'verweis',
+  /** Baustein „Reihe“ (sichtbarer Name); `props.reihe` = ID des Werts in „Mitarbeit“ (`themenreihe.ts`). Ohne Text. */
+  themenreihe: 'themenreihe',
 } as const;
 
 /** Die festen Punkte – die EINE Liste, nach der Vorlagen, Leiste, „/“-Menü und Freigabe fragen. */
@@ -313,6 +315,22 @@ export function mitNeuenIds(bloecke: readonly Block[], neueId: () => string): Bl
       : {}),
     children: mitNeuenIds(b.children ?? [], neueId),
   }));
+}
+
+/**
+ * **Die Reihen im Dokument** (`props.reihe` der Reihe-Blöcke, in Dokumentreihenfolge, ohne Doppelte) – die eine Stelle, an
+ * der Editor, Lese-Ansicht und PDF fragen, ob und welche Reihen sie laden müssen.
+ */
+export function themenreiheIds(dokument: readonly Block[]): string[] {
+  const ids: string[] = [];
+  const besuche = (b: Block): void => {
+    const id = b.props?.reihe;
+    if (b.type === BLOCK.themenreihe && typeof id === 'string' && id !== '' && !ids.includes(id))
+      ids.push(id);
+    (b.children ?? []).forEach(besuche);
+  };
+  dokument.forEach(besuche);
+  return ids;
 }
 
 /** Ein Absatz ohne Text und ohne Kinder – die leere Zeile, die der Editor am Ende des Dokuments stehen lässt. */

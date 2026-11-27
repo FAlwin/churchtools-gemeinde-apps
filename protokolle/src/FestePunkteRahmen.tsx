@@ -9,6 +9,7 @@ import type { Sitzung } from '@shared/protokolle/sitzungen';
 import type { Aufgabe } from '@shared/protokolle/aufgaben';
 import { FestePunkteKontext, type FestePunkteWert } from './festePunkteKontext';
 import { ProtokollAnsicht } from './ProtokollAnsicht';
+import { ReiheAnbieter } from './ReiheAnbieter';
 import { FruehesWahl } from './FruehesWahl';
 import ansicht from './SitzungAnsicht.module.scss';
 
@@ -147,7 +148,10 @@ export function FestePunkteRahmen({
               name={name}
               imFenster
             >
-              <ProtokollAnsicht dokument={dokument} aufgaben={aufgaben} />
+              {/* Das frühere Protokoll hat sein eigenes Dokument – seine Reihen lädt ein eigener Anbieter (der des Bildschirms dahinter kennt nur das aktuelle). */}
+              <ReiheAnbieter gruppeId={gruppe} dokument={dokument}>
+                <ProtokollAnsicht dokument={dokument} aufgaben={aufgaben} />
+              </ReiheAnbieter>
             </FestePunkteRahmen>
           ) : (
             <p className={ansicht.fehler} role="alert">

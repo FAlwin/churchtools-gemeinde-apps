@@ -1,0 +1,134 @@
+// Der Baustein „Reihe“ im Protokoll (Entwurf `reihe-events-v1`): Name, eine Zeile je Abend, darunter die stillen Wörter
+// „Bearbeiten“ und „In Events übertragen“. Im Editor und in der Lese-Ansicht dieselbe Karte.
+.karte {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 4px 0 10px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--blue);
+  border-radius: var(--r-card);
+  background: var(--surface2);
+  font-size: 14.5px;
+}
+
+.kopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--hair);
+  color: var(--text);
+}
+
+.zeichen {
+  color: var(--blue-ink);
+  display: inline-flex;
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.tabelle {
+  width: 100%;
+  border-collapse: collapse;
+
+  th {
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--hair);
+    color: var(--text2);
+    font-size: 12px;
+    font-weight: 700;
+    text-align: left;
+  }
+
+  td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--hair);
+    vertical-align: top;
+  }
+
+  tr:last-child td {
+    border-bottom: 0;
+  }
+
+  small {
+    display: block;
+    color: var(--text2);
+    font-size: 12.5px;
+  }
+}
+
+.event {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-ctrl);
+  background: var(--surface2);
+  font-size: 13px;
+}
+
+.ohneEvent {
+  border-style: dashed;
+  color: var(--text2);
+}
+
+.leer {
+  color: var(--text3);
+}
+
+.fuss {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--hair);
+}
+
+.hinweis {
+  margin: 0;
+  padding: 10px 12px;
+  color: var(--text2);
+  font-size: 13.5px;
+}
+
+// Am Handy Karten statt Tabelle: jede Zeile wird ein Block.
+@media (max-width: 600px) {
+  .tabelle,
+  .tabelle tbody,
+  .tabelle tr,
+  .tabelle td {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .tabelle thead {
+    display: none;
+  }
+
+  .tabelle tr {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--hair);
+  }
+
+  .tabelle td {
+    padding: 2px 0;
+    border: 0;
+  }
+
+  // Ohne Spaltenköpfe sagt die Beschriftung vor dem Wert, was es ist.
+  .tabelle td[data-label]::before {
+    content: attr(data-label) ': ';
+    color: var(--text2);
+    font-size: 12.5px;
+  }
+}

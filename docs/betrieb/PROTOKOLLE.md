@@ -673,6 +673,52 @@ sehen darf – das legt der **Gruppentyp** fest. In einem Typ, dessen Teilnehmer
 Test-Instanz „Anmeldung“), sehen sie auch nach dem Einrichten die Mitglieder nicht. Für die Protokolle selbst spielt
 das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit schon (gemessen 22.10.2026, S2-4).
 
+## Reihe planen und in Events übertragen
+
+Eine Gruppe plant im Treffen eine Themen- oder Predigtreihe (z. B. die Jugend: „Jona – Gott gibt nicht auf“, fünf Abende) und
+schreibt sie danach in die **Infos der ChurchTools-Events**, damit jeder im Event sieht, worum es geht.
+
+- **Einfügen:** Im Editor **Einfügen ▾ → Reihe** (oder `/` und „Reihe“). Es öffnet sich das Fenster **Neue Reihe**: Name der Reihe,
+  dann je Abend eine Karte mit **Datum, Event, Thema, Wer, Bibelstelle, Notiz**. **+ Abend** schlägt das Datum eine Woche nach dem
+  letzten vor. **Wer:** Vorschläge aus den Mitgliedern der Gruppe, ein freier Name geht auch. Erst mit **Speichern** erscheint die
+  Reihe im Protokoll – schließt man das Fenster vorher, bleibt nichts zurück.
+- **Event wählen:** Beim Antippen von „Event wählen“ liest die Erweiterung die Events um das Datum (sieben Tage davor und danach);
+  die am Tag selbst stehen oben. Wählt man eins, übernimmt die Zeile auch **den Tag des Events**. Ein Event gehört höchstens zu einem
+  Abend. Gibt es am Tag kein Event, steht dort „Am … gibt es kein Event“ (ein Event neu anlegen kommt später).
+- **Im Protokoll** steht die Reihe als Tabelle (am Handy als Karten) – nur zum Lesen. Darunter **Bearbeiten** und **In Events übertragen**.
+  Beides gibt es **auch bei einem freigegebenen Protokoll**: Die Reihe liegt nicht im Protokoll, sondern bei der Gruppe („Mitarbeit“), und Events
+  ordnet man meist erst nach dem Treffen zu.
+- **In Events übertragen:** Das Fenster liest jedes Event **frisch** und zeigt, was in den Infos stehen würde (neue und geänderte
+  Zeilen grün), je Event mit Häkchen und einem Etikett: **neu**, **geändert**, **darfst du nicht**, **ohne Event**, **zu lang**
+  (mehr als 4000 Zeichen), **beschädigt**. Was schon stimmt, steht zusammengefasst als „Unverändert: …“. **N Events übertragen**
+  schreibt nacheinander und liest danach nach. Geht bei einem Event etwas schief (jemand hat die Infos inzwischen geändert, kein Recht,
+  ChurchTools antwortet nicht), werden die anderen trotzdem übertragen; „nicht übertragen, bitte noch einmal“ heißt: nichts ist kaputt,
+  einfach erneut versuchen (**Neu lesen**).
+- **Was im Event steht:** Die Reihe schreibt nur zwischen zwei Markierungszeilen:
+
+  ```
+  ── Reihe „Jona – Gott gibt nicht auf“ · Teil 2 von 5 ──
+  Thema: Im Bauch des Fisches
+  Wer: Johann Becker
+  Bibelstelle: Jona 2
+  Notiz: Lobpreis Team B, danach Spieleabend
+  ── Ende Reihe (aus Protokolle) ──
+  ```
+
+  Alles andere, was schon in den Infos steht (Handtext), **bleibt unverändert**. Beim nächsten Übertragen wird dieser Abschnitt
+  **ersetzt**, nicht ein zweiter angehängt – auch nach dem Umbenennen der Reihe. Löscht oder verändert jemand eine der Markierungszeilen
+  von Hand so, dass Anfang und Ende nicht mehr zusammenpassen, schreibt die Erweiterung dort nichts und sagt „Abschnitt beschädigt – bitte in ChurchTools prüfen“.
+
+- **Rechte:** Bauen, bearbeiten und übertragen darf, wer in dieser Gruppe Protokolle schreiben darf (Leitung, „Schreibt mit“); sehen
+  können die Reihe alle, die das Protokoll sehen. Die Infos eines Events ändern darf, wer in ChurchTools für den **Kalender des Events**
+  das Recht „Events bearbeiten“ hat oder **Admin dieses Events** ist – sonst steht dort „darfst du nicht“.
+- **Hinweise:** Gleichzeitig ändert niemand still etwas weg: Hat jemand die Reihe inzwischen anders gespeichert, wird nichts überschrieben, und das
+  Fenster sagt „Bitte öffne sie neu“. Eine Reihe wird nie gelöscht, nur die Karte im Protokoll lässt sich entfernen. Eine **ältere Fassung** der
+  Erweiterung kennt den Baustein nicht: Sie öffnet ein Protokoll mit Reihe nur zum Lesen (nichts geht verloren), zeigt die Reihe dort aber nicht an.
+  In Vorlagen und bei „wie letztes Mal“ wird die Reihe nicht übernommen. Nimmt man einen Abend aus der Reihe oder hängt ihn an ein anderes Event, behält das alte
+  Event seinen Abschnitt (er wird nur bei Events ersetzt, die noch in der Reihe stehen) – dort von Hand löschen. Zwei verschiedene Reihen auf demselben Event würden sich gegenseitig
+  überschreiben (die Markierung trägt keine Reihen-Kennung).
+
 ## Für Entwickler
 
 - Regeln (ohne Oberfläche, getestet): `shared/protokolle/` – Dokument und Ableitung (`dokument.ts`), Speicher mit
@@ -807,6 +853,20 @@ das keine Rolle (sie hängen an den Kategorien), für die Anwesenheit schon (gem
   in den Editor `punkteUebernehmen.ts` (`reihenfolgeUebernehmen`: ein `transact`, nur die geänderte Spanne, nur auf dem
   Stand, von dem das Fenster ausging). Der Knopf hängt in `Werkzeugleiste.tsx`; `Sheet` hat dafür `handyVoll`. Der Griff
   sitzt ohne BlockNotes Überschriften-Versatz (`GRIFF_LAGE`).
+- Reihe in Events (Scheibe 1; im Code `themenreihe`, nicht `reihe` – `terminReihe.ts` ist die Termin-Wiederholung): Regeln ohne Oberfläche `shared/protokolle/themenreihe.ts` (`Themenreihe`, strenger
+  Wächter `istThemenreihe` + tolerantes `reiheLesen` + `reiheSchreibform` – **immer die normalisierte Form schreiben**, sonst scheitert `wertNachgelesen`; `abschnitt`, `abschnittEinsetzen` – ersetzt den einen
+  Reihe-Abschnitt, hängt sonst an, ein kaputter Abschnitt wird nie geraten –, `vorschau` mit Rangfolge `ohneEvent` → `doppelt` → `nichtGelesen` → `keinRecht` → `beschaedigt` → `aktuell` → `zuLang` → `neu`/`geaendert`,
+  `reiheEventsAus`/`eventsZurZeile` – der Tag eines Events aus `startDate` in der Zeitzone der Gemeinde, nie `slice(0, 10)`). Speicher: **ein Wert je Reihe in „Mitarbeit“**, Kennung `art: 'themenreihe'` (kein To-Do-Leser hält sie
+  für ein To-Do – `istAufgabe` verlangt Status und Zuständige), `protokolle/src/themenreiheSchreiben.ts` (`themenreiheSpeichern` über `wertNachgelesen`; `gesehen` = Stand beim Öffnen, sonst `ReiheGeaendert`; ID schon beim Öffnen des
+  Fensters vergeben, nie hart gelöscht). Der Block `BLOCK.themenreihe` (`props.reihe` = ID des Werts) steht in `dokument.ts`, `editorSchema.ts`, `EditorBloecke.tsx` (`ReiheBlock`), `ProtokollAnsicht.tsx`, `protokollBlatt.ts`
+  (Kasten im PDF, `ProtokollQuelle.themenreihen`), `gliederung.ts` (zählt als Inhalt), `vorlagen.ts` (`startDokument` lässt ihn weg; `wieLetztesMal` nimmt nur Punkte und feste Verweise). **Events werden nur über
+  `shared/ct/terminInfos.ts` (`infosSpeichern`, `darfTerminAendern`) geschrieben** – frisch lesen, `isCanceled` mitschicken, 4000 Zeichen, Konflikt, Nachlesen; der Browser-Anschluss liegt seit der Reihe in `ui/ct/terminInfosPort.ts`
+  (vorher `dienstplaner/src/ladeTerminInfos.ts`; `leseEvent` = `GET /events/{id}`). **Rechte:** `protokolle/src/reiheUebertragen.ts` (`ladeEventLagen`, `uebertragen`; beide **nacheinander**, wirft nie): `terminKalender` = die Kalender
+  mit „edit events“ aus `/permissions/global` (`Start.eventsAendern` = `eventInfosKalender` in `shared/ct/eventRechte.ts`, gelesen über `idsAusRecht` wie im Dienstplaner: `null` = Recht ohne Aufzählung = alle Kalender – nicht `eventKalender`, das ein `true` als „keine“ liest; durchgereicht über `ReiheBasis` in `App.tsx`), Kalender und Admins des Events aus dem frischen `GET /events/{id}` (`ablaufTerminVon`), `isAdmin: false`
+  wie im Dienstplaner (ChurchTools entscheidet beim Schreiben ohnehin; ein 403 wird als „darf nicht“ gemeldet). Oberfläche: `ReiheKarte.tsx` (lesende Karte, Editor und Lese-Ansicht), `ReiheAnbieter.tsx` (lädt die Reihen erst, wenn
+  das Dokument einen Reihe-Block hat; hält die Fenster neben dem Editor; „Bearbeiten“ und „Übertragen“ lesen die Reihe vorher frisch), `ReiheFenster.tsx` (Bearbeiten, Event wählen), `ReiheUebertragenFenster.tsx`, `reiheEinfuegen.tsx` (erst Fenster, Block nach dem Speichern), `themenreiheKontext.ts`.
+  Demo: `?demo` – Leitungsteam, Entwurf „Leitungssitzung“ 21.10. und das freigegebene Protokoll 09.09. tragen eine Jona-Reihe; Events 7001–7007 (Kalender 9 ohne „edit events“). **Nicht in Scheibe 1:** Reiter „Reihen“,
+  Event aus der Zeile anlegen, Predigtserie (`series`) am Ablauf; die Reihe wird beim Entfernen des Blocks oder Löschen des Protokolls nicht vermerkt; kopiert man einen Reihe-Block in ein anderes Protokoll, hängt er an derselben Reihe.
 - Bauplan und Messungen liegen in einem Planungsordner außerhalb des Repos – die Verweise auf `protokolle-planung/…` in
   dieser Anleitung meinen diesen Ordner.
 - Erweiterung: `protokolle/` (`npm run dev -w protokolle`, dann `http://localhost:5192/ccm/protokolle/?demo`;

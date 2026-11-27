@@ -1310,3 +1310,45 @@ merkt sich das – auf jedem Gerät.
 - **Historie:** 27.11.2026 (Entwurf `sitzungen-alle-gruppen-v1` von Alwin abgenommen; Anlass: Der Reiter öffnete immer die erste Gruppe)
 
 </details>
+
+### TF-PROT-35 · Reihe planen und in die Infos der Events übertragen
+
+**Das brauchst du:** In der Test-Instanz eine Gruppe mit Protokollen, in der du **schreiben darfst** (Leitung), dazu mindestens **vier Events** in einem
+Kalender, für den du „Events bearbeiten“ hast – an vier verschiedenen Tagen, bei einem davon steht schon ein **Handtext in den Infos**
+(z. B. „TEST Treffpunkt 19 Uhr“) – und **ein Event in einem Kalender ohne dieses Recht**. Ein Protokoll im Entwurf. Ein Handy (oder das Browserfenster auf 375 px).
+
+**Das muss passieren:** Die Reihe steht im Protokoll, ihre Abende schreiben sich als eigener Abschnitt in die Infos der Events; der Handtext bleibt, ein zweites Übertragen
+hängt nichts doppelt an, und wo etwas nicht geht, sagt das Fenster es – die anderen Events werden trotzdem übertragen.
+
+1. Im Entwurf **Einfügen ▾ → Reihe**: Das Fenster **Neue Reihe** öffnet sich, im Protokoll ist noch nichts eingefügt. Fenster mit **Abbrechen** schließen: Es steht kein
+   leerer Baustein im Protokoll.
+2. Wieder **Einfügen ▾ → Reihe**. Name „TEST Reihe“, beim ersten Abend ein Datum, ein Thema, bei **Wer** einen Namen aus den Vorschlägen und eine Bibelstelle. **+ Abend** dreimal:
+   Das Datum steht jeweils eine Woche nach dem letzten. Bei jedem Abend **Event wählen**: Die Events um das Datum stehen da, die am Tag zuerst; nach **Übernehmen** zeigt die Zeile
+   den Namen des Events (und seinen Tag). Ein Event, das schon bei einem anderen Abend steht, wird nicht mehr angeboten. Bei einem Abend **kein** Event wählen. **Speichern.**
+3. Die Reihe steht jetzt im Protokoll als Tabelle (Handy: als Karten mit „Thema: …“), darunter **Bearbeiten** und **In Events übertragen**; der Abend ohne Event zeigt „Kein Event“.
+4. **In Events übertragen:** Jedes Event ist frisch gelesen. Das Event mit Handtext zeigt den Handtext, eine Leerzeile und den Abschnitt „── Reihe „TEST Reihe“ · Teil … ──“ bis
+   „── Ende Reihe (aus Protokolle) ──“ (grün hinterlegt), Etikett **neu**. Der Abend ohne Event steht mit **ohne Event** da, ein Event im Kalender ohne Recht mit **darfst du nicht**.
+   Der Knopf unten nennt die Zahl der übertragbaren Events.
+5. Ein Häkchen wegnehmen: Der Knopf zählt eins weniger. Wieder setzen, **übertragen**: Die Etiketten springen auf **übertragen**, unten steht **Fertig**. In ChurchTools beim Event
+   **Infos** öffnen: Handtext unverändert, darunter der Abschnitt; der Absagen-Haken des Events ist unverändert.
+6. Im Protokoll bei einem Abend das **Thema** ändern (Bearbeiten, Speichern) und noch einmal **In Events übertragen**: Nur dieses Event ist **geändert** (die neue Zeile grün), die anderen
+   stehen bei „Unverändert“. Übertragen: In den Infos steht nur **ein** Abschnitt – der alte ist ersetzt.
+7. Die Reihe **umbenennen** und übertragen: In den Infos steht weiter ein einziger Abschnitt, mit dem neuen Namen.
+8. In ChurchTools in den Infos eines Events die Zeile „── Ende Reihe …“ von Hand löschen. Wieder **In Events übertragen**: Dieses Event zeigt **beschädigt** („bitte in ChurchTools
+   prüfen“), die anderen sind **aktuell**; es wird nichts geschrieben.
+9. In ChurchTools die Infos eines Events von Hand ändern, **während** das Übertragen-Fenster offen ist, dann **übertragen**: Dieses Event meldet „inzwischen in ChurchTools
+   geändert – Fenster neu öffnen“ und bleibt, wie es ist; die anderen werden übertragen.
+10. Den Entwurf **freigeben** (oder ein freigegebenes Protokoll mit Reihe öffnen): Die Reihe steht in der Lese-Ansicht, **Bearbeiten** und **In Events übertragen** gibt es weiter.
+    Als Mitglied **ohne** Schreibrecht in der Gruppe: Die Reihe steht da, aber **ohne** die beiden Knöpfe, und „Reihe“ fehlt im Menü „Einfügen“.
+11. **Teilen / PDF**: Die Reihe steht als grauer Kasten mit Name und je Abend einer Zeile (Datum, Thema, Wer, Bibelstelle).
+12. **Neues Protokoll** aus „wie letztes Mal“ oder einer Vorlage: Die Reihe ist **nicht** dabei. Hell und dunkel, PC und 375 px: nichts läuft über den Rand, am Handy stehen die Abende der
+    Reihe im Fenster untereinander.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/protokolle/themenreihe.ts`, `protokolle/src/themenreiheSchreiben.ts`, `protokolle/src/reiheUebertragen.ts`, `protokolle/src/ReiheKarte.tsx`, `protokolle/src/ReiheAnbieter.tsx`, `protokolle/src/ReiheFenster.tsx`, `protokolle/src/ReiheUebertragenFenster.tsx`, `protokolle/src/reiheEinfuegen.tsx`, `protokolle/src/EditorBloecke.tsx`, `protokolle/src/ProtokollAnsicht.tsx`, `shared/protokolle/protokollBlatt.ts`, `shared/protokolle/vorlagen.ts`, `shared/protokolle/gliederung.ts`, `ui/ct/terminInfosPort.ts`, `shared/ct/terminInfos.ts`
+- **Automatisiert:** größtenteils – `shared/protokolle/themenreihe.test.ts` (Abschnitt, Einsetzen, Vorschau, Events und Tag in der Zeitzone), `shared/protokolle/themenreiheBlock.test.ts` (Block in Teilen, Freigabe, Nachziehen, Vorlage, „wie letztes Mal“, PDF, kein To-Do), `protokolle/src/themenreiheSchreiben.test.ts` (Anlegen, Konflikt, Nachlesen, 503), `protokolle/src/reiheUebertragen.test.ts` (nacheinander, Konflikt/403/504/nicht übernommen brechen die anderen nicht ab), `protokolle/src/Reihe.test.tsx` (Anbieter, Karte, Fenster), `protokolle/src/editorSchema.test.tsx` (Einfügen); **nur von Hand:** Infos im echten ChurchTools (Handtext, `isCanceled`, 4000 Zeichen), Recht „Events bearbeiten“ je Kalender, Aussehen am Handy
+- **Historie:** 27.11.2026 (Entwurf `reihe-events-v1` von Alwin abgenommen; Anlass: Die Jugend plant ihre Reihen im Treffen und will sie in die Events schreiben; Scheibe 1)
+
+</details>

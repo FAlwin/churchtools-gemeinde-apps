@@ -25,6 +25,7 @@ import type { Thema } from '@ui/design/thema';
 import { useThema } from '@ui/design/useThema';
 import { farbWert } from './farben';
 import { FesterPunkt } from './FesterPunkt';
+import { ReiheKarte } from './ReiheKarte';
 import styles from './ProtokollAnsicht.module.scss';
 import { sichererLink } from '@shared/ct/sichereAdresse';
 
@@ -272,6 +273,10 @@ function EinBlock({ b, k }: { b: Block; k: Kontext }) {
           {kinder}
         </div>
       );
+    case BLOCK.themenreihe:
+      // Baustein „Reihe“: dieselbe Karte wie im Editor, samt Knöpfen für alle, die im Protokoll schreiben dürfen – auch bei
+      // einem freigegebenen Protokoll (die Reihe liegt in „Mitarbeit“, nicht im Protokoll).
+      return <ReiheKarte reiheId={typeof b.props?.reihe === 'string' ? b.props.reihe : ''} />;
     case 'table':
       return <Tabelle content={b.content} nurThemen={k.nurThemen} />;
     case 'divider':

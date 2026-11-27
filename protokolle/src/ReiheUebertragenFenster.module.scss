@@ -1,0 +1,66 @@
+// Fenster „In Events übertragen“ (Entwurf `reihe-events-v1`): je Event eine Karte mit dem neuen Text, neue und geänderte
+// Zeilen hervorgehoben.
+.karte {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface2);
+}
+
+.aus {
+  opacity: 0.75;
+}
+
+.oben {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.wahl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-weight: 700;
+}
+
+.haken {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--blue);
+}
+
+.text {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--r-ctrl);
+  background: var(--section);
+  color: var(--text2);
+  font:
+    13px/1.45 ui-monospace,
+    Menlo,
+    monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+
+  mark {
+    border-radius: 2px;
+    background: var(--antwort-ja);
+    color: var(--text);
+  }
+}
+
+.stand {
+  margin: 0;
+  color: var(--text2);
+  font-size: 13px;
+}

@@ -8,7 +8,13 @@ import { createExtension } from '@blocknote/core';
 import { createReactBlockSpec } from '@blocknote/react';
 import { BLOCK } from '@shared/protokolle/dokument';
 import { aufgabenIdsVergeben } from '@shared/protokolle/aufgaben';
-import { AufgabeBlock, BeschlussBlock, TerminBlock, VerweisBlock } from './EditorBloecke';
+import {
+  AufgabeBlock,
+  BeschlussBlock,
+  ReiheBlock,
+  TerminBlock,
+  VerweisBlock,
+} from './EditorBloecke';
 import { ohneVerlauf } from './ohneVerlauf';
 import { einrueckenTasten } from './einruecken';
 import { punktNummern } from './punktNummern';
@@ -77,6 +83,16 @@ const verweisBlock = createReactBlockSpec(
   { render: VerweisBlock },
 );
 
+const themenreiheBlock = createReactBlockSpec(
+  {
+    type: BLOCK.themenreihe,
+    // `reihe`: die ID des Werts in „Mitarbeit“ (wie `props.aufgabe`) – die Reihe selbst liegt dort, nicht im Protokoll.
+    propSchema: { reihe: { default: '' } },
+    content: 'none',
+  },
+  { render: ReiheBlock },
+);
+
 const { paragraph, bulletListItem, numberedListItem, checkListItem, quote, divider, table } =
   defaultBlockSpecs;
 
@@ -110,6 +126,7 @@ export const schema = BlockNoteSchema.create({
     [BLOCK.beschluss]: beschlussBlock(),
     [BLOCK.termin]: terminBlock(),
     [BLOCK.verweis]: verweisBlock(),
+    [BLOCK.themenreihe]: themenreiheBlock(),
   },
 });
 

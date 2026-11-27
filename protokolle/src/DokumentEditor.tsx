@@ -37,6 +37,8 @@ import { aufgabenIdsSetzen, schema, TABELLEN, type ProtokollEditor } from './edi
 import { blockInhalt, griffVersatz } from './griffLage';
 import { FestePunkteKontext } from './festePunkteKontext';
 import { festeImMenue } from './festeImMenue';
+import { reiheImMenue } from './reiheEinfuegen';
+import { ReiheKontext } from './themenreiheKontext';
 import { tabelleEinfuegen } from './tabelleEinfuegen';
 import { TabellenGriff } from './TabellenZeilenMenue';
 import { hatGriff, nurDieseZeile } from './zeilenGriff';
@@ -199,6 +201,7 @@ export function DokumentEditor({
   fremdeAufgabe?: (id: string) => boolean;
 }) {
   const feste = useContext(FestePunkteKontext);
+  const reihe = useContext(ReiheKontext);
   const editor: ProtokollEditor = useCreateBlockNote(
     {
       schema,
@@ -297,6 +300,7 @@ export function DokumentEditor({
                       icon: <Icon name="tabelle" size={18} />,
                       onItemClick: () => tabelleEinfuegen(editor),
                     },
+                    ...reiheImMenue(editor, reihe),
                     ...festeImMenue(editor, feste),
                     ...getDefaultReactSlashMenuItems(editor).filter((i) => MENUE.has(i.title)),
                   ],

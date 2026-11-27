@@ -17,6 +17,7 @@ import { ProtokollAnsicht } from './ProtokollAnsicht';
 import { Bereiche } from './Bereiche';
 import { FestePunkteRahmen } from './FestePunkteRahmen';
 import { ProtokollTeilen, TeilenKnopf, type TeilenRahmen } from './ProtokollTeilen';
+import { ReiheAnbieter } from './ReiheAnbieter';
 import { protokollLesen } from './schreiben';
 import { useMitlesen } from './useMitlesen';
 import styles from './SitzungAnsicht.module.scss';
@@ -115,113 +116,115 @@ export function SitzungAnsicht({
   }, [springeZu]);
 
   return (
-    <div className={styles.seite}>
-      <button type="button" className={styles.zurueck} onClick={onZurueck}>
-        <Icon name="chev-left" size={18} />
-        Sitzungen
-      </button>
-      <header className={styles.kopf}>
-        <h2>
-          {sitzung.titel} · {gruppe}
-        </h2>
-        <p>{wannLang(sitzung.beginn, zeitzone)}</p>
-        <div className={styles.marken}>
-          {!kopf && <Etikett ton="neutral">noch kein Protokoll</Etikett>}
-          {kopf?.status === 'geplant' && <Etikett ton="neutral">geplant</Etikett>}
-          {kopf?.status === 'entwurf' && (
-            <Etikett ton="neutral">Entwurf – noch nicht freigegeben</Etikett>
+    <ReiheAnbieter gruppeId={gruppeId} dokument={dokument ?? []}>
+      <div className={styles.seite}>
+        <button type="button" className={styles.zurueck} onClick={onZurueck}>
+          <Icon name="chev-left" size={18} />
+          Sitzungen
+        </button>
+        <header className={styles.kopf}>
+          <h2>
+            {sitzung.titel} · {gruppe}
+          </h2>
+          <p>{wannLang(sitzung.beginn, zeitzone)}</p>
+          <div className={styles.marken}>
+            {!kopf && <Etikett ton="neutral">noch kein Protokoll</Etikett>}
+            {kopf?.status === 'geplant' && <Etikett ton="neutral">geplant</Etikett>}
+            {kopf?.status === 'entwurf' && (
+              <Etikett ton="neutral">Entwurf – noch nicht freigegeben</Etikett>
+            )}
+            {kopf?.status === 'frei' && <FreigabeMarke kopf={kopf} zeitzone={zeitzone} />}
+          </div>
+          {(onBearbeiten || onZuruecknehmen || onLoeschen || darfTeilen) && (
+            <div className={styles.aktionen}>
+              {onBearbeiten && (
+                <KopfKnopf
+                  label="Bearbeiten"
+                  title="Sitzung bearbeiten (Zeit, Titel, Eingeladene, absagen)"
+                  symbol={<Icon name="pencil" size={16} />}
+                  onClick={onBearbeiten}
+                />
+              )}
+              {darfTeilen && <TeilenKnopf onClick={() => setTeilenOffen(true)} />}
+              {onZuruecknehmen && kopf?.status === 'frei' && (
+                <KopfKnopf
+                  label="Freigabe zurücknehmen"
+                  title="Freigabe zurücknehmen – wieder Entwurf"
+                  symbol={<Icon name="undo" size={16} />}
+                  onClick={onZuruecknehmen}
+                />
+              )}
+              {onLoeschen && loeschbar(kopf?.status) && (
+                <KopfKnopf
+                  gefahr
+                  label="Löschen"
+                  title="Protokoll löschen"
+                  symbol={<Icon name="trash" size={16} />}
+                  onClick={onLoeschen}
+                />
+              )}
+            </div>
           )}
-          {kopf?.status === 'frei' && <FreigabeMarke kopf={kopf} zeitzone={zeitzone} />}
-        </div>
-        {(onBearbeiten || onZuruecknehmen || onLoeschen || darfTeilen) && (
-          <div className={styles.aktionen}>
-            {onBearbeiten && (
-              <KopfKnopf
-                label="Bearbeiten"
-                title="Sitzung bearbeiten (Zeit, Titel, Eingeladene, absagen)"
-                symbol={<Icon name="pencil" size={16} />}
-                onClick={onBearbeiten}
-              />
-            )}
-            {darfTeilen && <TeilenKnopf onClick={() => setTeilenOffen(true)} />}
-            {onZuruecknehmen && kopf?.status === 'frei' && (
-              <KopfKnopf
-                label="Freigabe zurücknehmen"
-                title="Freigabe zurücknehmen – wieder Entwurf"
-                symbol={<Icon name="undo" size={16} />}
-                onClick={onZuruecknehmen}
-              />
-            )}
-            {onLoeschen && loeschbar(kopf?.status) && (
-              <KopfKnopf
-                gefahr
-                label="Löschen"
-                title="Protokoll löschen"
-                symbol={<Icon name="trash" size={16} />}
-                onClick={onLoeschen}
-              />
-            )}
+        </header>
+        <ZurueckVermerk kopf={kopf} zeitzone={zeitzone} />
+
+        {!kopf && (
+          <p className={styles.hinweis}>
+            Für diese Sitzung gibt es noch kein Protokoll.
+            {onBeginnen ? '' : ' Die Leitung beginnt es, sobald die Sitzung ansteht.'}
+          </p>
+        )}
+        {kopf?.status === 'geplant' && (
+          <p className={styles.hinweis}>Das Protokoll ist geplant, aber noch nicht begonnen.</p>
+        )}
+        {onBeginnen && (!kopf || kopf.status === 'geplant') && (
+          <div>
+            <button type="button" className={styles.beginnen} onClick={onBeginnen}>
+              <Icon name="pencil" size={18} />
+              Protokoll beginnen
+            </button>
           </div>
         )}
-      </header>
-      <ZurueckVermerk kopf={kopf} zeitzone={zeitzone} />
+        {kopf && kopf.status !== 'geplant' && !dokument && (
+          <p className={styles.fehler} role="alert">
+            Das Protokoll ist gerade nicht vollständig lesbar (es wird vielleicht in diesem Moment
+            gespeichert). Bitte gleich noch einmal öffnen.
+          </p>
+        )}
 
-      {!kopf && (
-        <p className={styles.hinweis}>
-          Für diese Sitzung gibt es noch kein Protokoll.
-          {onBeginnen ? '' : ' Die Leitung beginnt es, sobald die Sitzung ansteht.'}
-        </p>
-      )}
-      {kopf?.status === 'geplant' && (
-        <p className={styles.hinweis}>Das Protokoll ist geplant, aber noch nicht begonnen.</p>
-      )}
-      {onBeginnen && (!kopf || kopf.status === 'geplant') && (
-        <div>
-          <button type="button" className={styles.beginnen} onClick={onBeginnen}>
-            <Icon name="pencil" size={18} />
-            Protokoll beginnen
-          </button>
-        </div>
-      )}
-      {kopf && kopf.status !== 'geplant' && !dokument && (
-        <p className={styles.fehler} role="alert">
-          Das Protokoll ist gerade nicht vollständig lesbar (es wird vielleicht in diesem Moment
-          gespeichert). Bitte gleich noch einmal öffnen.
-        </p>
-      )}
-
-      {dokument && (
-        <FestePunkteRahmen
-          sitzung={sitzung}
-          gruppe={gruppeId}
-          protokolle={protokolle}
-          teile={teile}
-          aufgaben={aufgaben}
-          zeitzone={zeitzone}
-          onZuSitzung={onZuSitzung}
-        >
-          <section className={styles.karte} aria-label="Protokoll">
-            <ProtokollAnsicht dokument={dokument} aufgaben={aufgaben} markiert={springeZu} />
-          </section>
-          <Bereiche dokument={dokument} aufgaben={aufgaben} naechste={naechste} />
-        </FestePunkteRahmen>
-      )}
-      {teilenOffen && teilen && dokument && (
-        <ProtokollTeilen
-          sitzung={sitzung}
-          gruppe={gruppe}
-          gruppeId={gruppeId}
-          kopf={kopf}
-          dokument={dokument}
-          aufgaben={aufgaben}
-          protokolle={protokolle}
-          naechste={teilen.naechste}
-          zeitzone={zeitzone}
-          gemeinde={teilen.gemeinde}
-          ich={teilen.ich}
-          onClose={() => setTeilenOffen(false)}
-        />
-      )}
-    </div>
+        {dokument && (
+          <FestePunkteRahmen
+            sitzung={sitzung}
+            gruppe={gruppeId}
+            protokolle={protokolle}
+            teile={teile}
+            aufgaben={aufgaben}
+            zeitzone={zeitzone}
+            onZuSitzung={onZuSitzung}
+          >
+            <section className={styles.karte} aria-label="Protokoll">
+              <ProtokollAnsicht dokument={dokument} aufgaben={aufgaben} markiert={springeZu} />
+            </section>
+            <Bereiche dokument={dokument} aufgaben={aufgaben} naechste={naechste} />
+          </FestePunkteRahmen>
+        )}
+        {teilenOffen && teilen && dokument && (
+          <ProtokollTeilen
+            sitzung={sitzung}
+            gruppe={gruppe}
+            gruppeId={gruppeId}
+            kopf={kopf}
+            dokument={dokument}
+            aufgaben={aufgaben}
+            protokolle={protokolle}
+            naechste={teilen.naechste}
+            zeitzone={zeitzone}
+            gemeinde={teilen.gemeinde}
+            ich={teilen.ich}
+            onClose={() => setTeilenOffen(false)}
+          />
+        )}
+      </div>
+    </ReiheAnbieter>
   );
 }

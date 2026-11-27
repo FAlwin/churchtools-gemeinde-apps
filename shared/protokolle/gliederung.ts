@@ -44,6 +44,7 @@ interface Zaehler {
   beschluesse: number;
   todos: number;
   termine: number;
+  reihen: number;
   anwesenheit: boolean;
   fest: boolean;
 }
@@ -59,6 +60,7 @@ function zaehle(bloecke: readonly Block[], z: Zaehler): void {
     else if (b.type === BLOCK.beschluss) z.beschluesse++;
     else if (b.type === BLOCK.aufgabe) z.todos++;
     else if (b.type === BLOCK.termin) z.termine++;
+    else if (b.type === BLOCK.themenreihe) z.reihen++;
     else if (b.type === BLOCK.verweis) {
       z.fest = true;
       if (b.props?.art === 'anwesenheit') z.anwesenheit = true;
@@ -76,6 +78,7 @@ function mitText(inhalt: readonly Block[], unterpunkte: number): { mit: string; 
     beschluesse: 0,
     todos: 0,
     termine: 0,
+    reihen: 0,
     anwesenheit: false,
     fest: false,
   };
@@ -87,6 +90,7 @@ function mitText(inhalt: readonly Block[], unterpunkte: number): { mit: string; 
   if (z.beschluesse) teile.push(wort(z.beschluesse, 'Beschluss', 'Beschlüsse'));
   if (z.todos) teile.push(wort(z.todos, 'To-Do', 'To-Dos'));
   if (z.termine) teile.push(wort(z.termine, 'Termin', 'Termine'));
+  if (z.reihen) teile.push(wort(z.reihen, 'Reihe', 'Reihen'));
   if (z.absaetze) teile.push(wort(z.absaetze, 'Absatz', 'Absätze'));
   if (z.tabellen) teile.push(wort(z.tabellen, 'Tabelle', 'Tabellen'));
   if (unterpunkte) teile.push(wort(unterpunkte, 'Unterpunkt', 'Unterpunkte'));

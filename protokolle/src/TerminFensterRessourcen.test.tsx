@@ -69,10 +69,13 @@ const reiterRessourcen = async (f: HTMLElement) => {
 /** Ein Zahlenfeld nach seinem Namen – „Vorlauf“ heißt auch die Gruppe darum. */
 const zahl = (f: HTMLElement, name: string) =>
   within(f).getByRole<HTMLInputElement>('spinbutton', { name });
+/** Die Liste „Ressourcen wählen“ öffnen (falls zu) und ein Häkchen umschalten. */
+const knopfRessourcen = (f: HTMLElement) =>
+  within(f).getByRole<HTMLButtonElement>('button', { name: /^Ressourcen wählen/ });
 const waehle = (f: HTMLElement, name: RegExp) => {
-  const auswahl = within(f).getByLabelText<HTMLSelectElement>('Ressource');
-  const o = within(auswahl).getByRole<HTMLOptionElement>('option', { name });
-  fireEvent.change(auswahl, { target: { value: o.value } });
+  if (!within(f).queryByRole('dialog', { name: 'Ressourcen wählen' }))
+    fireEvent.click(knopfRessourcen(f));
+  fireEvent.click(within(f).getByRole('checkbox', { name }));
 };
 
 beforeEach(() => {
@@ -141,21 +144,50 @@ describe('Vorlauf und Nachlauf', () => {
 });
 
 describe('Tabelle der Buchungen', () => {
-  it('Auswahl „Name · Typ“ gruppiert nach Typ; eine Ressource nur einmal', async () => {
+  it('Liste mit Häkchen nach Typ; mehrere auf einmal, Abhaken nimmt die Buchung heraus (27.11.2026)', async () => {
     zeigen();
     const f = await fenster();
     await reiterRessourcen(f);
-    const auswahl = within(f).getByLabelText('Ressource');
     expect(within(f).getByText('Noch keine Ressource gebucht.')).toBeTruthy();
-    expect([...auswahl.querySelectorAll('optgroup')].map((g) => g.getAttribute('label'))).toEqual([
+    fireEvent.click(knopfRessourcen(f));
+    const liste = within(f).getByRole('dialog', { name: 'Ressourcen wählen' });
+    expect([...liste.querySelectorAll('legend')].map((l) => l.textContent)).toEqual([
       'Fahrzeug',
       'Gegenstand',
       'Raum',
     ]);
-    expect(within(auswahl).getByRole('option', { name: 'Saal · Raum' })).toBeTruthy();
     waehle(f, /^Saal/);
-    expect(within(auswahl).queryByRole('option', { name: 'Saal · Raum' })).toBeNull();
-    expect(within(f).getAllByRole('row')).toHaveLength(2); // Kopf + Saal
+    waehle(f, /^Bus/);
+    // Die Liste bleibt offen, beide sind angehakt und stehen unten.
+    expect(within(f).getByRole<HTMLInputElement>('checkbox', { name: /^Saal/ }).checked).toBe(true);
+    expect(within(f).getAllByRole('row')).toHaveLength(3); // Kopf + Saal + Bus
+    expect(knopfRessourcen(f).textContent).toBe('Bus, Saal');
+    waehle(f, /^Saal/);
+    expect(within(f).getAllByRole('row')).toHaveLength(2);
+    expect(within(f).getByRole<HTMLInputElement>('checkbox', { name: /^Saal/ }).checked).toBe(
+      false,
+    );
+  });
+
+  it('„Status für alle“: setzt nur verwaltbare, gilt erst ab zwei Buchungen', async () => {
+    zeigen(undefined, [1, 2]);
+    const f = await fenster();
+    await reiterRessourcen(f);
+    waehle(f, /^Saal/);
+    expect(within(f).queryByLabelText('Status für alle')).toBeNull();
+    waehle(f, /^Küche/);
+    waehle(f, /^Bus/);
+    const alle = within(f).getByLabelText<HTMLSelectElement>('Status für alle');
+    expect(alle.value).toBe('1');
+    fireEvent.change(alle, { target: { value: '2' } });
+    expect(within(f).getByLabelText<HTMLSelectElement>('Status Saal').value).toBe('2');
+    expect(within(f).getByLabelText<HTMLSelectElement>('Status Küche').value).toBe('2');
+    // Den Bus darf Alwin nicht verwalten – er bleibt „Wartet auf Bestätigung“ (ohne Auswahl).
+    expect(within(f).queryByLabelText('Status Bus')).toBeNull();
+    expect(alle.value).toBe('2');
+    fireEvent.change(within(f).getByLabelText('Status Küche'), { target: { value: '3' } });
+    expect(within(f).getByLabelText<HTMLSelectElement>('Status für alle').value).toBe('');
+    expect(within(f).getByRole('option', { name: 'Verschieden' })).toBeTruthy();
   });
 
   it('neue Zeile mit dem aktuellen Vorlauf/Nachlauf als Startwert, eigener Wert je Zeile, ✕ entfernt', async () => {
@@ -304,10 +336,10 @@ describe('„Nur verknüpfen“ und Vorlagen', () => {
     await within(f).findByText(/schon „Heiligabend/);
     await reiterRessourcen(f);
     expect(within(f).getByText(/dabei wird nichts gebucht/)).toBeTruthy();
-    expect(within(f).getByLabelText<HTMLSelectElement>('Ressource').disabled).toBe(true);
+    expect(knopfRessourcen(f).disabled).toBe(true);
     fireEvent.click(within(f).getByLabelText(/Trotzdem neu anlegen/));
     expect(within(f).queryByText(/dabei wird nichts gebucht/)).toBeNull();
-    expect(within(f).getByLabelText<HTMLSelectElement>('Ressource').disabled).toBe(false);
+    expect(knopfRessourcen(f).disabled).toBe(false);
   });
 
   it('eine Vorlage mit Buchungen füllt die Tabelle – nur buchbare Ressourcen, Status ohne Recht 1', async () => {

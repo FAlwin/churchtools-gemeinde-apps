@@ -79,7 +79,9 @@ ChurchTools). Ausnahme: der ChordPro-**Editor** nutzt bewusst Monospace (`'JetBr
   Plus, Stift), **`FilterKnopf`/`ZeitraumKnopf`** (`ui/bedienung`, seit 28.10.2026 aus dem Dienstplaner herausgelöst –
   Dienstplaner › Termine/Planen und Abwesenheiten der Musik-App; das Aufklappen regelt `useAufklapp`, auch für
   `HinzufuegenMenue`), **`AuswahlFenster`/`HinzufuegenMenue`** (`ui/bedienung/OptionWaehlen`, S2: „Option wählen“ – am Handy ein Fenster
-  (`Sheet`, seit 20.11.2026 – vorher Blatt von unten), am iPad/Rechner Menü unter dem grünen Knopf), `TabBar`
+  (`Sheet`, seit 20.11.2026 – vorher Blatt von unten), am iPad/Rechner Menü unter dem grünen Knopf),
+  **`MehrfachWahl`** (`ui/bedienung`, 27.11.2026: Feld mit Häkchen-Liste nach Gruppen, mehrere auf einmal – am Handy ein
+  Fenster, sonst im Fluss unter dem Feld; Protokolle „Ressourcen wählen“; Pfeil der Auswahlfelder: Mixin `auswahlpfeil`), `TabBar`
   (Reiter der Musik-App in der gemeinsamen `ui/bedienung/ReiterLeiste` – am Handy unten, sonst `oben` als
   Textreiter; Grenze `HANDY_BREITE` für alle Apps),
   `Sheet`, `ConfirmDialog`, **`SchwebePlus`** (das runde Plus unten rechts – Abwesenheiten, Lieder und Ablauf; seit S2

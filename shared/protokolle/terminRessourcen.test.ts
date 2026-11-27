@@ -7,12 +7,15 @@ import {
   buchungHinzu,
   buchungRumpf,
   buchungsHinweis,
+  buchungUmschalten,
+  gemeinsamerStatus,
   LAUF_VORGABE,
   LAUF_VORSCHLAEGE,
   NACHLAUF_MAX,
   ressourceText,
   ressourcenAus,
   statusFuer,
+  statusFuerAlle,
   VORLAUF_MAX,
   type Buchung,
   type Ressource,
@@ -195,6 +198,42 @@ describe('Buchungen', () => {
     expect(eintragZusatz(eintrag({ buchungen: [buchung()] }), false).buchungen).toEqual([
       buchung(),
     ]);
+  });
+});
+
+describe('mehrere auf einmal (27.11.2026)', () => {
+  const BEAMER: Ressource = { id: 2, name: 'Beamer', typId: 11, typ: 'Gegenstand', anzahl: 1 };
+  const vorgabe = { vorlauf: 30, nachlauf: 0 };
+
+  it('Häkchen setzen fügt mit den Vorgaben hinzu, Häkchen weg nimmt nur diese Buchung heraus', () => {
+    const zwei = buchungUmschalten(buchungUmschalten([], SAAL, vorgabe), BEAMER, vorgabe);
+    expect(zwei.map((b) => b.ressource)).toEqual([1, 2]);
+    expect(zwei[1]).toEqual(buchung({ ressource: 2, vorlauf: 30, nachlauf: 0 }));
+    expect(buchungUmschalten(zwei, SAAL, vorgabe)).toEqual([zwei[1]]);
+  });
+
+  it('Status für alle: nur verwaltbare Ressourcen, die anderen bleiben „Wartet“', () => {
+    const vorher = [
+      buchung({ ressource: 1 }),
+      buchung({ ressource: 2, status: 3 }),
+      buchung({ ressource: 5 }),
+    ];
+    const nachher = statusFuerAlle(vorher, 2, new Set([1, 2]));
+    expect(nachher.map((b) => b.status)).toEqual([2, 2, 1]);
+  });
+
+  it('gemeinsamer Status: nur über die verwaltbaren, null bei verschiedenen oder keinem', () => {
+    const verwaltbar = new Set([1, 2]);
+    const gleich = [
+      buchung({ ressource: 1, status: 2 }),
+      buchung({ ressource: 2, status: 2 }),
+      buchung({ ressource: 5 }),
+    ];
+    expect(gemeinsamerStatus(gleich, verwaltbar)).toBe(2);
+    expect(
+      gemeinsamerStatus([...gleich.slice(0, 1), buchung({ ressource: 2, status: 3 })], verwaltbar),
+    ).toBeNull();
+    expect(gemeinsamerStatus([buchung({ ressource: 5 })], verwaltbar)).toBeNull();
   });
 });
 

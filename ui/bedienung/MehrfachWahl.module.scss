@@ -1,0 +1,88 @@
+// Feld mit Häkchen-Liste (`MehrfachWahl`, 27.11.2026) – das Feld sieht aus wie eine Auswahl (`eingabefeld` + `auswahlpfeil`),
+// die Liste wie das Menü des Filter-Knopfs (`FilterKnopf.module.scss`). Höhe und Polster gibt der Aufrufer (`feldKlasse`).
+@use '../design/mixins' as m;
+
+.rahmen {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.feld {
+  @include m.eingabefeld;
+  @include m.auswahlpfeil;
+  width: 100%;
+  min-height: var(--knopf-hoehe);
+  padding-left: 10px;
+  font: inherit;
+  display: flex;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+    color: var(--text2);
+  }
+}
+
+.text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Im Fluss, nicht schwebend: Das Fenster scrollt selbst und schnitte ein schwebendes Menü an seiner Unterkante ab
+// (Durchklicken 27.11.2026). Keine eigene Höhe mit Scrollbalken – kein Scrollen im Scrollen in Fenstern (#538).
+.menue {
+  margin-top: 6px;
+  padding: 8px 12px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface2);
+}
+
+.liste {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.abschnitt {
+  margin: 0;
+  padding: 0;
+  border: 0;
+
+  legend {
+    padding: 0;
+    margin-bottom: 2px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--text2);
+  }
+}
+
+.zeile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  font-size: 14.5px;
+  color: var(--text);
+  cursor: pointer;
+
+  input {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--blue);
+  }
+}
+
+.zusatz {
+  color: var(--text2);
+  font-size: 13.5px;
+}

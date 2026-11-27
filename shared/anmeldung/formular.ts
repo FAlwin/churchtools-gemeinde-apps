@@ -645,6 +645,17 @@ export interface EigeneAnsicht {
   tabelle?: { anmeldung?: TabellenWahl; person?: TabellenWahl };
 }
 
+/**
+ * **Wer braucht einen Nachweis?** (N3b, Entscheidungsliste E20) – je Nachweis-Art einer Veranstaltung: alle Angemeldeten
+ * oder nur, wer bei einer Frage des Formulars eine der gewählten Antworten gibt. `artGruppeId` ist die Gruppe „Nachweis:
+ * …“ in ChurchTools, `feld` die Kennung der Frage (`frageSchluessel`, bleibt bei „wie frühere Veranstaltung“ gleich, anders
+ * als die Nummer des Gruppenfelds). Die Einstellungen sind öffentlich lesbar: keine Personendaten, nur Fragen und Antworten
+ * des Formulars. Rechnen: `nachweisBedarf.ts`.
+ */
+export type NachweisBedarf =
+  | { artGruppeId: number; fuer: 'alle' }
+  | { artGruppeId: number; fuer: 'nurWenn'; feld: string; antworten: string[] };
+
 /** Name von Schritt 1, solange keiner eingetragen ist (Klick-Runde 8). */
 export const ERSTER_SCHRITT = 'Deine Angaben';
 
@@ -715,6 +726,11 @@ export interface OeffentlicheEinstellungen {
   tabelle?: { anmeldung?: TabellenWahl; person?: TabellenWahl };
   /** **Eigene Ansichten** des Teams (U3) – höchstens `ANSICHTEN_MAX`; fehlt = keine. Bei „wie frühere“ mitkopiert. */
   ansichten?: EigeneAnsicht[];
+  /**
+   * **Nachweise** (N3b) – je eingeschalteter Nachweis-Art, wer ihn braucht (`NachweisBedarf`); fehlt = keine Art eingeschaltet.
+   * Bei „wie frühere Veranstaltung“ mitkopiert.
+   */
+  nachweise?: NachweisBedarf[];
   /**
    * **Kopiert von** (A9-2a): die Veranstaltung, aus der diese mit „Wie eine frühere Veranstaltung“ entstand. Beim
    * Freigeben übernimmt die Erweiterung von dort den eigenen Mailtext (er steht in deren Routinen, die nicht mitkopiert
@@ -859,6 +875,18 @@ const eigeneAnsichtSchema = z.object({
     .optional(),
 });
 
+/** Höchstens so viele Nachweis-Arten je Veranstaltung eingeschaltet (Entscheidungsliste E27: Platz der Einstellungen). */
+export const NACHWEISE_MAX = 10;
+const nachweisBedarfSchema = z.union([
+  z.object({ artGruppeId: z.number().int().positive(), fuer: z.literal('alle') }),
+  z.object({
+    artGruppeId: z.number().int().positive(),
+    fuer: z.literal('nurWenn'),
+    feld: z.string().min(1).max(60),
+    antworten: z.array(z.string().max(120)).min(1).max(40),
+  }),
+]);
+
 const einstellungenSchema = z.object({
   termin: z
     .object({
@@ -975,6 +1003,8 @@ const einstellungenSchema = z.object({
     .optional(),
   // Seit U3: nur, wenn das Team eigene Ansichten angelegt hat (hält die Einstellungen kurz).
   ansichten: z.array(eigeneAnsichtSchema).max(ANSICHTEN_MAX).optional(),
+  // Seit N3b: nur, wenn mindestens eine Nachweis-Art eingeschaltet ist (hält die Einstellungen kurz).
+  nachweise: z.array(nachweisBedarfSchema).max(NACHWEISE_MAX).optional(),
   kopieVon: z.number().int().positive().optional(),
 });
 

@@ -12,6 +12,7 @@ import * as NP from './nachpruefung';
 import * as MG from './mitglieder';
 import * as ZA from './zahlung';
 import * as AB from './ablaeufe';
+import * as NA from './nachweisArten';
 import { OHNE_EIGENEN_TEXT } from '@shared/anmeldung/ablaeufe';
 import * as TP from '@ui/teilen/sharePdf';
 import * as TF from '@ui/teilen/shareFile';
@@ -69,6 +70,12 @@ vi.mock('./ablaeufe', async (original) => ({
   ablaeufeNachholen: vi.fn(),
 }));
 const ab = vi.mocked(AB);
+// N3b: Die Karte „Nachweise“ liest die Arten aus ChurchTools – hier nachgestellt (die Karte selbst: `NachweiseKarte.test.tsx`).
+vi.mock('./nachweisArten', async (original) => ({
+  ...(await original<typeof import('./nachweisArten')>()),
+  nachweisArtenKurz: vi.fn(),
+}));
+const na = vi.mocked(NA);
 const gm = vi.mocked(G);
 // „Neue Veranstaltung“ legt danach die Spalten an (A5) – hier nicht Gegenstand.
 // Freigeben zieht ältere Veranstaltungen nach (#597).
@@ -225,6 +232,7 @@ beforeEach(() => {
   ab.ablaeufeAbgleichen.mockImplementation((id: number) => ab.ablaeufeLesen(id));
   // K1: ohne Termin aus dem Kalender gibt es nichts nachzuziehen.
   m.terminNachziehen.mockResolvedValue(null);
+  na.nachweisArtenKurz.mockResolvedValue([{ id: 61, name: 'Führungszeugnis', fertig: true }]);
 });
 
 describe('Veranstaltung laden scheitert – gemeinsamer Fehlerkasten (ui/erweiterung)', () => {
@@ -249,6 +257,44 @@ describe('Veranstaltung laden scheitert – gemeinsamer Fehlerkasten (ui/erweite
 });
 
 describe('Veranstaltung einrichten (A3, #486)', () => {
+  it('N3b: Karte „Nachweise“ im Bereich „Vorbereiten“ – mit Recht änderbar, ohne nur zu sehen', async () => {
+    stelle(true, 2, { nachweise: [{ artGruppeId: 61, fuer: 'alle' }] });
+    zeigen();
+    const karte = await screen.findByRole('region', { name: 'Nachweise' });
+    expect(await within(karte).findByText('alle Angemeldeten')).toBeTruthy();
+    expect(within(karte).getByRole('button', { name: 'Bearbeiten' })).toBeTruthy();
+    cleanup();
+    stelle(false, 2, { nachweise: [{ artGruppeId: 61, fuer: 'alle' }] });
+    zeigen();
+    const nurAnsehen = await screen.findByRole('region', { name: 'Nachweise' });
+    expect(await within(nurAnsehen).findByText('alle Angemeldeten')).toBeTruthy();
+    expect(within(nurAnsehen).queryByRole('button', { name: 'Bearbeiten' })).toBeNull();
+  });
+
+  it('N3b: Nachweise speichern → „Rückgängig“ gibt den Stand davor zurück und die Seite lädt neu', async () => {
+    stelle(true);
+    const geaendert = vi.fn();
+    render(
+      <VeranstaltungSeite
+        id={91}
+        reiter="vorbereiten"
+        zeitzone={ZONE}
+        formularAdresse={null}
+        onZurueck={() => {}}
+        onGeaendert={geaendert}
+      />,
+    );
+    const karte = await screen.findByRole('region', { name: 'Nachweise' });
+    fireEvent.click(await within(karte).findByRole('button', { name: 'Bearbeiten' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Führungszeugnis' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(geaendert).toHaveBeenCalled());
+    expect(geaendert.mock.calls[0][0].text).toBe('Nachweise gespeichert.');
+    expect(geaendert.mock.calls[0][0].rueckgaengig).toBeTypeOf('function');
+    expect(m.aendereEinstellungen).toHaveBeenCalledTimes(1);
+    expect(m.einstellungenVon).toHaveBeenCalledTimes(2);
+  });
+
   it('ohne Recht: alles sichtbar, aber kein Bearbeiten und kein Freigeben', async () => {
     stelle(false);
     zeigen();

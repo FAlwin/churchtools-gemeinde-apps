@@ -533,8 +533,15 @@ describe('kopiereVeranstaltung', () => {
         am: '2026-11-05T12:00:00.000Z',
       },
       druck: { spalten: ['alter'], sortierung: 'alter' },
+      // N3b: Nachweise je Veranstaltung ebenso (Entscheidungsliste E20) – mit den Kennungen der Fragen, nicht den Feldnummern.
+      nachweise: [
+        { artGruppeId: 61, fuer: 'alle' },
+        { artGruppeId: 62, fuer: 'nurWenn', feld: 'frage:f1', antworten: ['Ja', 'Nein'] },
+      ],
     }));
     expect(einstellungenLesen(g.note)?.termin).not.toBeNull();
+    // Gegenprobe zur Kopie: die Quelle trägt die Nachweise wirklich im gepackten Text (das Schema wirft Unbekanntes still weg).
+    expect(einstellungenLesen(g.note)?.nachweise).toHaveLength(2);
     const kopie = await kopiereVeranstaltung(quelle, 'Essen 2027');
     const k = einstellungenLesen(gruppen.get(kopie)!.note)!;
     expect(k.termin).toBeNull();
@@ -545,6 +552,10 @@ describe('kopiereVeranstaltung', () => {
       { id: 'kueche', name: 'Küchenteam', filter: [{ spalte: 'betrag', ab: 10, bis: null }] },
     ]);
     // A9-2a: Die Kopie merkt sich die Vorlage – deren eigener Mailtext steht in Routinen, die nicht mitkopiert werden.
+    expect(k.nachweise).toEqual([
+      { artGruppeId: 61, fuer: 'alle' },
+      { artGruppeId: 62, fuer: 'nurWenn', feld: 'frage:f1', antworten: ['Ja', 'Nein'] },
+    ]);
     expect(k.kopieVon).toBe(quelle);
     expect(e.kopieVon).toBeUndefined();
     expect(k.ctFelder.bezahlt).toBe(e.ctFelder.bezahlt + 1000);
@@ -1395,6 +1406,31 @@ describe('Formularfelder in ChurchTools (A5)', () => {
       { text: 'L', altId: opt[2].id, von: 'L' },
     ]);
     expect(gespeichert(id, 'f2').bed!.regeln).toEqual([{ feld: 'f1', op: 'ist', wert: 'Medium' }]);
+  });
+
+  it('N3b: Antwort umbenannt → „Nur wenn …“ der Nachweise zieht mit; andere Fragen und „alle“ bleiben', async () => {
+    const id = await mitBedingung();
+    await aendereEinstellungen(id, (e) => ({
+      ...e,
+      nachweise: [
+        { artGruppeId: 61, fuer: 'nurWenn', feld: 'frage:f1', antworten: ['M', 'L'] },
+        { artGruppeId: 62, fuer: 'nurWenn', feld: 'frage:f2', antworten: ['M'] },
+        { artGruppeId: 63, fuer: 'alle' },
+      ],
+    }));
+    const opt = ctFeld(id, 'f1').options as { id: string; name: string }[];
+    const e = await feldSpeichern(id, 'anmeldung', feld({ antworten: ['S', 'Medium', 'L'] }), [
+      { text: 'S', altId: opt[0].id, von: 'S' },
+      { text: 'Medium', altId: opt[1].id, von: 'M' },
+      { text: 'L', altId: opt[2].id, von: 'L' },
+    ]);
+    const gelesen = einstellungenLesen(gruppen.get(id)!.note)!;
+    expect(gelesen.nachweise).toEqual([
+      { artGruppeId: 61, fuer: 'nurWenn', feld: 'frage:f1', antworten: ['Medium', 'L'] },
+      { artGruppeId: 62, fuer: 'nurWenn', feld: 'frage:f2', antworten: ['M'] },
+      { artGruppeId: 63, fuer: 'alle' },
+    ]);
+    expect(e.nachweise).toEqual(gelesen.nachweise);
   });
 
   it('F1c: Antwort umbenannt → die Bedingung AN dieser Antwort zieht mit', async () => {

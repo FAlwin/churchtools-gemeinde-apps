@@ -56,7 +56,7 @@ const FEST: DruckSpalte[] = [
 ];
 
 /** Der Schlüssel einer Frage als Spalte – gemeinsam für Druckliste und Tabelle (U2-1). */
-export const frageSchluessel = (f: Feld) => `frage:${f.id}`;
+export const frageSchluessel = (f: Pick<Feld, 'id'>) => `frage:${f.id}`;
 
 /**
  * Fragen mit eigener Spalte in ChurchTools, die das Formular auch stellt – der **eine** Spaltenkatalog der Fragen für

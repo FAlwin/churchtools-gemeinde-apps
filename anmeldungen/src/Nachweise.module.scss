@@ -529,3 +529,36 @@
     font-size: 13px;
   }
 }
+
+// ── Karte „Nachweise“ in der Veranstaltung (N3b) ─────────────────────────────────────────────────────────────────
+
+// Eine Nachweis-Art im Fenster: Schalter, darunter „Für wen“ und – bei „Nur wenn …“ – die Bedingung.
+.art {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+}
+
+// „Wenn Bereich ist Gruppenleiter“ + „Bedingung ändern“ in einer Zeile (am Handy darf sie umbrechen).
+.regel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 8px 12px;
+  border-radius: var(--r-ctrl);
+  background: var(--surface3);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.regelEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

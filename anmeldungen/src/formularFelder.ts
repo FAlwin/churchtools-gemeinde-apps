@@ -42,6 +42,7 @@ import {
   type RegelZiel,
 } from '@shared/anmeldung/bedingungen';
 import { freiName, freiSchluessel } from '@shared/anmeldung/freieAntwort';
+import { mitNachweisenUmbenannt } from '@shared/anmeldung/nachweisBedarf';
 import { istLeer, rohWert } from '@shared/anmeldung/feldwert';
 import { ADRESSE_TEILE } from '@shared/anmeldung/adresse';
 import { NichtUebernommen, aendereEinstellungen, einstellungenVon } from './einrichten';
@@ -242,7 +243,8 @@ export async function feldSpeichern(
   const gespeichert: Feld = { ...feld, verborgen };
   if (!gespeichert.verborgen) delete gespeichert.verborgen;
   return aendereEinstellungen(id, (frisch) => ({
-    ...frisch,
+    // N3b: „Nur wenn …“ bei den Nachweisen zieht umbenannte Antworten mit – wie die Bedingungen im Formular.
+    ...mitNachweisenUmbenannt(frisch, feld.id, umbenannt),
     formular: ersetzen(frisch.formular, bereich, gespeichert, vorId, umbenannt),
     ctFelder: {
       ...frisch.ctFelder,

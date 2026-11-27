@@ -17,7 +17,7 @@ import {
   schreibbareKalender,
   vorlagenKalender,
 } from '@shared/ct/kalenderRechte';
-import { eventKalender } from '@shared/ct/eventRechte';
+import { eventInfosKalender, eventKalender } from '@shared/ct/eventRechte';
 import { gruppenTypenAnlegen } from '@shared/ct/gruppenTypRechte';
 import { buchbareRessourcen, verwaltbareRessourcen } from '@shared/ct/ressourcenRechte';
 import { gruppenMitRecht } from '@shared/ct/gruppenRechteListe';
@@ -50,6 +50,8 @@ export interface Start {
   ressourcenVerwalten: number[];
   /** Kalender, in denen man Events anlegen darf (`churchservice` „edit events“, W15-3) – nur dort gibt es den Reiter „Events“. */
   eventsAnlegen: number[];
+  /** Kalender, in denen man die Infos von Events ändern darf (`edit events`, Baustein „Reihe“); `null` = alle (`eventInfosKalender`). */
+  eventsAendern: number[] | null;
   /** Gruppentypen, in denen man Gruppen anlegen darf (`churchdb` „create groups of grouptype“, W15-5) – ohne keinen gibt es den Reiter „Anmeldung“. */
   gruppentypenAnlegen: number[];
 }
@@ -90,6 +92,7 @@ export async function ladeStart(): Promise<Start> {
     ressourcenBuchen: [...buchbareRessourcen(rechte)],
     ressourcenVerwalten: [...verwaltbareRessourcen(rechte)],
     eventsAnlegen: [...eventKalender(rechte)],
+    eventsAendern: eventInfosKalender(rechte),
     gruppentypenAnlegen: [...gruppenTypenAnlegen(rechte)],
   };
 }

@@ -33,9 +33,9 @@ export interface EventZustand {
   fehler?: string;
 }
 
-/** Die Rechte des Nutzers an Events – `kalender` = Kalender-IDs mit „edit events“ (`eventKalender`), `ich` = Person-ID. */
+/** Die Rechte des Nutzers an Events – `kalender` = Kalender-IDs mit „edit events“ (`eventInfosKalender`; `null` = alle), `ich` = Person-ID. */
 export interface EventRechte {
-  kalender: readonly number[];
+  kalender: readonly number[] | null;
   ich: number | null;
 }
 

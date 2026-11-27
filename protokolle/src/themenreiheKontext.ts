@@ -17,8 +17,8 @@ export interface ReiheBasisWert {
   /** `Start.schreibbar` – für `darfSchreibenIn`. */
   schreibbar: readonly number[];
   ich: { person: number; name: string };
-  /** Kalender mit „edit events“ (`Start.eventsAnlegen`, aus `/permissions/global` – `eventKalender`) – für `darfTerminAendern`. */
-  eventKalender: readonly number[];
+  /** Kalender mit „edit events“ (`Start.eventsAendern`, aus `/permissions/global` – `eventInfosKalender`; `null` = alle) – für `darfTerminAendern`. */
+  eventKalender: readonly number[] | null;
 }
 
 export const ReiheBasis = createContext<ReiheBasisWert | null>(null);

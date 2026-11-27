@@ -10,6 +10,9 @@ import {
   vorschau,
   type Themenreihe,
 } from '@shared/protokolle/themenreihe';
+import { teileBauen, type ProtokollKopf, type ProtokollTeil } from '@shared/protokolle/speicher';
+import type { Sitzung } from '@shared/protokolle/sitzungen';
+import { FestePunkteRahmen } from './FestePunkteRahmen';
 import { ProtokollAnsicht } from './ProtokollAnsicht';
 import { ReiheAnbieter } from './ReiheAnbieter';
 import { hervorgehoben } from './reiheHervorheben';
@@ -21,6 +24,15 @@ import * as Schreiben from './themenreiheSchreiben';
 vi.mock('./themenreiheSchreiben', async (orig) => ({
   ...(await orig<typeof import('./themenreiheSchreiben')>()),
   ladeThemenreihen: vi.fn(),
+}));
+vi.mock('@ui/ct/terminInfosPort', () => ({
+  leseEvent: vi.fn(async () => ({
+    name: 'Jugendabend',
+    startDate: '2027-01-13T18:30:00Z',
+    description: '',
+    calendar: { domainIdentifier: '9' },
+  })),
+  speichereInfos: vi.fn(),
 }));
 vi.mock('./mitglieder', () => ({ ladeGruppenMitglieder: vi.fn(() => Promise.resolve([])) }));
 afterEach(cleanup);
@@ -114,6 +126,100 @@ describe('ReiheAnbieter und Karte', () => {
     expect(await screen.findByDisplayValue('Jona')).toBeTruthy();
     expect(screen.getByDisplayValue('Weglaufen')).toBeTruthy();
     expect(screen.getByText('Abend 3')).toBeTruthy();
+  });
+});
+
+describe('Recht an den Events kommt aus dem Rahmen', () => {
+  const zeigeUebertragen = async (kalender: number[] | null) => {
+    vi.mocked(Schreiben.ladeThemenreihen).mockResolvedValue([reihe]);
+    anzeigen({ ...basis([60]), eventKalender: kalender });
+    fireEvent.click(await screen.findByRole('button', { name: 'In Events übertragen' }));
+  };
+
+  it('ein Recht ohne Aufzählung (null) gilt für alle Kalender – das Event im Kalender 9 ist übertragbar', async () => {
+    await zeigeUebertragen(null);
+    expect(await screen.findByRole('button', { name: '2 Events übertragen' })).toBeTruthy();
+  });
+
+  it('mit der Liste [4] ist der Kalender 9 tabu: „darfst du nicht“', async () => {
+    await zeigeUebertragen([4]);
+    expect((await screen.findAllByText('darfst du nicht')).length).toBe(2);
+    expect(screen.getByRole('button', { name: '0 Events übertragen' })).toBeTruthy();
+  });
+});
+
+describe('Reihe im Dokument eines anderen Anbieters', () => {
+  it('ein Anbieter ohne Reihe im eigenen Dokument lädt nicht – ein eigener Anbieter für das frühere Protokoll schon', async () => {
+    vi.mocked(Schreiben.ladeThemenreihen).mockResolvedValue([reihe]);
+    render(
+      <ReiheBasis.Provider value={basis([60])}>
+        <ReiheAnbieter gruppeId={11} dokument={[]}>
+          <ProtokollAnsicht dokument={DOK} />
+          <ReiheAnbieter gruppeId={11} dokument={DOK}>
+            <ProtokollAnsicht dokument={DOK} />
+          </ReiheAnbieter>
+        </ReiheAnbieter>
+      </ReiheBasis.Provider>,
+    );
+    // Die innere Karte bekommt ihre Reihe; die äußere (ohne eigenen Bedarf) wartet weiter.
+    expect(await screen.findAllByText('Weglaufen')).toHaveLength(1);
+    expect(screen.getAllByText('Die Reihe wird geladen …')).toHaveLength(1);
+    expect(Schreiben.ladeThemenreihen).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Reihe in der Vorschau des früheren Protokolls (Fester Punkt „Letztes Protokoll“)', () => {
+  const kopf = (
+    sitzung: string,
+    beginn: string,
+    status: ProtokollKopf['status'],
+  ): ProtokollKopf => ({
+    art: 'protokoll',
+    fassung: 1,
+    sitzung,
+    titel: 'Jugendplanung',
+    status,
+    beginn,
+    termin: null,
+    treffen: null,
+    freigabe: status === 'frei' ? { von: 1, am: '2026-10-15T08:00:00Z' } : null,
+    sperre: null,
+    stand: 'x',
+  });
+  const sitzungAus = (k: ProtokollKopf): Sitzung => ({
+    schluessel: `p:${k.sitzung}`,
+    beginn: k.beginn,
+    titel: k.titel,
+    termin: null,
+    treffen: null,
+    kopf: k,
+    anfragen: [],
+  });
+  it('die Reihe des früheren Protokolls wird geladen, auch wenn das aktuelle keine hat', async () => {
+    vi.mocked(Schreiben.ladeThemenreihen).mockResolvedValue([reihe]);
+    const alt = teileBauen(DOK, 'okt');
+    const ALT = sitzungAus({ ...kopf('okt', '2026-10-14T17:00:00Z', 'frei'), stand: alt.stand });
+    const HEUTE = sitzungAus(kopf('heute', '2026-10-28T17:00:00Z', 'entwurf'));
+    const heute: Block[] = [{ id: 'v', type: 'verweis', props: { art: 'letztes-protokoll' } }];
+    render(
+      <ReiheBasis.Provider value={basis([60])}>
+        <ReiheAnbieter gruppeId={11} dokument={heute}>
+          <FestePunkteRahmen
+            sitzung={HEUTE}
+            gruppe={11}
+            protokolle={[ALT]}
+            teile={alt.werte.map((w) => JSON.parse(w) as ProtokollTeil)}
+            aufgaben={[]}
+            zeitzone="Europe/Berlin"
+          >
+            <ProtokollAnsicht dokument={heute} />
+          </FestePunkteRahmen>
+        </ReiheAnbieter>
+      </ReiheBasis.Provider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Ansehen' }));
+    expect(await screen.findByText('Weglaufen')).toBeTruthy();
+    expect(screen.queryByText('Die Reihe wird geladen …')).toBeNull();
   });
 });
 

@@ -77,7 +77,7 @@ export function ReiheAnbieter({
 
   // Stabil: das Fenster „In Events übertragen“ liest neu, sobald sich `rechte` ändert.
   const rechte = useMemo(
-    () => ({ kalender: basis?.eventKalender ?? [], ich: basis?.ich.person ?? null }),
+    () => ({ kalender: basis ? basis.eventKalender : [], ich: basis?.ich.person ?? null }),
     [basis],
   );
 

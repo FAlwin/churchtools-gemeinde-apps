@@ -715,7 +715,9 @@ schreibt sie danach in die **Infos der ChurchTools-Events**, damit jeder im Even
 - **Hinweise:** Gleichzeitig ändert niemand still etwas weg: Hat jemand die Reihe inzwischen anders gespeichert, wird nichts überschrieben, und das
   Fenster sagt „Bitte öffne sie neu“. Eine Reihe wird nie gelöscht, nur die Karte im Protokoll lässt sich entfernen. Eine **ältere Fassung** der
   Erweiterung kennt den Baustein nicht: Sie öffnet ein Protokoll mit Reihe nur zum Lesen (nichts geht verloren), zeigt die Reihe dort aber nicht an.
-  In Vorlagen und bei „wie letztes Mal“ wird die Reihe nicht übernommen.
+  In Vorlagen und bei „wie letztes Mal“ wird die Reihe nicht übernommen. Nimmt man einen Abend aus der Reihe oder hängt ihn an ein anderes Event, behält das alte
+  Event seinen Abschnitt (er wird nur bei Events ersetzt, die noch in der Reihe stehen) – dort von Hand löschen. Zwei verschiedene Reihen auf demselben Event würden sich gegenseitig
+  überschreiben (die Markierung trägt keine Reihen-Kennung).
 
 ## Für Entwickler
 
@@ -860,7 +862,7 @@ schreibt sie danach in die **Infos der ChurchTools-Events**, damit jeder im Even
   (Kasten im PDF, `ProtokollQuelle.themenreihen`), `gliederung.ts` (zählt als Inhalt), `vorlagen.ts` (`startDokument` lässt ihn weg; `wieLetztesMal` nimmt nur Punkte und feste Verweise). **Events werden nur über
   `shared/ct/terminInfos.ts` (`infosSpeichern`, `darfTerminAendern`) geschrieben** – frisch lesen, `isCanceled` mitschicken, 4000 Zeichen, Konflikt, Nachlesen; der Browser-Anschluss liegt seit der Reihe in `ui/ct/terminInfosPort.ts`
   (vorher `dienstplaner/src/ladeTerminInfos.ts`; `leseEvent` = `GET /events/{id}`). **Rechte:** `protokolle/src/reiheUebertragen.ts` (`ladeEventLagen`, `uebertragen`; beide **nacheinander**, wirft nie): `terminKalender` = die Kalender
-  mit „edit events“ aus `/permissions/global` (`Start.eventsAnlegen` = `eventKalender`, durchgereicht über `ReiheBasis` in `App.tsx`), Kalender und Admins des Events aus dem frischen `GET /events/{id}` (`ablaufTerminVon`), `isAdmin: false`
+  mit „edit events“ aus `/permissions/global` (`Start.eventsAendern` = `eventInfosKalender` in `shared/ct/eventRechte.ts`, gelesen über `idsAusRecht` wie im Dienstplaner: `null` = Recht ohne Aufzählung = alle Kalender – nicht `eventKalender`, das ein `true` als „keine“ liest; durchgereicht über `ReiheBasis` in `App.tsx`), Kalender und Admins des Events aus dem frischen `GET /events/{id}` (`ablaufTerminVon`), `isAdmin: false`
   wie im Dienstplaner (ChurchTools entscheidet beim Schreiben ohnehin; ein 403 wird als „darf nicht“ gemeldet). Oberfläche: `ReiheKarte.tsx` (lesende Karte, Editor und Lese-Ansicht), `ReiheAnbieter.tsx` (lädt die Reihen erst, wenn
   das Dokument einen Reihe-Block hat; hält die Fenster neben dem Editor; „Bearbeiten“ und „Übertragen“ lesen die Reihe vorher frisch), `ReiheFenster.tsx` (Bearbeiten, Event wählen), `ReiheUebertragenFenster.tsx`, `reiheEinfuegen.tsx` (erst Fenster, Block nach dem Speichern), `themenreiheKontext.ts`.
   Demo: `?demo` – Leitungsteam, Entwurf „Leitungssitzung“ 21.10. und das freigegebene Protokoll 09.09. tragen eine Jona-Reihe; Events 7001–7007 (Kalender 9 ohne „edit events“). **Nicht in Scheibe 1:** Reiter „Reihen“,

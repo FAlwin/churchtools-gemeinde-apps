@@ -113,7 +113,7 @@ export function App() {
             gruppen: start.gruppen,
             schreibbar: start.schreibbar,
             ich: { person: start.id, name: start.vorname },
-            eventKalender: start.eventsAnlegen,
+            eventKalender: start.eventsAendern,
           }
         : null,
     [start],

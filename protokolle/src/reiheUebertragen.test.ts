@@ -153,6 +153,14 @@ describe('ladeEventLagen', () => {
     expect(lagen.get(10)).toMatchObject({ name: 'Jugendabend', startDate: '2027-01-13T18:30:00Z' });
   });
 
+  it('ein Recht ohne Aufzählung (null = alle Kalender) gilt für jedes Event', async () => {
+    const n = nachbau({ 10: EVENT(4), 11: EVENT(9), 12: EVENT(77) });
+    const lagen = await ladeEventLagen(n.port, reihe, { kalender: null, ich: 1 });
+    expect([10, 11, 12].map((id) => lagen.get(id)?.lage?.darf)).toEqual([true, true, true]);
+    const keins = await ladeEventLagen(n.port, reihe, { kalender: [], ich: 1 });
+    expect([10, 11, 12].map((id) => keins.get(id)?.lage?.darf)).toEqual([false, false, false]);
+  });
+
   it('ein nicht lesbares Event (503) ist „nicht gelesen“ – nicht „aktuell“; die anderen werden gelesen', async () => {
     const n = nachbau({ 10: EVENT(4), 11: EVENT(4), 12: EVENT(4) });
     n.fehlerBeiLesen.set(11, new ApiError(503, 'x'));

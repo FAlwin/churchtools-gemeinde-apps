@@ -352,17 +352,6 @@ export function TerminBlock({
 }
 
 /**
- * Fester Punkt (S4-3a) – derselbe Baustein wie in der Lese-Ansicht; abhaken darf man hier.
- *
- * Ein Klick in den Kasten **tut im Text nichts** (beim Durchklicken 26.10.2026 gefunden): Der Editor markierte sonst den
- * ganzen Block, und der nächste Tastendruck ersetzte den festen Punkt. Nur weiterreichen half nicht – dann setzte der
- * Browser den Cursor in den Kasten, und Tippen löschte ihn und zog zwei Tagesordnungspunkte zusammen. Deshalb weder
- * Cursor noch Markierung (`preventDefault`) und kein Editor (`stopPropagation`, am Element selbst: der Editor hört an
- * seiner Fläche, bevor React das Ereignis sieht). Die Knöpfe im Kasten reagieren auf `click` und bleiben bedienbar.
- * Ein **Eingabefeld** im Kasten (Gäste der Anwesenheit, S5-3) bekommt den Klick: dort nur `stopPropagation`, sonst
- * käme es nie zum Fokus.
- */
-/**
  * **Reihe** (Baustein „Reihe“): im Editor nur die lesende Karte (`ReiheKarte`) mit „Bearbeiten“ und „In Events übertragen“
  * – keine Eingabefelder im Block (Fokus, Tasten und Rückgängig von BlockNote würden sich mit ihnen schlagen); bearbeitet wird
  * in Fenstern. Wie der feste Punkt: BlockNote würde den Klick auf die Karte sonst als Cursor-Setzen schlucken – die Knöpfe
@@ -387,6 +376,17 @@ export function ReiheBlock({ block }: { block: { props: { reihe: string } } }) {
   );
 }
 
+/**
+ * Fester Punkt (S4-3a) – derselbe Baustein wie in der Lese-Ansicht; abhaken darf man hier.
+ *
+ * Ein Klick in den Kasten **tut im Text nichts** (beim Durchklicken 26.10.2026 gefunden): Der Editor markierte sonst den
+ * ganzen Block, und der nächste Tastendruck ersetzte den festen Punkt. Nur weiterreichen half nicht – dann setzte der
+ * Browser den Cursor in den Kasten, und Tippen löschte ihn und zog zwei Tagesordnungspunkte zusammen. Deshalb weder
+ * Cursor noch Markierung (`preventDefault`) und kein Editor (`stopPropagation`, am Element selbst: der Editor hört an
+ * seiner Fläche, bevor React das Ereignis sieht). Die Knöpfe im Kasten reagieren auf `click` und bleiben bedienbar.
+ * Ein **Eingabefeld** im Kasten (Gäste der Anwesenheit, S5-3) bekommt den Klick: dort nur `stopPropagation`, sonst
+ * käme es nie zum Fokus.
+ */
 export function VerweisBlock({
   block,
   editor,

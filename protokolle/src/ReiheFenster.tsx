@@ -282,7 +282,7 @@ function EventWahl({
   const { stand, neu } = useLaden(async () => {
     const f = eventFenster(zeile.datum);
     return reiheEventsAus(await ctDaten<unknown>(eventsPfad(f.von, f.bis)), zeitzone);
-  }, [zeile.datum]);
+  }, [zeile.datum, zeitzone]);
   const [gewaehlt, setGewaehlt] = useState<number | null>(zeile.eventId);
   const liste = stand.art === 'fertig' ? eventsZurZeile(zeile.datum, stand.daten, vergeben) : [];
   const amTag = liste.some((x) => x.amTag);

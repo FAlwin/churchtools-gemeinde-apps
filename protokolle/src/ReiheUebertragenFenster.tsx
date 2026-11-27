@@ -5,12 +5,7 @@ import { Etikett, type EtikettTon } from '@ui/bedienung/Etikett';
 import { leseEvent, speichereInfos } from '@ui/ct/terminInfosPort';
 import { useLaden } from '@ui/ct/useLaden';
 import { datumText } from '@shared/ct/datum';
-import {
-  vorschau,
-  type Themenreihe,
-  type Vorschau,
-  type VorschauArt,
-} from '@shared/protokolle/themenreihe';
+import { vorschau, type Themenreihe, type VorschauArt } from '@shared/protokolle/themenreihe';
 import {
   ladeEventLagen,
   uebertragen,
@@ -18,6 +13,7 @@ import {
   type EventRechte,
   type UebertragenPort,
 } from './reiheUebertragen';
+import { hervorgehoben } from './reiheHervorheben';
 import felder from './Fensterfelder.module.scss';
 import styles from './ReiheUebertragenFenster.module.scss';
 
@@ -54,29 +50,6 @@ const ERGEBNIS: Record<Ergebnis['art'], { text: string; ton: EtikettTon }> = {
 };
 
 /**
- * **Der neue Text mit Hervorhebung:** die Zeilen des Reihe-Abschnitts, die vorher nicht im Event standen. Bei „neu“ der
- * ganze Abschnitt, bei „geändert“ nur, was sich unterscheidet. Reine Anzeige – geschrieben wird `neuerText`.
- */
-export function hervorgehoben(v: Pick<Vorschau, 'neuerText' | 'alterText' | 'abschnitt'>): {
-  text: string;
-  neu: boolean;
-}[] {
-  const text = v.neuerText ?? '';
-  const start = v.abschnitt ? text.indexOf(v.abschnitt) : -1;
-  if (!v.abschnitt || start < 0) return [{ text, neu: false }];
-  const alt = new Set((v.alterText ?? '').split('\n').map((l) => l.replace(/\r$/, '')));
-  const vor = text.slice(0, start);
-  const nach = text.slice(start + v.abschnitt.length);
-  const teile = [{ text: vor, neu: false }];
-  const zeilen = v.abschnitt.split('\n');
-  zeilen.forEach((z, i) => {
-    teile.push({ text: z + (i < zeilen.length - 1 ? '\n' : ''), neu: !alt.has(z) });
-  });
-  teile.push({ text: nach, neu: false });
-  return teile.filter((t) => t.text !== '');
-}
-
-/**
  * **Fenster „In Events übertragen“** (Entwurf `reihe-events-v1`): liest jedes zugeordnete Event **frisch**, zeigt je Event den
  * neuen Text (neue und geänderte Zeilen hervorgehoben), ein Häkchen je Event, ein Etikett (neu · geändert · darfst du nicht ·
  * ohne Event · zu lang · beschädigt) und „Unverändert: …“ zusammengefasst. „N Events übertragen“ schreibt **nacheinander**;
@@ -94,7 +67,10 @@ export function ReiheUebertragenFenster({
   /** Nur für Tests. */
   port?: UebertragenPort;
 }) {
-  const { stand, neu: neuLesen } = useLaden(() => ladeEventLagen(port, reihe, rechte), [reihe]);
+  const { stand, neu: neuLesen } = useLaden(
+    () => ladeEventLagen(port, reihe, rechte),
+    [reihe, port, rechte],
+  );
   const [aus, setAus] = useState<ReadonlySet<number>>(new Set());
   const [laeuft, setLaeuft] = useState(false);
   const [ergebnis, setErgebnis] = useState<ReadonlyMap<number, Ergebnis>>(new Map());

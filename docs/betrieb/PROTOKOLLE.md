@@ -708,6 +708,7 @@ schreibt sie danach in die **Infos der ChurchTools-Events**, damit jeder im Even
   Alles andere, was schon in den Infos steht (Handtext), **bleibt unverändert**. Beim nächsten Übertragen wird dieser Abschnitt
   **ersetzt**, nicht ein zweiter angehängt – auch nach dem Umbenennen der Reihe. Löscht oder verändert jemand eine der Markierungszeilen
   von Hand so, dass Anfang und Ende nicht mehr zusammenpassen, schreibt die Erweiterung dort nichts und sagt „Abschnitt beschädigt – bitte in ChurchTools prüfen“.
+
 - **Rechte:** Bauen, bearbeiten und übertragen darf, wer in dieser Gruppe Protokolle schreiben darf (Leitung, „Schreibt mit“); sehen
   können die Reihe alle, die das Protokoll sehen. Die Infos eines Events ändern darf, wer in ChurchTools für den **Kalender des Events**
   das Recht „Events bearbeiten“ hat oder **Admin dieses Events** ist – sonst steht dort „darfst du nicht“.
@@ -861,7 +862,7 @@ schreibt sie danach in die **Infos der ChurchTools-Events**, damit jeder im Even
   (vorher `dienstplaner/src/ladeTerminInfos.ts`; `leseEvent` = `GET /events/{id}`). **Rechte:** `protokolle/src/reiheUebertragen.ts` (`ladeEventLagen`, `uebertragen`; beide **nacheinander**, wirft nie): `terminKalender` = die Kalender
   mit „edit events“ aus `/permissions/global` (`Start.eventsAnlegen` = `eventKalender`, durchgereicht über `ReiheBasis` in `App.tsx`), Kalender und Admins des Events aus dem frischen `GET /events/{id}` (`ablaufTerminVon`), `isAdmin: false`
   wie im Dienstplaner (ChurchTools entscheidet beim Schreiben ohnehin; ein 403 wird als „darf nicht“ gemeldet). Oberfläche: `ReiheKarte.tsx` (lesende Karte, Editor und Lese-Ansicht), `ReiheAnbieter.tsx` (lädt die Reihen erst, wenn
-  das Dokument einen Reihe-Block hat; hält die Fenster neben dem Editor), `ReiheFenster.tsx` (Bearbeiten, Event wählen), `ReiheUebertragenFenster.tsx`, `reiheEinfuegen.tsx` (erst Fenster, Block nach dem Speichern), `themenreiheKontext.ts`.
+  das Dokument einen Reihe-Block hat; hält die Fenster neben dem Editor; „Bearbeiten“ und „Übertragen“ lesen die Reihe vorher frisch), `ReiheFenster.tsx` (Bearbeiten, Event wählen), `ReiheUebertragenFenster.tsx`, `reiheEinfuegen.tsx` (erst Fenster, Block nach dem Speichern), `themenreiheKontext.ts`.
   Demo: `?demo` – Leitungsteam, Entwurf „Leitungssitzung“ 21.10. und das freigegebene Protokoll 09.09. tragen eine Jona-Reihe; Events 7001–7007 (Kalender 9 ohne „edit events“). **Nicht in Scheibe 1:** Reiter „Reihen“,
   Event aus der Zeile anlegen, Predigtserie (`series`) am Ablauf; die Reihe wird beim Entfernen des Blocks oder Löschen des Protokolls nicht vermerkt; kopiert man einen Reihe-Block in ein anderes Protokoll, hängt er an derselben Reihe.
 - Bauplan und Messungen liegen in einem Planungsordner außerhalb des Repos – die Verweise auf `protokolle-planung/…` in

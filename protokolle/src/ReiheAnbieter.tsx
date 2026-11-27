@@ -75,20 +75,41 @@ export function ReiheAnbieter({
           : 'leer';
   const darfBauen = !!basis && !!gruppe && darfSchreibenIn(gruppe, basis.schreibbar);
 
+  // Stabil: das Fenster „In Events übertragen“ liest neu, sobald sich `rechte` ändert.
+  const rechte = useMemo(
+    () => ({ kalender: basis?.eventKalender ?? [], ich: basis?.ich.person ?? null }),
+    [basis],
+  );
+
+  const frisch = useCallback(
+    async (id: string): Promise<Themenreihe | undefined> => {
+      try {
+        if (!ort) return undefined;
+        const liste = await ladeThemenreihen(ort);
+        setGeladen(new Map(liste.map((r) => [r.id, r])));
+        setLokal(new Map());
+        return liste.find((r) => r.id === id);
+      } catch {
+        // Vorübergehend ist nicht ungültig: Das Lesen scheiterte – mit dem bekannten Stand weiter, gespeichert wird ohnehin nur
+        // gegen den frisch gelesenen (`themenreiheSpeichern`).
+        return reihen.get(id);
+      }
+    },
+    [ort, reihen],
+  );
+
   const wert = useMemo<ReiheKontextWert | null>(() => {
     if (!basis || !ort) return null;
     return {
       reihen,
       stand,
       darfBauen,
-      bearbeiten: (id) => {
-        const r = reihen.get(id);
-        if (r) setFenster({ art: 'bearbeiten', reihe: r, neu: false });
-      },
-      uebertragen: (id) => {
-        const r = reihen.get(id);
-        if (r) setFenster({ art: 'uebertragen', reihe: r });
-      },
+      // Beide Fenster gehen mit der **frisch gelesenen** Reihe auf: Der Stand im Speicher des Bildschirms kann veraltet
+      // sein (jemand anderes hat gespeichert) – „Bitte öffne sie neu“ führte sonst wieder zum selben alten Stand.
+      bearbeiten: (id) =>
+        void frisch(id).then((r) => r && setFenster({ art: 'bearbeiten', reihe: r, neu: false })),
+      uebertragen: (id) =>
+        void frisch(id).then((r) => r && setFenster({ art: 'uebertragen', reihe: r })),
       neu: (fertig) => {
         const id = crypto.randomUUID();
         setFenster({
@@ -107,7 +128,7 @@ export function ReiheAnbieter({
       },
       neuLaden: laden.neu,
     };
-  }, [basis, ort, reihen, stand, darfBauen, gruppeId, laden.neu]);
+  }, [basis, ort, reihen, stand, darfBauen, gruppeId, laden.neu, frisch]);
 
   const gespeichert = useCallback(
     (r: Themenreihe) => {
@@ -136,7 +157,7 @@ export function ReiheAnbieter({
       {basis && fenster?.art === 'uebertragen' && (
         <ReiheUebertragenFenster
           reihe={fenster.reihe}
-          rechte={{ kalender: basis.eventKalender, ich: basis.ich.person }}
+          rechte={rechte}
           onClose={() => setFenster(null)}
         />
       )}

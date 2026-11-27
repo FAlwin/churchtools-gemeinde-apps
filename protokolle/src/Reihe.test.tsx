@@ -12,7 +12,8 @@ import {
 } from '@shared/protokolle/themenreihe';
 import { ProtokollAnsicht } from './ProtokollAnsicht';
 import { ReiheAnbieter } from './ReiheAnbieter';
-import { ReiheUebertragenFenster, hervorgehoben } from './ReiheUebertragenFenster';
+import { hervorgehoben } from './reiheHervorheben';
+import { ReiheUebertragenFenster } from './ReiheUebertragenFenster';
 import type { UebertragenPort } from './reiheUebertragen';
 import { ReiheBasis, type ReiheBasisWert } from './themenreiheKontext';
 import * as Schreiben from './themenreiheSchreiben';
@@ -113,6 +114,28 @@ describe('ReiheAnbieter und Karte', () => {
     expect(await screen.findByDisplayValue('Jona')).toBeTruthy();
     expect(screen.getByDisplayValue('Weglaufen')).toBeTruthy();
     expect(screen.getByText('Abend 3')).toBeTruthy();
+  });
+});
+
+describe('Fenster gehen mit der frisch gelesenen Reihe auf', () => {
+  it('„Bearbeiten“ liest die Reihe neu – ein veralteter Stand führt nicht in eine Sackgasse', async () => {
+    vi.mocked(Schreiben.ladeThemenreihen).mockResolvedValueOnce([reihe]);
+    vi.mocked(Schreiben.ladeThemenreihen).mockResolvedValue([
+      { ...reihe, name: 'Jona von jemand anderem' },
+    ]);
+    anzeigen(basis([60]));
+    fireEvent.click(await screen.findByRole('button', { name: 'Bearbeiten' }));
+    expect(await screen.findByDisplayValue('Jona von jemand anderem')).toBeTruthy();
+    expect(Schreiben.ladeThemenreihen).toHaveBeenCalledTimes(2);
+  });
+
+  it('scheitert das frische Lesen (503), geht das Fenster mit dem bekannten Stand auf', async () => {
+    vi.mocked(Schreiben.ladeThemenreihen)
+      .mockResolvedValueOnce([reihe])
+      .mockRejectedValueOnce(new Error('503'));
+    anzeigen(basis([60]));
+    fireEvent.click(await screen.findByRole('button', { name: 'Bearbeiten' }));
+    expect(await screen.findByDisplayValue('Jona')).toBeTruthy();
   });
 });
 

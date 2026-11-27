@@ -261,6 +261,6 @@ eine). Die Vorschau darunter zeigt, wie Gäste die Liste sehen. Am Computer ist 
 - **Priorität:** normal
 - **Betrifft:** `shared/anmeldung/zeilenListe.ts`, `shared/anmeldung/formular.ts`, `anmeldungen/src/ListeBearbeiten.tsx`, `anmeldungen/src/bausteinFrei.ts`, `anmeldungen/src/formularFelder.ts`, `ui/anmeldeformular/ListeEingabe.tsx`
 - **Automatisiert:** ja – `zeilenListe.test.ts` (Regel), `formular.test.ts` (Prüfung, Ablage, Schema), `einrichten.test.ts` (Spalten in ChurchTools), `senden.test.ts` (Absenden gesperrt bis F6b), `Baukasten.test.tsx` (Kachel, Fragetyp, Bearbeiten, gebaute Erweiterung), `ListeEingabe.test.tsx`; im Browser mit der Demo durchgeklickt (Computer, 375 px, hell/dunkel). Von Hand bleibt der Weg gegen echtes ChurchTools – mit F6b
-- **Historie:** F6a (27.11.2026, Messung M9, Entscheidungsliste E44–E50)
+- **Historie:** F6a (27.11.2026, Messung M9, Entscheidungsliste E44–E51)
 
 </details>

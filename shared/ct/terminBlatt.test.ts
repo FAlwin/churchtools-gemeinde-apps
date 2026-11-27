@@ -112,6 +112,15 @@ describe('Termin-Blatt: Kopf', () => {
     expect(b.dateiname).toBe('Gottesdienst 01.11.2026');
   });
 
+  it('mit Predigtserie (Dienstplaner, 27.11.2026): hinten im Untertitel; leer → nichts davon', () => {
+    expect(terminBlatt({ ...QUELLE, serie: 'Die Psalmen' }, BLATT_VORGABE).untertitel).toBe(
+      'Sonntag, 1. November 2026 · 10:00 – 10:44 Uhr · Predigtserie: Die Psalmen',
+    );
+    expect(terminBlatt({ ...QUELLE, serie: null }, BLATT_VORGABE).untertitel).toBe(
+      'Sonntag, 1. November 2026 · 10:00 – 10:44 Uhr',
+    );
+  });
+
   it('ohne Ablauf: nur der Beginn, kein Ablauf auf dem Blatt', () => {
     const b = terminBlatt({ ...QUELLE, zeilen: null }, BLATT_VORGABE);
     expect(b.untertitel).toBe('Sonntag, 1. November 2026 · 10:00 Uhr');

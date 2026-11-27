@@ -18,17 +18,27 @@
   text-align: center;
 }
 
+// In der Tabelle der Buchungen schmaler und ohne „min“ (steht im Spaltenkopf) – mit „Vorschlag“ daneben bliebe für den
+// Status sonst kein Platz. Am Handy (Karten ohne Spaltenkopf) bleibt das „min“.
+.tabelle .minuten {
+  width: 56px;
+}
+
+@media (min-width: 560px) {
+  .tabelle .einheit {
+    display: none;
+  }
+}
+
 .einheit {
   color: var(--text2);
   font-size: 13.5px;
 }
 
-// Nur der Pfeil – der Text der Vorschläge steht in der aufgeklappten Liste.
+// „Vorschlag ▾“ – so breit wie sein Text, der Pfeil kommt aus `auswahlpfeil` (main.scss).
 .vorschlag {
-  width: 40px;
+  width: auto;
   flex: none;
-  padding-right: 0;
-  padding-left: 6px;
 }
 
 .zeit {
@@ -103,7 +113,8 @@
 
     td {
       display: grid;
-      grid-template-columns: 84px minmax(0, 1fr);
+      // 72 statt 84 px: Der Pfeil der Auswahl braucht Platz, sonst wird „Wartet auf Bestätigung“ abgeschnitten.
+      grid-template-columns: 72px minmax(0, 1fr);
       gap: 8px;
       align-items: center;
       padding: 0;

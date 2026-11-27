@@ -122,6 +122,26 @@
   }
 }
 
+/**
+ * **Der Pfeil einer Auswahl** (Protokolle, Alwin 27.11.2026: „die ganzen Pfeile nach unten … nicht ganz richtig“): Der
+ * eingebaute Pfeil des Browsers klebte ohne Abstand am rechten Rand und sah je Browser anders aus. Hier ein ruhiger
+ * Winkel in `--text2` mit Abstand zum Rand – aus zwei Verläufen gezeichnet, damit er im Dunkeln mitfärbt.
+ * Auf das `select` selbst anwenden; die Fläche bleibt bei `eingabefeld`.
+ */
+@mixin auswahlpfeil {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 26px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text2) 50%),
+    linear-gradient(135deg, var(--text2) 50%, transparent 50%);
+  background-position:
+    calc(100% - 15px) 50%,
+    calc(100% - 10px) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+
 @mixin eingabefeld($innen: false) {
   background: var(--surface2);
   border: 1px solid var(--border);

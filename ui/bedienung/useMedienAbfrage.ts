@@ -7,6 +7,12 @@ import { useEffect, useState } from 'react';
 export const HANDY_BREITE = '(max-width: 759px)';
 
 /**
+ * **Fingerbedienung** (iPad, Handy): Der Haupt-Zeiger ist grob. Wo der Mauszeiger fein ist (Rechner), gilt es nicht –
+ * auch nicht mit angeschlossener Tastatur am Tablet, dort bleibt der Finger der Haupt-Zeiger.
+ */
+export const FINGER_BEDIENUNG = '(pointer: coarse)';
+
+/**
  * **Trifft eine CSS-Medienabfrage gerade zu?** – laufend nachgeführt (`matchMedia` + `change`).
  *
  * Eine Stelle für alle Apps (Dienstplaner E3: Reiter oben oder unten). Vorher stand dasselbe Muster von

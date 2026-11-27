@@ -13,6 +13,7 @@
  * Was hier **nicht** liegt: die Trefferlisten. Die Bibliothek zeigt in jeder Ansicht etwas anderes (im
  * Liederheft mit „+"- und Stift-Knopf, in der Auswahl ohne), deshalb rendert sie der Aufrufer.
  */
+import { FINGER_BEDIENUNG, useMedienAbfrage } from '../bedienung/useMedienAbfrage';
 import { Icon } from '../icons/icons';
 import styles from './LiedSucheKopf.module.scss';
 
@@ -25,6 +26,10 @@ interface LiedSucheKopfProps {
    * ist beim Tippen längst gefiltert.
    */
   onSongSelectSuchen?: () => void;
+  /**
+   * Das Feld beim Öffnen fokussieren – **nur mit Maus**. Am iPad/Handy ginge sonst sofort die Tastatur auf und
+   * verdeckte die Liederliste (Alwin am iPad, 27.11.2026); dort öffnet erst der Tipp ins Feld die Tastatur.
+   */
   autoFocus?: boolean;
 }
 
@@ -34,13 +39,14 @@ export function LiedSucheKopf({
   onSongSelectSuchen,
   autoFocus,
 }: LiedSucheKopfProps) {
+  const finger = useMedienAbfrage(FINGER_BEDIENUNG);
   return (
     <div className={styles.feld}>
       <Icon name="search" size={18} stroke={2} className={styles.lupe} />
       <input
         placeholder="Lied oder Autor suchen…"
         value={eingabe}
-        autoFocus={autoFocus}
+        autoFocus={autoFocus && !finger}
         onChange={(e) => onEingabe(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && onSongSelectSuchen) onSongSelectSuchen();

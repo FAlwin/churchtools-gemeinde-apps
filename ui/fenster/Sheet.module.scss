@@ -12,7 +12,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  // Oben nie ins Unschärfe-Band der installierten iOS-App (`--band-unten`, sonst 0px): Ein hohes Fenster reichte sonst
+  // mit dem Kopf unter die Uhr (Alwin am iPad, 27.11.2026). `fensterUnterBand.test.ts` hält das fest.
+  padding: max(16px, var(--band-unten)) 16px 16px;
   // Tastatur aussparen (--kb kommt aus useOverlayKeyboardInset) → Inhalt bleibt sichtbar, ohne zu wischen.
   padding-bottom: calc(16px + var(--kb, 0px));
   animation: fadeIn 0.15s ease both;
@@ -23,7 +25,7 @@
 // 2 × 16 px Rand blieben ungenutzt (Alwin am iPhone: „Punkt vorschlagen“ schrumpfte bis auf ~100 px Inhalt).
 .overlay[data-tastatur] {
   align-items: flex-start;
-  padding: 8px 16px calc(8px + var(--kb, 0px));
+  padding: max(8px, var(--band-unten)) 16px calc(8px + var(--kb, 0px));
 
   .sheet {
     max-height: 100%;

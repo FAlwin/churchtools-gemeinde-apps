@@ -138,7 +138,7 @@ function mitBedingungen(
 }
 /**
  * F6a: „Liste mit Zeilen“ im Worship-Workshop (Entwurf `f6-liste-v1`, Leitung: Lobpreisteam) – zum Ansehen im Baukasten und in der Vorschau.
- * Abschicken kommt mit F6b, deshalb nur hier (nicht in der Lobpreisfreizeit, deren „Von Hand“ sonst scheiterte).
+ * Abschicken geht seit F6b (Formular und „Von Hand“).
  */
 function mitListe(f: OeffentlicheEinstellungen['formular']): OeffentlicheEinstellungen['formular'] {
   return {

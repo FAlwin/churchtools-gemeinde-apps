@@ -296,7 +296,8 @@
   border: 2px solid transparent;
   border-radius: calc(var(--p-r) * 0.6);
 }
-.pv .pf.bad input {
+.pv .pf.bad input,
+.pv .pf.bad textarea {
   border-color: var(--p-err) !important;
 }
 .bt-eckig .go,

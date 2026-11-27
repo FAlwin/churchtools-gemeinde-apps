@@ -2061,3 +2061,116 @@ describe('Adresse in den Personenfeldern (F4)', () => {
     expect(ids(id).anmeldung).not.toContain('adresse');
   });
 });
+
+// ── F6a: Liste mit Zeilen in ChurchTools (E1: lesbar + „(Daten)“ + Zahl-Feld für die Summe) ──
+describe('Liste mit Zeilen in ChurchTools (F6a)', () => {
+  const neu = () => legeVeranstaltungAn({ name: 'Essen', teamId: 7, artId: 5, vorlage: 'einfach' });
+  const liste = (summe = true, extra: Partial<Feld> = {}): Feld => ({
+    id: 'f1',
+    art: 'eigen',
+    typ: 'liste',
+    frage: 'Was bringst du mit?',
+    hilfe: '',
+    zustand: 'pflicht',
+    antworten: [],
+    kurz: 'Inventar',
+    liste: {
+      spalten: [
+        { id: 'a', name: 'Gegenstand', art: 'text' },
+        { id: 'b', name: 'Wert', art: 'zahl', einheit: '€', ...(summe ? { summe: true } : {}) },
+      ],
+      max: 10,
+    },
+    ...extra,
+  });
+  const ctFeld = (id: number, schluessel: string) => {
+    const e = einstellungenLesen(gruppen.get(id)!.note)!;
+    return gruppen.get(id)!.felder.find((f) => f.id === e.ctFelder[schluessel]);
+  };
+  const schluessel = (id: number) =>
+    Object.keys(einstellungenLesen(gruppen.get(id)!.note)!.ctFelder).filter((k) =>
+      k.startsWith('f1'),
+    );
+
+  it('neu: langer Text, „(Daten)“ als langer Text und die Summe als Zahl – die weiteren Spalten nie Pflicht in ChurchTools', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'person', liste());
+    expect(ctFeld(id, 'f1')).toMatchObject({
+      name: 'Was bringst du mit?',
+      fieldTypeCode: 'textarea',
+      useInRegistrationForm: true,
+      securityLevel: 3,
+    });
+    expect(ctFeld(id, 'f1.daten')).toMatchObject({
+      name: 'Was bringst du mit? (Daten)',
+      fieldTypeCode: 'textarea',
+      useInRegistrationForm: true,
+      requiredInRegistrationForm: false,
+      securityLevel: 3,
+    });
+    expect(ctFeld(id, 'f1.summe')).toMatchObject({
+      name: 'Inventar – Summe Wert',
+      fieldTypeCode: 'number',
+      useInRegistrationForm: true,
+      requiredInRegistrationForm: false,
+    });
+  });
+
+  it('„Summe zeigen“ aus: das Zahl-Feld kommt aus dem Anmeldeformular, bleibt aber; wieder an → dieselbe Spalte', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'person', liste());
+    const summe = ctFeld(id, 'f1.summe')!;
+    await feldSpeichern(id, 'person', liste(false));
+    expect(ctFeld(id, 'f1.summe')).toMatchObject({ id: summe.id, useInRegistrationForm: false });
+    expect(ctFeld(id, 'f1.daten')).toMatchObject({ useInRegistrationForm: true });
+    await feldSpeichern(id, 'person', liste());
+    expect(ctFeld(id, 'f1.summe')).toMatchObject({ id: summe.id, useInRegistrationForm: true });
+  });
+
+  it('Kurzname geändert → die Summen-Spalte heißt mit (dieselbe Nummer)', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'person', liste());
+    const summe = ctFeld(id, 'f1.summe')!;
+    await feldSpeichern(id, 'person', liste(true, { kurz: 'Geräte' }));
+    expect(ctFeld(id, 'f1.summe')).toMatchObject({ id: summe.id, name: 'Geräte – Summe Wert' });
+  });
+
+  it('entfernt, noch niemand geantwortet: alle drei Spalten gelöscht, keine Schlüssel mehr', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'person', liste());
+    const nummern = ['f1', 'f1.daten', 'f1.summe'].map((k) => ctFeld(id, k)!.id);
+    expect(await feldEntfernen(id, 'f1')).toEqual({ art: 'geloescht' });
+    expect(gruppen.get(id)!.felder.filter((f) => nummern.includes(f.id))).toEqual([]);
+    expect(schluessel(id)).toEqual([]);
+  });
+
+  it('Fragetyp Liste → Text: „(Daten)“ und Summe gehen mit, der Text bekommt seine Spalte', async () => {
+    const id = await neu();
+    await feldSpeichern(id, 'person', liste());
+    const alt = ['f1.daten', 'f1.summe'].map((k) => ctFeld(id, k)!.id);
+    const { liste: _weg, ...ohne } = liste();
+    await feldTypAendern(id, { ...ohne, typ: 'text' });
+    expect(gruppen.get(id)!.felder.filter((f) => alt.includes(f.id))).toEqual([]);
+    expect(schluessel(id)).toEqual(['f1']);
+    expect(ctFeld(id, 'f1')).toMatchObject({ fieldTypeCode: 'text' });
+  });
+
+  it('F3c nachgezogen: eine gelöschte Frage nimmt auch die Spalte ihrer freien Antwort mit (vorher blieb sie als Waise)', async () => {
+    const id = await neu();
+    const frage: Feld = {
+      id: 'f1',
+      art: 'eigen',
+      typ: 'radio',
+      frage: 'Gemeinde',
+      hilfe: '',
+      zustand: 'freiwillig',
+      antworten: ['A', 'B'],
+      frei: { name: 'Sonstiges', textfeld: 'auf' },
+    };
+    await feldSpeichern(id, 'person', frage);
+    const frei = ctFeld(id, 'f1.frei')!.id;
+    await feldEntfernen(id, 'f1');
+    expect(gruppen.get(id)!.felder.some((f) => f.id === frei)).toBe(false);
+    expect(schluessel(id)).toEqual([]);
+  });
+});

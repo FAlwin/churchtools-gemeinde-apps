@@ -32,6 +32,8 @@ import {
   type FeldEntwurf,
 } from './baukastenEntwurf';
 import { geburtsdatumNoetigText } from './anzeige';
+import { bausteinFrei } from './bausteinFrei';
+import { ListeBearbeiten } from './ListeBearbeiten';
 import k from './Baukasten.module.scss';
 
 /**
@@ -40,7 +42,8 @@ import k from './Baukasten.module.scss';
  * nach einer Pause) – diese Komponente meldet nur Änderungen.
  */
 
-const FRAGETYPEN = BAUSTEINE.filter((x) => x.gruppe === 'frage');
+/** Die Fragetypen zur Wahl – ohne Bausteine, die noch nicht für alle da sind (`bausteinFrei`, F6a). */
+const fragetypen = () => BAUSTEINE.filter((x) => x.gruppe === 'frage' && bausteinFrei(x.typ));
 
 /** Wie die Eingabe aussieht – damit man beim Bearbeiten sieht, was Gäste ausfüllen (Google Forms: „Kurzantwort“). */
 function Muster({ f }: { f: Feld }) {
@@ -290,13 +293,16 @@ export function FeldBearbeiten({
           />
         )
       )}
-      {!text && istQuelle(formular, f.id) && (
+      {/* F6a: Bei einer Liste benennt der Kurzname die Spalte in der Tabelle und die Summe (Entwurf). */}
+      {!text && (istQuelle(formular, f.id) || f.typ === 'liste') && (
         <input
           className={k.hilfe}
           value={f.kurz ?? ''}
           maxLength={KURZ_MAX}
-          aria-label="Kurzname für Bedingungen"
-          placeholder={`Kurzname für Bedingungen (freiwillig): ${kurzname({ ...f, kurz: undefined })}`}
+          aria-label={
+            f.typ === 'liste' ? 'Kurzname für Tabelle und Summe' : 'Kurzname für Bedingungen'
+          }
+          placeholder={`${f.typ === 'liste' ? 'Kurzname für Tabelle und Summe' : 'Kurzname für Bedingungen'} (freiwillig): ${kurzname({ ...f, kurz: undefined })}`}
           onChange={(e) => {
             const neu: Feld = { ...f, kurz: e.target.value };
             if (!e.target.value) delete neu.kurz;
@@ -317,6 +323,8 @@ export function FeldBearbeiten({
             </div>
           ))}
         </div>
+      ) : f.typ === 'liste' ? (
+        <ListeBearbeiten feld={f} onListe={(liste) => setFeld({ liste })} />
       ) : (
         <Muster f={f} />
       )}
@@ -395,7 +403,7 @@ export function FeldBearbeiten({
             }
             onChange={(e) => onTyp(e.target.value as Feldtyp)}
           >
-            {FRAGETYPEN.map((x) => (
+            {fragetypen().map((x) => (
               <option key={x.typ} value={x.typ}>
                 {x.name}
               </option>

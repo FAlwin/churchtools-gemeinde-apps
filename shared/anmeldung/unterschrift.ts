@@ -10,10 +10,12 @@
  * sonst würde die Unterschrift beim Anzeigen verzerrt.
  */
 
+import { GRUPPENFELD_MAX } from './feldwert';
+
 export const BREITE = 600;
 export const HOEHE = 300;
-/** Gemessen: mehr nimmt ein ChurchTools-Feld nicht. */
-export const MAX_ZEICHEN = 4000;
+/** Gemessen: mehr nimmt ein ChurchTools-Feld nicht (`GRUPPENFELD_MAX`). */
+export const MAX_ZEICHEN = GRUPPENFELD_MAX;
 const KENNUNG = 'u1;';
 const ZEICHEN = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 

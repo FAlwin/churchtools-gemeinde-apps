@@ -19,6 +19,7 @@ import {
   ctAblage,
   ctZusatzSpalten,
   pruefeFormular,
+  zusatzSchluessel,
   type Feld,
   type Formular,
   type OeffentlicheEinstellungen,
@@ -41,7 +42,7 @@ import {
   type Bedingung,
   type RegelZiel,
 } from '@shared/anmeldung/bedingungen';
-import { freiName, freiSchluessel } from '@shared/anmeldung/freieAntwort';
+import { freiName } from '@shared/anmeldung/freieAntwort';
 import { mitNachweisenUmbenannt } from '@shared/anmeldung/nachweisBedarf';
 import { istLeer, rohWert } from '@shared/anmeldung/feldwert';
 import { ADRESSE_TEILE } from '@shared/anmeldung/adresse';
@@ -62,6 +63,13 @@ export interface CtFeld {
 }
 
 const json = (body: unknown) => JSON.stringify(body);
+
+/**
+ * Der Fragetyp, mit dem `feldDefinition` eine weitere Spalte beschreibt – nach ihrer Art in ChurchTools (Text, langer
+ * Text, Zahl für die Summe einer Liste, F6a).
+ */
+const zusatzTyp = (code: string | undefined): Feld['typ'] =>
+  code === 'text' ? 'text' : code === 'number' ? 'number' : 'textarea';
 
 /** Die Gruppenfelder der Veranstaltung, je Nummer. */
 export async function ctFelderLesen(id: number): Promise<Map<number, CtFeld>> {
@@ -213,7 +221,7 @@ export async function feldSpeichern(
     const definition = feldDefinition(
       {
         ...feld,
-        typ: z.fieldTypeCode === 'text' ? 'text' : 'textarea',
+        typ: zusatzTyp(z.fieldTypeCode),
         zustand: feld.zustand === 'aus' ? 'aus' : 'freiwillig',
       },
       bereich,
@@ -221,19 +229,18 @@ export async function feldSpeichern(
     )!;
     zusatz[z.schluessel] = await spalteSpeichern(id, bisher, definition, z.name);
   }
-  // F3c: Fiel die freie Antwort weg (oder hat sie kein Textfeld mehr), kommt ihre Spalte aus dem Anmeldeformular –
-  // die Texte darin bleiben stehen, wie bei einem ausgeblendeten Feld.
-  const freiAlt = e.ctFelder[freiSchluessel(feld.id)];
-  if (freiAlt !== undefined && !spalten.some((z) => z.schluessel === freiSchluessel(feld.id))) {
-    const bisher = (await ctFelderLesen(id)).get(freiAlt);
-    if (bisher?.useInRegistrationForm) {
-      const definition = feldDefinition(
-        { ...feld, typ: 'text', zustand: 'aus' },
-        bereich,
-        bisher.name,
-      )!;
-      await spalteSpeichern(id, bisher, definition, bisher.name);
-    }
+  // Fiel eine weitere Spalte weg (F3c: freie Antwort entfernt oder ohne Textfeld; F6a: „Summe zeigen“ aus), kommt sie
+  // aus dem Anmeldeformular – die Werte darin bleiben stehen, wie bei einem ausgeblendeten Feld.
+  for (const schluessel of zusatzSchluessel(e.ctFelder, feld.id)) {
+    if (spalten.some((z) => z.schluessel === schluessel)) continue;
+    const bisher = (await ctFelderLesen(id)).get(e.ctFelder[schluessel]);
+    if (!bisher?.useInRegistrationForm) continue;
+    const definition = feldDefinition(
+      { ...feld, typ: zusatzTyp(bisher.fieldTypeCode), zustand: 'aus' },
+      bereich,
+      bisher.name,
+    )!;
+    await spalteSpeichern(id, bisher, definition, bisher.name);
   }
 
   // F4: Die Adresse liegt an der Person – ihre drei Personenfelder kommen ins Anmeldeformular (oder heraus).
@@ -363,6 +370,24 @@ export async function spalteSpeichern(
 }
 
 /**
+ * **Spalten löschen – und nachlesen**: Nur, was es noch gibt; steht danach noch eine da, `NichtUebernommen` (ein 204
+ * allein beweist nichts).
+ */
+async function spaltenLoeschen(
+  id: number,
+  ctIds: (number | undefined)[],
+  was: string,
+): Promise<void> {
+  const da = await ctFelderLesen(id);
+  const weg = ctIds.filter((x): x is number => x !== undefined && da.has(x));
+  if (!weg.length) return;
+  for (const x of weg)
+    await ctAnfrage(`/groups/${id}/memberfields/group/${x}`, { method: 'DELETE' });
+  const nachher = await ctFelderLesen(id);
+  if (weg.some((x) => nachher.has(x))) throw new NichtUebernommen(was);
+}
+
+/**
  * **Ein Feld aus dem Formular nehmen.** Empfohlene Felder (Telefon, Geburtsdatum …) werden nur ausgeschaltet –
  * ihre Kachel bietet sie wieder an. Eigene Felder: Hat sie schon jemand beantwortet, werden sie nur
  * **ausgeblendet** (Alwin: „ausblenden“) – die Spalte und die Antworten bleiben, im Formular erscheint das Feld
@@ -384,13 +409,14 @@ export async function feldEntfernen(
     await feldSpeichern(id, bereich, { ...feld, zustand: 'aus' });
     return { art: 'ausgeblendet', antworten };
   }
-  if (ctId !== undefined && (await ctFelderLesen(id)).has(ctId)) {
-    await ctAnfrage(`/groups/${id}/memberfields/group/${ctId}`, { method: 'DELETE' });
-    if ((await ctFelderLesen(id)).has(ctId)) throw new NichtUebernommen('das Löschen des Felds');
-  }
+  // Mit dem Feld gehen seine weiteren Spalten („(Daten)“, Text der freien Antwort, Summe) – sonst blieben sie als
+  // Waisen in ChurchTools und in `ctFelder` stehen.
+  const weitere = zusatzSchluessel(e.ctFelder, feldId);
+  await spaltenLoeschen(id, [ctId, ...weitere.map((k) => e.ctFelder[k])], 'das Löschen des Felds');
   await aendereEinstellungen(id, (frisch) => {
     const ctFelder = { ...frisch.ctFelder };
     delete ctFelder[feldId];
+    for (const k of zusatzSchluessel(frisch.ctFelder, feldId)) delete ctFelder[k];
     return {
       ...frisch,
       // Schaute eine Bedingung auf das Feld, fällt sie mit weg (F1c, Alwin 12.11.2026).
@@ -424,11 +450,20 @@ export async function feldTypAendern(id: number, feld: Feld): Promise<Oeffentlic
         409,
         `Bei „${feld.frage}“ haben schon ${antworten === 1 ? 'eine Anmeldung' : `${antworten} Anmeldungen`} geantwortet – der Fragetyp lässt sich nicht mehr ändern. Lege dafür ein neues Feld an.`,
       );
-    if ((await ctFelderLesen(id)).has(ctId)) {
-      await ctAnfrage(`/groups/${id}/memberfields/group/${ctId}`, { method: 'DELETE' });
-      if ((await ctFelderLesen(id)).has(ctId))
-        throw new NichtUebernommen('das Ändern des Fragetyps');
-    }
+    // Die weiteren Spalten des alten Typs („(Daten)“, Summe, Text der freien Antwort) gehen mit – niemand hat
+    // geantwortet, und der neue Typ legt seine eigenen an.
+    const weitere = zusatzSchluessel(e.ctFelder, feld.id);
+    await spaltenLoeschen(
+      id,
+      [ctId, ...weitere.map((k) => e.ctFelder[k])],
+      'das Ändern des Fragetyps',
+    );
+    if (weitere.length)
+      await aendereEinstellungen(id, (frisch) => {
+        const ctFelder = { ...frisch.ctFelder };
+        for (const k of zusatzSchluessel(frisch.ctFelder, feld.id)) delete ctFelder[k];
+        return { ...frisch, ctFelder };
+      });
   }
   // Ohne Spalte legt `feldSpeichern` eine neue an (wie nach „Rückgängig“ eines Entfernens).
   return feldSpeichern(id, bereich, { ...feld, verborgen: undefined });

@@ -8,6 +8,20 @@
  *   Im Verlauf steht sie dagegen als lesbarer Text („Küche, Sonstiges“).
  */
 
+/**
+ * **Höchstlänge eines Gruppenfelds in ChurchTools: 4.000 Zeichen** (Zeichen, nicht Bytes), fest – eine höhere `maxLength`
+ * nimmt ChurchTools an und ignoriert sie (A6-2b, `messung-a6-2026-10-14.md`). Schreibt die Leitung mehr, lehnt ChurchTools
+ * mit 400 ab; **beim öffentlichen Anmelden ohne Login schneidet es still ab** (Antwort 200, gespeichert die ersten 4.000 –
+ * M9, `messung-m9-2026-11-27.md`). Wer ohne Login schreibt, muss die Länge also selbst prüfen. Die EINE Stelle für diese
+ * Zahl (Unterschrift, Liste mit Zeilen).
+ */
+export const GRUPPENFELD_MAX = 4000;
+
+/** Eine Zahl lesbar: deutsch, höchstens zwei Nachkommastellen („1.234,5“) – Tabelle, Summen, Liste mit Zeilen. */
+export function zahlText(n: number): string {
+  return n.toLocaleString('de-DE', { maximumFractionDigits: 2 });
+}
+
 /** Ein Wert zum Schreiben oder Vergleichen: Text, Liste von Options-Nummern, Kästchen, leer. */
 export type CtFeldwert = string | string[] | boolean | null;
 

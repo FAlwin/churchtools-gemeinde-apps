@@ -15,6 +15,7 @@ import { frageAntwort, frageAntwortRoh, frageSchluessel, fragen } from './druckl
 import { kurzname, wahlAntworten } from './bedingungen';
 import { mehrfachAnzeigeTeile, type ListenAnmeldung, type ListenPerson } from './liste';
 import { spaltenKatalog, zahlAus } from './tabelle';
+import { zahlText } from './feldwert';
 import { AMPEL_TEXT, ampelDerPerson, nachweisArtVon, type AmpelWert } from './nachweisAmpel';
 
 export type { SpaltenFilter };
@@ -103,8 +104,6 @@ export function filterName(e: OeffentlicheEinstellungen, spalte: string): string
   );
   return s?.titel ?? spalte;
 }
-
-const zahlText = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 2 });
 
 /** **Was auf dem Chip steht** – „Küche oder Technik“, „ab 3“, „50–100 €“, „enthält „Nuss““. */
 export function filterText(f: SpaltenFilter): string {

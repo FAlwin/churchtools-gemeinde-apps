@@ -2032,3 +2032,95 @@ describe('Baukasten (F5b): Links im Hinweistext', () => {
     expect(screen.queryByRole('button', { name: 'Link' })).toBeNull();
   });
 });
+
+// ── F6a: Liste mit Zeilen im Baukasten (Entwurf `f6-liste-v1`) ──
+describe('Baukasten (F6a): Liste mit Zeilen', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('in der Entwicklung: Kachel antippen → Liste mit „Was“ und „Anzahl“, Spalten im Feld bearbeitbar', async () => {
+    zeigen();
+    fireEvent.click(screen.getByRole('button', { name: 'Liste mit Zeilen' }));
+    expect(await screen.findByLabelText('Name der Spalte 1')).toHaveProperty('value', 'Was');
+    expect(screen.getByLabelText('Art der Spalte 2')).toHaveProperty('value', 'zahl');
+    expect(screen.getByLabelText('Höchstzahl Zeilen')).toHaveProperty('value', '10');
+    expect(screen.getByText('Vorschau – so sieht es im Formular aus:')).toBeTruthy();
+  });
+
+  it('gebaute Erweiterung (Test-ZIP, Release): weder Kachel noch Fragetyp „Liste mit Zeilen“ – bis F6b', async () => {
+    vi.stubEnv('DEV', false);
+    const { huelle } = zeigen();
+    expect(screen.queryByRole('button', { name: 'Liste mit Zeilen' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Kurzer Text' })).toBeTruthy();
+    fireEvent.click(huelle('f1'));
+    const typ = await screen.findByLabelText('Fragetyp');
+    const werte = [...typ.querySelectorAll('option')].map((o) => o.getAttribute('value'));
+    expect(werte).toContain('radio');
+    expect(werte).not.toContain('liste');
+  });
+
+  it('Fragetyp → Liste bekommt Spalten, zurück zu Text fallen sie weg', async () => {
+    ff.feldTypAendern.mockResolvedValue({} as never);
+    const { huelle } = zeigen();
+    fireEvent.click(huelle('f1'));
+    fireEvent.change(await screen.findByLabelText('Fragetyp'), { target: { value: 'liste' } });
+    await waitFor(() => expect(ff.feldTypAendern).toHaveBeenCalledTimes(1));
+    expect(ff.feldTypAendern.mock.calls[0][1]).toMatchObject({
+      typ: 'liste',
+      antworten: [],
+      liste: { spalten: [{ name: 'Was' }, { name: 'Anzahl' }], max: 10 },
+    });
+    fireEvent.change(screen.getByLabelText('Fragetyp'), { target: { value: 'text' } });
+    await waitFor(() => expect(ff.feldTypAendern).toHaveBeenCalledTimes(2));
+    expect(ff.feldTypAendern.mock.calls[1][1].liste).toBeUndefined();
+  });
+
+  it('Summe nur an einer Spalte, Spalte dazu bis 5, gespeichert nach der Pause mit den Spalten', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    zeigen();
+    fireEvent.click(screen.getByRole('button', { name: 'Liste mit Zeilen' }));
+    await screen.findByLabelText('Name der Spalte 1');
+    // Spalte 1 wird Zahl → zwei Zahl-Spalten; die Summe springt von einer zur anderen.
+    fireEvent.change(screen.getByLabelText('Art der Spalte 1'), { target: { value: 'zahl' } });
+    const summen = () => screen.getAllByLabelText<HTMLInputElement>('Summe zeigen');
+    fireEvent.click(summen()[0]);
+    fireEvent.click(summen()[1]);
+    expect(summen().map((x) => x.checked)).toEqual([false, true]);
+    for (let i = 0; i < 3; i++)
+      fireEvent.click(screen.getByRole('button', { name: '+ Spalte hinzufügen' }));
+    expect(screen.getByRole('button', { name: 'höchstens 5 Spalten' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(PAUSE_FELD_MS);
+    });
+    await waitFor(() => expect(ff.feldSpeichern).toHaveBeenCalled());
+    const feld = ff.feldSpeichern.mock.calls.at(-1)![2];
+    expect(feld.typ).toBe('liste');
+    expect(feld.liste!.spalten.map((s) => [s.name, s.art, !!s.summe])).toEqual([
+      ['Was', 'zahl', false],
+      ['Anzahl', 'zahl', true],
+      // Neue Spalten heißen verschieden – sonst hielte „zwei Spalten heißen gleich“ das Speichern auf.
+      ['Neue Spalte', 'text', false],
+      ['Neue Spalte 2', 'text', false],
+      ['Neue Spalte 3', 'text', false],
+    ]);
+    // Neue Spalten haben eigene Kennungen (Daten in ChurchTools hängen daran).
+    expect(new Set(feld.liste!.spalten.map((s) => s.id)).size).toBe(5);
+  });
+
+  it('kaputte Einstellung (zwei gleiche Spaltennamen) → Hinweis am Feld, nichts gespeichert', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    zeigen();
+    fireEvent.click(screen.getByRole('button', { name: 'Liste mit Zeilen' }));
+    fireEvent.change(await screen.findByLabelText('Name der Spalte 2'), {
+      target: { value: 'was' },
+    });
+    expect(screen.getByRole('alert').textContent).toMatch(/Zwei Spalten heißen „was“/);
+    ff.feldSpeichern.mockClear();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(PAUSE_FELD_MS);
+    });
+    expect(ff.feldSpeichern).not.toHaveBeenCalled();
+  });
+});

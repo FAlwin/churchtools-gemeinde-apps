@@ -16,6 +16,7 @@ import {
 } from '@shared/anmeldung/baukasten';
 import { BausteinSymbol, type BausteinIcon } from './bausteinIcons';
 import { WER_TEXT, geburtsdatumNoetigText } from './anzeige';
+import { bausteinFrei } from './bausteinFrei';
 import k from './Baukasten.module.scss';
 
 /**
@@ -54,6 +55,7 @@ const SYMBOL_TYP: Partial<Record<Feldtyp, BausteinIcon>> = {
   multi: 'multi',
   date: 'date',
   number: 'number',
+  liste: 'liste',
   ueberschrift: 'ueberschrift',
   info: 'info',
   trenner: 'trenner',
@@ -235,14 +237,16 @@ export function BausteineTafel({
   // Eigene Fragen gelten meist pro Person; bei „einzeln“ gibt es ohnehin nur eine.
   const eigenerBereich: Bereich = wer === 'einzeln' ? 'anmeldung' : 'person';
   const eigene = (gruppe: 'frage' | 'gestaltung') =>
-    BAUSTEINE.filter((x) => x.gruppe === gruppe && passt(x.name)).map((x) => ({
-      typ: x.typ,
-      b: {
-        name: x.name,
-        feld: bausteinFeld(x.typ, neueFeldKennung(formular)),
-        bereich: eigenerBereich,
-      },
-    }));
+    BAUSTEINE.filter((x) => x.gruppe === gruppe && bausteinFrei(x.typ) && passt(x.name)).map(
+      (x) => ({
+        typ: x.typ,
+        b: {
+          name: x.name,
+          feld: bausteinFeld(x.typ, neueFeldKennung(formular)),
+          bereich: eigenerBereich,
+        },
+      }),
+    );
   const prozent = Math.min(100, Math.round(platz * 100));
 
   return (

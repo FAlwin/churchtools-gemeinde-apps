@@ -14,6 +14,7 @@ import {
   weggefallenText,
 } from '@shared/anmeldung/bedingungen';
 import { kannFrei } from '@shared/anmeldung/freieAntwort';
+import { standardListe } from '@shared/anmeldung/zeilenListe';
 import { antwortenZaehlen, ctFelderLesen, feldSpeichern, feldTypAendern } from './formularFelder';
 import { aendereEinstellungen } from './einrichten';
 import {
@@ -238,6 +239,9 @@ export function useFeldEntwurf({
     };
     // F3c: Eine freie Antwort gibt es nur bei Auswahlfragen – bei einem Text, einem Datum … fällt sie weg.
     if (!kannFrei(feld)) delete feld.frei;
+    // F6a: Eine Liste braucht Spalten (die vom letzten Mal, sonst „Was“/„Anzahl“); jeder andere Typ hat keine.
+    if (typ === 'liste') feld.liste = d.feld.liste ?? standardListe();
+    else delete feld.liste;
     // Ein anderer Fragetyp kennt andere Vergleiche und Antworten – was nicht mehr passt, fällt weg (F1c).
     const { formular, weggefallen } = bedingungenNachziehen(ersetzeFeld(formularRef.current, feld));
     setLokalF(formular);

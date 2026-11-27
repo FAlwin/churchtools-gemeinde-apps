@@ -136,6 +136,43 @@ function mitBedingungen(
     ],
   };
 }
+/**
+ * F6a: „Liste mit Zeilen“ im Worship-Workshop (Entwurf `f6-liste-v1`, Leitung: Lobpreisteam) – zum Ansehen im Baukasten und in der Vorschau.
+ * Abschicken kommt mit F6b, deshalb nur hier (nicht in der Lobpreisfreizeit, deren „Von Hand“ sonst scheiterte).
+ */
+function mitListe(f: OeffentlicheEinstellungen['formular']): OeffentlicheEinstellungen['formular'] {
+  return {
+    anmeldung: [
+      ...f.anmeldung.slice(0, -2),
+      {
+        id: 'geraete',
+        art: 'eigen' as const,
+        typ: 'liste' as const,
+        frage: 'Was bringst du privat mit?',
+        hilfe: 'Alles, was du mitbringst und was über die Gemeinde versichert sein soll.',
+        zustand: 'pflicht' as const,
+        antworten: [],
+        kurz: 'Inventar',
+        liste: {
+          spalten: [
+            { id: 'a', name: 'Gegenstand', art: 'text' as const },
+            { id: 'b', name: 'Anzahl', art: 'zahl' as const },
+            { id: 'c', name: 'Wert gesamt', art: 'zahl' as const, einheit: '€', summe: true },
+            {
+              id: 'd',
+              name: 'Zustand',
+              art: 'auswahl' as const,
+              antworten: ['neu', 'gut', 'gebraucht'],
+            },
+          ],
+          max: 15,
+        },
+      },
+      ...f.anmeldung.slice(-2),
+    ],
+    person: f.person,
+  };
+}
 const DEMO_FELDER = [
   { id: 73, name: 'Bezahlt' },
   { id: 74, name: 'Anmelde-Nr.' },
@@ -487,6 +524,7 @@ function demoGruppen(): Map<number, G> {
             { artGruppeId: 61, fuer: 'nurWenn', feld: 'frage:gibtsnicht', antworten: ['Ja'] },
             { artGruppeId: 99, fuer: 'alle' },
           ],
+          formular: mitListe(neueEinstellungen('einfach').formular),
         }),
         { maxMembers: 20 },
         2,

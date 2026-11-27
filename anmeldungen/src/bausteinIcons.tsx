@@ -26,6 +26,8 @@ const PFADE = {
   multi: 'M9 6h11M9 12h11M9 18h11M3 6l1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17',
   date: 'M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2ZM3 10h18M8 3v4m8-4v4',
   number: 'M4 9h16M4 15h16M10 3 8 21m8-18-2 18',
+  // F6a „Liste mit Zeilen“: eine kleine Tabelle.
+  liste: 'M4 5h16v14H4ZM4 10h16M4 15h16M10 5v14',
   ueberschrift: 'M6 4v16M18 4v16M6 12h12',
   info: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 11v5m0-8v.01',
   trenner: 'M3 12h18',

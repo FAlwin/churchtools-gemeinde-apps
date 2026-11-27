@@ -386,3 +386,33 @@ describe('F1b: Was die Person nicht mehr gesehen hat, kommt nicht nach ChurchToo
     expect(buchungAus(e, antworten(), wahl, HEUTE).alter).toEqual([9, null]);
   });
 });
+
+describe('F6a: Liste mit Zeilen – Absenden kommt erst mit F6b', () => {
+  it('eine Liste im Formular → PasstNicht („nicht richtig eingerichtet“), nie still ohne die Liste angemeldet', () => {
+    const e = einstellungen();
+    e.formular.anmeldung.splice(2, 0, {
+      id: 'inv',
+      art: 'eigen',
+      typ: 'liste',
+      frage: 'Was bringst du mit?',
+      hilfe: '',
+      zustand: 'freiwillig',
+      antworten: [],
+      liste: { spalten: [{ id: 'a', name: 'Was', art: 'text' }], max: 10 },
+    });
+    e.ctFelder = { ...e.ctFelder, inv: 900, 'inv.daten': 901 };
+    const ct: CtFormular = {
+      ...CT,
+      form: [
+        ...CT.form,
+        { id: 900, type: 'custom', name: 'Was bringst du mit?' },
+        { id: 901, type: 'custom', name: 'Was bringst du mit? (Daten)' },
+      ],
+    };
+    const a = antworten();
+    a.anmeldung.inv = { zeilen: [{ a: 'Zelt' }] };
+    expect(() => anmeldungAufbauen(e, a, { option: 0, extras: [] }, HEUTE, ct)).toThrow(
+      /Liste mit Zeilen/,
+    );
+  });
+});

@@ -356,6 +356,10 @@ export function anmeldungAufbauen(
       if (!ctFeld) throw new PasstNicht(`das Feld „${name}“ fehlt im Anmeldeformular`);
       return ctFeld;
     };
+    // F6a: Das Absenden einer Liste mit Zeilen kommt erst mit F6b – bis dahin laut scheitern („nicht richtig
+    // eingerichtet“), nie still ohne die Liste anmelden. Der Baustein ist bis dahin nur in Entwicklung/Demo zu haben.
+    if (f.typ === 'liste')
+      throw new PasstNicht(`„${f.frage}“ (Liste mit Zeilen) kann noch nicht abgeschickt werden`);
     const ctFeld = spalte(f.id, f.frage);
     if (f.typ === 'unterschrift') {
       const striche = unterschriftAus(w);

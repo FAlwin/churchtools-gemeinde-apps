@@ -62,7 +62,7 @@ export async function ladeZusagenTermine(
   bis: string,
 ): Promise<Map<number, string[]> | null> {
   if (!platzeVollstaendig(start, gruppen)) return null;
-  const roh = await ladeRohTermine(von, plusTage(bis, 1));
+  const roh = await ladeRohTermine(start, von, plusTage(bis, 1));
   return zusagenTermine(roh, (serviceId) => start.dienste.get(serviceId)?.dienstgruppeId, gruppen);
 }
 

@@ -12,6 +12,8 @@ import { isoTag } from '@shared/ct/zeit';
 import { plusTage } from '@shared/ct/datum';
 import { termineAus, type RohTermin, type TerminZeile } from '@shared/dienstplan/termine';
 import { planAus, type Plan } from '@shared/dienstplan/plan';
+import { ohneLeereTermine } from '@shared/dienstplan/leereTermine';
+import { siehtAlleDienstgruppen } from '@shared/ct/dienstRechte';
 import { ganzSichtbar, planbar, type Start } from './start';
 
 /** Liste (Start, Termine) und Matrix (Planen) – aus derselben Antwort, eine Abfrage für alle drei Reiter. */
@@ -58,8 +60,10 @@ export function ladeZeitraum(
 /**
  * Die rohen Termine von `von` (eingeschlossen) bis `bisAusschliesslich` (nicht, wie ChurchTools' `to`) mit ihren Plätzen.
  * **Wirft**, wenn sie nicht als Liste kommen – eine Stelle für Liste, Matrix und „Verfügbarkeit → Zusagen“.
+ * **Termine ohne sichtbaren Platz fehlen** (`ohneLeereTermine`) – außer für Menschen, die alle Dienstgruppen sehen.
  */
 export async function ladeRohTermine(
+  start: Pick<Start, 'rechte' | 'dienstgruppen'>,
   von: string,
   bisAusschliesslich: string,
 ): Promise<RohTermin[]> {
@@ -69,7 +73,10 @@ export async function ladeRohTermine(
   if (!Array.isArray(termine)) {
     throw new ApiError(502, 'ChurchTools hat die Termine nicht vollständig geliefert.');
   }
-  return termine as RohTermin[];
+  return ohneLeereTermine(
+    termine as RohTermin[],
+    siehtAlleDienstgruppen(start.rechte, start.dienstgruppen),
+  );
 }
 
 /** `von` eingeschlossen, `bisAusschliesslich` nicht (wie ChurchTools' `to`). */
@@ -79,7 +86,7 @@ async function ladeVonBis(
   bisAusschliesslich: string,
   zeitzone: string,
 ): Promise<TermineDaten> {
-  return datenAus(start, await ladeRohTermine(von, bisAusschliesslich), zeitzone, true);
+  return datenAus(start, await ladeRohTermine(start, von, bisAusschliesslich), zeitzone, true);
 }
 
 /**

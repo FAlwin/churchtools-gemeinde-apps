@@ -1387,3 +1387,28 @@ und nach einem Speicherversuch lässt sich die Gruppe nicht mehr wechseln.
 - **Historie:** 28.11.2026 (Entwurf `reihen-reiter-s2-v1`, Variante A, von Alwin abgenommen; Scheibe 2)
 
 </details>
+
+### TF-PROT-37 · Reihe: Events aus den Abenden in ChurchTools anlegen
+
+**Das brauchst du:** In der Test-Instanz eine Gruppe mit Protokollen, in der du **schreiben darfst**, und einen **Kalender, in dem du Termine UND Events anlegen darfst**. Eine gespeicherte Reihe mit **drei Abenden ohne Event** (z. B. 13.01., 20.01., 27.01.), dazu im Kalender am **20.01.** schon einen Termin, der so ähnlich heißt wie die Reihe (z. B. „TEST Jugendabend extra“ bei einer Reihe „TEST Jugendabend“). Mindestens **eine Eventvorlage** in ChurchTools. Ein Konto, das Termine, aber **keine Events** anlegen darf. Ein Handy (oder das Browserfenster auf 375 px).
+
+**Das muss passieren:** Aus der Reihe heraus entstehen in ChurchTools Termine mit Events; die Abende bekommen die Events erst, wenn sie dort nachgelesen sind. An einem Tag mit ähnlichem Termin wird nichts angelegt. Gespeichert wird die Reihe wie bisher von Hand.
+
+1. **Reiter „Reihen“** (oder im Protokoll **Bearbeiten**) → die Reihe öffnen → **Bearbeiten**. Unter den Abenden steht **„Events für 3 Abende anlegen …“**. Mit dem Konto **ohne** Event-Recht fehlt dieser Knopf, und in „Event wählen“ fehlt unten „+ Event am … neu anlegen …“.
+2. Bei einem Abend **Event wählen** antippen: Unten steht **„+ Event am 27.01.2027 neu anlegen …“** (nur bei einem Abend mit Datum). Antippen: Das Fenster **„Event anlegen“** geht auf, oben das Datum als Etikett, darunter **Kalender** (nur Kalender mit beiden Rechten), **Titel** (der Name der Reihe), **Beginn 19:30**, **Ende 21:30** und **Eventvorlage**. **Anlegen** ist grau, bis eine Vorlage gewählt ist; die Vorlage **„Standard“** zählt als gewählt. Einen leeren Titel lässt das Fenster nicht zu.
+3. Eine Vorlage wählen, **Anlegen**: Das Fenster schließt. Der Abend zeigt jetzt das **Event** (Titel aus ChurchTools); im Fenster „Reihe“ steht **„1 Event angelegt. Jetzt die Reihe speichern.“** und **Speichern** ist aktiv. In ChurchTools steht im Kalender ein neuer Termin am 27.01. um 19:30 mit einem Event, dessen Dienste und Ablauf aus der Vorlage kommen. **Es ging keine Einladung raus** (keine Mail an Mitglieder der Gruppe).
+4. **Ohne zu speichern** das Fenster schließen und neu öffnen: Der Abend hat wieder „Event wählen“ – aber in „Event wählen“ steht das neue Event in der Liste (am 27.01.) und lässt sich **übernehmen**.
+5. **Sammelknopf:** **Events für 2 Abende anlegen …** (13.01. und 20.01.). Das Fenster heißt **„Events für 2 Abende anlegen“** und zeigt beide Daten; der Knopf heißt **„2 Events anlegen“**. Anlegen: Er zählt hoch („Legt an … 1 von 2“). In ChurchTools entsteht **nur der Termin am 13.01.**; am **20.01.** wird **nichts** angelegt. Die Zusammenfassung sagt „1 Event angelegt. Jetzt die Reihe speichern.“ und „Am 20.01.2027 steht im Kalender … schon „TEST Jugendabend extra“. Dort wird nichts angelegt; ordne ihn über „Event wählen“ zu.“ Der 20.01. bleibt bei „Event wählen“.
+6. **Speichern**: Die Reihe zeigt beide Events (13.01. und 27.01.) im Protokoll bzw. in der Karte; **„In Events übertragen“** kann sie jetzt schreiben.
+7. **Nichts doppelt:** Bei einem Abend mit Event (z. B. 27.01.) in „Event wählen“ **Zuordnung entfernen** tippen, **Übernehmen** nicht nötig, und für ihn erneut „+ Event am … neu anlegen …“ wählen: Es kommt **„schon da“** – der Termin von Schritt 3 steht ja im Kalender –, nicht ein zweiter Termin.
+8. **Flugmodus** beim Tippen auf **Anlegen** (nach dem Wählen der Vorlage): Es erscheint eine Meldung („Am … wurde nichts angelegt“ bzw. „ChurchTools hat nicht geantwortet …“), der Abend bleibt ohne Event, **nichts wird doppelt angelegt**. Ist die Meldung „ob der Termin angelegt wurde, ist unklar“: erst in ChurchTools nachsehen.
+9. Hell und dunkel, PC und 375 px: Fenster und Zusammenfassung laufen nicht über den Rand.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/protokolle/reiheEventAnlegen.ts`, `protokolle/src/reiheEventAnlegen.ts`, `protokolle/src/ReiheEventAnlegenFenster.tsx`, `protokolle/src/ReiheFenster.tsx`, `protokolle/src/eventsLesen.ts`, `protokolle/src/useReiheFenster.tsx`, `protokolle/src/ReiheBearbeitenFenster.tsx`, `protokolle/src/Reihen.tsx`, `protokolle/src/ReiheAnbieter.tsx`, `protokolle/src/themenreiheKontext.ts`, `protokolle/src/App.tsx`, `protokolle/src/demo.ts`
+- **Automatisiert:** größtenteils – `shared/protokolle/reiheEventAnlegen.test.ts` (Regeln, Vorlage 0, Meldungen), `protokolle/src/reiheEventAnlegen.test.ts` (nacheinander, „schon da“, Prüfung wirft, unklar, Event erst nach dem Nachlesen), `protokolle/src/eventsLesen.test.ts`, `protokolle/src/ReiheEventAnlegenFenster.test.tsx` (Knöpfe nur mit Recht, Fenster, Einzeln und Sammel, Zusammenfassung, Speichern aktiv), `protokolle/src/demoReiheEvent.test.ts`, `protokolle/src/Reihe.test.tsx` und `Reihen.test.tsx` (Recht bis ins Fenster); **nur von Hand:** echtes ChurchTools (Event mit Diensten aus der Vorlage, keine Mail, Zeitgrenzen beim Nachlesen), Flugmodus-Fall, Aussehen am Handy
+- **Historie:** 28.11.2026 (Entwurf `reihe-event-anlegen-s3-v1`, von Alwin abgenommen; Scheibe 3)
+
+</details>

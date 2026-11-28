@@ -100,7 +100,12 @@ export function zusammenfassung(ergebnisse: readonly TagErgebnis[]): {
   speichern: boolean;
 } {
   const n = ergebnisse.filter((e) => e.art === 'angelegt').length;
-  const zahl = n === 0 ? 'Es wurde kein Event angelegt.' : n === 1 ? '1 Event angelegt.' : `${n} Events angelegt.`;
+  const zahl =
+    n === 0
+      ? 'Es wurde kein Event angelegt.'
+      : n === 1
+        ? '1 Event angelegt.'
+        : `${n} Events angelegt.`;
   return {
     kopf: n > 0 ? `${zahl} Jetzt die Reihe speichern.` : zahl,
     meldungen: ergebnisse.flatMap((e) => tagMeldung(e) ?? []),

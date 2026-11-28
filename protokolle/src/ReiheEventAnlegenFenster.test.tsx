@@ -40,7 +40,10 @@ const reihe: Themenreihe = neueThemenreihe({
   ],
 });
 /** Dazu ein Abend ohne Datum – der zählt nicht (und ließe sich ohnehin nicht speichern). */
-const mitLeerem: Themenreihe = neueThemenreihe({ ...reihe, zeilen: [...reihe.zeilen, neueZeile('d', '')] });
+const mitLeerem: Themenreihe = neueThemenreihe({
+  ...reihe,
+  zeilen: [...reihe.zeilen, neueZeile('d', '')],
+});
 const KALENDER = [4];
 const VORLAGEN = [
   { id: 0, name: 'Standard' },
@@ -70,7 +73,6 @@ const zeigen = (eventAnlegen: readonly number[] | null = KALENDER, r = reihe) =>
   );
 const sammel = () => screen.queryByRole('button', { name: /^Events? für \d+ Abend/ });
 const speichern = () => screen.getByRole<HTMLButtonElement>('button', { name: 'Speichern' });
-const dialog = async () => await screen.findByRole('dialog', { name: /Event/ });
 const waehle = (f: HTMLElement, wert = '0') =>
   fireEvent.change(within(f).getByLabelText('Eventvorlage'), { target: { value: wert } });
 const anlegenKnopf = (f: HTMLElement) =>
@@ -134,7 +136,9 @@ describe('Knöpfe: nur mit Recht, nur für Abende mit Datum und ohne Event', () 
   it('in „Event wählen“ steht unten „+ Event am 27.01.2027 neu anlegen …“', async () => {
     zeigen();
     fireEvent.click(screen.getAllByRole('button', { name: 'Event wählen' })[0]);
-    expect(await screen.findByRole('button', { name: '+ Event am 27.01.2027 neu anlegen …' })).toBeTruthy();
+    expect(
+      await screen.findByRole('button', { name: '+ Event am 27.01.2027 neu anlegen …' }),
+    ).toBeTruthy();
   });
 });
 
@@ -147,7 +151,11 @@ describe('Einzeln anlegen', () => {
     expect(within(f).getByLabelText<HTMLInputElement>('Titel').value).toBe('Jugendabend');
     expect(within(f).getByLabelText<HTMLInputElement>('Beginn').value).toBe('19:30');
     expect(within(f).getByLabelText<HTMLInputElement>('Ende').value).toBe('21:30');
-    expect(within(f).getByText('Aus der Vorlage kommen Dienste und Ablauf. Es geht keine Einladung raus.')).toBeTruthy();
+    expect(
+      within(f).getByText(
+        'Aus der Vorlage kommen Dienste und Ablauf. Es geht keine Einladung raus.',
+      ),
+    ).toBeTruthy();
     expect(anlegenKnopf(f).disabled).toBe(true);
   });
 
@@ -181,11 +189,18 @@ describe('Einzeln anlegen', () => {
     // Zeile b zeigt jetzt das nachgelesene Event, c bleibt bei „Event wählen“.
     expect(screen.getAllByRole('button', { name: 'Event wählen' })).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Jugendabend' })).toBeTruthy();
-    expect(screen.getByRole('status').textContent).toBe('1 Event angelegt. Jetzt die Reihe speichern.');
+    expect(screen.getByRole('status').textContent).toBe(
+      '1 Event angelegt. Jetzt die Reihe speichern.',
+    );
     expect(speichern().disabled).toBe(false);
     // Vorlage 7, Kalender 4, Titel der Reihe, ohne Einladung.
     const q = vi.mocked(terminLegen).mock.calls[0][0];
-    expect(q.eintrag).toMatchObject({ kalender: 4, titel: 'Jugendabend', tag: '2027-01-27', events: { '2027-01-27': 7 } });
+    expect(q.eintrag).toMatchObject({
+      kalender: 4,
+      titel: 'Jugendabend',
+      tag: '2027-01-27',
+      events: { '2027-01-27': 7 },
+    });
     expect(q.eingeladen).toBeUndefined();
   });
 
@@ -228,7 +243,11 @@ describe('Einzeln anlegen', () => {
   });
 
   it('steht am Tag schon so ein Termin: nichts angelegt, Meldung mit Kalender und Titel', async () => {
-    vi.mocked(schonImKalender).mockResolvedValue({ id: 9, titel: 'Jugendabend extra', beginn: 'x' });
+    vi.mocked(schonImKalender).mockResolvedValue({
+      id: 9,
+      titel: 'Jugendabend extra',
+      beginn: 'x',
+    });
     zeigen();
     const f = await einzeln();
     waehle(f);
@@ -299,7 +318,9 @@ describe('Für alle Abende auf einmal', () => {
     const s = await screen.findByRole('status');
     expect(screen.getAllByRole('status')).toHaveLength(1);
     expect(s.textContent).toContain('1 Event angelegt. Jetzt die Reihe speichern.');
-    expect(s.textContent).toContain('Am 10.02.2027 steht im Kalender „Jugend“ schon „Jugendabend“.');
+    expect(s.textContent).toContain(
+      'Am 10.02.2027 steht im Kalender „Jugend“ schon „Jugendabend“.',
+    );
     expect(vi.mocked(terminLegen).mock.calls.map((c) => c[0].eintrag.tag)).toEqual(['2027-01-27']);
     // Der Abend ohne Treffer bleibt bei „Event wählen“.
     expect(screen.getAllByRole('button', { name: 'Event wählen' })).toHaveLength(1);

@@ -54,9 +54,12 @@ export async function eventsNachlesen(q: {
 }): Promise<{ fehlend: string[]; unklar: boolean }> {
   if (!q.gewuenscht.length) return { fehlend: [], unklar: false };
   try {
-    const da = (await eventsDesTermins(q.termin, q.gewuenscht.map((g) => g.tag))).map((x) =>
-      Date.parse(x.startDate as string),
-    );
+    const da = (
+      await eventsDesTermins(
+        q.termin,
+        q.gewuenscht.map((g) => g.tag),
+      )
+    ).map((x) => Date.parse(x.startDate as string));
     return {
       fehlend: q.gewuenscht.filter((g) => !da.includes(Date.parse(g.startDate))).map((g) => g.tag),
       unklar: false,

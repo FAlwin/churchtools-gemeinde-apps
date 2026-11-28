@@ -63,7 +63,8 @@ async function ein(
     return { ...bezug, art: 'fehler', text: fehlerMeldung(e).text };
   }
   // Das Nachlesen in `terminLegen` sagt nur „fehlt“/„unklar“ – die Nummer des Events braucht die Zeile.
-  if (r.events && (r.events.fehlend.length || r.events.unklar)) return { ...bezug, art: 'ohneEvent' };
+  if (r.events && (r.events.fehlend.length || r.events.unklar))
+    return { ...bezug, art: 'ohneEvent' };
   try {
     const gewollt = eventsFuer(eintrag, q.zeitzone)[0];
     const event = await eventZumTerminLesen({

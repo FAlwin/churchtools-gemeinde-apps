@@ -103,7 +103,9 @@ describe('reiheEintrag', () => {
 describe('eventAnlegenFehler', () => {
   const tag = '2027-01-27';
   it('prüft mit der Prüfung des Termin-Fensters: Kalender, Titel, Zeit', () => {
-    expect(eventAnlegenFehler({ ...EINGABE, kalender: null }, tag)).toBe('Bitte einen Kalender wählen.');
+    expect(eventAnlegenFehler({ ...EINGABE, kalender: null }, tag)).toBe(
+      'Bitte einen Kalender wählen.',
+    );
     expect(eventAnlegenFehler({ ...EINGABE, titel: '  ' }, tag)).toBe('Bitte einen Titel angeben.');
     expect(eventAnlegenFehler({ ...EINGABE, bis: '19:00' }, tag)).toBe(
       'Das Ende muss nach dem Beginn liegen.',

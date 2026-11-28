@@ -146,7 +146,9 @@ describe('reiheEventsAnlegen', () => {
     vi.mocked(terminLegen).mockRejectedValueOnce(new Unklar('Bitte erst im Kalender nachsehen.'));
     const r = await los();
     expect(r[0]).toMatchObject({ art: 'unklar', text: 'Bitte erst im Kalender nachsehen.' });
-    expect(vi.mocked(terminLegen).mock.calls.filter((c) => c[0].eintrag.tag === '2027-01-27')).toHaveLength(1);
+    expect(
+      vi.mocked(terminLegen).mock.calls.filter((c) => c[0].eintrag.tag === '2027-01-27'),
+    ).toHaveLength(1);
     expect(r[1].art).toBe('angelegt');
   });
 
@@ -180,7 +182,9 @@ describe('reiheEventsAnlegen', () => {
   });
 
   it('ein Termin, der sich nicht nachlesen lässt (Unklar aus terminLegen), ist unklar – ohne Event, ohne zweites Anlegen', async () => {
-    vi.mocked(terminLegen).mockRejectedValue(new Unklar('Der Termin wurde angelegt, ließ sich aber nicht nachlesen.'));
+    vi.mocked(terminLegen).mockRejectedValue(
+      new Unklar('Der Termin wurde angelegt, ließ sich aber nicht nachlesen.'),
+    );
     const r = await los([ABENDE[0]]);
     expect(r[0].art).toBe('unklar');
     expect(terminLegen).toHaveBeenCalledTimes(1);

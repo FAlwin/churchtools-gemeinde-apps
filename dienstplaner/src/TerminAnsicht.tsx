@@ -345,7 +345,20 @@ export function TerminAnsicht({
 
           <section className={styles.karte} aria-label="Ablauf">
             <div className={styles.kartenKopf}>
-              <h3>Ablauf</h3>
+              <h3 className={styles.ablaufTitel}>
+                Ablauf
+                {/* Abgeschlossen (wie „Ablaufplan festlegen“ in ChurchTools): ein Schloss, schon vor dem Bearbeiten. */}
+                {teile.abgeschlossen && (
+                  <span
+                    className={styles.schloss}
+                    role="img"
+                    aria-label="In ChurchTools abgeschlossen"
+                    title="In ChurchTools abgeschlossen"
+                  >
+                    <Icon name="lock" size={14} stroke={2.2} />
+                  </span>
+                )}
+              </h3>
               <span className={styles.kopfKnoepfe}>
                 {teile.kopfKnopf}
                 {teile.liveKnopf}
@@ -483,6 +496,7 @@ export function TerminAnsicht({
                   gemeinde: start.gemeinde,
                   app: 'Dienstplaner',
                   zeilen: ablauf === null ? null : teile.zeilen,
+                  serie: teile.serie,
                   dienste: blattGruppenAus(gruppen),
                   infoGruppen: teile.infoGruppen,
                   ansichtInfos: teile.infoSpalten,

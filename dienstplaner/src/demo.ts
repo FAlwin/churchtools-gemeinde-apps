@@ -795,6 +795,8 @@ function ablaufDemo(
     },
   ];
   let beginnPos = probe?.beginnPos ?? 1;
+  // Die Predigtserie (27.11.2026) – wie gemessen: `PUT` mit `series` setzt sie, gekürzt, leer = `null`.
+  let serie: string | null = null;
   let naechsteId = naechsteIdAnfang;
   const PFAD = `/api/events/${termin}/agenda`;
 
@@ -822,6 +824,7 @@ function ablaufDemo(
       calendarId: 1,
       eventStartPosition: beginnPos,
       isLocked: false,
+      series: serie,
       items: punkte.map(({ ausgeblendet: _a, ...p }, i) => ({
         ...p,
         position: i,
@@ -872,6 +875,7 @@ function ablaufDemo(
           punkte = ids.map((id) => punkte.find((p) => p.id === id)).filter((p) => p !== undefined);
         }
         if (typeof r.eventStartPosition === 'number') beginnPos = r.eventStartPosition;
+        if ('series' in r) serie = typeof r.series === 'string' ? r.series.trim() || null : null;
         return { status: 200, data: lesen() };
       }
       if (pfad === `${PFAD}/items` && methode === 'POST') {

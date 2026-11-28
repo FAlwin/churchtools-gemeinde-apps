@@ -98,12 +98,16 @@ export interface CtAgenda {
   /** Pflichtfeld beim Schreiben des Ablaufs (`PUT …/agenda`). */
   calendarId?: number;
   /**
-   * Die „Predigtserie“ (seit dem App-Update vom 26.11.2026 in der ChurchTools-App setzbar). Die App liest sie nicht.
+   * Die „Predigtserie“ (seit dem App-Update vom 26.11.2026 in der ChurchTools-App setzbar). Die Musik-App liest sie nicht; der Dienstplaner zeigt und setzt sie (27.11.2026).
    * Gemessen am 26.11.2026 (`server/scripts/probe-agenda-series.ts`): Ein `PUT …/agenda` OHNE das Feld lässt sie stehen –
    * Umsortieren (`{ items }`) und Grenze verschieben (`{ calendarId, eventStartPosition }`) löschen sie also nicht.
    * Ebenso bei Vorlagen (`PUT /agendatemplates/{id}`, gemessen 27.11.2026): Umsortieren, Grenze, Umbenennen
    * (`{ name, calendarId }`) und Ersetzen lassen sie stehen. Nur „Neue Vorlage“/„Als Vorlage“ (`POST`) schreiben `null` –
    * eine neue Vorlage übernimmt die Serie eines Termins bewusst nicht.
+   * **Setzen** (gemessen 27.11.2026 an Test-Termin 160, `probe-agenda-series.ts --serie-rumpf`): `PUT …/agenda` mit nur
+   * `{ series }` genügt (200, ohne `calendarId`, ohne `items` – Punkte und Grenze bleiben). ChurchTools kürzt Leerzeichen
+   * am Rand, `""` wird `null`, höchstens 100 Zeichen (101 → 400). Freitext – eine Liste vorhandener Serien gibt es nicht.
+   * Der Dienstplaner schreibt sie über `serieSetzen` (`schreibKern.ts`).
    */
   series?: string | null;
   /** In ChurchTools abgeschlossen (`…/agenda/lock`) – dann verweigert ChurchTools jedes Ändern. */

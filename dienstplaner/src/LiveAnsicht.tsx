@@ -6,7 +6,7 @@ import { NachbarKnopf } from '@ui/ablauf/NachbarKnopf';
 import { TextKnopf } from '@ui/bedienung/TextKnopf';
 import { useVollbild } from '@ui/bedienung/useVollbild';
 import { useWakeLock } from '@ui/bedienung/useWakeLock';
-import { itemLabel, type AblaufZeile } from '@shared/ct/ablaufZeile';
+import { itemLabel, zustaendigeText, type AblaufZeile } from '@shared/ct/ablaufZeile';
 import { tagKurz } from '@shared/ct/datum';
 import {
   endeStelle,
@@ -352,7 +352,7 @@ export function LiveAnsicht({
     if (!z) return { titel: p.title, wer: '', zeile: null };
     return {
       titel: itemLabel(z),
-      wer: z.responsible.map((r) => r.label).join(', '),
+      wer: zustaendigeText(z),
       zeile: z,
     };
   };

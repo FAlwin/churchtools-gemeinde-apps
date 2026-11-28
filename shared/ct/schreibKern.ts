@@ -190,6 +190,46 @@ export async function ablaufAbschliessen(
   });
 }
 
+/** Höchstlänge der Predigtserie – ChurchTools lehnt mehr mit 400 ab (gemessen 27.11.2026). */
+export const SERIE_MAX = 100;
+
+/** Die Predigtserie, wie ChurchTools sie speichert: Rand-Leerzeichen weg, leer = keine (`null`). */
+export function serieAus(text: string | null | undefined): string | null {
+  const t = (text ?? '').trim();
+  return t === '' ? null : t;
+}
+
+/** Was an einer Predigtserie nicht stimmt – `null`, wenn sie passt (leer ist erlaubt: „keine Serie“). */
+export function serieFehler(text: string): string | null {
+  const t = serieAus(text);
+  return t !== null && t.length > SERIE_MAX
+    ? `Die Predigtserie darf höchstens ${SERIE_MAX} Zeichen lang sein.`
+    : null;
+}
+
+/**
+ * Die **Predigtserie** eines Termins setzen, ändern oder entfernen (`null`/leer). Gemessen 27.11.2026: `PUT …/agenda` mit
+ * nur `{ series }` – **ohne** `items`, die ersetzten sonst die ganze Liste und überschrieben eine Änderung, die gerade
+ * jemand anders macht; ohne `eventStartPosition`, die Grenze bleibt. Teilen sich mehrere Termine einen Ablauf, gilt die
+ * Serie für alle. Abgeschlossen → 423 über `ablaufSchreibe`. Liefert den geschriebenen Wert.
+ */
+export async function serieSetzen(
+  s: CtSchreiber,
+  eventId: number,
+  text: string | null,
+): Promise<string | null> {
+  const fehler = serieFehler(text ?? '');
+  if (fehler) throw s.fehler(400, fehler);
+  const series = serieAus(text);
+  await ablaufSchreibe(s, eventId, ablaufBasis(eventId), {
+    method: 'PUT',
+    json: { series },
+    verweigert: ABLAUF_VERWEIGERT,
+    fehler: 'Predigtserie speichern fehlgeschlagen',
+  });
+  return series;
+}
+
 /**
  * Ein bestimmtes Arrangement eines Lieds – oder 404 (#321). Die Suche stand zweimal da (Tempo und
  * Versionen); hier liegt sie, damit Server und Browser sie teilen. Das Lied dazu liest der Aufrufer

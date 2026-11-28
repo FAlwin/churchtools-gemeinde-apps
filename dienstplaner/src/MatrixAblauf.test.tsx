@@ -96,9 +96,19 @@ const ABLAUF_10 = [
  * `ablauf11` ersetzt die Antwort für Termin 11 (Fehler); `gesperrt10` schließt den Ablauf von Termin 10 ab.
  */
 function ct(
-  o: { ablauf11?: () => Response; erstesNeuLesenHalten?: boolean; gesperrt10?: boolean } = {},
+  o: {
+    ablauf11?: () => Response;
+    erstesNeuLesenHalten?: boolean;
+    gesperrt10?: boolean;
+    /** Predigtserie der Termine 10 und 11 (`series`); ein `PUT …/agenda` an 10 setzt sie wie ChurchTools. */
+    serie10?: string | null;
+    serie11?: string | null;
+  } = {},
 ) {
   let items = ABLAUF_10.map((i, n) => ({ ...i, position: n }));
+  let serie10 = o.serie10 ?? null;
+  /** Die Rümpfe aller `PUT …/agenda` (Ablauf selbst, nicht seine Punkte). */
+  const ablaufRuempfe: unknown[] = [];
   const schreiben: string[] = [];
   const gelesen: string[] = [];
   // Das erste Lesen von Termin 10 nach dem ersten Schreiben hält an (mit dem Stand von DAMALS), bis `weiter()`.
@@ -110,6 +120,12 @@ function ct(
     if (url.pathname.endsWith('/csrftoken')) return Promise.resolve(json(200, { data: 'tok' }));
     if (methode !== 'GET') {
       schreiben.push(`${methode} ${url.pathname}`);
+      if (methode === 'PUT' && url.pathname.endsWith('/agenda')) {
+        const rumpf = JSON.parse(String(init?.body)) as { series?: string | null };
+        ablaufRuempfe.push(rumpf);
+        if ('series' in rumpf) serie10 = rumpf.series?.trim() || null;
+        return Promise.resolve(json(200, { data: {} }));
+      }
       const id = Number(url.pathname.split('/').pop());
       if (methode === 'PUT') {
         const rumpf = JSON.parse(String(init?.body)) as { title?: string };
@@ -122,7 +138,7 @@ function ct(
       gelesen.push(agenda[1]);
       if (agenda[1] === '10') {
         const antwort = json(200, {
-          data: { calendarId: 2, isLocked: o.gesperrt10 === true, items },
+          data: { calendarId: 2, isLocked: o.gesperrt10 === true, series: serie10, items },
         });
         if (o.erstesNeuLesenHalten && schreiben.length === 1 && !gehalten) {
           return new Promise<Response>((r) => {
@@ -136,7 +152,12 @@ function ct(
         return Promise.resolve(
           o.ablauf11?.() ??
             json(200, {
-              data: { calendarId: 5, isLocked: false, items: [{ id: 90, title: 'Gebet' }] },
+              data: {
+                calendarId: 5,
+                isLocked: false,
+                series: o.serie11 ?? null,
+                items: [{ id: 90, title: 'Gebet' }],
+              },
             }),
         );
       }
@@ -152,7 +173,7 @@ function ct(
     // `custommodules` (keine Musik-App) und `whoami` für die Fehler-Übersetzung.
     return Promise.resolve(json(200, { data: url.pathname.endsWith('/whoami') ? { id: 1 } : [] }));
   });
-  return { spy, schreiben, gelesen, weiter: () => weiter() };
+  return { spy, schreiben, gelesen, ablaufRuempfe, weiter: () => weiter() };
 }
 
 function zeige(o: { handy?: boolean; start?: typeof START; onVorlagen?: () => void } = {}) {
@@ -486,5 +507,69 @@ describe('Matrix am Handy – Ablauf (E6-6a)', () => {
     expect(screen.queryByRole('button', { name: /Neu aufsetzen/ })).toBeNull();
     // „Als Vorlage …“ (E10-V5) gehört wie „Neu aufsetzen …“ nur in die Termin-Ansicht.
     expect(screen.queryByRole('button', { name: /Als Vorlage/ })).toBeNull();
+  });
+});
+
+/**
+ * **Predigtserie im Spaltenkopf** (Alwin, 27.11.2026, Entwurf `predigtserie-matrix-3.html` C): kursiv mit Buch unter dem
+ * Termin-Namen, nur wenn gesetzt; im „Ablauf bearbeiten“ antippbar (mit Recht, nicht abgeschlossen) – derselbe Schreibweg
+ * wie in der Termin-Ansicht, nur `{ series }`.
+ */
+describe('Matrix – Predigtserie im Spaltenkopf', () => {
+  /** Der Spaltenkopf eines Termins (Spalte `n`, 0 = erster Termin). */
+  const kopf = (n: number) => screen.getAllByRole('columnheader')[n + 1];
+
+  it('steht im Kopf, wo eine gesetzt ist – mit ganzem Titel beim Darüberfahren; ohne Serie nichts', async () => {
+    ct({ serie10: 'Der Römerbrief – Gerecht aus Glauben allein', serie11: 'Die Psalmen' });
+    zeige();
+    await waitFor(() =>
+      expect(within(kopf(0)).getByText('Der Römerbrief – Gerecht aus Glauben allein')).toBeTruthy(),
+    );
+    expect(
+      within(kopf(0)).getByTitle('Predigtserie: Der Römerbrief – Gerecht aus Glauben allein'),
+    ).toBeTruthy();
+    expect(within(kopf(1)).getByText('Die Psalmen')).toBeTruthy();
+    // Termin 13 hat keinen Ablauf, 12 keinen mit Serie: kein Eintrag.
+    expect(within(kopf(3)).queryByTitle(/Predigtserie/)).toBeNull();
+    // In der Ansicht ist nichts antippbar.
+    expect(screen.queryByRole('button', { name: /Predigtserie/ })).toBeNull();
+  });
+
+  it('im „Ablauf bearbeiten“: antippen, ändern, speichern → nur { series }, danach steht die neue Serie im Kopf', async () => {
+    const c = ct({ serie10: 'Die Psalmen', serie11: 'Jona' });
+    zeige();
+    await waitFor(() => expect(within(kopf(0)).getByText('Die Psalmen')).toBeTruthy());
+    mehrEintrag('Ablauf bearbeiten');
+    // Termin 11 (nur ansehen): die Serie steht da, ist aber kein Knopf.
+    expect(within(kopf(1)).getByText('Jona')).toBeTruthy();
+    expect(within(kopf(1)).queryByRole('button', { name: /Predigtserie/ })).toBeNull();
+    // Termin 13 hat keinen Ablauf – also auch keine Serie zum Setzen.
+    expect(within(kopf(3)).queryByRole('button', { name: /Predigtserie/ })).toBeNull();
+
+    fireEvent.click(within(kopf(0)).getByRole('button', { name: /Predigtserie: Die Psalmen/ }));
+    const fenster = await screen.findByRole('dialog', { name: 'Predigtserie' });
+    fireEvent.change(within(fenster).getByRole('textbox'), { target: { value: 'Römerbrief' } });
+    fireEvent.click(within(fenster).getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(c.ablaufRuempfe).toEqual([{ series: 'Römerbrief' }]));
+    expect(c.schreiben).toEqual(['PUT /api/events/10/agenda']);
+    expect(await within(kopf(0)).findByText('Römerbrief')).toBeTruthy();
+    expect(screen.queryByRole('dialog', { name: 'Predigtserie' })).toBeNull();
+  });
+
+  it('im Bearbeiten ohne Serie: leises „Predigtserie …“ zum Setzen; abgeschlossen: nichts zum Antippen', async () => {
+    ct();
+    zeige();
+    await waitFor(() => expect(within(ablaufZelle(0)).getByText('Soundcheck')).toBeTruthy());
+    expect(within(kopf(0)).queryByText('Predigtserie …')).toBeNull();
+    mehrEintrag('Ablauf bearbeiten');
+    expect(within(kopf(0)).getByRole('button', { name: /Predigtserie setzen/ })).toBeTruthy();
+    cleanup();
+    vi.restoreAllMocks();
+
+    ct({ gesperrt10: true, serie10: 'Die Psalmen' });
+    zeige();
+    await waitFor(() => expect(within(kopf(0)).getByText('Die Psalmen')).toBeTruthy());
+    mehrEintrag('Ablauf bearbeiten');
+    expect(within(kopf(0)).queryByRole('button', { name: /Predigtserie/ })).toBeNull();
   });
 });

@@ -4,7 +4,13 @@ import { Icon } from '@ui/icons/icons';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { useVollbild } from '@ui/bedienung/useVollbild';
 import { useWakeLock } from '@ui/bedienung/useWakeLock';
-import { ablaufEnde, beginnStelle, itemTitleParts, type AblaufZeile } from '@shared/ct/ablaufZeile';
+import {
+  ablaufEnde,
+  beginnStelle,
+  itemTitleParts,
+  zustaendigeText,
+  type AblaufZeile,
+} from '@shared/ct/ablaufZeile';
 import { tagKurz, tagLang } from '@shared/ct/datum';
 import { ortszeitAus } from '@shared/ct/zeit';
 import type { InfoGruppe } from '@shared/types/index';
@@ -43,6 +49,7 @@ export function AblaufAnzeige({
   tag,
   beginn,
   zeilen,
+  serie = null,
   infoGruppen,
   zeitzone,
   onSchliessen,
@@ -53,6 +60,8 @@ export function AblaufAnzeige({
   /** „10:00“. */
   beginn: string;
   zeilen: readonly AblaufZeile[];
+  /** Die Predigtserie (27.11.2026) – steht mit in der Zeile unter dem Titel. */
+  serie?: string | null;
   /** Die unter „Spalten“ gewählten Gruppen – ihre Infos stehen unter dem Punkt. */
   infoGruppen: readonly InfoGruppe[];
   zeitzone: string;
@@ -130,6 +139,7 @@ export function AblaufAnzeige({
     tag !== jetzt.tag ? tagKurz(tag) : null,
     `Beginn ${beginn}`,
     ende ? `Ende ${ende}` : null,
+    serie ? `Predigtserie: ${serie}` : null,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -143,7 +153,7 @@ export function AblaufAnzeige({
       );
     }
     const { title, songName } = itemTitleParts(z);
-    const wer = z.responsible.map((r) => r.label).join(', ');
+    const wer = zustaendigeText(z);
     return (
       <div key={z.id} className={`${styles.punkt}${z.vorBeginn ? ` ${styles.vor}` : ''}`}>
         <div className={styles.zeit}>

@@ -28,6 +28,7 @@ export type IconName =
   | 'info'
   | 'lock'
   | 'lock-open'
+  | 'buch'
   | 'type'
   | 'logout'
   | 'check'
@@ -324,6 +325,14 @@ export function Icon({ name, size = 22, stroke = 2, style, className }: IconProp
         <svg {...p}>
           <rect x="4.5" y="10.5" width="15" height="10" rx="2.5" />
           <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" />
+        </svg>
+      );
+    case 'buch':
+      // Ein aufgeschlagenes Buch von der Seite – die Predigtserie im Spaltenkopf der Matrix (27.11.2026).
+      return (
+        <svg {...p}>
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z" />
+          <path d="M4 19.5V21h16" />
         </svg>
       );
     case 'lock-open':

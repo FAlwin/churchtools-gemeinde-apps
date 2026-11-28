@@ -41,3 +41,33 @@
   padding: 10px 8px;
   font-size: 12.5px;
 }
+
+// Die Predigtserie (27.11.2026, wie die ChurchTools-App): eine leise Zeile über dem Ablauf. Im Bearbeiten ist die ganze
+// Zeile der Knopf (`KlickZeile`, „›“ am Ende).
+.serie {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--hair);
+  font-size: 14px;
+}
+
+.serieLabel {
+  flex: none;
+  color: var(--text2);
+  font-size: 12.5px;
+}
+
+.serieWert {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.serieLeer {
+  color: var(--text3);
+}

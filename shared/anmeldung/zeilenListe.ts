@@ -194,7 +194,7 @@ export function vollstaendigeZeilen(
 }
 
 /** Die Spalte mit „Summe zeigen“ – höchstens eine. */
-export function summenSpalte(l: ListeEinstellung): ListenSpalte | null {
+export function summenSpalte(l: Pick<ListeEinstellung, 'spalten'>): ListenSpalte | null {
   return l.spalten.find((s) => s.art === 'zahl' && s.summe) ?? null;
 }
 
@@ -221,9 +221,15 @@ export function spaltenTitel(s: ListenSpalte): string {
   return e ? `${s.name.trim()} (${e})` : s.name.trim();
 }
 
-/** Eine Zelle als Text: Zahlen deutsch („1.234,5“), Text ohne Zeilenumbrüche. */
+/**
+ * Eine Zelle als Text: Zahlen deutsch („1.234,5“), Text ohne Zeilenumbrüche. Eine Zahl-Zelle, die keine Zahl ist (Spalte
+ * später von Text zu Zahl umgestellt), steht wie getippt da – nie als „0“.
+ */
 function zelleText(s: ListenSpalte, wert: string): string {
-  if (s.art === 'zahl') return zahlText(listenZahl(wert) ?? 0);
+  if (s.art === 'zahl') {
+    const n = listenZahl(wert);
+    return n === null ? wert.trim() : zahlText(n);
+  }
   return wert.trim().replace(/\s*\n\s*/g, ' ');
 }
 
@@ -282,29 +288,117 @@ export function listeDaten(l: ListeEinstellung, a: ListeAntwort): string {
  */
 export function listeAusDaten(l: ListeEinstellung, text: string): ListeAntwort | null {
   if (!text.trim()) return { zeilen: [] };
+  const d = datenLesen(text);
+  if (!d) return null;
+  const bekannt = new Set(l.spalten.map((s) => s.id));
+  return {
+    zeilen: d.zeilen.map((zeile) => {
+      const aus: Record<string, string> = {};
+      for (const [id, w] of zeile) {
+        if (!bekannt.has(id)) continue;
+        if (typeof w === 'number') aus[id] = String(w).replace('.', ',');
+        else aus[id] = w;
+      }
+      return aus;
+    }),
+  };
+}
+
+/** „(Daten)“ geparst: je Zeile die Zellen über die Kennung ihrer Spalte (Zahl oder Text) – `null`, wenn kaputt. */
+function datenLesen(text: string): { zeilen: Map<string, string | number>[] } | null {
   let roh: unknown;
   try {
     roh = JSON.parse(text);
   } catch {
     return null;
   }
-  const d = roh as { v?: unknown; s?: unknown; z?: unknown };
+  const d = roh as { v?: unknown; s?: unknown; z?: unknown } | null;
   if (d?.v !== DATEN_FASSUNG || !Array.isArray(d.s) || !Array.isArray(d.z)) return null;
   const ids = d.s.map((x) => (typeof x === 'string' ? x : ''));
-  const bekannt = new Set(l.spalten.map((s) => s.id));
-  const zeilen: Record<string, string>[] = [];
+  const zeilen: Map<string, string | number>[] = [];
   for (const zeile of d.z as unknown[]) {
     if (!Array.isArray(zeile)) return null;
-    const aus: Record<string, string> = {};
+    const m = new Map<string, string | number>();
     ids.forEach((id, i) => {
       const w: unknown = zeile[i];
-      if (!bekannt.has(id)) return;
-      if (typeof w === 'number') aus[id] = String(w).replace('.', ',');
-      else if (typeof w === 'string') aus[id] = w;
+      if (id && (typeof w === 'number' || typeof w === 'string')) m.set(id, w);
     });
-    zeilen.push(aus);
+    zeilen.push(m);
   }
   return { zeilen };
+}
+
+/**
+ * **Eine gespeicherte Liste zum Ansehen** (F6c) – Tabelle, Fenster, Druckliste, Filter und Summen-Spalte lesen sie
+ * über `listeGelesen`, nie selbst.
+ */
+export interface ListeGelesen {
+  /** Die Spalten, wie die Liste sie heute hat. */
+  spalten: ListenSpalte[];
+  /** Je Eintrag die Zellen als Text, in der Reihenfolge von `spalten` – leer, wo es die Spalte damals nicht gab. */
+  zeilen: string[][];
+  /** Die Summe der Spalte mit „Summe zeigen“ – `null` ohne eine solche Spalte. */
+  summe: number | null;
+}
+
+/**
+ * **„(Daten)“ zum Ansehen lesen** (F6c, E57) – nachsichtig: Jede gespeicherte Zeile ist ein Eintrag (beim Absenden war
+ * sie vollständig), auch wenn die Spalten seitdem geändert wurden (E48): eine neue Spalte bleibt leer, eine gelöschte
+ * fällt weg, eine Auswahl steht da, wie sie gewählt wurde, eine Zahl als Zahl. Nicht über `zeilenZustand` – sonst
+ * verschwänden alte Einträge still, sobald eine Spalte dazukommt. `null`, wenn es nichts zu zeigen gibt (Daten fehlen,
+ * sind kaputt oder haben keine Zelle in den heutigen Spalten) – dann zeigt das Tool den lesbaren Text.
+ */
+export function listeGelesen(
+  l: ListeEinstellung,
+  daten: string | null | undefined,
+): ListeGelesen | null {
+  const d = daten?.trim() ? datenLesen(daten) : null;
+  if (!d) return null;
+  const sum = summenSpalte(l);
+  let summe = 0;
+  const zeilen: string[][] = [];
+  for (const z of d.zeilen) {
+    const zellen = l.spalten.map((s) => {
+      const w = z.get(s.id);
+      if (w === undefined) return '';
+      return typeof w === 'number' ? zahlText(w) : zelleText(s, w);
+    });
+    if (zellen.every((t) => !t)) continue;
+    zeilen.push(zellen);
+    const w = sum ? z.get(sum.id) : undefined;
+    summe += typeof w === 'number' ? w : typeof w === 'string' ? (listenZahl(w) ?? 0) : 0;
+  }
+  if (!zeilen.length) return null;
+  return { spalten: l.spalten, zeilen, summe: sum ? hundertstel(summe) : null };
+}
+
+/** **Kurz für die Tabelle** (Entwurf): „2 Einträge · Zelt für 4 Personen, Kocher“ – die erste Spalte jedes Eintrags. */
+export function listeKurz(g: ListeGelesen): string {
+  const n = g.zeilen.length;
+  const erste = g.zeilen.map((z) => z[0]).filter(Boolean);
+  return `${n} ${n === 1 ? 'Eintrag' : 'Einträge'}${erste.length ? ` · ${erste.join(', ')}` : ''}`;
+}
+
+/**
+ * **Die gelesene Liste als Text** – wie in ChurchTools (`listeLesbar`): Kopfzeile, dann eine Zeile je Eintrag. Für
+ * Druckliste, Fenster ohne Tabelle und Filter. `kopf: false` nur die Einträge (der Filter „enthält“ findet sonst die
+ * Spaltennamen in jeder Anmeldung).
+ */
+export function listeGelesenText(g: ListeGelesen, { kopf = true } = {}): string {
+  const zeilen = g.zeilen.map((z) => z.join(TRENNER));
+  return (kopf ? [g.spalten.map(spaltenTitel).join(TRENNER), ...zeilen] : zeilen).join('\n');
+}
+
+/** **Eine Zelle mit Einheit**: „150 €“ – nur bei Zahl-Spalten mit Einheit und nicht leer (Fenster, Summe). */
+export function mitEinheit(s: ListenSpalte, text: string): string {
+  const e = s.art === 'zahl' ? s.einheit?.trim() : '';
+  return text && e ? `${text} ${e}` : text;
+}
+
+/** **Eine Summe mit Einheit**: „1.384,5 €“ – Summen-Spalte, Summenzeile und Fenster. */
+export function summeText(l: Pick<ListeEinstellung, 'spalten'>, n: number): string {
+  const s = summenSpalte(l);
+  return s ? mitEinheit(s, zahlText(n)) : zahlText(n);
 }
 
 /**

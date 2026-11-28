@@ -14,6 +14,7 @@ import {
   listenZahlen,
   type ListenAnmeldung,
   type ListenPerson,
+  type Werte,
 } from './liste';
 import { adresseText } from './adresse';
 import { euroText, kannEtwasKosten } from './preis';
@@ -154,10 +155,28 @@ function frageLesen(
   p: ListenPerson | null,
   lesen: typeof antwortText,
 ): string | null {
+  // F4b: Die Adresse steht an der Person – mit Person ihre, je Anmeldung die der ersten (alle bekamen dieselbe).
+  if (f.typ === 'adresse')
+    return e.formular.person.includes(f) && !p
+      ? null
+      : adresseText((p ?? x.personen[0])?.adresse ?? undefined) || null;
+  return frageWert(e, f, x, p, lesen);
+}
+
+/**
+ * **Wessen Werte eine Frage liest** – Fragen der Person aus ihren Werten, Fragen der Anmeldung aus der Anmeldung; ohne
+ * Person keine Frage je Person. Die EINE Regel für Antwort, Rohwert und Liste mit Zeilen (F6c: `listeVon`,
+ * `listenSummeVon`).
+ */
+export function frageWert<T>(
+  e: OeffentlicheEinstellungen,
+  f: Feld,
+  x: ListenAnmeldung,
+  p: ListenPerson | null,
+  lesen: (f: Feld, werte: Werte, ctFelder: OeffentlicheEinstellungen['ctFelder']) => T | null,
+): T | null {
   const jePerson = e.formular.person.includes(f);
   if (jePerson && !p) return null;
-  // F4b: Die Adresse steht an der Person – mit Person ihre, je Anmeldung die der ersten (alle bekamen dieselbe).
-  if (f.typ === 'adresse') return adresseText((p ?? x.personen[0])?.adresse ?? undefined) || null;
   return lesen(f, jePerson && p ? p.werte : x.einmal, e.ctFelder);
 }
 

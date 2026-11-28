@@ -26,6 +26,7 @@ import { rohWert } from './feldwert';
 import { freiAnzeige, freiSchluessel } from './freieAntwort';
 import { centAusEuroText, kannEtwasKosten } from './preis';
 import { eigeneZahlungArt, istEigeneZahlung } from './zahlung';
+import { listeGelesen, listeGelesenText, type ListeGelesen } from './zeilenListe';
 
 /** Im Verlauf stehen die Felder mit ihrem Namen – so heißt die Anmelde-Nr. dort. */
 const NR_NAME = SYSTEMFELDER.find((f) => f.id === 'nr')!.name;
@@ -535,11 +536,15 @@ export function listenZahlen(e: OeffentlicheEinstellungen, liste: ListenAnmeldun
 
 // ── Antworten zum Ansehen ─────────────────────────────────────────────────────────────────────
 
-/** Eine Antwort, wie das Fenster sie zeigt. `striche`: Daten der Unterschrift (`unterschrift.ts`). */
+/**
+ * Eine Antwort, wie das Fenster sie zeigt. `striche`: Daten der Unterschrift (`unterschrift.ts`); `liste`: die Liste mit
+ * Zeilen aus „(Daten)“ (F6c) – dann zeigt das Fenster eine kleine Tabelle.
+ */
 export interface AntwortZeile {
   frage: string;
   text: string;
   striche?: string;
+  liste?: ListeGelesen;
 }
 
 /**
@@ -564,23 +569,83 @@ export function antwortZeilen(
       if (w || striche) zeilen.push({ frage: f.frage, text: w ?? '', striche });
       continue;
     }
+    const liste = listeVon(f, werte, ctFelder);
+    if (liste) {
+      zeilen.push({ frage: f.frage, text: '', liste });
+      continue;
+    }
     const text = antwortText(f, werte, ctFelder);
     if (text !== null) zeilen.push({ frage: f.frage, text });
   }
   return zeilen;
 }
 
+/** Wert einer weiteren Spalte eines Felds (`<Feld-ID>.daten`, `.summe` …). */
+const zusatzWert = (
+  werte: Werte,
+  ctFelder: OeffentlicheEinstellungen['ctFelder'],
+  schluessel: string,
+) => {
+  const id = ctFelder[schluessel];
+  return id === undefined ? undefined : werte[id];
+};
+
+/**
+ * **Die Liste mit Zeilen einer Antwort** (F6c, E1) – aus der Spalte „(Daten)“ über `listeGelesen`. `null`, wenn das
+ * Feld keine Liste ist oder die Daten fehlen bzw. nicht lesbar sind (ältere oder von Hand geänderte Einträge) – dann
+ * steht der lesbare Text da (`antwortText`).
+ */
+export function listeVon(
+  f: Feld,
+  werte: Werte,
+  ctFelder: OeffentlicheEinstellungen['ctFelder'],
+): ListeGelesen | null {
+  if (f.typ !== 'liste' || !f.liste || ctAblage(f).ort !== 'gruppenfeld') return null;
+  return listeGelesen(f.liste, listeDatenText(f, werte, ctFelder));
+}
+
+/** Der Text der Spalte „(Daten)“ einer Liste (`<Feld-ID>.daten`) – Lesen (`listeVon`) und Regeln (`antwortenAus`). */
+export function listeDatenText(
+  f: Feld,
+  werte: Werte,
+  ctFelder: OeffentlicheEinstellungen['ctFelder'],
+): string | undefined {
+  return zusatzWert(werte, ctFelder, `${f.id}.daten`);
+}
+
+/**
+ * **Die Summe einer Liste** (F6c, E58) – aus „(Daten)“ (`listeVon`), damit auch Einträge zählen, die vor dem
+ * Einschalten von „Summe zeigen“ kamen; ohne lesbare Daten das Zahl-Feld „… – Summe …“ in ChurchTools. `null` ohne
+ * „Summe zeigen“ oder ohne Wert. Die EINE Quelle für Zelle, Sortierung, Filter und Summenzeile.
+ */
+export function listenSummeVon(
+  f: Feld,
+  werte: Werte,
+  ctFelder: OeffentlicheEinstellungen['ctFelder'],
+): number | null {
+  if (f.typ !== 'liste' || !f.liste || !f.liste.spalten.some((s) => s.summe)) return null;
+  const g = listeVon(f, werte, ctFelder);
+  if (g) return g.summe;
+  const t = zusatzWert(werte, ctFelder, `${f.id}.summe`)?.trim();
+  const n = t ? Number(t) : NaN;
+  return Number.isFinite(n) ? n : null;
+}
+
 /**
  * **Eine Antwort als Text** – wie das Fenster sie zeigt, die Druckliste sie druckt (A8) und die Tabelle sie zeigt:
  * Ankreuzen als „ja“, Mehrfachauswahl mit `MEHRFACH_TRENNER`, sonst der lesbare Wert; `null`, wenn nichts beantwortet
  * ist oder das Feld keine eigene Spalte in ChurchTools hat. Die freie Antwort (F3) steht hier als ihr Text, wie eine
- * eigene Antwort („FeG Siegburg“ statt „Andere Gemeinde“, Alwin 16.11.2026) – für die Regeln gilt `antwortRoh`.
+ * eigene Antwort („FeG Siegburg“ statt „Andere Gemeinde“, Alwin 16.11.2026) – für die Regeln gilt `antwortRoh`. Eine
+ * Liste mit Zeilen (F6) steht als Text aus „(Daten)“ (`listeVon`), sonst wie in ChurchTools.
  */
 export function antwortText(
   f: Feld,
   werte: Werte,
   ctFelder: OeffentlicheEinstellungen['ctFelder'],
 ): string | null {
+  // F6c: Die Liste aus „(Daten)“ – auch wenn jemand den lesbaren Text in ChurchTools geändert oder geleert hat.
+  const liste = listeVon(f, werte, ctFelder);
+  if (liste) return listeGelesenText(liste);
   const roh = antwortRoh(f, werte, ctFelder);
   if (roh === null) return null;
   const tid = ctFelder[freiSchluessel(f.id)];

@@ -523,3 +523,47 @@
   margin: 8px 12px 0;
   font-size: 13.5px;
 }
+
+// F6c: Liste mit Zeilen im Fenster einer Anmeldung als kleine Tabelle (Entwurf `f6-liste-v1`). Breite Listen scrollen
+// in sich, nicht das Fenster.
+.listeTabelle {
+  overflow-x: auto;
+  border: 1px solid var(--hair);
+  border-radius: var(--r-ctrl);
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  th,
+  td {
+    padding: 4px 8px;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--hair);
+  }
+
+  th {
+    color: var(--text2);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  tfoot td {
+    border-top: 1px solid var(--hair);
+    border-bottom: 0;
+    font-weight: 700;
+  }
+
+  .zahl {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+}

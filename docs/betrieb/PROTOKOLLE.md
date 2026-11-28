@@ -694,7 +694,7 @@ schreibt sie danach in die **Infos der ChurchTools-Events**, damit jeder im Even
   mindestens einer Gruppe mit „Mitarbeit“ schreiben darfst; bei mehreren solchen Gruppen hat das Fenster oben das Feld **Gruppe** (vorbelegt mit der Gruppe aus dem Filter,
   sonst der ersten) – ein Wechsel behält alles, was du schon eingetippt hast. **Sobald du „Speichern“ angetippt hast, ist die Gruppe gesperrt** (auch nach einem Fehler:
   ein zweiter Versuch schreibt mit derselben Kennung in dieselbe Gruppe, nie ein Doppel in einer anderen). **Bekannte Grenze:** Eine Reihe aus dem Reiter hängt an **keinem
-  Protokoll** – wer sie im Protokoll sehen will, fügt dort den Baustein „Reihe“ ein; **löschen lässt sich eine Reihe (noch) nirgends.**
+  Protokoll** – in ein Protokoll holen lässt sie sich (noch) nicht – der Baustein „Reihe“ legt dort immer eine neue an; **löschen lässt sich eine Reihe (noch) nirgends.**
 - **Im Protokoll** steht die Reihe als Tabelle (am Handy als Karten) – nur zum Lesen. Darunter **Bearbeiten** und **In Events übertragen**.
   Beides gibt es **auch bei einem freigegebenen Protokoll**: Die Reihe liegt nicht im Protokoll, sondern bei der Gruppe („Mitarbeit“), und Events
   ordnet man meist erst nach dem Treffen zu.

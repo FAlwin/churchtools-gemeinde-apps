@@ -644,3 +644,29 @@ oben) und **Werkzeuge** (die Knöpfe Aussehen, Tempo, Anmerken). „Schritt 1 vo
 - **Historie:** Scheibe B5 (30.10.2026); Tour bleibt `chart-v9` (Alwin, 28.10.2026: nur neue Nutzer)
 
 </details>
+
+### TF-CHART-21 · Lieder und Werkzeuge in der oberen Leiste auseinanderhalten
+
+**Das brauchst du:** Ein iPad (quer und hochkant) oder einen Rechner; einen Termin mit mehreren Liedern.
+
+**Das muss passieren:** In der oberen Leiste des Liedblatts sieht man auf einen Blick, wo die Lieder enden und die
+Werkzeuge beginnen: Eine senkrechte Linie trennt beide, **Aussehen**, **Tempo**, **Notizen** und **Anmerken** sitzen
+gemeinsam auf einer leicht grauen Fläche. Am iPad hochkant stehen kurze Namen („Aa“, „Notizen“), damit mehr Lieder
+Platz haben. Am Handy ändert sich nichts.
+
+1. Termin öffnen → ein Lied antippen. Rechts von den Liedern steht die Trennlinie, dahinter die graue Fläche mit den
+   Werkzeugen.
+2. iPad quer oder Rechner: Die Knöpfe tragen ihre vollen Namen („Aussehen“, „Notizen von …“).
+3. iPad hochkant: „Aa“ statt „Aussehen“, „Notizen“ statt „Notizen von …“; lange Drücken bzw. Maus darauf zeigt den
+   vollen Namen.
+4. Jedes Werkzeug antippen: Das Menü öffnet wie bisher direkt darunter.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `client/src/components/BlattKopf.tsx`, `client/src/components/BlattKopf.module.scss`, `client/src/utils/werkzeuge.ts`
+- **Automatisiert:** teilweise – `client/src/components/BlattKopf.test.tsx` (Trennlinie, Fläche, kurze Namen unter
+  1100 px); von Hand bleibt, ob die Trennung am Gerät gut zu sehen ist
+- **Historie:** #1205 (Alwin am iPad und Mac 27.11.2026, Variante A; am iPad bestätigt 28.11.2026)
+
+</details>

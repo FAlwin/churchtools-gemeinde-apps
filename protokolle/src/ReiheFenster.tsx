@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet } from '@ui/fenster/Sheet';
 import { FensterKnopf } from '@ui/fenster/FensterKnopf';
 import { Icon } from '@ui/icons/icons';
@@ -87,6 +87,12 @@ export function ReiheFenster({
   // Das Fenster „Event anlegen“: für welche Abende (Zeilen-IDs) – und danach die eine Zusammenfassung.
   const [anlegenFuer, setAnlegenFuer] = useState<string[] | null>(null);
   const [angelegt, setAngelegt] = useState<ReturnType<typeof zusammenfassung> | null>(null);
+  // Die Meldung steht unter den Abenden – bei langen Reihen außer Sicht. Nach jedem Anlegen ins Bild holen. Rumpf in
+  // geschweiften Klammern: `scrollIntoView` liefert in Chrome 152 ein Promise, das kein Aufräumer sein darf.
+  const angelegtRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (angelegt) angelegtRef.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [angelegt]);
   // Ein Speichern wurde versucht: Die Gruppe ist ab jetzt gesperrt. Ein vorübergehender Fehler kann schon in Gruppe A
   // geschrieben haben – ein Wechsel auf B legte beim zweiten Versuch mit derselben ID ein Doppel an.
   const [versucht, setVersucht] = useState(false);
@@ -303,7 +309,7 @@ export function ReiheFenster({
           )}
         </div>
         {angelegt && (
-          <div className={styles.zusammen} role="status">
+          <div ref={angelegtRef} className={styles.zusammen} role="status">
             <p>{angelegt.kopf}</p>
             {angelegt.meldungen.map((m) => (
               <p key={m}>{m}</p>

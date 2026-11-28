@@ -339,7 +339,7 @@ describe('Reiter „Reihen“: Neue Reihe', () => {
     fireEvent.change(gruppeFeld(f)!, { target: { value: '19' } });
     // Dieselbe Eingabe, dieselbe Seite – nur die Mitglieder folgen der Gruppe.
     await waitFor(() => expect(ladeGruppenMitglieder).toHaveBeenLastCalledWith(19));
-    expect(f.getByLabelText('Name der Reihe').value).toBe('Mischpult');
+    expect(f.getByDisplayValue('Mischpult')).toBe(f.getByLabelText('Name der Reihe'));
     fireEvent.click(f.getByRole('button', { name: 'Speichern' }));
     await waitFor(() => expect(Schreiben.themenreiheSpeichern).toHaveBeenCalledTimes(1));
     const [ort, gespeichert] = vi.mocked(Schreiben.themenreiheSpeichern).mock.calls[0];

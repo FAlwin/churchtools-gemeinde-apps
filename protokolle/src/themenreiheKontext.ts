@@ -19,6 +19,8 @@ export interface ReiheBasisWert {
   ich: { person: number; name: string };
   /** Kalender mit „edit events“ (`Start.eventsAendern`, aus `/permissions/global` – `eventInfosKalender`; `null` = alle) – für `darfTerminAendern`. */
   eventKalender: readonly number[] | null;
+  /** Kalender, in denen man Termine **und** Events anlegen darf (`kalenderMitEvents`) – für „Event neu anlegen“ in der Reihe. */
+  eventAnlegen: readonly number[];
 }
 
 export const ReiheBasis = createContext<ReiheBasisWert | null>(null);

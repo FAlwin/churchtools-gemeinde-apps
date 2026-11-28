@@ -16,6 +16,8 @@ export function ReiheBearbeitenFenster(p: {
   f: Extract<ReiheFensterArt, { art: 'bearbeiten' }>;
   ortVon: (gruppe: number) => MitarbeitOrt | null;
   ich: { person: number };
+  /** Kalender mit „Termine anlegen“ und „Events anlegen“ – für „Event neu anlegen“ im Fenster. */
+  eventAnlegen: readonly number[];
   onGespeichert: (r: Themenreihe) => void;
   onClose: () => void;
 }) {
@@ -37,6 +39,7 @@ export function ReiheBearbeitenFenster(p: {
           ? { gruppen: p.f.gruppenwahl, gewaehlt: gruppe, onWahl: setGruppe }
           : undefined
       }
+      eventAnlegen={p.eventAnlegen}
       onGespeichert={p.onGespeichert}
       onClose={p.onClose}
     />

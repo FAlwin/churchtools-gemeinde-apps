@@ -7,12 +7,19 @@ import { ZeilenKnopf } from '@ui/bedienung/ZeilenKnopf';
 import { ctDaten } from '@ui/ct/verbindung';
 import { fehlerMeldung } from '@ui/ct/fehlerMeldung';
 import { useLaden } from '@ui/ct/useLaden';
-import { datumText, tagKurz } from '@shared/ct/datum';
+import { datumText, tagKurz, tagPunkt } from '@shared/ct/datum';
 import { gemeindeZeitzone, heuteImKalender, uhrText } from '@shared/ct/zeit';
 import type { Person } from '@shared/organigramm/mitglieder';
 import {
+  angelegte,
+  zeilenOhneEvent,
+  zusammenfassung,
+  type TagErgebnis,
+} from '@shared/protokolle/reiheEventAnlegen';
+import {
   eventFenster,
   eventsZurZeile,
+  istTag,
   naechstesDatum,
   neueZeile,
   reiheEventsAus,
@@ -23,6 +30,7 @@ import {
   type Themenreihe,
 } from '@shared/protokolle/themenreihe';
 import { eventsPfad } from './eventsLesen';
+import { ReiheEventAnlegenFenster } from './ReiheEventAnlegenFenster';
 import type { MitarbeitOrt } from './mitarbeitWerte';
 import { themenreiheSpeichern, ReiheGeaendert } from './themenreiheSchreiben';
 import felder from './Fensterfelder.module.scss';
@@ -42,6 +50,7 @@ export function ReiheFenster({
   ort,
   ich,
   gruppenwahl,
+  eventAnlegen,
   onGespeichert,
   onClose,
 }: {
@@ -60,6 +69,11 @@ export function ReiheFenster({
     gewaehlt: number;
     onWahl: (gruppe: number) => void;
   };
+  /**
+   * Kalender, in denen die Person Termine **und** Events anlegen darf (`kalenderMitEvents`) – leer oder fehlend: keine Knöpfe
+   * „Event neu anlegen“. Stabil halten (das Fenster „Event anlegen“ liest die Kalender neu, sobald sich die Liste ändert).
+   */
+  eventAnlegen?: readonly number[];
   onGespeichert: (r: Themenreihe) => void;
   onClose: () => void;
 }) {
@@ -70,6 +84,9 @@ export function ReiheFenster({
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const [wahlFuer, setWahlFuer] = useState<string | null>(null);
+  // Das Fenster „Event anlegen“: für welche Abende (Zeilen-IDs) – und danach die eine Zusammenfassung.
+  const [anlegenFuer, setAnlegenFuer] = useState<string[] | null>(null);
+  const [angelegt, setAngelegt] = useState<ReturnType<typeof zusammenfassung> | null>(null);
   // Ein Speichern wurde versucht: Die Gruppe ist ab jetzt gesperrt. Ein vorübergehender Fehler kann schon in Gruppe A
   // geschrieben haben – ein Wechsel auf B legte beim zweiten Versuch mit derselben ID ein Doppel an.
   const [versucht, setVersucht] = useState(false);
@@ -104,6 +121,23 @@ export function ReiheFenster({
     } finally {
       setLaeuft(false);
     }
+  }
+
+  const darfAnlegen = !!eventAnlegen && eventAnlegen.length > 0;
+  const ohneEvent = darfAnlegen ? zeilenOhneEvent(zeilen) : [];
+  const anlegenAbende = zeilen.filter((z) => anlegenFuer?.includes(z.id));
+
+  /** Das Fenster „Event anlegen“ ist durch: die neuen Events in die Zeilen, die Zusammenfassung zeigen. */
+  function angelegtUebernehmen(ergebnisse: TagErgebnis[]): void {
+    const neue = angelegte(ergebnisse);
+    setZeilen((l) =>
+      l.map((z) => {
+        const n = neue.find((x) => x.id === z.id);
+        return n ? zeileMitEvent(z, n.event) : z;
+      }),
+    );
+    setAngelegt(zusammenfassung(ergebnisse));
+    setAnlegenFuer(null);
   }
 
   const wahlZeile = zeilen.find((z) => z.id === wahlFuer);
@@ -242,17 +276,40 @@ export function ReiheFenster({
             </li>
           ))}
         </ul>
-        <TextKnopf
-          disabled={laeuft}
-          onClick={() =>
-            setZeilen((l) => [
-              ...l,
-              neueZeile(crypto.randomUUID(), naechstesDatum(l, heuteImKalender())),
-            ])
-          }
-        >
-          + Abend
-        </TextKnopf>
+        <div className={styles.fuss}>
+          <TextKnopf
+            disabled={laeuft}
+            onClick={() =>
+              setZeilen((l) => [
+                ...l,
+                neueZeile(crypto.randomUUID(), naechstesDatum(l, heuteImKalender())),
+              ])
+            }
+          >
+            + Abend
+          </TextKnopf>
+          {ohneEvent.length > 0 && (
+            <TextKnopf
+              disabled={laeuft}
+              onClick={() => {
+                setAngelegt(null);
+                setAnlegenFuer(ohneEvent.map((z) => z.id));
+              }}
+            >
+              {ohneEvent.length === 1
+                ? 'Event für 1 Abend anlegen …'
+                : `Events für ${ohneEvent.length} Abende anlegen …`}
+            </TextKnopf>
+          )}
+        </div>
+        {angelegt && (
+          <div className={styles.zusammen} role="status">
+            <p>{angelegt.kopf}</p>
+            {angelegt.meldungen.map((m) => (
+              <p key={m}>{m}</p>
+            ))}
+          </div>
+        )}
         {mitglieder === 'verborgen' && (
           <p className={felder.leise}>
             Die Mitglieder der Gruppe lassen sich nicht anzeigen – bei „Wer“ geht nur ein freier
@@ -289,7 +346,25 @@ export function ReiheFenster({
             set(wahlZeile.id, { eventId: null, eventTitel: '' });
             setWahlFuer(null);
           }}
+          onAnlegen={
+            darfAnlegen && istTag(wahlZeile.datum)
+              ? () => {
+                  setWahlFuer(null);
+                  setAngelegt(null);
+                  setAnlegenFuer([wahlZeile.id]);
+                }
+              : undefined
+          }
           onClose={() => setWahlFuer(null)}
+        />
+      )}
+      {anlegenAbende.length > 0 && eventAnlegen && (
+        <ReiheEventAnlegenFenster
+          abende={anlegenAbende}
+          reiheName={name}
+          kalender={eventAnlegen}
+          onFertig={angelegtUebernehmen}
+          onClose={() => setAnlegenFuer(null)}
         />
       )}
     </>
@@ -306,12 +381,15 @@ function EventWahl({
   vergeben,
   onWahl,
   onKeins,
+  onAnlegen,
   onClose,
 }: {
   zeile: ReiheZeile;
   vergeben: ReadonlySet<number>;
   onWahl: (e: ReiheEvent) => void;
   onKeins: () => void;
+  /** Nur mit Recht und Datum: „+ Event am … neu anlegen …“ (öffnet das Fenster „Event anlegen“ für diesen Abend). */
+  onAnlegen?: () => void;
   onClose: () => void;
 }) {
   const zeitzone = gemeindeZeitzone();
@@ -368,6 +446,11 @@ function EventWahl({
           ))}
           {!amTag && (
             <p className={styles.stand}>Am {datumText(zeile.datum)} gibt es kein Event.</p>
+          )}
+          {onAnlegen && (
+            <TextKnopf onClick={onAnlegen}>
+              + Event am {tagPunkt(zeile.datum)} neu anlegen …
+            </TextKnopf>
           )}
         </div>
       )}

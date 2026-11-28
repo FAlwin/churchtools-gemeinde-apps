@@ -68,6 +68,8 @@ const gelesen = (stand: Record<number, Themenreihe[]>) =>
     .mocked(Schreiben.ladeThemenreihen)
     .mockImplementation(async (ort) => stand[ort.kategorie - 1000] ?? []);
 
+/** Dieselbe Liste bei jedem Render (sonst lüde das Fenster „Event anlegen“ endlos). */
+const KEINE_KALENDER: number[] = [];
 const zeigen = (
   gruppen: ProtokollGruppe[],
   schreibbar: number[] = gruppen.map((g) => g.protokolle as number),
@@ -79,6 +81,7 @@ const zeigen = (
       gruppen={gruppen}
       schreibbar={schreibbar}
       eventKalender={[4]}
+      eventAnlegen={KEINE_KALENDER}
     />,
   );
 

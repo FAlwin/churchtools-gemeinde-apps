@@ -109,3 +109,29 @@
     grid-template-columns: 1fr;
   }
 }
+
+// Die eine Zusammenfassung nach „Event anlegen“ (Scheibe 3).
+.zusammen {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--r-ctrl);
+  background: var(--blue-soft);
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.4;
+
+  p {
+    margin: 0;
+  }
+
+  p + p {
+    margin-top: 6px;
+  }
+}
+
+// „+ Abend“ und „Events für … anlegen“ nebeneinander, am Handy umbrechend.
+.fuss {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+}

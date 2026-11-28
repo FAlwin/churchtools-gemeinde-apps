@@ -62,6 +62,7 @@ const basis = (schreibbar: number[]): ReiheBasisWert => ({
   schreibbar,
   ich: { person: 1, name: 'Alwin' },
   eventKalender: [4],
+  eventAnlegen: [],
 });
 const DOK: Block[] = [{ id: 'b1', type: BLOCK.themenreihe, props: { reihe: 'r1' } }];
 const anzeigen = (b: ReiheBasisWert | null, dok: Block[] = DOK) =>

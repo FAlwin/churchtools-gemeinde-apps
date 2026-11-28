@@ -519,17 +519,11 @@ export function ctZusatzSpalten(
     return [{ schluessel: `${x.id}.daten`, name: `${x.frage} (Daten)`, fieldTypeCode: 'textarea' }];
   // F6 (E1): die Zeilen in fester Form – und mit „Summe zeigen“ ein Zahl-Feld, in ChurchTools sortier- und filterbar.
   if (x.typ === 'liste') {
-    const summe = x.liste ? summenSpalte(x.liste) : null;
+    const summe = listeSummenName(x);
     return [
       { schluessel: `${x.id}.daten`, name: `${x.frage} (Daten)`, fieldTypeCode: 'textarea' },
       ...(summe
-        ? [
-            {
-              schluessel: `${x.id}.summe`,
-              name: `${kurzname(x)} – Summe ${summe.name.trim()}`,
-              fieldTypeCode: 'number' as const,
-            },
-          ]
+        ? [{ schluessel: `${x.id}.summe`, name: summe, fieldTypeCode: 'number' as const }]
         : []),
     ];
   }
@@ -542,6 +536,15 @@ export function ctZusatzSpalten(
       },
     ];
   return [];
+}
+
+/**
+ * **Wie die Summe einer Liste heißt** (E49): „Kurzname – Summe Spaltenname“ – die Spalte in ChurchTools und die
+ * Summen-Spalte der Tabelle (F6c), eine Stelle. `null` ohne „Summe zeigen“.
+ */
+export function listeSummenName(x: Feld): string | null {
+  const summe = x.typ === 'liste' && x.liste ? summenSpalte(x.liste) : null;
+  return summe ? `${kurzname(x)} – Summe ${summe.name.trim()}` : null;
 }
 
 /**

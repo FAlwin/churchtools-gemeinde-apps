@@ -3,7 +3,7 @@
  * nach – in der Form, die an der Test-Instanz gemessen wurde (12.10.2026) –, damit die Seite ohne Instanz
  * zu sehen und zu bedienen ist. Seit A3 merkt sich die Demo auch, was geschrieben wird (Anlegen,
  * Einrichten, Termine), bis die Seite neu geladen wird. `?demo=leer` zeigt „keine Gruppen",
- * `?demo=fehler` den Fehlerfall, `?demo=einrichten` die Erweiterung vor dem Einrichten (keine Formular-Adresse), `?demo=admin` einen Gruppen-Admin (verschieben, endgültig löschen), `?demo=vertrauen` eine Vertrauensperson der Nachweise ohne „Berechtigungen verwalten“ (sieht die Seite „Nachweise“, kann nichts anlegen). Seit N1b gibt es zwei Nachweis-Arten (Führungszeugnis, JuLeiCa), `#/nachweise` zeigt sie. Seit N3b zeigt die Lobpreisfreizeit (`#/v/46`, Vorbereiten) die Karte „Nachweise“ mit einer „Nur wenn“-Bedingung, der Worship-Workshop (`#/v/43`) eine kaputte. Seit N3c trägt die Demo beim Öffnen als Admin die Technik-Leute der Lobpreisfreizeit ins Führungszeugnis ein (stille Meldung), und die Art 99 heißt dank Ablage „Erste Hilfe“. Seit N3d zeigt die Lobpreisfreizeit (`#/v/46`, Reiter „Anmeldungen“, je Person) die Spalte „Führungszeugnis“ mit allen Zuständen (Stand aus der Ablage), und die Startseite den Hinweis „3 Personen ohne gültigen Nachweis“ mit `?demo=vertrauen` (alle fünf Zustände: gültig, läuft vor Ende ab, fehlt, noch nicht angefordert, nicht nötig); wer als Admin öffnet (auch die Vorgabe der Demo), trägt die Technik-Leute beim Öffnen ein und schreibt den Stand neu – dann sieht die Ampel anders aus. Wird nie mitgebaut (siehe `main.tsx`).
+ * `?demo=fehler` den Fehlerfall, `?demo=einrichten` die Erweiterung vor dem Einrichten (keine Formular-Adresse), `?demo=admin` einen Gruppen-Admin (verschieben, endgültig löschen), `?demo=vertrauen` eine Vertrauensperson der Nachweise ohne „Berechtigungen verwalten“ (sieht die Seite „Nachweise“, kann nichts anlegen). Seit N1b gibt es zwei Nachweis-Arten (Führungszeugnis, JuLeiCa), `#/nachweise` zeigt sie. Seit N3b zeigt die Lobpreisfreizeit (`#/v/46`, Vorbereiten) die Karte „Nachweise“ mit einer „Nur wenn“-Bedingung, der Worship-Workshop (`#/v/43`) eine kaputte. Seit N3c trägt die Demo beim Öffnen als Admin die Technik-Leute der Lobpreisfreizeit ins Führungszeugnis ein (stille Meldung), und die Art 99 heißt dank Ablage „Erste Hilfe“. Seit N3d zeigt die Lobpreisfreizeit (`#/v/46`, Reiter „Anmeldungen“, je Person) die Spalte „Führungszeugnis“ mit allen Zuständen (Stand aus der Ablage), und die Startseite den Hinweis „3 Personen ohne gültigen Nachweis“ mit `?demo=vertrauen` (alle fünf Zustände: gültig, läuft vor Ende ab, fehlt, noch nicht angefordert, nicht nötig); wer als Admin öffnet (auch die Vorgabe der Demo), trägt die Technik-Leute beim Öffnen ein und schreibt den Stand neu – dann sieht die Ampel anders aus. Seit F6c fragt die Lobpreisfreizeit „Was bringst du mit?“ (Liste mit Summe, Kurzname „Technik“) – mit kaputten „(Daten)“ (Petra Albers), nur lesbarem Text (Jonas Brenner) und Daten von vor einer neuen Spalte (Ruth Dietrich). Wird nie mitgebaut (siehe `main.tsx`).
  *
  * Die Beschreibungen entstehen mit `einstellungenAlsText` – wie im Betrieb.
  */
@@ -17,6 +17,13 @@ import {
   nachweisSchritte,
 } from '@shared/anmeldung/nachweise';
 import { artAngabenWert, standWert } from '@shared/anmeldung/nachweisStandAblage';
+import {
+  listeDaten,
+  listeLesbar,
+  listenSumme,
+  summeFuerCt,
+  type ListeEinstellung,
+} from '@shared/anmeldung/zeilenListe';
 
 function beschreibung(
   beginn: string,
@@ -94,6 +101,53 @@ const DEMO_SPALTEN = {
   erfahrung: 80,
   // F3: der Text der freien Antwort „Anderer Bereich“ in seiner zweiten Spalte.
   'bereich.frei': 81,
+  // F6c: „Was bringst du mit?“ – lesbar, „(Daten)“, Summe.
+  technik: 82,
+  'technik.daten': 83,
+  'technik.summe': 84,
+};
+
+/**
+ * **F6c: eine Liste mit Zeilen in der Lobpreisfreizeit** – „Was bringst du mit?“ (Kurzname „Technik“) mit Summe. Die
+ * Antworten entstehen mit denselben Regeln wie beim Absenden (`listeLesbar`, `listeDaten`, `listenSumme`); dazu Fälle,
+ * die es nur in ChurchTools gibt: kaputte „(Daten)“, nur der lesbare Text, Daten aus der Zeit vor einer neuen Spalte.
+ */
+const TECHNIK_LISTE: ListeEinstellung = {
+  spalten: [
+    { id: 'a', name: 'Gerät', art: 'text' },
+    { id: 'b', name: 'Anzahl', art: 'zahl' },
+    { id: 'c', name: 'Wert gesamt', art: 'zahl', einheit: '€', summe: true },
+    { id: 'd', name: 'Zustand', art: 'auswahl', antworten: ['neu', 'gut', 'gebraucht'] },
+  ],
+  max: 15,
+};
+function technikWerte(zeilen: Record<string, string>[]): Record<number, string> {
+  const a = { zeilen };
+  return {
+    82: listeLesbar(TECHNIK_LISTE, a),
+    83: listeDaten(TECHNIK_LISTE, a),
+    84: summeFuerCt(listenSumme(TECHNIK_LISTE, a) ?? 0),
+  };
+}
+const TECHNIK: Record<string, Record<number, string>> = {
+  DEMO01: technikWerte([
+    { a: 'Mischpult Yamaha', b: '1', c: '1.250', d: 'gut' },
+    { a: 'Mikrofon SM58', b: '4', c: '396', d: 'gebraucht' },
+  ]),
+  DEMO02: technikWerte([{ a: 'Keyboard', b: '1', c: '899,90', d: 'neu' }]),
+  // Jemand hat „(Daten)“ in ChurchTools angefasst – das Tool zeigt den lesbaren Text, die Summe aus dem Zahl-Feld.
+  DEMO03: {
+    ...technikWerte([{ a: 'Gitarrenverstärker', b: '1', c: '320', d: 'gut' }]),
+    83: '{"v":1,"s":["a"',
+  },
+  // Von Hand in ChurchTools eingetragen: nur der lesbare Text.
+  DEMO04: { 82: 'Kabeltrommel 25 m, 2 Stück (von Hand eingetragen)' },
+  // Angemeldet, als es die Spalte „Zustand“ noch nicht gab – die Einträge bleiben, „Zustand“ leer.
+  DEMO05: {
+    82: 'Gerät · Anzahl · Wert gesamt (€)\nNotenständer · 6 · 90',
+    83: JSON.stringify({ v: 1, s: ['a', 'b', 'c'], z: [['Notenständer', 6, 90]] }),
+    84: '90',
+  },
 };
 function mitBedingungen(
   f: OeffentlicheEinstellungen['formular'],
@@ -122,6 +176,13 @@ function mitBedingungen(
       // F2: Das Formular blättert – „Mitarbeit“ (Team-Frage + Personen), dann „Team“ nur für Mitarbeitende.
       frage('s-mit', 'schritt', 'Mitarbeit'),
       frage('team', 'janein', 'Bist du im Team?'),
+      {
+        ...frage('technik', 'text', 'Was bringst du mit?'),
+        typ: 'liste' as const,
+        kurz: 'Technik',
+        hilfe: 'Eigene Technik, die über die Gemeinde versichert sein soll.',
+        liste: TECHNIK_LISTE,
+      },
       ...f.anmeldung.slice(-1),
     ],
     person: [
@@ -199,6 +260,9 @@ const DEMO_FELDER = [
   },
   { id: 80, name: 'Team-Erfahrung' },
   { id: 81, name: 'Bereich (Anderer Bereich)' },
+  { id: 82, name: 'Was bringst du mit?' },
+  { id: 83, name: 'Was bringst du mit? (Daten)' },
+  { id: 84, name: 'Technik – Summe Wert gesamt', fieldTypeCode: 'number' },
 ];
 /** Ein Tag (`YYYY-MM-DD`) relativ zu heute, optional Jahre davor/danach – für die Nachweise (N2a). */
 function isoTag(abHeute: number, jahre = 0): string {
@@ -435,7 +499,13 @@ const familie = (seit: string) => ({
       groupMemberStatus: wartet ? 'waiting' : 'active',
       waitinglistPosition: wartet ? 1 : null,
       memberStartDate: seit,
-      fields: Object.entries(werte as Record<string, string>).map(([f, value]) => ({
+      // F6c: Die Liste steht bei der ersten Person der Anmeldung (mit „Angemeldet von“).
+      fields: Object.entries({
+        ...(werte as Record<string, string>),
+        ...((werte as Record<string, string>)[75]
+          ? TECHNIK[(werte as Record<string, string>)[74]]
+          : {}),
+      }).map(([f, value]) => ({
         id: Number(f),
         value,
       })),

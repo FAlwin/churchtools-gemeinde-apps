@@ -20,6 +20,13 @@ import { fragen } from '@shared/anmeldung/druckliste';
 import { adresseText } from '@shared/anmeldung/adresse';
 import { unterschriftLesen } from '@shared/anmeldung/unterschrift';
 import {
+  mitEinheit,
+  summenSpalte,
+  summeText,
+  type ListeGelesen,
+  type ListenSpalte,
+} from '@shared/anmeldung/zeilenListe';
+import {
   antwortZeilen,
   type Absage,
   type AntwortZeile,
@@ -45,7 +52,7 @@ import v from './VeranstaltungSeite.module.scss';
 import a from './AnmeldungenReiter.module.scss';
 import { absageText, ganzerName } from './anmeldungText';
 
-function Antworten({ zeilen }: { zeilen: AntwortZeile[] }) {
+export function Antworten({ zeilen }: { zeilen: AntwortZeile[] }) {
   if (zeilen.length === 0) return null;
   return (
     <dl className={a.antworten}>
@@ -60,12 +67,59 @@ function Antworten({ zeilen }: { zeilen: AntwortZeile[] }) {
                   <UnterschriftBild striche={striche} />
                 </span>
               )}
+              {z.liste && <ListeTabelle g={z.liste} />}
               {z.text && <span className={a.mehrzeilig}>{z.text}</span>}
             </dd>
           </div>
         );
       })}
     </dl>
+  );
+}
+
+/**
+ * **Eine Liste mit Zeilen als kleine Tabelle** (F6c, Entwurf `f6-liste-v1`): Spaltennamen, je Eintrag eine Zeile, Zahlen
+ * rechtsbündig mit Einheit, mit „Summe zeigen“ darunter die Summe. Gelesen aus „(Daten)“ (`listeGelesen`).
+ */
+export function ListeTabelle({ g }: { g: ListeGelesen }) {
+  const zahl = (sp: ListenSpalte) => sp.art === 'zahl';
+  const si = g.summe === null ? -1 : g.spalten.findIndex((sp) => sp === summenSpalte(g));
+  return (
+    <div className={a.listeTabelle}>
+      <table>
+        <thead>
+          <tr>
+            {g.spalten.map((sp) => (
+              <th key={sp.id} className={zahl(sp) ? a.zahl : undefined}>
+                {sp.name}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {g.zeilen.map((z, i) => (
+            <tr key={i}>
+              {g.spalten.map((sp, j) => (
+                <td key={sp.id} className={zahl(sp) ? a.zahl : undefined}>
+                  {mitEinheit(sp, z[j])}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+        {si >= 0 && (
+          <tfoot>
+            <tr>
+              {g.spalten.map((sp, j) => (
+                <td key={sp.id} className={j === si ? a.zahl : undefined}>
+                  {j === si ? summeText(g, g.summe ?? 0) : j === 0 ? 'Summe' : ''}
+                </td>
+              ))}
+            </tr>
+          </tfoot>
+        )}
+      </table>
+    </div>
   );
 }
 

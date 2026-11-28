@@ -12,6 +12,9 @@ import {
 } from './themenreiheKontext';
 import { useReiheFenster } from './useReiheFenster';
 
+/** Dieselbe leere Liste bei jedem Aufruf – ein neues `[]` je Render ließe das Fenster „Event anlegen“ endlos neu laden. */
+const KEINE: readonly number[] = [];
+
 /**
  * **Der Anbieter für den Baustein „Reihe“** – hängt um einen Bildschirm, der ein Protokoll zeigt (Editor, Sitzungsansicht):
  * lädt die Reihen der Gruppe **erst, wenn das Dokument einen Reihe-Block hat** und sie noch nicht da sind (ein Lesen der
@@ -83,6 +86,7 @@ export function ReiheAnbieter({
     onGespeichert,
     ich: basis?.ich ?? null,
     eventKalender: basis ? basis.eventKalender : [],
+    eventAnlegen: basis ? basis.eventAnlegen : KEINE,
   });
 
   const wert = useMemo<ReiheKontextWert | null>(() => {

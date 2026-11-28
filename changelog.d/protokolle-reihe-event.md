@@ -1,0 +1,11 @@
+### Neu (Protokolle)
+
+- **Events aus der Reihe anlegen:** Fehlt einem Abend das Event, legst du es jetzt direkt im Fenster „Reihe“ an. **Einzeln:** in „Event wählen“ steht unten **„+ Event am 27.01.2027 neu anlegen …“**. **Alle auf einmal:** unter den Abenden steht **„Events für 3 Abende anlegen …“** (gezählt werden die Abende mit Datum und ohne Event). Das kleine Fenster „Event anlegen“ fragt Kalender, Titel (vorbelegt mit dem Namen der Reihe), Beginn und Ende (19:30–21:30 vorgeschlagen) und die **Eventvorlage**; aus ihr kommen Dienste und Ablauf. Es geht keine Einladung raus.
+- **Nichts doppelt:** Steht im gewählten Kalender am Tag schon ein ähnlicher Termin, legt die Erweiterung dort **nichts** an und sagt es – den Abend ordnest du dann über „Event wählen“ zu. Die Events entstehen **nacheinander**, ein Fehler an einem Tag stoppt die anderen nicht. Die Erweiterung liest jedes Event danach in ChurchTools nach; erst wenn es dort steht, hängt es am Abend. Ließ es sich nicht finden, steht der Termin trotzdem im Kalender – die Meldung sagt, wo du nachsiehst.
+- **Danach speichern:** Die neuen Events stehen erst in der Reihe, wenn du auf **Speichern** tippst (das Fenster sagt es). Schließt du ohne Speichern, bleiben die Events in ChurchTools bestehen und „Event wählen“ bietet sie wieder an.
+- Den Knopf gibt es nur, wenn du im Kalender sowohl Termine als auch Events anlegen darfst.
+
+### Intern (Protokolle)
+
+- Neue reine Regeln in `shared/protokolle/reiheEventAnlegen.ts` (Abende ohne Event, Eintrag je Abend über `eintragVorbelegung`, Meldungen, Zusammenfassung; die Vorlage mit der Nummer 0 gilt als gewählt), Ablauf in `protokolle/src/reiheEventAnlegen.ts` über das vorhandene `terminLegen`/`schonImKalender` (nacheinander, nie ein zweites `POST` nach einer unklaren Antwort). `eventsLesen.ts` hat jetzt EINE Suche „Event zu Termin und Beginn“ (`eventsNachlesen` und das neue `eventZumTerminLesen` nutzen sie). Das Recht (Kalender mit „Termine anlegen“ und „Events anlegen“) kommt über `ReiheBasis`/`useReiheFenster` bis ins Fenster.
+- Demo: Events, die ein Termin anlegt, sind jetzt echte Events des Kalenders (Name = Titel, lesbar und übertragbar); der letzte Abend von „Technik im Advent“ hat schon einen ähnlichen Termin.

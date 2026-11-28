@@ -36,6 +36,8 @@ export interface ReiheFensterEingabe {
   ich: { person: number } | null;
   /** Kalender mit „edit events“ (`null` = alle) – für „In Events übertragen“. */
   eventKalender: readonly number[] | null;
+  /** Kalender, in denen die Person Termine **und** Events anlegen darf (`kalenderMitEvents`) – für „Event neu anlegen“. Stabil halten. */
+  eventAnlegen: readonly number[];
 }
 
 export interface ReiheFensterSteuerung {
@@ -66,7 +68,7 @@ export interface ReiheFensterSteuerung {
  * (`themenreiheSpeichern`).
  */
 export function useReiheFenster(p: ReiheFensterEingabe): ReiheFensterSteuerung {
-  const { ortVon, bekannt, onFrisch, onGespeichert, ich, eventKalender } = p;
+  const { ortVon, bekannt, onFrisch, onGespeichert, ich, eventKalender, eventAnlegen } = p;
   const [fenster, setFenster] = useState<ReiheFensterArt | null>(null);
 
   const frisch = useCallback(
@@ -154,6 +156,7 @@ export function useReiheFenster(p: ReiheFensterEingabe): ReiheFensterSteuerung {
             f={fenster}
             ortVon={ortVon}
             ich={ich}
+            eventAnlegen={eventAnlegen}
             onGespeichert={gespeichert}
             onClose={() => setFenster(null)}
           />

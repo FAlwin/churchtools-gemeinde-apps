@@ -13,6 +13,7 @@ import { Suche } from './Suche';
 import { Reihen } from './Reihen';
 import { Termine } from './Termine';
 import { protokollSchluessel } from '@shared/protokolle/sitzungen';
+import { kalenderMitEvents } from '@shared/protokolle/reiheEventAnlegen';
 import { reiterMitZaehler, sichtbareReiter, sitzungAusAdresse, type ReiterId } from './reiter';
 import { useFaellige } from './useFaellige';
 import { ReiheBasis } from './themenreiheKontext';
@@ -105,6 +106,11 @@ export function App() {
         onSchliessen={zu}
       />
     ) : undefined;
+  // Kalender, in denen „Event neu anlegen“ in der Reihe geht: Termine UND Events anlegen dürfen (einmal gerechnet, stabil).
+  const eventAnlegen = useMemo(
+    () => (start ? kalenderMitEvents(start.kalenderSchreiben, start.eventsAnlegen) : []),
+    [start],
+  );
   // Was der Baustein „Reihe“ aus dem Start braucht (`ReiheAnbieter`) – einmal hier, nicht an jedem Bildschirm durchgereicht.
   const reiheBasis = useMemo(
     () =>
@@ -115,9 +121,10 @@ export function App() {
             schreibbar: start.schreibbar,
             ich: { person: start.id, name: start.vorname },
             eventKalender: start.eventsAendern,
+            eventAnlegen,
           }
         : null,
-    [start],
+    [start, eventAnlegen],
   );
   const bereiche = mitReitern ? { reiter: mitZaehler, aktiv, onWechsel: wechseln } : undefined;
 
@@ -174,6 +181,7 @@ export function App() {
             gruppen={start.gruppen}
             schreibbar={start.schreibbar}
             eventKalender={start.eventsAendern}
+            eventAnlegen={eventAnlegen}
           />
         )}
         {start && !suche.offen && aktiv === 'termine' && (

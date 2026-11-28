@@ -468,6 +468,8 @@ interface DemoEvent {
   description: string;
   isCanceled: boolean;
   kalender: number;
+  /** Nur bei Events, die ein Termin angelegt hat. */
+  appointmentId?: number;
 }
 const DEMO_JUGEND_EVENTS = (): DemoEvent[] => [
   ...[
@@ -891,6 +893,14 @@ const KALENDER_AM_TAG = [
     titel: 'Heiligabend – Familiengottesdienst',
     beginn: '2027-12-24T09:00:00Z',
   },
+  // Reihe „Technik im Advent“ (Technik-Team): am letzten Abend steht im Kalender schon so ein Termin – „Events für … Abende
+  // anlegen“ legt dort nichts an und sagt es (Reihe, Scheibe 3). Der Tag hängt wie die Reihe an „heute“.
+  {
+    tag: technikTag(TECHNIK_TAGE.advent[2]),
+    id: 162,
+    titel: 'Technik im Advent – Aufbau Heiligabend',
+    beginn: `${technikTag(TECHNIK_TAGE.advent[2])}T18:30:00Z`,
+  },
   {
     tag: '2027-04-24',
     id: DEMO_TERMIN_DRIN.kalenderTermin,
@@ -941,11 +951,13 @@ interface Speicher {
   vorlagen: Record<string, unknown>[];
   /** Ressourcen-Buchungen (W15-2) – von `POST …/appointments` angelegt, von `GET /bookings` gelesen. */
   buchungen: { resourceId: number; appointmentId: number }[];
-  /** Events (W15-3) – von `POST …/appointments` angelegt, von `GET /events` gelesen. */
-  events: { id: number; appointmentId: number; startDate: string; eventTemplateId: number }[];
   /** Gruppen, die ChurchTools für Anmeldungen anlegt (W15-5) – von `POST …/appointments` angelegt, von `GET /groups` gelesen. */
   gruppen: { id: number; name: string; groupTypeId: number; terminId: number }[];
-  /** Events der Jugend für den Baustein „Reihe“ – `GET`/`PUT /events/{id}` (nur `description` und `isCanceled` ändern sich). */
+  /**
+   * Events für den Baustein „Reihe“ – `GET /events`, `GET`/`PUT /events/{id}` (nur `description` und `isCanceled` ändern sich).
+   * Die Events, die `POST …/appointments` (W15-3, Reihe Scheibe 3) anlegt, kommen **hierher** (mit `appointmentId`): so findet
+   * `eventsNachlesen` sie, und die Reihe kann sie lesen und übertragen – wie bei ChurchTools ist es dasselbe Event.
+   */
   jugendEvents: DemoEvent[];
 }
 
@@ -1145,7 +1157,6 @@ function speicherAnlegen(fall: string): Speicher {
     beitraege: [],
     vorlagen: [...DEMO_VORLAGEN],
     buchungen: [],
-    events: [],
     gruppen: [],
     jugendEvents: DEMO_JUGEND_EVENTS(),
   };
@@ -1191,6 +1202,7 @@ const eventAntwort = (e: DemoEvent) => ({
   startDate: e.startDate,
   description: e.description === '' ? null : e.description,
   isCanceled: e.isCanceled,
+  ...(e.appointmentId !== undefined ? { appointmentId: e.appointmentId } : {}),
   calendar: { domainType: 'calendar', domainIdentifier: String(e.kalender) },
   adminIds: [],
 });
@@ -1326,15 +1338,6 @@ function antwort(
     return {
       status: 200,
       data: [
-        ...s.events
-          .filter((x) => x.startDate.slice(0, 10) >= von && x.startDate.slice(0, 10) <= bis)
-          .map((x) => ({
-            id: x.id,
-            name: 'Event',
-            appointmentId: x.appointmentId,
-            startDate: x.startDate,
-            isCanceled: false,
-          })),
         ...s.jugendEvents
           .filter((x) => x.startDate.slice(0, 10) >= von && x.startDate.slice(0, 10) <= bis)
           .map(eventAntwort),
@@ -1462,15 +1465,17 @@ function antwort(
           });
       }
     }
-    // Events (W15-3): wie ChurchTools nur mit der Antwort „201“ – gelesen wird `GET /events`.
-    for (const x of (rumpf.events as
-      | { startDate: string; eventTemplateId: number }[]
-      | undefined) ?? [])
-      s.events.push({
+    // Events (W15-3): wie ChurchTools nur mit der Antwort „201“ – gelesen wird `GET /events`. Der Name des Events ist der
+    // Titel des Termins, es liegt im Kalender des Termins.
+    for (const x of (rumpf.events as { startDate: string }[] | undefined) ?? [])
+      s.jugendEvents.push({
         id: s.naechste++,
         appointmentId: id,
+        name: String(rumpf.title),
         startDate: x.startDate,
-        eventTemplateId: x.eventTemplateId,
+        description: '',
+        isCanceled: false,
+        kalender: Number(rumpf.calendarId),
       });
     return { status: 201, data: { id } };
   }

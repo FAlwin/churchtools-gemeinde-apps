@@ -73,6 +73,7 @@ export function Reihen({
   gruppen,
   schreibbar,
   eventKalender,
+  eventAnlegen,
 }: {
   modul: number;
   ich: { person: number; name: string };
@@ -80,6 +81,8 @@ export function Reihen({
   schreibbar: readonly number[];
   /** Kalender mit „edit events“ (`null` = alle) – für „In Events übertragen“. */
   eventKalender: readonly number[] | null;
+  /** Kalender mit „Termine anlegen“ **und** „Events anlegen“ (`kalenderMitEvents`) – für „Event neu anlegen“. Stabil halten. */
+  eventAnlegen: readonly number[];
 }) {
   const handy = useMedienAbfrage(HANDY_BREITE);
   const geladen = useLaden(() => ladeAlle(modul, gruppen), [modul, gruppen]);
@@ -141,6 +144,7 @@ export function Reihen({
     onGespeichert,
     ich,
     eventKalender,
+    eventAnlegen,
   });
 
   const mitMitarbeit = gruppen.filter((g) => g.mitarbeit !== null);

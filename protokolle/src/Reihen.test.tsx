@@ -68,9 +68,12 @@ const gelesen = (stand: Record<number, Themenreihe[]>) =>
     .mocked(Schreiben.ladeThemenreihen)
     .mockImplementation(async (ort) => stand[ort.kategorie - 1000] ?? []);
 
+/** Dieselbe Liste bei jedem Render (sonst lüde das Fenster „Event anlegen“ endlos). */
+const KEINE_KALENDER: number[] = [];
 const zeigen = (
   gruppen: ProtokollGruppe[],
   schreibbar: number[] = gruppen.map((g) => g.protokolle as number),
+  eventAnlegen: number[] = KEINE_KALENDER,
 ) =>
   render(
     <Reihen
@@ -79,6 +82,7 @@ const zeigen = (
       gruppen={gruppen}
       schreibbar={schreibbar}
       eventKalender={[4]}
+      eventAnlegen={eventAnlegen}
     />,
   );
 
@@ -222,6 +226,21 @@ describe('Reiter „Reihen“: Karte', () => {
     fireEvent.click(screen.getByRole('button', { name: /Jona/ }));
     const jugend = await screen.findByRole('dialog');
     expect(within(jugend).getByRole('button', { name: 'Bearbeiten' })).toBeTruthy();
+  });
+
+  it('„Event neu anlegen“ im Fenster „Reihe“ gibt es nur mit dem Recht, das der Reiter durchreicht (Scheibe 3)', async () => {
+    gelesen({ 11: [JONA] });
+    const a = zeigen([JUGEND], [JUGEND.protokolle as number], [4]);
+    fireEvent.click(await screen.findByRole('button', { name: /Jona/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Bearbeiten' }));
+    // Jona hat vier Events und einen Abend ohne.
+    expect(await screen.findByRole('button', { name: 'Event für 1 Abend anlegen …' })).toBeTruthy();
+    a.unmount();
+    zeigen([JUGEND]);
+    fireEvent.click(await screen.findByRole('button', { name: /Jona/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Bearbeiten' }));
+    await screen.findByDisplayValue('Jona');
+    expect(screen.queryByRole('button', { name: /Abend anlegen/ })).toBeNull();
   });
 
   it('„Bearbeiten“ liest die Reihe vorher frisch – das Fenster zeigt den Stand von jetzt, nicht den alten', async () => {

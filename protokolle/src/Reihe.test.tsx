@@ -56,12 +56,13 @@ const GRUPPE: ProtokollGruppe = {
   protokolle: 60,
   mitarbeit: 61,
 };
-const basis = (schreibbar: number[]): ReiheBasisWert => ({
+const basis = (schreibbar: number[], eventAnlegen: number[] = []): ReiheBasisWert => ({
   modul: 24,
   gruppen: [GRUPPE],
   schreibbar,
   ich: { person: 1, name: 'Alwin' },
   eventKalender: [4],
+  eventAnlegen,
 });
 const DOK: Block[] = [{ id: 'b1', type: BLOCK.themenreihe, props: { reihe: 'r1' } }];
 const anzeigen = (b: ReiheBasisWert | null, dok: Block[] = DOK) =>
@@ -126,6 +127,23 @@ describe('ReiheAnbieter und Karte', () => {
     expect(await screen.findByDisplayValue('Jona')).toBeTruthy();
     expect(screen.getByDisplayValue('Weglaufen')).toBeTruthy();
     expect(screen.getByText('Abend 3')).toBeTruthy();
+  });
+});
+
+describe('Event neu anlegen: das Recht kommt aus dem Rahmen bis ins Fenster „Reihe“ (Scheibe 3)', () => {
+  const bearbeiten = async (b: ReiheBasisWert) => {
+    vi.mocked(Schreiben.ladeThemenreihen).mockResolvedValue([reihe]);
+    anzeigen(b);
+    fireEvent.click(await screen.findByRole('button', { name: 'Bearbeiten' }));
+    await screen.findByDisplayValue('Jona');
+  };
+  it('mit Kalender, in denen beides geht: „Event für 1 Abend anlegen …“ (Abend c hat kein Event)', async () => {
+    await bearbeiten(basis([60], [4]));
+    expect(screen.getByRole('button', { name: 'Event für 1 Abend anlegen …' })).toBeTruthy();
+  });
+  it('ohne: kein Knopf', async () => {
+    await bearbeiten(basis([60], []));
+    expect(screen.queryByRole('button', { name: /Abend anlegen/ })).toBeNull();
   });
 });
 

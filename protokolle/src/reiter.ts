@@ -2,13 +2,14 @@ import type { Reiter } from '@ui/bedienung/ReiterLeiste';
 import { reiterName } from '@shared/protokolle/hinweis';
 import { erweiterungsLink } from '@ui/erweiterung/kuerzel';
 
-/** Die Bereiche der Protokolle: Start, Sitzungen (S3-2), To-Dos (S7-1), Termine (W14) und – nur für Admins – Einstellungen (S2-2, früher „Verwaltung“; R13: der letzte Reiter, nur Einstellungen). */
-export type ReiterId = 'start' | 'sitzungen' | 'todos' | 'termine' | 'verwaltung';
+/** Die Bereiche der Protokolle: Start, Sitzungen (S3-2), To-Dos (S7-1), Reihen (Baustein „Reihe“, Scheibe 2), Termine (W14) und – nur für Admins – Einstellungen (S2-2, früher „Verwaltung“; R13: der letzte Reiter, nur Einstellungen). */
+export type ReiterId = 'start' | 'sitzungen' | 'todos' | 'reihen' | 'termine' | 'verwaltung';
 
 export const ALLE_REITER: Reiter<ReiterId>[] = [
   { id: 'start', label: 'Start', icon: 'home' },
   { id: 'sitzungen', label: 'Sitzungen', icon: 'calendar' },
   { id: 'todos', label: 'To-Dos', icon: 'todo-liste' },
+  { id: 'reihen', label: 'Reihen', icon: 'liste' },
   { id: 'termine', label: 'Termine', icon: 'clock' },
   { id: 'verwaltung', label: 'Einstellungen', icon: 'zahnrad' },
 ];

@@ -28,6 +28,7 @@ import {
   neueThemenreihe,
   neueZeile,
   type ReiheZeile,
+  type Themenreihe,
 } from '@shared/protokolle/themenreihe';
 import { praefix } from '@shared/protokolle/tabellenZeile';
 import { neuerToDoVorschlag, vorschlagAblehnen } from '@shared/protokolle/todoVorschlag';
@@ -400,6 +401,65 @@ const demoReihe = (alt = false) =>
     ],
   });
 const DEMO_REIHE = demoReihe();
+/**
+ * **Reihen des Technik-Teams** (Reiter „Reihen“): damit Gruppierung, Filter und das Feld „Gruppe“ in der Demo etwas zeigen –
+ * eine vergangene Reihe (alle Abende mit Event) und eine kommende, von der erst ein Abend ein Event hat. Die Tage hängen an
+ * „heute“, sie bleiben also vergangen bzw. kommend. Erfundene Namen.
+ */
+const TECHNIK_TAGE = {
+  schulung: [-70, -63, -56],
+  advent: [14, 21, 28],
+};
+const technikTag = (n: number) => plusTage(heuteImKalender(), n);
+const DEMO_REIHEN_TECHNIK = (): Themenreihe[] => [
+  neueThemenreihe({
+    id: 'demo-reihe-schulung',
+    gruppe: 19,
+    name: 'Tontechnik-Schulung',
+    von: 19,
+    am: '2026-09-01T18:00:00Z',
+    zeilen: [
+      ABEND('sa', technikTag(TECHNIK_TAGE.schulung[0]), {
+        eventId: 7101,
+        eventTitel: 'Technik-Abend',
+        thema: 'Mischpult Grundlagen',
+        wer: { personId: 19, name: 'Peter Wiens' },
+      }),
+      ABEND('sb', technikTag(TECHNIK_TAGE.schulung[1]), {
+        eventId: 7102,
+        eventTitel: 'Technik-Abend',
+        thema: 'Mikrofone und Monitor',
+        wer: { personId: 19, name: 'Peter Wiens' },
+      }),
+      ABEND('sc', technikTag(TECHNIK_TAGE.schulung[2]), {
+        eventId: 7103,
+        eventTitel: 'Technik-Abend',
+        thema: 'Probe mit der Band',
+        wer: { personId: 7, name: 'Johann Becker' },
+      }),
+    ],
+  }),
+  neueThemenreihe({
+    id: 'demo-reihe-advent',
+    gruppe: 19,
+    name: 'Technik im Advent',
+    von: 19,
+    am: '2026-11-20T18:00:00Z',
+    zeilen: [
+      ABEND('aa', technikTag(TECHNIK_TAGE.advent[0]), {
+        eventId: 7104,
+        eventTitel: 'Technik-Abend',
+        thema: 'Beamer und Folien',
+        wer: { personId: 7, name: 'Johann Becker' },
+      }),
+      ABEND('ab', technikTag(TECHNIK_TAGE.advent[1]), {
+        thema: 'Licht für das Krippenspiel',
+        wer: { personId: null, name: 'Tobias K.' },
+      }),
+      ABEND('ac', technikTag(TECHNIK_TAGE.advent[2]), { thema: 'Aufbau Heiligabend' }),
+    ],
+  }),
+];
 /** Ein Event, wie `GET /events/{id}` es liefert – nur die Felder, die die Reihe liest. */
 interface DemoEvent {
   id: number;
@@ -410,6 +470,19 @@ interface DemoEvent {
   kalender: number;
 }
 const DEMO_JUGEND_EVENTS = (): DemoEvent[] => [
+  ...[
+    [7101, TECHNIK_TAGE.schulung[0]],
+    [7102, TECHNIK_TAGE.schulung[1]],
+    [7103, TECHNIK_TAGE.schulung[2]],
+    [7104, TECHNIK_TAGE.advent[0]],
+  ].map(([id, tag]) => ({
+    id,
+    name: 'Technik-Abend',
+    startDate: `${technikTag(tag)}T18:30:00Z`,
+    description: '',
+    isCanceled: false,
+    kalender: 4,
+  })),
   {
     id: 7001,
     name: 'Jugendabend',
@@ -1047,7 +1120,7 @@ function speicherAnlegen(fall: string): Speicher {
             ],
             [
               81,
-              W8B_TECHNIK.map((x, i) => ({
+              [...W8B_TECHNIK, ...DEMO_REIHEN_TECHNIK()].map((x, i) => ({
                 id: 900 + i,
                 dataCategoryId: 81,
                 value: JSON.stringify(x),

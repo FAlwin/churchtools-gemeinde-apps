@@ -239,6 +239,86 @@ export function zeitPlus(zeit: string, minuten: number): string | null {
   return `${String(Math.floor(gesamt / 60)).padStart(2, '0')}:${String(gesamt % 60).padStart(2, '0')}`;
 }
 
+/** 95 → „1 Std. 35 Min“, 60 → „1 Std.“, 14 → „14 Min“. */
+export function dauerText(minuten: number): string {
+  const h = Math.floor(minuten / 60);
+  const m = minuten % 60;
+  if (h === 0) return `${m} Min`;
+  return m === 0 ? `${h} Std.` : `${h} Std. ${m} Min`;
+}
+
+/** Minuten zwischen zwei Uhrzeiten („10:00“ → „11:35“ = 95), über Mitternacht weiter. `null` ohne gültige Zeiten. */
+export function minutenZwischen(von: string, bis: string): number | null {
+  const m = (z: string) => {
+    const t = /^(\d{1,2}):(\d{2})$/.exec(z);
+    return t ? Number(t[1]) * 60 + Number(t[2]) : null;
+  };
+  const a = m(von);
+  const b = m(bis);
+  if (a === null || b === null) return null;
+  return (b - a + 24 * 60) % (24 * 60);
+}
+
+/** Wie lange ein Ablauf dauert, in Minuten (`ablaufDauer`). */
+export interface AblaufDauer {
+  /** Von „Beginn“ (Uhrzeit des Termins) bis „Ende“ – `null` ohne Beginn oder ohne Ende. */
+  abBeginn: number | null;
+  /** Vom ersten Punkt mit Uhrzeit bis „Ende“ – nur, wenn Vorlauf dabei ist; sonst `null`. */
+  mitVorlauf: number | null;
+}
+
+/**
+ * **Wie lange der Ablauf insgesamt dauert** (Alwin, 28.11.2026: „wie lange alle Elemente insgesamt dauern“) – von
+ * „Beginn“ bis „Ende“ (`ablaufEnde`), und mit Vorlauf vom ersten Punkt mit Uhrzeit bis „Ende“. Die Rechnung des
+ * Termin-PDFs (seit 05.11.2026), hierher gezogen, damit Balken „Ende“ und PDF nie auseinanderlaufen. ChurchTools rechnet
+ * die Uhrzeiten lückenlos aus den Dauern – das ist also die Summe der Dauern; weggelassene Punkte haben keine Uhrzeit
+ * und zählen so von selbst nicht, „entfernt“-Platzhalter der Musik-App ebenfalls nicht.
+ * `beginn` ist die reine Uhrzeit („10:00“); ein angehängtes „Uhr“ (Musik-App: `service.time`) stört nicht.
+ */
+export function ablaufDauer(
+  zeilen: readonly Pick<AblaufZeile, 'time' | 'durationMin' | 'removed' | 'vorBeginn'>[],
+  beginn: string | null | undefined,
+): AblaufDauer {
+  const da = zeilen.filter((z) => !z.removed);
+  const ende = ablaufEnde(da);
+  if (!ende) return { abBeginn: null, mitVorlauf: null };
+  const start = beginn?.replace(/\s*Uhr$/, '');
+  const erste = da.find((z) => z.time)?.time;
+  return {
+    abBeginn: start ? minutenZwischen(start, ende) : null,
+    mitVorlauf: erste && da.some((z) => z.vorBeginn) ? minutenZwischen(erste, ende) : null,
+  };
+}
+
+/**
+ * Die Teile des Dauer-Texts: `['Dauer 44 Min', 'mit Vorlauf 1 Std. 14 Min']` – einzeln, damit der Balken „Ende“ in einer
+ * schmalen Matrix-Spalte zwischen den Teilen umbricht statt mitten in „1 Std.“. Leer, wenn nichts zu sagen ist.
+ */
+export function ablaufDauerTeile(
+  d: AblaufDauer,
+  { vorlauf = true }: { vorlauf?: boolean } = {},
+): string[] {
+  const teile: string[] = [];
+  if (d.abBeginn !== null) teile.push(`Dauer ${dauerText(d.abBeginn)}`);
+  if (vorlauf && d.mitVorlauf !== null && d.mitVorlauf !== d.abBeginn) {
+    teile.push(`mit Vorlauf ${dauerText(d.mitVorlauf)}`);
+  }
+  return teile;
+}
+
+/**
+ * „Dauer 35 Min“ – nur ab Beginn, für Kopfzeilen neben „Ende“ (Termin-Kopf, Vollbild-Anzeige; Alwin, 28.11.2026).
+ * `null` ohne Beginn oder Ende.
+ */
+export function ablaufDauerKurz(d: AblaufDauer): string | null {
+  return ablaufDauerTeile(d, { vorlauf: false })[0] ?? null;
+}
+
+/** „Dauer 44 Min · mit Vorlauf 1 Std. 14 Min“ – die Zeile „Ende“ im Termin-PDF. */
+export function ablaufDauerText(d: AblaufDauer): string {
+  return ablaufDauerTeile(d).join(' · ');
+}
+
 /** „[Musik], Peter“ → „Musik, Peter“ – in der Feldliste stehen Dienste ohne Klammern (wie die ChurchTools-App). */
 export const zustaendigText = (text: string) => text.replace(/\[([^\]]+)\]/g, '$1').trim();
 

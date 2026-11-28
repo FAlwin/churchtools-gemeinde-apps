@@ -9,7 +9,16 @@
  * Dienst-Name (die Namen stehen einmal oben), Abschnitte mit ihrer Dauer, Beginn und Ende hervorgehoben.
  */
 import type { InfoGruppe, ResponsibleEntry } from '../types/index';
-import { ablaufEnde, beginnStelle, itemTitleParts, type AblaufZeile } from './ablaufZeile';
+import {
+  ablaufDauer,
+  ablaufDauerText,
+  ablaufEnde,
+  beginnStelle,
+  dauerText,
+  itemTitleParts,
+  minutenZwischen,
+  type AblaufZeile,
+} from './ablaufZeile';
 import { tagLang, tagPunkt } from './datum';
 
 // ── Eingang ──────────────────────────────────────────────────────────────────
@@ -169,25 +178,8 @@ export interface TerminBlatt {
 
 // ── Regeln ───────────────────────────────────────────────────────────────────
 
-/** 95 → „1 Std. 35 Min“, 60 → „1 Std.“, 14 → „14 Min“. */
-export function dauerText(minuten: number): string {
-  const h = Math.floor(minuten / 60);
-  const m = minuten % 60;
-  if (h === 0) return `${m} Min`;
-  return m === 0 ? `${h} Std.` : `${h} Std. ${m} Min`;
-}
-
-/** Minuten zwischen zwei Uhrzeiten („10:00“ → „11:35“ = 95), über Mitternacht weiter. `null` ohne gültige Zeiten. */
-export function minutenZwischen(von: string, bis: string): number | null {
-  const m = (z: string) => {
-    const t = /^(\d{1,2}):(\d{2})$/.exec(z);
-    return t ? Number(t[1]) * 60 + Number(t[2]) : null;
-  };
-  const a = m(von);
-  const b = m(bis);
-  if (a === null || b === null) return null;
-  return (b - a + 24 * 60) % (24 * 60);
-}
+// `dauerText` und `minutenZwischen` stehen seit der Gesamtdauer im Ablauf (28.11.2026) in `ablaufZeile.ts`.
+export { dauerText, minutenZwischen };
 
 /**
  * **Teams kurz:** Sind mehrere Personen über denselben Dienst zuständig („Gesang“ mit fünf Sängerinnen), steht nur der
@@ -353,21 +345,11 @@ export function terminBlatt(q: BlattQuelle, e: BlattEinstellungen): TerminBlatt 
     });
     if (beginnBei >= gezeigt.length) zeilen.push({ art: 'beginn', zeit: q.beginn });
     if (ende) {
-      const haupt = minutenZwischen(q.beginn, ende);
-      const erste = gezeigt.find((z) => z.time)?.time;
-      const gesamt =
-        erste && a.vorlauf && gezeigt.some((z) => z.vorBeginn)
-          ? minutenZwischen(erste, ende)
-          : null;
+      // Dieselbe Rechnung wie der Balken „Ende“ am Bildschirm (`ablaufDauer`) – „mit Vorlauf“ nur, wenn er gezeigt wird.
       zeilen.push({
         art: 'ende',
         zeit: ende,
-        dauer: [
-          haupt !== null ? `Dauer ${dauerText(haupt)}` : null,
-          gesamt !== null && gesamt !== haupt ? `mit Vorlauf ${dauerText(gesamt)}` : null,
-        ]
-          .filter(Boolean)
-          .join(' · '),
+        dauer: ablaufDauerText(ablaufDauer(gezeigt, q.beginn)),
       });
     }
     ablauf = { kopf, arten, zeilen };

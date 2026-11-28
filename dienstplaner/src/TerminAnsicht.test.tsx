@@ -160,7 +160,8 @@ describe('TerminAnsicht (E6-1b)', () => {
     const kopf = screen.getByRole('heading', { name: 'Gottesdienst' }).nextElementSibling!;
     // Ende = wann der letzte Punkt vorbei ist (Lied 10:05 + 5 Min), nicht das Ende des Termins (12:00) und ohne „ca.“
     // (Alwin, 30.10.2026).
-    expect(kopf.textContent).toBe('So, 18.10.2026 · 10:00 Uhr · Ende 10:10 Uhr');
+    // Daneben die Dauer ab Beginn (Alwin, 28.11.2026) – „mit Vorlauf“ steht nur im Balken „Ende“ unter dem Ablauf.
+    expect(kopf.textContent).toBe('So, 18.10.2026 · 10:00 Uhr · Ende 10:10 Uhr · Dauer 10 Min');
     const ablauf = screen.getByRole('region', { name: 'Ablauf' });
     expect(within(ablauf).getByText('Soundcheck')).toBeTruthy();
     expect(within(ablauf).getByText('30 Min')).toBeTruthy();
@@ -171,6 +172,12 @@ describe('TerminAnsicht (E6-1b)', () => {
     const zeit = within(ablauf).getByText('10:05').parentElement!;
     expect(zeit.textContent).toBe('10:055 Min');
     expect(within(ablauf).getByText(/Beginn/)).toBeTruthy();
+    // Unter dem Ablauf der Balken „Ende“ mit der Dauer, hier auch „mit Vorlauf“ (Soundcheck 30 Min; Alwin, 28.11.2026).
+    expect(
+      within(ablauf).getByRole('separator', {
+        name: 'Ende 10:10 · Dauer 10 Min · mit Vorlauf 40 Min',
+      }),
+    ).toBeTruthy();
     // Nur ansehen – bis auf die Punkte (B8, E20: Tipp auf den Punkt = Einzelansicht, Tipp auf die Lied-Karte = Lied-Ansicht,
     // E6-O O4). Im Kopf dazu das „⋯“-Menü (B8): „Spalten wählen“ (Infos je Gruppe, E6-4) und „Ablauf zeigen“ (E6b-1).
     expect(

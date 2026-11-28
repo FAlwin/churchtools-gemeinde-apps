@@ -78,17 +78,19 @@ afterEach(() => {
 });
 
 describe('Ablauf-Anzeige (E6b-1)', () => {
-  it('Uhr und Tag in Gemeinde-Zeit, rechts Titel, Beginn und Ende', () => {
+  it('Uhr und Tag in Gemeinde-Zeit, rechts Titel, Beginn, Ende und Dauer', () => {
     const { anzeige } = zeige();
     expect(within(anzeige).getByText('09:47')).toBeTruthy();
     expect(within(anzeige).getByText('Sonntag, 1. November')).toBeTruthy();
     expect(within(anzeige).getByText('Gottesdienst')).toBeTruthy();
-    expect(within(anzeige).getByText('Beginn 10:00 · Ende 10:34')).toBeTruthy();
+    expect(within(anzeige).getByText('Beginn 10:00 · Ende 10:34 · Dauer 34 Min')).toBeTruthy();
   });
 
   it('ein anderer Tag als heute: sein Datum steht vorne dabei', () => {
     const { anzeige } = zeige({ tag: '2026-11-08' });
-    expect(within(anzeige).getByText('So, 08.11. · Beginn 10:00 · Ende 10:34')).toBeTruthy();
+    expect(
+      within(anzeige).getByText('So, 08.11. · Beginn 10:00 · Ende 10:34 · Dauer 34 Min'),
+    ).toBeTruthy();
   });
 
   it('Punkte mit Zeit, Dauer, Titel samt Lied und Zuständigen; Abschnitt als Band; „Beginn“ nach dem Vorlauf', () => {

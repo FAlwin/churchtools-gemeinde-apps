@@ -4,7 +4,14 @@ import { Icon } from '@ui/icons/icons';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { useVollbild } from '@ui/bedienung/useVollbild';
 import { useWakeLock } from '@ui/bedienung/useWakeLock';
-import { ablaufEnde, beginnStelle, itemTitleParts, type AblaufZeile } from '@shared/ct/ablaufZeile';
+import {
+  ablaufDauer,
+  ablaufDauerKurz,
+  ablaufEnde,
+  beginnStelle,
+  itemTitleParts,
+  type AblaufZeile,
+} from '@shared/ct/ablaufZeile';
 import { tagKurz, tagLang } from '@shared/ct/datum';
 import { ortszeitAus } from '@shared/ct/zeit';
 import type { InfoGruppe } from '@shared/types/index';
@@ -73,6 +80,7 @@ export function AblaufAnzeige({
   const stelle = beginnStelle(punkte);
   // Ende = wann der letzte Punkt vorbei ist (wie der Balken „Ende“ der Matrix), ohne „ca.“ (Alwin, 30.10.2026).
   const ende = ablaufEnde(punkte);
+  const dauer = ablaufDauerKurz(ablaufDauer(punkte, beginn));
 
   function schliessen(): void {
     vollbild.beenden();
@@ -130,6 +138,7 @@ export function AblaufAnzeige({
     tag !== jetzt.tag ? tagKurz(tag) : null,
     `Beginn ${beginn}`,
     ende ? `Ende ${ende}` : null,
+    dauer,
   ]
     .filter(Boolean)
     .join(' · ');

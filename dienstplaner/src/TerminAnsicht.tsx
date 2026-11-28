@@ -315,7 +315,19 @@ export function TerminAnsicht({
                 <h2>{s.name}</h2>
                 <p>
                   {datumText(s.tag)} · {s.uhrzeit} Uhr
-                  {teile.ende && ` · Ende ${teile.ende} Uhr`}
+                  {/* Am Handy bricht die Zeile zwischen den Teilen um, nie mitten in „Dauer 35 Min“. */}
+                  {teile.ende && (
+                    <>
+                      {' · '}
+                      <span className={styles.amStueck}>Ende {teile.ende} Uhr</span>
+                    </>
+                  )}
+                  {teile.dauer && (
+                    <>
+                      {' · '}
+                      <span className={styles.amStueck}>{teile.dauer}</span>
+                    </>
+                  )}
                   {s.abgesagt && <b className={styles.abgesagt}> · abgesagt</b>}
                 </p>
                 {/* Der Anfang der Infos in einer Zeile – antippen öffnet sie ganz. */}

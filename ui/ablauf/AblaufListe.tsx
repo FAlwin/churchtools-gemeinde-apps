@@ -6,19 +6,13 @@
  * (→ Charts) und setzt Schildchen „neu/geändert“. Die Regeln einer Zeile stehen in `@shared/ct/ablaufZeile`.
  */
 import { Fragment, type ReactNode } from 'react';
-import {
-  ablaufEnde,
-  beginnStelle,
-  itemLabel,
-  itemTitleParts,
-  type AblaufZeile,
-} from '@shared/ct/ablaufZeile';
+import { beginnStelle, itemLabel, itemTitleParts, type AblaufZeile } from '@shared/ct/ablaufZeile';
 import type { InfoGruppe } from '@shared/types/index';
 import { Etikett } from '../bedienung/Etikett';
 import { HANDY_BREITE, useMedienAbfrage } from '../bedienung/useMedienAbfrage';
 import {
   BeginnLinie,
-  EndeLinie,
+  AblaufEndeLinie,
   ItemTitle,
   Kuerzel,
   LiedKarte,
@@ -191,7 +185,6 @@ export function AblaufListe({
   const infos = schmal ? [] : infoSpalten;
   const alsSpalten = !handy && infos.length > 0;
   const sichtbar = zeilen.filter((z) => !z.removed);
-  const ende = mitEnde ? ablaufEnde(sichtbar) : null;
   // Der Balken „Beginn“ vor dem ersten Punkt nach dem Vorlauf (#423) – nur, wenn es Vorlauf gibt.
   const stelle = beginnStelle(sichtbar);
   let liedIndex = -1;
@@ -319,7 +312,7 @@ export function AblaufListe({
         </Fragment>
       ))}
       {stelle === sichtbar.length && <BeginnLinie zeit={beginn} />}
-      {ende && <EndeLinie zeit={ende} />}
+      {mitEnde && <AblaufEndeLinie zeilen={sichtbar} beginn={beginn} />}
     </>
   );
 

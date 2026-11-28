@@ -111,6 +111,8 @@ export function AgendaFullView({
         kopf={sichtbar && <AblaufHinweis aenderungen={zusammenfassung} />}
         infoSpalten={infoSpalten}
         fotos={istExtension}
+        // Wo der Ablauf aufhört und wie lange er dauert – wie im Dienstplaner (Alwin, 28.11.2026).
+        mitEnde
       />
       {punkt.ueberlagerung}
     </>

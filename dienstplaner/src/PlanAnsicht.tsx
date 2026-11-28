@@ -15,6 +15,7 @@ import {
 import { DIENST_SPALTE, SPALTENBREITE, type Breite } from '@shared/dienstplan/fenster';
 import { CtSymbol } from './CtSymbol';
 import { AblaufZeilen, HandyAblauf } from './MatrixAblauf';
+import { MatrixSerie } from './MatrixSerie';
 import { HandyInfos, InfosZeilen } from './MatrixInfos';
 import { vorgabeText, type Modus } from '@shared/dienstplan/modusVorgabe';
 import { darfPlanen, schluessel, type Sicht, nurAnsehen } from './planSicht';
@@ -204,6 +205,8 @@ export function TabellenPlan({ sicht, breite }: { sicht: Sicht; breite: Breite }
                       {s.name}
                     </span>
                   )}
+                  {/* Die Predigtserie (27.11.2026, Entwurf `predigtserie-matrix-3.html` C) – kursiv mit Buch. */}
+                  {sicht.ablauf && <MatrixSerie ma={sicht.ablauf} s={s} />}
                   <div className={styles.fuellung} aria-hidden="true">
                     <i
                       style={{

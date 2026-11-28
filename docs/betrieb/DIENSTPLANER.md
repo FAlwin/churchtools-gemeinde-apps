@@ -22,7 +22,9 @@
 >   **Predigtserie** (seit 27.11.2026, wie in der ChurchTools-App): steht als leise Zeile über dem Ablauf, wenn eine gesetzt ist; im
 >   Bearbeiten steht die Zeile immer da („keine“) und öffnet ein Fenster mit Freitext (höchstens 100 Zeichen, leer = keine
 >   Serie). Teilen sich mehrere Termine einen Ablauf, gilt die Serie für alle. Sie steht auch in **Ablauf zeigen** und im
->   **Termin-PDF**; eine neue Vorlage übernimmt sie nicht. Ist der Ablauf in ChurchTools **abgeschlossen**, steht ein **Schloss**
+>   **Termin-PDF**; eine neue Vorlage übernimmt sie nicht. In **Planen** (Matrix am Rechner/iPad) steht sie kursiv mit Buch im
+>   Spaltenkopf unter dem Termin-Namen (lange Titel mit „…“, ganz beim Darüberfahren); im „Ablauf bearbeiten“ ist sie dort
+>   antippbar, ohne Serie steht „Predigtserie …“. Ist der Ablauf in ChurchTools **abgeschlossen**, steht ein **Schloss**
 >   neben „Ablauf“ – dann lässt sich auch die Serie nicht ändern. Die Punkt-Seite nennt unter **Davor / Danach** auch die
 >   Zuständigen des Nachbarn. Weiter: die Dienste des Termins, **Infos & Dateien**
 >   (i, Büroklammer), **Live** (Folgen bzw. Steuern wie die Live-Agenda von ChurchTools), **Teilen** = Termin-Blatt

@@ -12,19 +12,33 @@ export function TextKnopf({
   children,
   disabled,
   dataTour,
+  titel,
+  ariaLabel,
+  kompakt = false,
 }: {
   onClick: () => void;
   children: ReactNode;
   disabled?: boolean;
   dataTour?: string;
+  /** Tooltip – z. B. der ganze Text, wenn der Inhalt gekürzt ist (Predigtserie im Spaltenkopf). */
+  titel?: string;
+  /** Name für Screenreader, wenn der Inhalt allein nicht sagt, was der Knopf tut. */
+  ariaLabel?: string;
+  /**
+   * Ohne Mindesthöhe und Rand – für ein Wort mitten in einem Kopf, der nicht wachsen darf (Predigtserie im Spaltenkopf der
+   * Matrix, nur am Rechner/iPad). Am Handy bleibt die 40-px-Fläche die Regel.
+   */
+  kompakt?: boolean;
 }) {
   return (
     <button
       type="button"
-      className={styles.knopf}
+      className={`${styles.knopf}${kompakt ? ` ${styles.kompakt}` : ''}`}
       onClick={onClick}
       disabled={disabled}
       data-tour={dataTour}
+      title={titel}
+      aria-label={ariaLabel}
     >
       {children}
     </button>

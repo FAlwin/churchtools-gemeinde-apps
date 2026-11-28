@@ -1638,15 +1638,20 @@ Termin, dessen Ablauf in ChurchTools abgeschlossen ist („Ablaufplan festlegen�
    Serie, steht sie da – im Bearbeiten lässt sie sich aber nicht antippen. Ein offener Termin hat kein Schloss.
 7. Ein Termin, der sich den Ablauf mit einem anderen teilt (verknüpfte Termine): im Fenster steht zusätzlich „Gilt für alle Termine mit diesem
    Ablauf.“
-8. **Matrix** (Planen): dort steht keine Serie und kein Schloss – die Spalten bleiben wie vorher.
+8. **Matrix** (Planen, Rechner/iPad): Im **Spaltenkopf** steht die Serie kursiv mit kleinem Buch unter dem Termin-Namen, über dem
+   Füllbalken – gut vom Status („3 frei“) zu unterscheiden. Ein langer Titel endet mit „…“, beim Darüberfahren steht er ganz da.
+   Termine ohne Serie zeigen nichts. **⋯ → Ablauf bearbeiten**: die Serie wird blau und antippbar (öffnet „Predigtserie“), wo sie
+   fehlt, steht leise „Predigtserie …“ – nur an Terminen mit Ablauf, mit Recht und nicht abgeschlossen. Der Kopf wird dabei nicht
+   höher. Am Handy steht die Serie im Ablauf des gewählten Termins wie in der Termin-Ansicht.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `shared/ct/schreibKern.ts`, `ui/ablauf/PredigtserieFenster.tsx`, `ui/ablauf/browserAblaufZugriff.ts`, `dienstplaner/src/TerminAblauf.tsx`, `dienstplaner/src/TerminAnsicht.tsx`, `dienstplaner/src/AblaufAnzeige.tsx`, `shared/ct/terminBlatt.ts`
+- **Betrifft:** `shared/ct/schreibKern.ts`, `ui/ablauf/PredigtserieFenster.tsx`, `dienstplaner/src/MatrixSerie.tsx`, `ui/ablauf/browserAblaufZugriff.ts`, `dienstplaner/src/TerminAblauf.tsx`, `dienstplaner/src/TerminAnsicht.tsx`, `dienstplaner/src/AblaufAnzeige.tsx`, `shared/ct/terminBlatt.ts`
 - **Automatisiert:** ja – `shared/ct/predigtserie.test.ts` (Rumpf NUR `{ series }`, Kürzen, leer = `null`, 100/101 Zeichen, abgeschlossen → 423),
   `dienstplaner/src/TerminAnsicht.test.tsx` (Zeile nur wenn gesetzt, setzen/entfernen mit echtem Schreibweg, Hinweis bei geteiltem Ablauf, Schloss),
-  `dienstplaner/src/AblaufAnzeige.test.tsx`, `shared/ct/terminBlatt.test.ts`; Gegenproben (`items` im Rumpf, Schloss weg) einzeln rot; von Hand
+  `dienstplaner/src/AblaufAnzeige.test.tsx`, `shared/ct/terminBlatt.test.ts`, `dienstplaner/src/MatrixAblauf.test.tsx` (Spaltenkopf:
+  Anzeige, Ändern im Bearbeiten, nur ansehen, abgeschlossen); Gegenproben (`items` im Rumpf, Schloss weg) einzeln rot; von Hand
   bleibt der Abgleich mit der ChurchTools-App
 - **Historie:** 27.11.2026, gemessen an Test-Termin 160 (`server/scripts/probe-agenda-series.ts --serie-rumpf`)
 

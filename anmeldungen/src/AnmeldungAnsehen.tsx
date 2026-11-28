@@ -82,16 +82,16 @@ export function Antworten({ zeilen }: { zeilen: AntwortZeile[] }) {
  * rechtsbündig mit Einheit, mit „Summe zeigen“ darunter die Summe. Gelesen aus „(Daten)“ (`listeGelesen`).
  */
 export function ListeTabelle({ g }: { g: ListeGelesen }) {
-  const zahl = (s: ListenSpalte) => s.art === 'zahl';
-  const si = g.summe === null ? -1 : g.spalten.findIndex((s) => s === summenSpalte(g));
+  const zahl = (sp: ListenSpalte) => sp.art === 'zahl';
+  const si = g.summe === null ? -1 : g.spalten.findIndex((sp) => sp === summenSpalte(g));
   return (
     <div className={a.listeTabelle}>
       <table>
         <thead>
           <tr>
-            {g.spalten.map((s) => (
-              <th key={s.id} className={zahl(s) ? a.zahl : undefined}>
-                {s.name}
+            {g.spalten.map((sp) => (
+              <th key={sp.id} className={zahl(sp) ? a.zahl : undefined}>
+                {sp.name}
               </th>
             ))}
           </tr>
@@ -99,9 +99,9 @@ export function ListeTabelle({ g }: { g: ListeGelesen }) {
         <tbody>
           {g.zeilen.map((z, i) => (
             <tr key={i}>
-              {g.spalten.map((s, j) => (
-                <td key={s.id} className={zahl(s) ? a.zahl : undefined}>
-                  {mitEinheit(s, z[j])}
+              {g.spalten.map((sp, j) => (
+                <td key={sp.id} className={zahl(sp) ? a.zahl : undefined}>
+                  {mitEinheit(sp, z[j])}
                 </td>
               ))}
             </tr>
@@ -110,8 +110,8 @@ export function ListeTabelle({ g }: { g: ListeGelesen }) {
         {si >= 0 && (
           <tfoot>
             <tr>
-              {g.spalten.map((s, j) => (
-                <td key={s.id} className={j === si ? a.zahl : undefined}>
+              {g.spalten.map((sp, j) => (
+                <td key={sp.id} className={j === si ? a.zahl : undefined}>
                   {j === si ? summeText(g, g.summe ?? 0) : j === 0 ? 'Summe' : ''}
                 </td>
               ))}

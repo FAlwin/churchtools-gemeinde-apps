@@ -198,8 +198,11 @@ export function summenSpalte(l: Pick<ListeEinstellung, 'spalten'>): ListenSpalte
   return l.spalten.find((s) => s.art === 'zahl' && s.summe) ?? null;
 }
 
-/** Auf Hundertstel gerundet – sonst stünde 0,1 + 0,2 als 0,30000000000000004 in ChurchTools. */
-const hundertstel = (n: number) => Math.round(n * 100) / 100;
+/**
+ * Auf Hundertstel gerundet – sonst stünde 0,1 + 0,2 als 0,30000000000000004 in ChurchTools. Auch die Summenzeile der
+ * Tabelle (F6c) rundet hierüber.
+ */
+export const hundertstel = (n: number) => Math.round(n * 100) / 100;
 
 /** **Die Summe** über die vollständigen Zeilen – `null`, wenn keine Spalte „Summe zeigen“ hat. */
 export function listenSumme(l: ListeEinstellung, a: ListeAntwort): number | null {

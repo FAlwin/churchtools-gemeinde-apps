@@ -352,6 +352,21 @@ describe('Druckliste – lesbar wie in ChurchTools', () => {
   });
 });
 
+describe('Antwort als Text (Druckliste, Fenster-Rückfall) – aus „(Daten)“', () => {
+  it('lesbaren Text in ChurchTools von Hand geändert: die Daten bleiben maßgeblich', () => {
+    const a = liste(vonHand(mitglieder('AAAAAA', 10, [ZELT, KOCHER]), 900, 'Zelt (von Hand)'))[0];
+    const g = listeVon(inv(), a.einmal, e().ctFelder)!;
+    expect(antwortText(inv(), a.einmal, e().ctFelder)).toBe(listeGelesenText(g));
+    const t = teilnehmerTabelle(
+      e(),
+      [a],
+      { spalten: ['frage:inv'], sortierung: 'anmeldung' },
+      false,
+    );
+    expect(t.zeilen[0]).toEqual({ zellen: ['Beispiel, Jonas', listeGelesenText(g)] });
+  });
+});
+
 describe('Filter – Liste wie Text, Summe wie Zahl (E59)', () => {
   it('Art der Filter; gemerkte Summen-Filter einer Ansicht bleiben', () => {
     expect(filterArt(e(), 'frage:inv')).toBe('text');

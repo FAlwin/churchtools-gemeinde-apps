@@ -33,7 +33,7 @@ import {
 } from './liste';
 import { altersregel, euroText, kannEtwasKosten } from './preis';
 import { zahlText } from './feldwert';
-import { listeKurz, summeText } from './zeilenListe';
+import { hundertstel, listeKurz, summeText } from './zeilenListe';
 import {
   ampelDerAnmeldung,
   ampelDerPerson,
@@ -358,7 +358,7 @@ export function summe(
 function listenSummenZeile(f: Feld, werte: (number | null)[]): Summe | null {
   if (!f.liste) return null;
   const n = werte.reduce<number>((s, w) => s + (w ?? 0), 0);
-  return { text: summeText(f.liste, Math.round(n * 100) / 100) };
+  return { text: summeText(f.liste, hundertstel(n)) };
 }
 
 /** **Suchen** – Name der Anmeldung, Anmelde-Nr. und jede Person; ohne Suchtext alle. Auch für Absagen (nur Name). */

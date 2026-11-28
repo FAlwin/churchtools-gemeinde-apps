@@ -283,8 +283,8 @@ statt still gekürzt zu werden.
 3. Bemerkung kürzen, die dritte Zeile leeren, anmelden: „Danke für die Anmeldung!“.
 4. In ChurchTools beim Mitglied: „Was bringst du mit?“ = Kopfzeile + zwei Zeilen, „Was bringst du mit? (Daten)“ = die Zeilen
    in fester Form, „… – Summe Wert“ = `1384.5`.
-5. In der Erweiterung, Reiter **Anmeldungen**: Die Spalte zeigt den lesbaren Text (gekürzt, ganz beim Darüberfahren), das
-   Fenster der Anmeldung zeigt ihn mehrzeilig.
+5. In der Erweiterung, Reiter **Anmeldungen**: Die Spalte zeigt „2 Einträge · Zelt für 4 Personen, Kocher“, das Fenster der
+   Anmeldung eine kleine Tabelle mit Summe (seit F6c, Einzelheiten TF-ANM-11).
 6. **Von Hand**: Die Liste steht im Fenster wie im Formular; eine halbe Zeile hält auf („Zeile 1: Anzahl fehlt“); vollständig
    angemeldet stehen dieselben drei Spalten in ChurchTools.
 
@@ -294,5 +294,37 @@ statt still gekürzt zu werden.
 - **Betrifft:** `shared/anmeldung/senden.ts`, `shared/anmeldung/formular.ts`, `shared/anmeldung/zeilenListe.ts`, `shared/anmeldung/teamMail.ts`, `ui/anmeldeformular/FeldEingabe.tsx`, `ui/anmeldeformular/ListeEingabe.tsx`
 - **Automatisiert:** ja – `senden.test.ts` (Spalten, Summe mit Punkt, leer, zu lang, „(Daten)“ fehlt), `vonHand.test.ts` (Von Hand, Person dazu, Tabelle liest den Text), `formular.test.ts` (Länge der Texte), `teamMail.test.ts`, `AnmeldeFormular.test.tsx` (Absenden hält auf, Zähler); echter Lauf 27.11.2026 in der Test-Instanz (Schritte 1–4). „Deine Anmeldung“ öffnet die Liste nicht – ohne Login gibt ChurchTools keine Antworten heraus (E54)
 - **Historie:** F6b (27.11.2026, Messung M9, Entscheidungsliste E52–E56)
+
+</details>
+
+### TF-ANM-11 · Anmeldungen: Liste mit Zeilen in Tabelle, Fenster, Druckliste und Filter
+
+**Das brauchst du:** Das aktuelle Paket in der Test-Instanz mit einer Veranstaltung, in der schon jemand eine „Liste mit Zeilen“
+mit „Summe zeigen“ abgeschickt hat (TF-ANM-10) – oder die Demo `?demo`, „Lobpreisfreizeit“ (`#/v/46`), Frage „Was bringst du
+mit?“ (Kurzname „Technik“).
+
+**Das muss passieren:** Die Liste steht überall lesbar, gelesen aus der Spalte „(Daten)“; fehlt die oder ist sie kaputt, steht
+der Text aus ChurchTools da – nie eine leere Zelle oder eine weiße Seite.
+
+1. Reiter **Anmeldungen**: Spalte „Technik“ (Kurzname) zeigt „2 Einträge · Mischpult Yamaha, Mikrofon SM58“, beim Darüberfahren
+   die ganze Liste; daneben „Technik – Summe Wert gesamt“ mit „1.646 €“, unten alles zusammen; unter der Liste „n ausgefüllt“.
+2. Auf die Überschrift der Summen-Spalte tippen: sortiert nach Betrag, Anmeldungen ohne Liste hinten.
+3. Trichter der Summen-Spalte: „ab 500“ → nur Anmeldungen mit mindestens 500 €; Druckliste und Rundmail heißen „nur diese n“.
+4. Trichter der Liste: „enthält Mischpult“ → nur diese Anmeldung; „enthält Anzahl“ → keine (Spaltennamen zählen nicht);
+   „leer“ → alle ohne Liste.
+5. Anmeldung öffnen: unter der Frage eine kleine Tabelle (Spaltennamen, je Eintrag eine Zeile, Zahlen rechts mit Einheit,
+   darunter „Summe“). Am Handy (375 px) scrollt eine breite Tabelle in sich, Wörter werden nicht zerteilt; hell und dunkel.
+6. **Druckliste** → Teilnehmer, Spalte „Was bringst du mit?“: in der Zelle Kopfzeile und eine Zeile je Eintrag.
+7. In ChurchTools bei einer Anmeldung „(Daten)“ leeren oder verändern: Spalte, Fenster und Druckliste zeigen den lesbaren
+   Text, die Summe kommt aus dem Zahl-Feld (Demo: Petra Albers, Jonas Brenner).
+8. Eine Spalte der Liste im Baukasten **dazunehmen**: Alte Anmeldungen zeigen weiter ihre Einträge, die neue Spalte bleibt leer
+   (Demo: Ruth Dietrich).
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/anmeldung/zeilenListe.ts`, `shared/anmeldung/liste.ts`, `shared/anmeldung/tabelle.ts`, `shared/anmeldung/tabellenFilter.ts`, `shared/anmeldung/antwortenAusListe.ts`, `anmeldungen/src/AnmeldungAnsehen.tsx`
+- **Automatisiert:** ja – `listeAnzeige.test.ts` (Anmeldungen über `anmeldungAufbauen` erzeugt: Tabelle, Summen-Spalte, Rückfall, geänderte Spalten, je Person, Fenster, Druckliste, Filter, Regeln, Mail-Bausteine), `AnmeldungAnsehen.liste.test.tsx` (kleine Tabelle); im Browser mit der Demo (Computer, 375 px, hell/dunkel). Mails: der Platzhalter setzt den lesbaren Text ein – ob ChurchTools die Zeilenumbrüche in der Bestätigung hält, ist nicht gemessen (E61)
+- **Historie:** F6c (28.11.2026, Entscheidungsliste E57–E61)
 
 </details>

@@ -537,12 +537,15 @@
     font-size: 13px;
   }
 
+  // Ganze Wörter – die Antwortliste darüber bricht überall (`overflow-wrap: anywhere`), hier stünde sonst „Mischpul t“.
+  // Zu breit → die Tabelle scrollt in sich.
   th,
   td {
     padding: 4px 8px;
     text-align: left;
     vertical-align: top;
     border-bottom: 1px solid var(--hair);
+    overflow-wrap: normal;
   }
 
   th {

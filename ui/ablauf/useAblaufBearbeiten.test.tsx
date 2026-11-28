@@ -332,7 +332,7 @@ describe('useAblaufBearbeiten – schmal (Matrix, E6-6a)', () => {
     expect(screen.getByTestId('liste').textContent).toContain('zum Sortieren');
   });
 
-  it('„Ende“ wie in der Ansicht – sonst spränge die Spalte beim Umschalten; ohne `schmal` keins', () => {
+  it('„Ende“ mit Dauer wie in der Ansicht – in der Matrix und seit 28.11.2026 auch ohne `schmal` (Termin-Ansicht, Musik-App)', () => {
     const mitZeit = [
       ablaufZeileAus(
         { id: 1, title: 'Segen', type: 'normal', start: '2026-11-01T09:39:00Z', duration: 300 },
@@ -341,10 +341,11 @@ describe('useAblaufBearbeiten – schmal (Matrix, E6-6a)', () => {
       ),
     ];
     render(<Harness aktionen={aktionen()} items={mitZeit} schmal />);
-    expect(screen.getByRole('separator', { name: 'Ende 10:44' })).toBeTruthy();
+    expect(screen.getByRole('separator', { name: 'Ende 10:44 · Dauer 44 Min' })).toBeTruthy();
     cleanup();
+    // Beim Bearbeiten sieht man beim Planen gleich, wie lange es wird (Alwin, 28.11.2026) – vorher nur in der Matrix.
     render(<Harness aktionen={aktionen()} items={mitZeit} />);
-    expect(screen.queryByRole('separator', { name: /^Ende/ })).toBeNull();
+    expect(screen.getByRole('separator', { name: 'Ende 10:44 · Dauer 44 Min' })).toBeTruthy();
   });
 
   it('abgeschlossen: das Plus zeigt den Sperr-Hinweis statt der Auswahl', () => {

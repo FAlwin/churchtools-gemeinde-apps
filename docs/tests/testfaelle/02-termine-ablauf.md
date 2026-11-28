@@ -307,7 +307,7 @@ und ein Handy.
 den Infos der unter „Spalten wählen“ gewählten Gruppen. Nichts lässt sich verstellen, der Bildschirm bleibt an.
 
 1. Dienstplaner → Termin öffnen → im Ablauf **⋯ → „Ablauf zeigen“** (seit B8; vorher ein eigener Knopf) → die Anzeige deckt alles ab: links die Uhr (läuft mit) und
-   der heutige Tag, rechts Titel und „Beginn … · Ende …“ (Ende = wann der letzte Punkt vorbei ist); ein anderer Tag als
+   der heutige Tag, rechts Titel und „Beginn … · Ende … · Dauer …“ (Ende = wann der letzte Punkt vorbei ist, Dauer ab Beginn); ein anderer Tag als
    heute steht vorne dabei.
 2. Ohne Haken unter „Spalten wählen“: keine Infos. Mit **Technik** angehakt: „Technik: …“ unter dem Punkt.
 3. Weggelassene Punkte fehlen, „Beginn“ steht nach dem Vorlauf, Überschriften als Band.
@@ -680,6 +680,37 @@ seiner alten Zeit weiter, als wäre man nie weg gewesen. Die kurzen Stopps zähl
 - **Betrifft:** `dienstplaner/src/Startseite.tsx`, `dienstplaner/src/liveFenster.ts`, `dienstplaner/src/reiter.ts`, `dienstplaner/src/ladeLive.ts`
 - **Automatisiert:** ja – `dienstplaner/src/liveFenster.test.ts` (Vortag 23:59, Tag 0:00, Ende, über Mitternacht, ohne Ende, Zeitzone), `dienstplaner/src/Startseite.live.test.tsx` (Knopf, Punkt, Klick, ohne Ablauf), `dienstplaner/src/ladeLive.test.ts`, `dienstplaner/src/reiter.test.ts`, `dienstplaner/src/TerminAnsicht.test.tsx` (Live gleich offen); von Hand bleibt das Aussehen am Handy
 - **Historie:** Live-Ansicht 2, L4-5 (23.11.2026)
+
+</details>
+
+### TF-ABLAUF-56 · Gesamtdauer: Balken „Ende“ mit Dauer, Termin-Kopf, Vollbild
+
+**Das brauchst du:** Einen Termin mit Ablauf mit **Vorlauf** (z. B. Soundcheck 30 Min), einem **weggelassenen** Punkt und
+Dauern an allen Punkten – in Musik-App und Dienstplaner; einmal am Rechner, einmal am Handy (375 px).
+
+**Das muss passieren:** Überall, wo der Ablauf steht, sieht man, wann er endet und wie lange er dauert – gerechnet wie die
+Zeile „Ende“ im geteilten PDF: **Dauer** von „Beginn“ bis „Ende“ (= Summe der Punkte, weggelassene zählen nicht), dazu
+**„mit Vorlauf …“**, wenn es Vorlauf gibt.
+
+1. **Dienstplaner, Termin-Ansicht:** Unter dem letzten Punkt der graue Balken **„Ende 11:03“**, darunter z. B.
+   **„Dauer 35 Min · mit Vorlauf 1 Std. 5 Min“**. Nachrechnen: Summe der Dauern ab „Beginn“ bzw. ab dem ersten Punkt.
+   Im Kopf: „Sa, 28.11.2026 · 10:28 Uhr · Ende 11:03 Uhr · **Dauer 35 Min**“ (ohne Vorlauf).
+2. **Bearbeiten** (Termin-Ansicht und Musik-App): Der Balken steht auch dort; eine Dauer ändern → nach dem Speichern stimmen
+   Ende und Dauer.
+3. **Matrix:** Jede Spalte mit Ablauf hat den Balken; in der schmalen Spalte bricht der Text **zwischen** „Dauer …“ und
+   „mit Vorlauf …“ um, nie mitten in „1 Std.“.
+4. **Musik-App, Ablauf:** derselbe Balken unter dem letzten Punkt (bisher gab es dort kein „Ende“).
+5. **⋯ → Ablauf zeigen:** rechts oben „Beginn 10:28 · Ende 11:03 · Dauer 35 Min“.
+6. Ohne Vorlauf nur „Dauer …“; ein Ablauf ohne Uhrzeiten (Vorlage) zeigt keinen Balken.
+7. **Handy (375 px):** Im Termin-Kopf bricht die Zeile zwischen den Teilen um, nie mitten in „Dauer 35 Min“. Der Balken
+   steht bündig mit „Beginn“.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/ct/ablaufZeile.ts`, `shared/ct/terminBlatt.ts`, `ui/ablauf/AblaufTeile.tsx`, `ui/ablauf/AblaufListe.tsx`, `ui/ablauf/useAblaufBearbeiten.tsx`, `client/src/components/AgendaFullView.tsx`, `dienstplaner/src/TerminAblauf.tsx`, `dienstplaner/src/TerminAnsicht.tsx`, `dienstplaner/src/AblaufAnzeige.tsx`
+- **Automatisiert:** ja – `shared/ct/ablaufZeile.test.ts` (Rechnung: Vorlauf, weggelassen, entfernt, ohne Uhrzeiten, „10:00 Uhr“, über Mitternacht, Wortlaut), `shared/ct/terminBlatt.test.ts` (PDF unverändert), `client/src/components/AgendaFullView.test.tsx`, `ui/ablauf/useAblaufBearbeiten.test.tsx`, `dienstplaner/src/TerminAnsicht.test.tsx`, `dienstplaner/src/AblaufAnzeige.test.tsx`; von Hand bleibt das Aussehen (Umbruch in der Matrix, Handy)
+- **Historie:** Gesamtdauer (Alwin, 28.11.2026)
 
 </details>
 

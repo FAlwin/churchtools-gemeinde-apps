@@ -16,7 +16,6 @@ import type { AgendaServiceOption, InfoGruppe } from '@shared/types/index';
 import type { GeloeschterPunkt, PunktAenderung } from '@shared/ct/schreibKern';
 import type { EinfuegeStelle, NeuerAgendaPunkt, PunktArt } from '@shared/ct/agendaItemChanges';
 import {
-  ablaufEnde,
   beginnStelle,
   itemLabel,
   punktStand,
@@ -35,7 +34,7 @@ import { useRueckgaengig } from '../bedienung/useRueckgaengig';
 import { useZiehSensoren } from '../bedienung/useZiehSensoren';
 import { innerScrollOnly, resetViewportAfterDrag } from '../bedienung/dndAutoScroll';
 import { SortableRow, type ZeilenAktionen } from './AgendaSortableRow';
-import { BeginnLinie, EndeLinie, VerborgeneGruppenHinweis } from './AblaufTeile';
+import { AblaufEndeLinie, BeginnLinie, VerborgeneGruppenHinweis } from './AblaufTeile';
 import { InfoTabelle } from './InfoTabelle';
 import type { InfoZellen } from './InfoZelle';
 import { infosErsetzt } from './infoTabellenRegeln';
@@ -438,7 +437,6 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
 
   // Balken „Beginn" in der Bearbeiten-Liste – dieselbe Regel wie in der Ansicht (#423).
   const beginnBeiBearbeiten = beginnStelle(localItems);
-  const ende = o.schmal ? ablaufEnde(localItems) : null;
 
   const anleitung = o.speichertGerade ? (
     'Speichere…'
@@ -495,7 +493,8 @@ export function useAblaufBearbeiten<T extends AblaufZeile>(
         platz?.index === localItems.length && <AblageStelle />
       )}
       {/* „Ende“ wie in der Ansicht (Matrix) – sonst spränge die Spalte beim Umschalten. */}
-      {o.schmal && ende && <EndeLinie zeit={ende} />}
+      {/* Ende und Dauer auch beim Bearbeiten – beim Planen sieht man gleich, wie lange es wird (Alwin, 28.11.2026). */}
+      <AblaufEndeLinie zeilen={localItems} beginn={o.beginn} />
     </>
   );
   const sortierbar = (

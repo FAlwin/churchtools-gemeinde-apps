@@ -57,15 +57,28 @@
 }
 .endeLinie {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 6px 8px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 14px; // seitlich wie „Beginn“, damit beide Balken bündig stehen
   background: var(--surface3);
   border-top: 1px solid var(--hair);
   color: var(--text2);
   font-size: 12px;
   font-weight: 700;
+}
+// „Ende“ links, Uhrzeit rechts; darunter die Dauer (Alwin, 28.11.2026) – leiser, damit „Ende“ der Balken bleibt.
+.endeZeile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.endeDauer {
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.endeTeil {
+  white-space: nowrap;
 }
 .beginnText {
   letter-spacing: 0.02em;

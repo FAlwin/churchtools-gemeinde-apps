@@ -46,6 +46,11 @@
   color: var(--red);
 }
 
+// Ein Teil der Kopfzeile („Ende 11:03 Uhr“, „Dauer 35 Min“) bleibt beisammen.
+.amStueck {
+  white-space: nowrap;
+}
+
 // „Weitere Infos“ (T1): der Anfang in einer Zeile unter Datum und Uhrzeit – antippen öffnet das ⓘ-Fenster.
 .infoZeile {
   display: block;

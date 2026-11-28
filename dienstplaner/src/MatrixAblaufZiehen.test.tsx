@@ -311,7 +311,7 @@ describe('Matrix: Trennung zwischen Ablauf und Diensten (Alwin, 29.10.2026, Entw
     );
     // Letzter Punkt um 10:00 (Berlin) mit 5 Min – bei den beiden Terminen mit diesem Ablauf.
     await waitFor(() =>
-      expect(screen.getAllByRole('separator', { name: 'Ende 10:05' }).length).toBeGreaterThan(0),
+      expect(screen.getAllByRole('separator', { name: /^Ende 10:05/ }).length).toBeGreaterThan(0),
     );
     const dienste = screen.getByRole('rowheader', { name: 'Dienste' }).closest('tr')!;
     const ablaufZeile = screen

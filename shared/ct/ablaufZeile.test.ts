@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import type { CtAgendaItem } from './typen';
 import {
+  ablaufDauer,
+  ablaufDauerKurz,
+  ablaufDauerTeile,
+  ablaufDauerText,
   ablaufEnde,
   ablaufUhrzeit,
   ablaufZeileAus,
@@ -245,6 +249,75 @@ describe('ablaufEnde – Balken „Ende“ in der Matrix (29.10.2026)', () => {
   it('kein Punkt mit Uhrzeit (oder leer): keins', () => {
     expect(ablaufEnde([z(null, null)])).toBeNull();
     expect(ablaufEnde([])).toBeNull();
+  });
+});
+
+describe('ablaufDauer – Gesamtdauer im Balken „Ende“, im Kopf und im PDF (Alwin, 28.11.2026)', () => {
+  const z = (
+    time: string | null,
+    durationMin: number | null,
+    mehr: { weggelassen?: boolean; removed?: boolean; vorBeginn?: boolean } = {},
+  ) => ({ time, durationMin, ...mehr, vorBeginn: mehr.vorBeginn ?? false });
+
+  it('von Beginn bis Ende – die Summe der Punkte; ohne Vorlauf kein „mit Vorlauf“', () => {
+    expect(ablaufDauer([z('10:00', 4), z('10:04', 35), z('10:39', 5)], '10:00')).toEqual({
+      abBeginn: 44,
+      mitVorlauf: null,
+    });
+  });
+
+  it('mit Vorlauf: zusätzlich vom ersten Punkt mit Uhrzeit bis Ende', () => {
+    const zeilen = [
+      z('09:30', 30, { vorBeginn: true }),
+      z('10:00', 10),
+      z(null, 5, { weggelassen: true }),
+      z('10:10', 5),
+    ];
+    expect(ablaufDauer(zeilen, '10:00')).toEqual({ abBeginn: 15, mitVorlauf: 45 });
+  });
+
+  it('weggelassene und entfernte Punkte zählen nicht – auch nicht als letzter Punkt', () => {
+    const zeilen = [
+      z('10:00', 20),
+      z('10:20', 5),
+      z(null, 15, { weggelassen: true }),
+      z('10:25', 30, { removed: true }),
+    ];
+    expect(ablaufDauer(zeilen, '10:00').abBeginn).toBe(25);
+  });
+
+  it('ein entfernter Vorlauf-Punkt (Musik-App) macht kein „mit Vorlauf“', () => {
+    const zeilen = [z('09:30', 30, { vorBeginn: true, removed: true }), z('10:00', 10)];
+    expect(ablaufDauer(zeilen, '10:00')).toEqual({ abBeginn: 10, mitVorlauf: null });
+  });
+
+  it('kein Punkt mit Uhrzeit (Vorlage) oder leer: keine Dauer', () => {
+    expect(ablaufDauer([z(null, 10), z(null, 5)], '10:00')).toEqual({
+      abBeginn: null,
+      mitVorlauf: null,
+    });
+    expect(ablaufDauer([], '10:00')).toEqual({ abBeginn: null, mitVorlauf: null });
+  });
+
+  it('ohne Beginn nur „mit Vorlauf“; „10:00 Uhr“ (Musik-App) zählt wie „10:00“', () => {
+    const zeilen = [z('09:45', 15, { vorBeginn: true }), z('10:00', 50)];
+    expect(ablaufDauer(zeilen, undefined)).toEqual({ abBeginn: null, mitVorlauf: 65 });
+    expect(ablaufDauer(zeilen, '10:00 Uhr')).toEqual({ abBeginn: 50, mitVorlauf: 65 });
+  });
+
+  it('über Mitternacht weiter', () => {
+    expect(ablaufDauer([z('23:30', 40), z('00:10', 5)], '23:30').abBeginn).toBe(45);
+  });
+
+  it('Wortlaut wie im Termin-PDF; gleiche Dauern nur einmal; Kurzform ohne Vorlauf', () => {
+    const d = { abBeginn: 35, mitVorlauf: 70 };
+    expect(ablaufDauerTeile(d)).toEqual(['Dauer 35 Min', 'mit Vorlauf 1 Std. 10 Min']);
+    expect(ablaufDauerText(d)).toBe('Dauer 35 Min · mit Vorlauf 1 Std. 10 Min');
+    expect(ablaufDauerTeile(d, { vorlauf: false })).toEqual(['Dauer 35 Min']);
+    expect(ablaufDauerKurz(d)).toBe('Dauer 35 Min');
+    expect(ablaufDauerText({ abBeginn: 60, mitVorlauf: 60 })).toBe('Dauer 1 Std.');
+    expect(ablaufDauerText({ abBeginn: null, mitVorlauf: null })).toBe('');
+    expect(ablaufDauerKurz({ abBeginn: null, mitVorlauf: 20 })).toBeNull();
   });
 });
 

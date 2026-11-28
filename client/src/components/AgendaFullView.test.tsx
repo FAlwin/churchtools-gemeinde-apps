@@ -445,7 +445,7 @@ describe('AgendaFullView – Linie „Beginn" nach dem Vorlauf (#423)', () => {
         onSelect={vi.fn()}
       />,
     );
-    expect(screen.queryByRole('separator')).toBeNull();
+    expect(screen.queryByRole('separator', { name: /^Beginn/ })).toBeNull();
   });
 
   it('die Lied-Nummer zählt trotz Linie nur Lieder', () => {
@@ -464,5 +464,45 @@ describe('AgendaFullView – Linie „Beginn" nach dem Vorlauf (#423)', () => {
     );
     fireEvent.click(screen.getByText('Way Maker'));
     expect(onSelect).toHaveBeenCalledWith(1);
+  });
+});
+
+/**
+ * Gesamtdauer (Alwin, 28.11.2026): Unter dem Ablauf der Balken „Ende“ mit der Dauer – wie im Dienstplaner. Vorher kannte
+ * die Musik-App kein „Ende“. `beginn` ist hier `service.time` („10:00 Uhr“) – das „Uhr“ darf die Rechnung nicht stören.
+ */
+describe('AgendaFullView – Balken „Ende“ mit Dauer', () => {
+  it('Ende, Dauer ab Beginn und mit Vorlauf – weggelassene Punkte zählen nicht', () => {
+    render(
+      <AgendaFullView
+        items={[
+          item({ id: 1, title: 'Soundcheck', time: '09:30', durationMin: 30, vorBeginn: true }),
+          item({ id: 2, title: 'Begrüßung', time: '10:00', durationMin: 5 }),
+          item({ id: 3, title: 'Abkündigungen', time: null, durationMin: 10, weggelassen: true }),
+          item({ id: 4, title: 'Predigt', time: '10:05', durationMin: 30 }),
+        ]}
+        eventId={1}
+        beginn="10:00 Uhr"
+        onSelect={vi.fn()}
+      />,
+    );
+    const ende = screen.getByRole('separator', {
+      name: 'Ende 10:35 · Dauer 35 Min · mit Vorlauf 1 Std. 5 Min',
+    });
+    // Unter dem letzten Punkt.
+    expect(
+      screen.getByText('Predigt').compareDocumentPosition(ende) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('ohne Uhrzeiten kein Balken', () => {
+    render(
+      <AgendaFullView
+        items={[item({ id: 1, title: 'Begrüßung' })]}
+        eventId={1}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('separator', { name: /^Ende/ })).toBeNull();
   });
 });

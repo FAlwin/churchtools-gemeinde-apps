@@ -19,7 +19,13 @@ import { InfoSpaltenFenster } from '@ui/ablauf/InfoSpalten';
 import { useInfoSpalten } from '@ui/ablauf/infoSpaltenWahl';
 import { browserAblaufLeser, browserSchreiber } from '@ui/ct/schreiber';
 import { infoGruppen, siehtAlleDienstgruppen } from '@shared/ct/dienstRechte';
-import { ablaufEnde, ablaufZeileAus, type AblaufZeile } from '@shared/ct/ablaufZeile';
+import {
+  ablaufDauer,
+  ablaufDauerKurz,
+  ablaufEnde,
+  ablaufZeileAus,
+  type AblaufZeile,
+} from '@shared/ct/ablaufZeile';
 import { datumText, tagKurz } from '@shared/ct/datum';
 import type { AblaufTermin } from '@shared/ct/ablaufRecht';
 import { ablaufAnlegen } from '@shared/ct/ablaufAnlegen';
@@ -101,6 +107,8 @@ export interface AblaufTeile {
    * Ablauf oder ohne Punkt mit Uhrzeit – dann steht kein Ende da.
    */
   ende: string | null;
+  /** „Dauer 35 Min“ neben dem Ende im Kopf der Termin-Ansicht (`ablaufDauerKurz`, Alwin 28.11.2026); `null` wie `ende`. */
+  dauer: string | null;
   /** Die Predigtserie des Ablaufs (`series`, getrimmt) – `null` ohne. Für das Termin-PDF. */
   serie: string | null;
   /** In ChurchTools abgeschlossen (`isLocked`) – die Termin-Ansicht zeigt dann ein Schloss im Ablauf-Kopf. */
@@ -466,8 +474,9 @@ export function TerminAblauf({
           onLied={(_, p) => setLiedOffen(p)}
           onPunkt={schmal ? undefined : punktAnsicht.oeffnen}
           schmal={schmal}
-          // Matrix: wo der Ablauf aufhört (Alwin, 29.10.2026, Entwurf `e6-6-trennung.html` C).
-          mitEnde={schmal}
+          // Wo der Ablauf aufhört und wie lange er dauert – Matrix seit 29.10.2026 (Entwurf `e6-6-trennung.html` C),
+          // Termin-Ansicht seit 28.11.2026 (Gesamtdauer, Alwin).
+          mitEnde
           infoSpalten={spalten.gewaehlt}
           // Eine Erweiterung in ChurchTools: Fotos laden dort direkt.
           fotos
@@ -582,6 +591,7 @@ export function TerminAblauf({
   const liveLaeuft = liveStand.art === 'fertig' && liveStand.daten;
 
   const ende = ablauf !== null ? ablaufEnde(zeilen) : null;
+  const dauer = ablauf !== null ? ablaufDauerKurz(ablaufDauer(zeilen, termin.uhrzeit)) : null;
 
   // Das „⋯“-Menü (R6): in der Ansicht „Spalten wählen“ und „Ablauf zeigen“, im Bearbeiten „Als Vorlage …“/„Neu aufsetzen …“.
   const mehrOptionen: Option[] = aktiv
@@ -612,6 +622,7 @@ export function TerminAblauf({
     darf,
     fehlerLoeschen: liste.fehlerLoeschen,
     ende,
+    dauer,
     serie,
     abgeschlossen,
     zeilen,

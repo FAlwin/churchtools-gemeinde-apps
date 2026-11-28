@@ -9,7 +9,13 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { AblaufZeile } from '@shared/ct/ablaufZeile';
 import type { ResponsibleEntry } from '@shared/types/index';
-import { itemTitleParts, platzhalterZeile } from '@shared/ct/ablaufZeile';
+import {
+  ablaufDauer,
+  ablaufDauerTeile,
+  ablaufEnde,
+  itemTitleParts,
+  platzhalterZeile,
+} from '@shared/ct/ablaufZeile';
 import { Icon } from '../icons/icons';
 import { BodyPortal } from '../fenster/BodyPortal';
 import { useAufklapp } from '../bedienung/useAufklapp';
@@ -290,13 +296,46 @@ export function BeginnLinie({ zeit }: { zeit?: string }) {
 /**
  * Der Balken **„Ende“** unter dem letzten Punkt (Matrix, Alwin 29.10.2026, Entwurf `e6-6-trennung.html` C): Dort sieht
  * man, wo der Ablauf eines Termins aufhört – vorher folgte gleich die erste Dienstgruppe. Grau statt blau wie „Beginn“;
- * die Zeit rechnet `ablaufEnde`.
+ * die Zeit rechnet `ablaufEnde`. Darunter die Dauer des Ablaufs (Alwin, 28.11.2026, `ablaufDauer` – dieselbe Rechnung wie
+ * die Zeile „Ende“ im Termin-PDF).
  */
-export function EndeLinie({ zeit }: { zeit: string }) {
+function EndeLinie({ zeit, dauer }: { zeit: string; dauer: string[] }) {
   return (
-    <div className={styles.endeLinie} role="separator" aria-label={`Ende ${zeit}`}>
-      <span className={styles.beginnText}>Ende</span>
-      <span className={styles.beginnZeit}>{zeit}</span>
+    <div
+      className={styles.endeLinie}
+      role="separator"
+      aria-label={['Ende ' + zeit, ...dauer].join(' · ')}
+    >
+      <span className={styles.endeZeile}>
+        <span className={styles.beginnText}>Ende</span>
+        <span className={styles.beginnZeit}>{zeit}</span>
+      </span>
+      {dauer.length > 0 && (
+        <span className={styles.endeDauer}>
+          {dauer.map((t, i) => (
+            <span key={t}>
+              {i > 0 && ' · '}
+              <span className={styles.endeTeil}>{t}</span>
+            </span>
+          ))}
+        </span>
+      )}
     </div>
   );
+}
+
+/**
+ * **Der Balken „Ende“ aus den Zeilen** – rechnet Ende und Dauer selbst, damit Ansicht (`AblaufListe`) und Bearbeiten
+ * (`useAblaufBearbeiten`) nicht jede für sich rechnen. Nichts, solange kein Punkt eine Uhrzeit hat (z. B. Vorlagen).
+ */
+export function AblaufEndeLinie({
+  zeilen,
+  beginn,
+}: {
+  zeilen: readonly Pick<AblaufZeile, 'time' | 'durationMin' | 'removed' | 'vorBeginn'>[];
+  beginn?: string;
+}) {
+  const zeit = ablaufEnde(zeilen);
+  if (!zeit) return null;
+  return <EndeLinie zeit={zeit} dauer={ablaufDauerTeile(ablaufDauer(zeilen, beginn))} />;
 }

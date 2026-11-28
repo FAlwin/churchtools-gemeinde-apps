@@ -13,6 +13,7 @@ import {
   reiheEventsAus,
   reiheFehlt,
   reiheLesen,
+  reiheZeitraumText,
   reihenOrdnen,
   reiheUeberblick,
   reiheSchreibform,
@@ -401,5 +402,21 @@ describe('reihenOrdnen', () => {
     const eingabe = [a, b];
     reihenOrdnen(eingabe, HEUTE);
     expect(ids(eingabe)).toEqual(['a', 'b']);
+  });
+});
+
+describe('reiheZeitraumText', () => {
+  it('liest von/bis aus dem Überblick der Reihe – mit einem Jahr, über den Jahreswechsel, ein Tag, ohne Datum', () => {
+    const z = (r: Themenreihe) => {
+      const u = reiheUeberblick(r);
+      return reiheZeitraumText(u.von, u.bis);
+    };
+    expect(z(R)).toBe('13. Jan – 27. Jan 2027');
+    expect(z(reihe([zeile('a', '2026-12-28'), zeile('b', '2027-01-11')]))).toBe(
+      '28. Dez 2026 – 11. Jan 2027',
+    );
+    expect(z(reihe([zeile('a', '2027-01-13')]))).toBe('13. Jan 2027');
+    expect(z(reihe([]))).toBe('ohne Datum');
+    expect(z(reihe([zeile('a', '')]))).toBe('ohne Datum');
   });
 });

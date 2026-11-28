@@ -15,7 +15,7 @@
  * ersetzt, nicht ein zweiter angehängt). Ein kaputter Abschnitt (Start ohne Ende, zwei Starts, Ende vor Start) wird nie
  * geraten – es wird nichts geschrieben (`beschaedigt`).
  */
-import { plusTage } from '../ct/datum';
+import { plusTage, tagMonatKurz } from '../ct/datum';
 import { tagAusIso } from '../ct/zeit';
 import { INFOS_MAX } from '../ct/terminInfos';
 
@@ -199,6 +199,18 @@ export function reiheUeberblick(r: Pick<Themenreihe, 'zeilen'>): {
     abende: r.zeilen.length,
     mitEvent: r.zeilen.filter((z) => z.eventId !== null).length,
   };
+}
+
+/**
+ * **Der Zeitraum einer Reihe als Text:** „13. Jan – 10. Feb 2027“, über den Jahreswechsel „28. Dez 2026 – 11. Jan 2027“, ein
+ * einzelner Tag „13. Jan 2027“, ohne Datum „ohne Datum“.
+ */
+export function reiheZeitraumText(von: string | null, bis: string | null): string {
+  if (von === null || bis === null) return 'ohne Datum';
+  if (von === bis) return `${tagMonatKurz(von)} ${von.slice(0, 4)}`;
+  return von.slice(0, 4) === bis.slice(0, 4)
+    ? `${tagMonatKurz(von)} – ${tagMonatKurz(bis)} ${bis.slice(0, 4)}`
+    : `${tagMonatKurz(von)} ${von.slice(0, 4)} – ${tagMonatKurz(bis)} ${bis.slice(0, 4)}`;
 }
 
 /**

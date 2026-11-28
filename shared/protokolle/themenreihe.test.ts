@@ -13,6 +13,8 @@ import {
   reiheEventsAus,
   reiheFehlt,
   reiheLesen,
+  reihenOrdnen,
+  reiheUeberblick,
   reiheSchreibform,
   vorschau,
   zeileMitEvent,
@@ -314,5 +316,90 @@ describe('Events zur Zeile', () => {
       datum: '2027-01-26',
     });
     expect(eventFenster('2027-01-27')).toEqual({ von: '2027-01-19', bis: '2027-02-04' });
+  });
+});
+
+describe('reiheUeberblick', () => {
+  it('erster und letzter Abend, Zahl der Abende, Abende mit Event', () => {
+    expect(reiheUeberblick(R)).toEqual({
+      von: '2027-01-13',
+      bis: '2027-01-27',
+      abende: 3,
+      mitEvent: 2,
+    });
+  });
+
+  it('Zeilen ohne Datum zählen als Abend, fließen aber nicht in von/bis ein', () => {
+    const r = reihe([
+      zeile('a', '', { eventId: 5 }),
+      zeile('b', '2027-03-02'),
+      zeile('c', '2027-03-09'),
+    ]);
+    expect(reiheUeberblick(r)).toEqual({
+      von: '2027-03-02',
+      bis: '2027-03-09',
+      abende: 3,
+      mitEvent: 1,
+    });
+  });
+
+  it('eine Reihe ohne Zeilen und eine ohne jedes Datum haben kein von/bis', () => {
+    expect(reiheUeberblick(reihe([]))).toEqual({ von: null, bis: null, abende: 0, mitEvent: 0 });
+    expect(reiheUeberblick(reihe([zeile('a', '')]))).toEqual({
+      von: null,
+      bis: null,
+      abende: 1,
+      mitEvent: 0,
+    });
+  });
+});
+
+describe('reihenOrdnen', () => {
+  const mit = (id: string, daten: string[]) =>
+    neueThemenreihe({
+      id,
+      gruppe: 5,
+      name: id,
+      zeilen: daten.map((d, i) => zeile(`${id}${i}`, d)),
+      von: 1,
+      am: 'x',
+    });
+  const ids = (l: Themenreihe[]) => l.map((r) => r.id);
+  const HEUTE = '2027-02-01';
+
+  it('laufende und kommende nach erstem Abend, dann vergangene (jüngste zuerst), ohne Datum zuletzt', () => {
+    const alt1 = mit('alt1', ['2026-09-01', '2026-09-15']);
+    const alt2 = mit('alt2', ['2026-10-05', '2026-11-02']);
+    const laufend = mit('laufend', ['2027-01-13', '2027-02-10']);
+    const spaeter = mit('spaeter', ['2027-05-04']);
+    const leer = mit('leer', []);
+    const ohne = mit('ohne', ['', '']);
+    expect(ids(reihenOrdnen([ohne, alt1, spaeter, leer, alt2, laufend], HEUTE))).toEqual([
+      'laufend',
+      'spaeter',
+      'alt2',
+      'alt1',
+      'ohne',
+      'leer',
+    ]);
+  });
+
+  it('eine Reihe, die heute endet, gilt noch als laufend – gestern vorbei ist vergangen', () => {
+    const heuteEnde = mit('heute', ['2027-01-25', HEUTE]);
+    const gestern = mit('gestern', ['2027-01-20', '2027-01-31']);
+    const kommt = mit('kommt', ['2027-03-01']);
+    expect(ids(reihenOrdnen([gestern, kommt, heuteEnde], HEUTE))).toEqual([
+      'heute',
+      'kommt',
+      'gestern',
+    ]);
+  });
+
+  it('verändert die gelieferte Liste nicht', () => {
+    const a = mit('a', ['2026-01-01']);
+    const b = mit('b', ['2027-06-01']);
+    const eingabe = [a, b];
+    reihenOrdnen(eingabe, HEUTE);
+    expect(ids(eingabe)).toEqual(['a', 'b']);
   });
 });

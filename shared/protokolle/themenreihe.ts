@@ -178,6 +178,53 @@ export function neueThemenreihe(a: {
 export const reiheGeloescht = (r: Themenreihe, von: number, am: string): Themenreihe =>
   r.geloescht ? r : { ...r, geloescht: { von, am } };
 
+/**
+ * **Auf einen Blick** (Reiter „Reihen“): erster und letzter Abend (nur aus Zeilen mit gültigem Datum, sonst `null`), Zahl der
+ * Abende (alle Zeilen) und wie viele davon schon ein Event haben. Rechnet nichts nach, was die Zeilen nicht selbst sagen –
+ * ob das Event noch in ChurchTools steht, liest der Reiter bewusst nicht.
+ */
+export function reiheUeberblick(r: Pick<Themenreihe, 'zeilen'>): {
+  von: string | null;
+  bis: string | null;
+  abende: number;
+  mitEvent: number;
+} {
+  const tage = r.zeilen
+    .map((z) => z.datum)
+    .filter(istTag)
+    .sort();
+  return {
+    von: tage[0] ?? null,
+    bis: tage.at(-1) ?? null,
+    abende: r.zeilen.length,
+    mitEvent: r.zeilen.filter((z) => z.eventId !== null).length,
+  };
+}
+
+/**
+ * **Die Reihenfolge im Reiter „Reihen“:** zuerst laufende und kommende (letzter Abend ab `heute`) nach erstem Abend
+ * aufsteigend, dann vergangene nach letztem Abend absteigend, Reihen ohne jedes Datum ans Ende. Gleichstand: wie geliefert.
+ */
+export function reihenOrdnen<T extends Pick<Themenreihe, 'zeilen'>>(
+  reihen: readonly T[],
+  heute: string,
+): T[] {
+  const mit = reihen.map((r, i) => ({ r, i, u: reiheUeberblick(r) }));
+  const rang = (u: { bis: string | null }) => (u.bis === null ? 2 : u.bis >= heute ? 0 : 1);
+  return mit
+    .sort((a, b) => {
+      const ra = rang(a.u);
+      const rb = rang(b.u);
+      if (ra !== rb) return ra - rb;
+      if (ra === 0 && a.u.von !== b.u.von)
+        return (a.u.von as string) < (b.u.von as string) ? -1 : 1;
+      if (ra === 1 && a.u.bis !== b.u.bis)
+        return (a.u.bis as string) > (b.u.bis as string) ? -1 : 1;
+      return a.i - b.i;
+    })
+    .map((x) => x.r);
+}
+
 /** **Das Datum für „+ Abend“:** eine Woche nach dem letzten Abend – ohne Zeilen `heute`. */
 export function naechstesDatum(zeilen: readonly ReiheZeile[], heute: string): string {
   const tage = zeilen.map((z) => z.datum).filter(istTag);

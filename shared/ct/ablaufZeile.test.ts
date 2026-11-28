@@ -257,7 +257,7 @@ describe('ablaufDauer – Gesamtdauer im Balken „Ende“, im Kopf und im PDF (
     time: string | null,
     durationMin: number | null,
     mehr: { weggelassen?: boolean; removed?: boolean; vorBeginn?: boolean } = {},
-  ) => ({ time, durationMin, ...mehr });
+  ) => ({ time, durationMin, ...mehr, vorBeginn: mehr.vorBeginn ?? false });
 
   it('von Beginn bis Ende – die Summe der Punkte; ohne Vorlauf kein „mit Vorlauf“', () => {
     expect(ablaufDauer([z('10:00', 4), z('10:04', 35), z('10:39', 5)], '10:00')).toEqual({

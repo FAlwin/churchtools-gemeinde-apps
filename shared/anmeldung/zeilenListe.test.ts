@@ -3,6 +3,8 @@ import { GRUPPENFELD_MAX } from './feldwert';
 import {
   ZEILEN_MAX,
   listeAus,
+  listeDatenSchaetzung,
+  listeKoennteZuLangWerden,
   listeAusDaten,
   listeDaten,
   listeEinstellungFehler,
@@ -18,6 +20,7 @@ import {
   zeilenZustand,
   type ListeAntwort,
   type ListeEinstellung,
+  type ListenSpalte,
 } from './zeilenListe';
 
 /** Baustein „Liste mit Zeilen“ (F6a, Entwurf `f6-liste-v1`): EINE Regel für Formular, Tabelle und ChurchTools-Text. */
@@ -350,5 +353,62 @@ describe('Kleinkram', () => {
   it('listeAus: alles andere wird eine leere Liste, fremde Werte in Zellen fallen weg', () => {
     expect(listeAus('Text')).toEqual({ zeilen: [] });
     expect(listeAus({ zeilen: [{ a: 'x', b: 3 }, null] })).toEqual({ zeilen: [{ a: 'x' }, {}] });
+  });
+});
+
+// ── F6b: Hinweis im Baukasten, wenn eine volle Liste nicht in ChurchTools passen könnte (E52) ──
+describe('listeKoennteZuLangWerden (F6b)', () => {
+  const spalte = (id: string, art: ListenSpalte['art'], antworten?: string[]): ListenSpalte => ({
+    id,
+    name: id,
+    art,
+    ...(antworten ? { antworten } : {}),
+  });
+  /** Jede Zeile voll mit realistischen Zellen: Text 20 Zeichen, Zahl 4 Stellen, Auswahl die längste Antwort. */
+  const voll = (l: ListeEinstellung) => ({
+    zeilen: Array.from({ length: l.max }, () =>
+      Object.fromEntries(
+        l.spalten.map((sp) => [
+          sp.id,
+          sp.art === 'zahl'
+            ? '1234'
+            : sp.art === 'auswahl'
+              ? [...(sp.antworten ?? [])].sort((x, y) => y.length - x.length)[0]
+              : 'x'.repeat(20),
+        ]),
+      ),
+    ),
+  });
+  const INVENTAR: ListeEinstellung = {
+    spalten: [
+      spalte('a', 'text'),
+      spalte('b', 'zahl'),
+      spalte('c', 'zahl'),
+      spalte('d', 'auswahl', ['gut', 'beschädigt']),
+    ],
+    max: 50,
+  };
+  const FUENF_TEXT: ListeEinstellung = {
+    spalten: ['a', 'b', 'c', 'd', 'e'].map((id) => spalte(id, 'text')),
+    max: 50,
+  };
+
+  it('die Schätzung trifft die echte Länge von „(Daten)“ einer so gefüllten Liste (höchstens 2 % daneben)', () => {
+    for (const l of [INVENTAR, FUENF_TEXT, { ...standardListe(), max: 50 }]) {
+      const echt = listeDaten(l, voll(l)).length;
+      expect(Math.abs(listeDatenSchaetzung(l) - echt) / echt).toBeLessThan(0.02);
+    }
+  });
+
+  it('Inventar (50 × 4) und die Vorgabe (10 × 2) passen; 50 × 5 Texte nicht – Grenze ist `GRUPPENFELD_MAX`', () => {
+    expect(listeKoennteZuLangWerden(standardListe())).toBe(false);
+    expect(listeKoennteZuLangWerden(INVENTAR)).toBe(false);
+    expect(listeKoennteZuLangWerden(FUENF_TEXT)).toBe(true);
+    // Genau an der Grenze: die größte Zeilenzahl ohne Hinweis.
+    const n = Array.from({ length: 50 }, (_, i) => i + 1).filter(
+      (max) => listeDatenSchaetzung({ ...FUENF_TEXT, max }) <= GRUPPENFELD_MAX,
+    ).length;
+    expect(listeKoennteZuLangWerden({ ...FUENF_TEXT, max: n })).toBe(false);
+    expect(listeKoennteZuLangWerden({ ...FUENF_TEXT, max: n + 1 })).toBe(true);
   });
 });

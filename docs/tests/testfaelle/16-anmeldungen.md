@@ -239,7 +239,7 @@ Auf der Startseite steht bei „Braucht deine Aufmerksamkeit“ „3 Personen oh
 
 ### TF-ANM-09 · Formular: Liste mit Zeilen im Baukasten
 
-**Das brauchst du:** Die Erweiterung in der Entwicklung (`npm run dev`, Demo `?demo`) – bis F6b gibt es den Baustein nur dort.
+**Das brauchst du:** Das aktuelle Paket in der Test-Instanz (oder die Demo `?demo` in der Entwicklung).
 Eine Veranstaltung, deren Formular du bearbeiten darfst (Demo: „Worship-Workshop“, dort steht schon „Was bringst du privat
 mit?“).
 
@@ -254,13 +254,45 @@ eine). Die Vorschau darunter zeigt, wie Gäste die Liste sehen. Am Computer ist 
 5. **Vorschau**: In die Liste tippen, eine Zeile nur halb ausfüllen, **Verbindlich anmelden**: Die halbe Zeile ist rot markiert,
    darunter „Zeile 1: … fehlt“; eine leere Zeile hält nichts auf. Die Summe zählt nur vollständige Zeilen.
 6. Fenster schmal (375 px): je Eintrag eine Karte mit beschrifteten Feldern, Zahlen zu zweit nebeneinander.
-7. Gebaute Erweiterung (Test-ZIP): **keine** Kachel „Liste mit Zeilen“ und kein Fragetyp dieses Namens.
+7. Gebaute Erweiterung (Test-ZIP): Kachel und Fragetyp „Liste mit Zeilen“ sind da (seit F6b).
+8. Höchstens **50** Zeilen und fünf **Text**-Spalten: Unter „Höchstens … Zeilen“ steht „Achtung: So viele Zeilen und Spalten
+   passen mit längeren Einträgen nicht …“; mit 20 Zeilen oder einer Zahl-Spalte statt Text verschwindet der Hinweis.
 
 <details><summary>Technisches</summary>
 
 - **Priorität:** normal
-- **Betrifft:** `shared/anmeldung/zeilenListe.ts`, `shared/anmeldung/formular.ts`, `anmeldungen/src/ListeBearbeiten.tsx`, `anmeldungen/src/bausteinFrei.ts`, `anmeldungen/src/formularFelder.ts`, `ui/anmeldeformular/ListeEingabe.tsx`
-- **Automatisiert:** ja – `zeilenListe.test.ts` (Regel), `formular.test.ts` (Prüfung, Ablage, Schema), `einrichten.test.ts` (Spalten in ChurchTools), `senden.test.ts` (Absenden gesperrt bis F6b), `Baukasten.test.tsx` (Kachel, Fragetyp, Bearbeiten, gebaute Erweiterung), `ListeEingabe.test.tsx`; im Browser mit der Demo durchgeklickt (Computer, 375 px, hell/dunkel). Von Hand bleibt der Weg gegen echtes ChurchTools – mit F6b
-- **Historie:** F6a (27.11.2026, Messung M9, Entscheidungsliste E44–E51)
+- **Betrifft:** `shared/anmeldung/zeilenListe.ts`, `shared/anmeldung/formular.ts`, `anmeldungen/src/ListeBearbeiten.tsx`, `anmeldungen/src/BaukastenLeiste.tsx`, `anmeldungen/src/FeldBearbeiten.tsx`, `anmeldungen/src/formularFelder.ts`, `ui/anmeldeformular/ListeEingabe.tsx`
+- **Automatisiert:** ja – `zeilenListe.test.ts` (Regel), `formular.test.ts` (Prüfung, Ablage, Schema), `einrichten.test.ts` (Spalten in ChurchTools), `Baukasten.test.tsx` (Kachel, Fragetyp, Bearbeiten, gebaute Erweiterung, Hinweis zur Länge), `ListeEingabe.test.tsx`; im Browser mit der Demo durchgeklickt (Computer, 375 px, hell/dunkel). Abschicken: TF-ANM-10
+- **Historie:** F6a (27.11.2026, Messung M9, Entscheidungsliste E44–E51); F6b (27.11.2026): Schalter weg, Hinweis zur Länge (E52)
+
+</details>
+
+### TF-ANM-10 · Formular: Liste mit Zeilen abschicken, lange Texte
+
+**Das brauchst du:** Eine freigegebene Veranstaltung in der Test-Instanz mit einer „Liste mit Zeilen“ (z. B. „Was bringst du
+mit?“: Was · Anzahl · Wert in € mit „Summe zeigen“), dazu den Link zum öffentlichen Formular. Eine eigene Mail-Adresse mit `+`.
+
+**Das muss passieren:** Abgeschickt wird nur, was vollständig ist: Eine halbe Zeile hält auf, eine leere fällt weg. In
+ChurchTools stehen danach drei Spalten – lesbar, „(Daten)“ und die Summe mit Punkt. Zu lange Texte halten das Absenden auf,
+statt still gekürzt zu werden.
+
+1. Zwei Zeilen ausfüllen („Zelt für 4 Personen · 1 · 150“, „Kocher · 2 · 1.234,5“), eine dritte nur bei „Was“: **Verbindlich
+   anmelden** hält auf, darunter „Zeile 3: Anzahl, Wert fehlen“.
+2. In **Bemerkungen** mehr als 4.000 Zeichen einfügen: rot gerahmt, „4.001 von 4.000 Zeichen“ und „Das ist zu lang –
+   höchstens 4.000 Zeichen“; nichts wird geschickt.
+3. Bemerkung kürzen, die dritte Zeile leeren, anmelden: „Danke für die Anmeldung!“.
+4. In ChurchTools beim Mitglied: „Was bringst du mit?“ = Kopfzeile + zwei Zeilen, „Was bringst du mit? (Daten)“ = die Zeilen
+   in fester Form, „… – Summe Wert“ = `1384.5`.
+5. In der Erweiterung, Reiter **Anmeldungen**: Die Spalte zeigt den lesbaren Text (gekürzt, ganz beim Darüberfahren), das
+   Fenster der Anmeldung zeigt ihn mehrzeilig.
+6. **Von Hand**: Die Liste steht im Fenster wie im Formular; eine halbe Zeile hält auf („Zeile 1: Anzahl fehlt“); vollständig
+   angemeldet stehen dieselben drei Spalten in ChurchTools.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** hoch
+- **Betrifft:** `shared/anmeldung/senden.ts`, `shared/anmeldung/formular.ts`, `shared/anmeldung/zeilenListe.ts`, `shared/anmeldung/teamMail.ts`, `ui/anmeldeformular/FeldEingabe.tsx`, `ui/anmeldeformular/ListeEingabe.tsx`
+- **Automatisiert:** ja – `senden.test.ts` (Spalten, Summe mit Punkt, leer, zu lang, „(Daten)“ fehlt), `vonHand.test.ts` (Von Hand, Person dazu, Tabelle liest den Text), `formular.test.ts` (Länge der Texte), `teamMail.test.ts`, `AnmeldeFormular.test.tsx` (Absenden hält auf, Zähler); echter Lauf 27.11.2026 in der Test-Instanz (Schritte 1–4). „Deine Anmeldung“ öffnet die Liste nicht – ohne Login gibt ChurchTools keine Antworten heraus (E54)
+- **Historie:** F6b (27.11.2026, Messung M9, Entscheidungsliste E52–E56)
 
 </details>

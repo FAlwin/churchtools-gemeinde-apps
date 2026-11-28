@@ -2046,16 +2046,29 @@ describe('Baukasten (F6a): Liste mit Zeilen', () => {
     expect(screen.getByText('Vorschau – so sieht es im Formular aus:')).toBeTruthy();
   });
 
-  it('gebaute Erweiterung (Test-ZIP, Release): weder Kachel noch Fragetyp „Liste mit Zeilen“ – bis F6b', async () => {
+  it('gebaute Erweiterung (Test-ZIP, Release): Kachel und Fragetyp „Liste mit Zeilen“ sind da (F6b)', async () => {
     vi.stubEnv('DEV', false);
     const { huelle } = zeigen();
-    expect(screen.queryByRole('button', { name: 'Liste mit Zeilen' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Kurzer Text' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Liste mit Zeilen' })).toBeTruthy();
     fireEvent.click(huelle('f1'));
     const typ = await screen.findByLabelText('Fragetyp');
     const werte = [...typ.querySelectorAll('option')].map((o) => o.getAttribute('value'));
-    expect(werte).toContain('radio');
-    expect(werte).not.toContain('liste');
+    expect(werte).toContain('liste');
+  });
+
+  it('Hinweis, wenn eine volle Liste nicht in ChurchTools passen könnte (F6b, E52) – erst bei 5 Texten × 50', async () => {
+    zeigen();
+    fireEvent.click(screen.getByRole('button', { name: 'Liste mit Zeilen' }));
+    await screen.findByLabelText('Name der Spalte 1');
+    const hinweis = () => screen.queryByText(/passen mit längeren Einträgen nicht in ChurchTools/);
+    fireEvent.change(screen.getByLabelText('Höchstzahl Zeilen'), { target: { value: '50' } });
+    expect(hinweis()).toBeNull();
+    for (let i = 0; i < 3; i++)
+      fireEvent.click(screen.getByRole('button', { name: '+ Spalte hinzufügen' }));
+    fireEvent.change(screen.getByLabelText('Art der Spalte 2'), { target: { value: 'text' } });
+    expect(hinweis()).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Höchstzahl Zeilen'), { target: { value: '20' } });
+    expect(hinweis()).toBeNull();
   });
 
   it('Fragetyp → Liste bekommt Spalten, zurück zu Text fallen sie weg', async () => {

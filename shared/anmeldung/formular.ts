@@ -48,6 +48,7 @@ import {
   kannFrei,
 } from './freieAntwort';
 import { adresseAus, type AdresseAntwort } from './adresse';
+import { GRUPPENFELD_MAX } from './feldwert';
 import {
   listePruefen,
   listeEinstellungFehler,
@@ -154,7 +155,6 @@ export const BAUSTEINE: { typ: Feldtyp; name: string; gruppe: 'frage' | 'gestalt
   { typ: 'multi', name: 'Mehrere Antworten', gruppe: 'frage' },
   { typ: 'date', name: 'Datum', gruppe: 'frage' },
   { typ: 'number', name: 'Zahl', gruppe: 'frage' },
-  // F6a: bis F6b nur in Entwicklung/Demo zu sehen (`bausteinFrei` in der Erweiterung) – Absenden fehlt noch.
   { typ: 'liste', name: 'Liste mit Zeilen', gruppe: 'frage' },
   { typ: 'ueberschrift', name: 'Überschrift', gruppe: 'gestaltung' },
   { typ: 'info', name: 'Hinweistext', gruppe: 'gestaltung' },
@@ -308,6 +308,14 @@ export function nurPersonenPfade(wege: string[]): string[] {
 }
 
 /**
+ * **Passt dieser Text nicht in eine Spalte in ChurchTools?** (F6b, M9) – gezählt wie geschickt (ohne Leerraum an den
+ * Enden). Die EINE Stelle für Formular und Zähler unter dem Feld (`FeldEingabe`).
+ */
+export function zuLang(text: string): boolean {
+  return text.trim().length > GRUPPENFELD_MAX;
+}
+
+/**
  * **Welche Pflichtangaben fehlen** – Schlüssel wie `anmeldung.mail`, `personen.1.birth`,
  * `anmeldung.name.vor`. Leer = alles da. Dieselbe Prüfung im Formular und in der Nachprüfung.
  */
@@ -320,6 +328,10 @@ export function pruefeAntworten(f: Formular, a: Antworten): string[] {
       fehlt.push(pfad);
       return;
     }
+    // F6b: Eine Text-Spalte fasst 4.000 Zeichen, und ohne Login kürzt ChurchTools still (M9) – zu lange Antworten halten
+    // auf, auch bei „freiwillig“ (`<pfad>.lang`; der Text der freien Antwort `<pfad>.freilang`). Nie kürzen.
+    if (typeof wert === 'string' && zuLang(wert)) fehlt.push(`${pfad}.lang`);
+    if (freiMitText(x) && zuLang(freiText(alle, x.id))) fehlt.push(`${pfad}.freilang`);
     // F6: Angefangene Zeilen und eine zu lange Liste halten auch bei „freiwillig“ auf (`zeilenListe.ts`).
     if (x.typ === 'liste') {
       for (const teil of listePruefen(x.liste, wert, x.zustand === 'pflicht'))

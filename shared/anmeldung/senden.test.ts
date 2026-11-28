@@ -11,6 +11,8 @@ import {
   ctWert,
   type CtFormular,
 } from './senden';
+import { GRUPPENFELD_MAX } from './feldwert';
+import { listeAus, listeAusDaten, listeDaten, listeLesbar } from './zeilenListe';
 
 const HEUTE = '2026-10-14';
 const wert = (form: { id: string; value: string | string[] }[], id: string | number) =>
@@ -387,8 +389,9 @@ describe('F1b: Was die Person nicht mehr gesehen hat, kommt nicht nach ChurchToo
   });
 });
 
-describe('F6a: Liste mit Zeilen – Absenden kommt erst mit F6b', () => {
-  it('eine Liste im Formular → PasstNicht („nicht richtig eingerichtet“), nie still ohne die Liste angemeldet', () => {
+describe('F6b: Liste mit Zeilen absenden', () => {
+  /** Kinder-Event mit der Liste „Was bringst du mit?“ (Was · Anzahl · Wert in € mit Summe) im Kontakt-Teil. */
+  const mitListe = (summe = true) => {
     const e = einstellungen();
     e.formular.anmeldung.splice(2, 0, {
       id: 'inv',
@@ -398,21 +401,99 @@ describe('F6a: Liste mit Zeilen – Absenden kommt erst mit F6b', () => {
       hilfe: '',
       zustand: 'freiwillig',
       antworten: [],
-      liste: { spalten: [{ id: 'a', name: 'Was', art: 'text' }], max: 10 },
+      liste: {
+        spalten: [
+          { id: 'a', name: 'Was', art: 'text' },
+          { id: 'b', name: 'Anzahl', art: 'zahl' },
+          { id: 'c', name: 'Wert', art: 'zahl', einheit: '€', ...(summe ? { summe: true } : {}) },
+        ],
+        max: 10,
+      },
     });
-    e.ctFelder = { ...e.ctFelder, inv: 900, 'inv.daten': 901 };
+    e.ctFelder = {
+      ...e.ctFelder,
+      inv: 900,
+      'inv.daten': 901,
+      ...(summe ? { 'inv.summe': 902 } : {}),
+    };
     const ct: CtFormular = {
       ...CT,
       form: [
         ...CT.form,
         { id: 900, type: 'custom', name: 'Was bringst du mit?' },
         { id: 901, type: 'custom', name: 'Was bringst du mit? (Daten)' },
+        { id: 902, type: 'custom', name: 'Was bringst du mit? – Summe Wert' },
       ],
     };
+    return { e, ct };
+  };
+  const ZEILEN: Record<string, string>[] = [
+    { a: 'Zelt für 4 Personen', b: '1', c: '150' },
+    {},
+    { a: 'Kocher', b: '2', c: '1.234,5' },
+  ];
+
+  it('schreibt lesbar, „(Daten)“ und die Summe mit Punkt – bei der ersten Person, leere Zeilen fallen weg', () => {
+    const { e, ct } = mitListe();
     const a = antworten();
-    a.anmeldung.inv = { zeilen: [{ a: 'Zelt' }] };
-    expect(() => anmeldungAufbauen(e, a, { option: 0, extras: [] }, HEUTE, ct)).toThrow(
-      /Liste mit Zeilen/,
+    a.anmeldung.inv = { zeilen: ZEILEN };
+    const [erste, zweite] = anmeldungAufbauen(e, a, { option: 0, extras: [] }, HEUTE, ct).forms;
+    const l = e.formular.anmeldung.find((f) => f.id === 'inv')!.liste!;
+    const liste = { zeilen: ZEILEN };
+    expect(wert(erste.form, 900)).toBe(listeLesbar(l, liste));
+    expect(wert(erste.form, 900)).toBe(
+      'Was · Anzahl · Wert (€)\nZelt für 4 Personen · 1 · 150\nKocher · 2 · 1.234,5',
     );
+    expect(wert(erste.form, 901)).toBe(listeDaten(l, liste));
+    // „(Daten)“ öffnet die Liste wieder – dieselben vollständigen Zeilen.
+    expect(listeAusDaten(l, String(wert(erste.form, 901)))?.zeilen).toEqual([
+      { a: 'Zelt für 4 Personen', b: '1', c: '150' },
+      { a: 'Kocher', b: '2', c: '1234,5' },
+    ]);
+    expect(wert(erste.form, 902)).toBe('1384.5');
+    for (const id of [900, 901, 902]) expect(wert(zweite.form, id), String(id)).toBeUndefined();
+  });
+
+  it('ohne „Summe zeigen“ kein Zahl-Feld', () => {
+    const { e, ct } = mitListe(false);
+    const a = antworten();
+    a.anmeldung.inv = { zeilen: ZEILEN };
+    const [erste] = anmeldungAufbauen(e, a, { option: 0, extras: [] }, HEUTE, ct).forms;
+    expect(wert(erste.form, 901)).toBeTruthy();
+    expect(wert(erste.form, 902)).toBeUndefined();
+  });
+
+  it('ohne vollständige Zeile wird nichts geschickt – auch keine Summe 0', () => {
+    const { e, ct } = mitListe();
+    const a = antworten();
+    a.anmeldung.inv = { zeilen: [{}, { a: '', b: '', c: '' }] };
+    const [erste] = anmeldungAufbauen(e, a, { option: 0, extras: [] }, HEUTE, ct).forms;
+    for (const id of [900, 901, 902]) expect(wert(erste.form, id), String(id)).toBeUndefined();
+  });
+
+  it('„(Daten)“ über 4.000 Zeichen → PasstNicht, nie gekürzt abgeschickt (ohne Login kürzt ChurchTools still, M9)', () => {
+    const { e, ct } = mitListe();
+    e.formular.anmeldung.find((f) => f.id === 'inv')!.liste!.max = 50;
+    const a = antworten();
+    a.anmeldung.inv = {
+      zeilen: Array.from({ length: 40 }, (_, i) => ({
+        a: `${'x'.repeat(90)} ${i}`,
+        b: '1',
+        c: '2',
+      })),
+    };
+    const l = e.formular.anmeldung.find((f) => f.id === 'inv')!.liste!;
+    expect(listeDaten(l, listeAus(a.anmeldung.inv)).length).toBeGreaterThan(GRUPPENFELD_MAX);
+    expect(() => anmeldungAufbauen(e, a, { option: 0, extras: [] }, HEUTE, ct)).toThrow(
+      /zu lang zum Speichern/,
+    );
+  });
+
+  it('fehlt die Spalte „(Daten)“ in ChurchTools → PasstNicht, nie still nur der lesbare Text', () => {
+    const { e, ct } = mitListe();
+    ct.form = ct.form.filter((x) => x.id !== 901);
+    const a = antworten();
+    a.anmeldung.inv = { zeilen: ZEILEN };
+    expect(() => anmeldungAufbauen(e, a, { option: 0, extras: [] }, HEUTE, ct)).toThrow(PasstNicht);
   });
 });

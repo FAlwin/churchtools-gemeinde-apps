@@ -308,6 +308,35 @@ export function listeAusDaten(l: ListeEinstellung, text: string): ListeAntwort |
 }
 
 /**
+ * Wie lang eine **realistische** Zelle ist (E52, aus M9): Text 20 Zeichen („Zelt für 4 Personen“), Zahl 4 Stellen,
+ * Auswahl so lang wie ihre längste Antwort. In „(Daten)“ kommen je Zelle Anführungszeichen und Komma dazu, je Zeile
+ * Klammern und Komma.
+ */
+const TEXT_ZELLE_REALISTISCH = 20;
+const ZAHL_ZELLE_REALISTISCH = 4;
+
+/** **Ungefähre Länge von „(Daten)“**, wenn alle Zeilen mit realistischen Zellen gefüllt sind (E52). */
+export function listeDatenSchaetzung(l: ListeEinstellung): number {
+  const zelle = (s: ListenSpalte) =>
+    s.art === 'zahl'
+      ? ZAHL_ZELLE_REALISTISCH + 1
+      : (s.art === 'auswahl'
+          ? Math.max(0, ...(s.antworten ?? []).map((a) => a.trim().length))
+          : TEXT_ZELLE_REALISTISCH) + 3;
+  const zeile = 2 + l.spalten.reduce((n, s) => n + zelle(s), 0);
+  const kopf = 20 + l.spalten.reduce((n, s) => n + s.id.length + 3, 0);
+  return kopf + l.max * zeile;
+}
+
+/**
+ * **Könnte eine volle Liste zu lang werden?** (Hinweis im Baukasten, F6b) – wenn die Schätzung über ein Gruppenfeld
+ * (`GRUPPENFELD_MAX`) geht. Nur ein Hinweis: Was wirklich zählt, prüft `listePruefen` beim Absenden.
+ */
+export function listeKoennteZuLangWerden(l: ListeEinstellung): boolean {
+  return listeDatenSchaetzung(l) > GRUPPENFELD_MAX;
+}
+
+/**
  * **Was an einer ausgefüllten Liste nicht stimmt** – Pfad-Teile für `pruefeAntworten` (`formular.ts`), jeweils hinter dem
  * Pfad des Felds: `<Zeile>.<Spalte>` je fehlender oder unpassender Zelle einer angefangenen Zeile, `max` bei mehr
  * Zeilen als erlaubt, `lang`, wenn „(Daten)“ nicht in ein Gruppenfeld passt, und `''` (das Feld selbst), wenn die Liste

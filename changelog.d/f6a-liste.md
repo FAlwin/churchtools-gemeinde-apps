@@ -1,6 +1,6 @@
 ### Neu (Anmeldungen)
 
-- **Liste mit Zeilen – erste Scheibe (F6a, noch nicht freigegeben).** Neuer Baustein unter „Eigene Fragen“ für Listen wie „Was bringst du privat mit?“: 1–5 Spalten (Text, Zahl, Auswahl), Einheit und „Summe zeigen“ für eine Zahl-Spalte, Höchstzahl Zeilen (1–50, vorbelegt 10). Bearbeitet wird direkt im Formular, darunter steht die Vorschau. Im Formular am Computer eine Zeilen-Tabelle, am Handy eine Karte je Eintrag; angefangene Zeilen halten das Absenden auf, leere fallen weg, die Summe zählt nur vollständige Zeilen. **Bis F6b nur in der Entwicklung (Demo) zu sehen** – in der gebauten Erweiterung fehlen Kachel und Fragetyp, weil das Abschicken noch fehlt.
+- **Liste mit Zeilen – erste Scheibe (F6a).** Neuer Baustein unter „Eigene Fragen“ für Listen wie „Was bringst du privat mit?“: 1–5 Spalten (Text, Zahl, Auswahl), Einheit und „Summe zeigen“ für eine Zahl-Spalte, Höchstzahl Zeilen (1–50, vorbelegt 10). Bearbeitet wird direkt im Formular, darunter steht die Vorschau. Im Formular am Computer eine Zeilen-Tabelle, am Handy eine Karte je Eintrag; angefangene Zeilen halten das Absenden auf, leere fallen weg, die Summe zählt nur vollständige Zeilen. Abschicken und Freigabe für alle kamen mit F6b (siehe dort).
 
 ### Behoben (Anmeldungen)
 

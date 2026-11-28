@@ -218,3 +218,30 @@ Ein gewähltes Datum steht senkrecht mittig im Feld.
 - **Historie:** #1103 (Datum mittig), #1182 (leere Felder, Alwin am iPad 26.11.2026)
 
 </details>
+
+### TF-KOPF-07 · Fenster bleiben unter dem milchigen Band – auch mit Tastatur
+
+**Das brauchst du:** Ein iPad (oder iPhone) mit iPadOS 26 oder neuer, die Musik-App vom **Home-Bildschirm**, einen
+Termin mit Ablauf und das Recht, ihn zu bearbeiten.
+
+**Das muss passieren:** Ein Fenster beginnt immer unterhalb des milchigen Bands unter Uhr und Akku – auch wenn die
+Tastatur aufgeht und das Fenster dafür nach oben rückt. Sein Kopf (z. B. „‹ Lied verknüpfen ✕“) ist scharf. Die
+Liedsuche öffnet am iPad und Handy **ohne** Tastatur, damit die ganze Liederliste zu sehen ist.
+
+1. **Termine** → Termin öffnen → **Bearbeiten** → bei einem Punkt **Lied verknüpfen**. Das Fenster öffnet, die
+   Tastatur bleibt zu, die Liederliste ist ganz zu sehen.
+2. Ins Suchfeld tippen: Die Tastatur geht auf, das Fenster rückt nach oben – sein Kopf steht aber **unter** dem Band
+   und ist scharf, nicht verschwommen.
+3. **Lieder** → **Neues Lied**: Auch hier öffnet die Suche ohne Tastatur.
+4. Gegenprobe am Rechner: **Neues Lied** öffnen – der Cursor steht sofort im Suchfeld.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `ui/fenster/Sheet.module.scss`, `ui/lied/LiedSucheKopf.tsx`, `ui/bedienung/useMedienAbfrage.ts`
+- **Automatisiert:** teilweise – `ui/design/fensterUnterBand.test.ts` (Rand oben mindestens `--band-unten`, mit und
+  ohne Tastatur), `ui/lied/LiedSucheKopf.test.tsx` (Finger ohne Autofokus, Maus mit); von Hand bleibt, wie es unter
+  dem echten Band und mit der echten Tastatur aussieht
+- **Historie:** #1203 (Alwin am iPad 27.11.2026, am iPad bestätigt 28.11.2026)
+
+</details>

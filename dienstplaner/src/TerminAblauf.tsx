@@ -4,6 +4,7 @@ import { Icon } from '@ui/icons/icons';
 import { KopfKnopf } from '@ui/bedienung/KopfKnopf';
 import { LeisesPlus } from '@ui/bedienung/LeisesPlus';
 import { MehrMenue } from '@ui/bedienung/MehrMenue';
+import { KlickZeile } from '@ui/bedienung/KlickZeile';
 import { HANDY_BREITE, useMedienAbfrage } from '@ui/bedienung/useMedienAbfrage';
 import type { Option } from '@ui/bedienung/OptionWaehlen';
 import { AblaufListe } from '@ui/ablauf/AblaufListe';
@@ -12,7 +13,8 @@ import { useAblaufBearbeiten, verlangtNeuLaden } from '@ui/ablauf/useAblaufBearb
 import { AblaufAnlegenFenster, type KopieVorschlag } from '@ui/ablauf/AblaufAnlegenFenster';
 import { NeuAufsetzen } from '@ui/ablauf/NeuAufsetzen';
 import { useAlsVorlage } from '@ui/ablauf/useAlsVorlage';
-import { browserAlsVorlageZugriff } from '@ui/ablauf/browserAblaufZugriff';
+import { browserAlsVorlageZugriff, browserSerieSetzen } from '@ui/ablauf/browserAblaufZugriff';
+import { PredigtserieFenster } from '@ui/ablauf/PredigtserieFenster';
 import { InfoSpaltenFenster } from '@ui/ablauf/InfoSpalten';
 import { useInfoSpalten } from '@ui/ablauf/infoSpaltenWahl';
 import { browserAblaufLeser, browserSchreiber } from '@ui/ct/schreiber';
@@ -27,10 +29,16 @@ import {
 import { datumText, tagKurz } from '@shared/ct/datum';
 import type { AblaufTermin } from '@shared/ct/ablaufRecht';
 import { ablaufAnlegen } from '@shared/ct/ablaufAnlegen';
-import { ablaufBestandLesen, ablaufNeuAufsetzen, type AblaufStand } from '@shared/ct/ablaufNeu';
+import {
+  ablaufBestandLesen,
+  ablaufNeuAufsetzen,
+  verbundeneTermine,
+  type AblaufStand,
+} from '@shared/ct/ablaufNeu';
 import { vorlagenFuer } from '@shared/ct/ablaufVorschlaege';
 import { liveInfoGruppen } from '@shared/ct/liveAgenda';
 import { ortszeitAus } from '@shared/ct/zeit';
+import { serieAus } from '@shared/ct/schreibKern';
 import type { CtAgenda, CtSong } from '@shared/ct/typen';
 import type { AblaufQuelle, AblaufVorlage, InfoGruppe } from '@shared/types/index';
 import { autorVon, ladeAblauf, ladeLiedDaten } from './ladeBeiwerk';
@@ -101,6 +109,10 @@ export interface AblaufTeile {
   ende: string | null;
   /** „Dauer 35 Min“ neben dem Ende im Kopf der Termin-Ansicht (`ablaufDauerKurz`, Alwin 28.11.2026); `null` wie `ende`. */
   dauer: string | null;
+  /** Die Predigtserie des Ablaufs (`series`, getrimmt) – `null` ohne. Für das Termin-PDF. */
+  serie: string | null;
+  /** In ChurchTools abgeschlossen (`isLocked`) – die Termin-Ansicht zeigt dann ein Schloss im Ablauf-Kopf. */
+  abgeschlossen: boolean;
   /**
    * Fürs Teilen (E8-1): die Zeilen, wie die Ansicht sie zeigt, die Infos-Gruppen, die man sieht, und die unter
    * „Spalten“ gewählten – damit das Termin-Blatt nichts davon ein zweites Mal rechnet.
@@ -174,6 +186,8 @@ export function TerminAblauf({
   const [zeigen, setZeigen] = useState(false);
   // „Live“ (E6b-2 L2): offen? Und läuft der Termin heute gerade in ChurchTools (roter Punkt am Knopf)?
   const [live, setLive] = useState(liveStart);
+  // „Predigtserie“ (27.11.2026): das Fenster zum Setzen – nur im Bearbeiten.
+  const [serieOffen, setSerieOffen] = useState(false);
   const agendaId = ablauf?.id;
   const items = ablauf?.items;
   // „Ablauf anlegen“ (E6-5a) und „Neu aufsetzen“ (E6-5b, `neu`): Fenster und was es braucht – erst beim Öffnen geladen.
@@ -410,7 +424,26 @@ export function TerminAblauf({
   // „Spalten“ und „Ablauf zeigen“ gehören zur Ansicht: nicht in der Matrix, nicht beim Bearbeiten, nicht ohne Punkte.
   const ansichtKnoepfe = !schmal && !aktiv && ablauf !== null && zeilen.length > 0;
 
-  const inhalt =
+  // Die Predigtserie (27.11.2026, wie die ChurchTools-App): in der Ansicht eine leise Zeile, nur wenn eine gesetzt ist; im
+  // Bearbeiten (Recht + nicht abgeschlossen) immer – die ganze Zeile öffnet das Fenster. Nicht in der Matrix.
+  const serie = serieAus(ablauf?.series);
+  const abgeschlossen = ablauf?.isLocked === true;
+  const serieText = (
+    <>
+      <span className={styles.serieLabel}>Predigtserie</span>
+      <span className={serie ? styles.serieWert : styles.serieLeer}>{serie ?? 'keine'}</span>
+    </>
+  );
+  const serieZeile =
+    schmal || ablauf === null ? null : aktiv && !abgeschlossen ? (
+      <KlickZeile className={styles.serie} onClick={() => setSerieOffen(true)}>
+        {serieText}
+      </KlickZeile>
+    ) : serie ? (
+      <div className={styles.serie}>{serieText}</div>
+    ) : null;
+
+  const ablaufInhalt =
     ablauf === null ? (
       schmal ? (
         anlegenKnopf ? (
@@ -450,6 +483,14 @@ export function TerminAblauf({
         />
       </div>
     );
+  const inhalt = serieZeile ? (
+    <>
+      {serieZeile}
+      {ablaufInhalt}
+    </>
+  ) : (
+    ablaufInhalt
+  );
 
   const ueberlagerung = (
     <>
@@ -472,6 +513,7 @@ export function TerminAblauf({
           tag={termin.tag}
           beginn={termin.uhrzeit}
           zeilen={zeilen}
+          serie={serie}
           infoGruppen={spalten.gewaehlt}
           zeitzone={zeitzone}
           onSchliessen={() => setZeigen(false)}
@@ -494,6 +536,24 @@ export function TerminAblauf({
           }}
           steuern={termin.liveSteuern === true}
           onAblauf={onAblauf}
+        />
+      )}
+      {serieOffen && aktiv && ablauf !== null && (
+        <PredigtserieFenster
+          serie={serie}
+          geteilt={verbundeneTermine(ablauf, terminId).length > 0}
+          onSpeichern={async (neu) => {
+            try {
+              await browserSerieSetzen(terminId, neu);
+            } catch (e) {
+              // Abgeschlossen oder inzwischen anders: frisch lesen, die Meldung steht im Fenster.
+              if (verlangtNeuLaden(e)) ablaufNeuLaden();
+              throw e;
+            }
+            setSerieOffen(false);
+            ablaufNeuLaden();
+          }}
+          onClose={() => setSerieOffen(false)}
         />
       )}
       {anlegen && !anlegen.neu && (
@@ -563,6 +623,8 @@ export function TerminAblauf({
     fehlerLoeschen: liste.fehlerLoeschen,
     ende,
     dauer,
+    serie,
+    abgeschlossen,
     zeilen,
     infoGruppen: gruppen,
     infoSpalten: spalten.ids,

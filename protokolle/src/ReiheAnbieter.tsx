@@ -1,13 +1,8 @@
 import { useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { useLaden } from '@ui/ct/useLaden';
-import { heuteImKalender } from '@shared/ct/zeit';
-import type { Person } from '@shared/organigramm/mitglieder';
 import { themenreiheIds, type Block } from '@shared/protokolle/dokument';
-import { neueThemenreihe, neueZeile, type Themenreihe } from '@shared/protokolle/themenreihe';
+import type { Themenreihe } from '@shared/protokolle/themenreihe';
 import { darfSchreibenIn } from '@shared/protokolle/zugang';
-import { ladeGruppenMitglieder } from './mitglieder';
-import { ReiheFenster } from './ReiheFenster';
-import { ReiheUebertragenFenster } from './ReiheUebertragenFenster';
 import { ladeThemenreihen } from './themenreiheSchreiben';
 import {
   ReiheBasis,
@@ -15,10 +10,7 @@ import {
   type ReiheKontextWert,
   type ReiheStand,
 } from './themenreiheKontext';
-
-type Fenster =
-  | { art: 'bearbeiten'; reihe: Themenreihe; neu: boolean; fertig?: (id: string) => void }
-  | { art: 'uebertragen'; reihe: Themenreihe };
+import { useReiheFenster } from './useReiheFenster';
 
 /**
  * **Der Anbieter für den Baustein „Reihe“** – hängt um einen Bildschirm, der ein Protokoll zeigt (Editor, Sitzungsansicht):
@@ -48,7 +40,6 @@ export function ReiheAnbieter({
   const ids = useMemo(() => themenreiheIds(dokument), [dokument]);
   // Gerade gespeichert und noch nicht neu gelesen – gilt über dem Gelesenen.
   const [lokal, setLokal] = useState<ReadonlyMap<string, Themenreihe>>(new Map());
-  const [fenster, setFenster] = useState<Fenster | null>(null);
 
   const [geladen, setGeladen] = useState<ReadonlyMap<string, Themenreihe> | null>(null);
   const fehlend = ids.filter((id) => !lokal.has(id) && !geladen?.has(id));
@@ -75,28 +66,24 @@ export function ReiheAnbieter({
           : 'leer';
   const darfBauen = !!basis && !!gruppe && darfSchreibenIn(gruppe, basis.schreibbar);
 
-  // Stabil: das Fenster „In Events übertragen“ liest neu, sobald sich `rechte` ändert.
-  const rechte = useMemo(
-    () => ({ kalender: basis ? basis.eventKalender : [], ich: basis?.ich.person ?? null }),
-    [basis],
+  const ortVon = useCallback(() => ort, [ort]);
+  const bekannt = useCallback((id: string) => reihen.get(id), [reihen]);
+  const onFrisch = useCallback((_g: number, liste: readonly Themenreihe[]) => {
+    setGeladen(new Map(liste.map((r) => [r.id, r])));
+    setLokal(new Map());
+  }, []);
+  const onGespeichert = useCallback(
+    (r: Themenreihe) => setLokal((alt) => new Map(alt).set(r.id, r)),
+    [],
   );
-
-  const frisch = useCallback(
-    async (id: string): Promise<Themenreihe | undefined> => {
-      try {
-        if (!ort) return undefined;
-        const liste = await ladeThemenreihen(ort);
-        setGeladen(new Map(liste.map((r) => [r.id, r])));
-        setLokal(new Map());
-        return liste.find((r) => r.id === id);
-      } catch {
-        // Vorübergehend ist nicht ungültig: Das Lesen scheiterte – mit dem bekannten Stand weiter, gespeichert wird ohnehin nur
-        // gegen den frisch gelesenen (`themenreiheSpeichern`).
-        return reihen.get(id);
-      }
-    },
-    [ort, reihen],
-  );
+  const { bearbeiten, uebertragen, neu, fenster } = useReiheFenster({
+    ortVon,
+    bekannt,
+    onFrisch,
+    onGespeichert,
+    ich: basis?.ich ?? null,
+    eventKalender: basis ? basis.eventKalender : [],
+  });
 
   const wert = useMemo<ReiheKontextWert | null>(() => {
     if (!basis || !ort) return null;
@@ -104,89 +91,18 @@ export function ReiheAnbieter({
       reihen,
       stand,
       darfBauen,
-      // Beide Fenster gehen mit der **frisch gelesenen** Reihe auf: Der Stand im Speicher des Bildschirms kann veraltet
-      // sein (jemand anderes hat gespeichert) – „Bitte öffne sie neu“ führte sonst wieder zum selben alten Stand.
-      bearbeiten: (id) =>
-        void frisch(id).then((r) => r && setFenster({ art: 'bearbeiten', reihe: r, neu: false })),
-      uebertragen: (id) =>
-        void frisch(id).then((r) => r && setFenster({ art: 'uebertragen', reihe: r })),
-      neu: (fertig) => {
-        const id = crypto.randomUUID();
-        setFenster({
-          art: 'bearbeiten',
-          neu: true,
-          fertig,
-          reihe: neueThemenreihe({
-            id,
-            gruppe: gruppeId,
-            name: '',
-            zeilen: [neueZeile(crypto.randomUUID(), heuteImKalender())],
-            von: basis.ich.person,
-            am: new Date().toISOString(),
-          }),
-        });
-      },
+      // Beide Fenster gehen mit der **frisch gelesenen** Reihe auf (`useReiheFenster`).
+      bearbeiten: (id) => bearbeiten({ id, gruppe: gruppeId }),
+      uebertragen: (id) => uebertragen({ id, gruppe: gruppeId }),
+      neu: (fertig) => neu({ gruppe: gruppeId, fertig }),
       neuLaden: laden.neu,
     };
-  }, [basis, ort, reihen, stand, darfBauen, gruppeId, laden.neu, frisch]);
-
-  const gespeichert = useCallback(
-    (r: Themenreihe) => {
-      setLokal((alt) => new Map(alt).set(r.id, r));
-      const f = fenster;
-      setFenster(null);
-      if (f?.art === 'bearbeiten' && f.neu) f.fertig?.(r.id);
-    },
-    [fenster],
-  );
+  }, [basis, ort, reihen, stand, darfBauen, gruppeId, laden.neu, bearbeiten, uebertragen, neu]);
 
   return (
     <ReiheKontext.Provider value={wert}>
       {children}
-      {basis && ort && fenster?.art === 'bearbeiten' && (
-        <BearbeitenFenster
-          gruppeId={gruppeId}
-          reihe={fenster.reihe}
-          neu={fenster.neu}
-          ort={ort}
-          ich={basis.ich}
-          onGespeichert={gespeichert}
-          onClose={() => setFenster(null)}
-        />
-      )}
-      {basis && fenster?.art === 'uebertragen' && (
-        <ReiheUebertragenFenster
-          reihe={fenster.reihe}
-          rechte={rechte}
-          onClose={() => setFenster(null)}
-        />
-      )}
+      {basis && ort && fenster}
     </ReiheKontext.Provider>
-  );
-}
-
-/** Das Fenster „Reihe“ mit den Mitgliedern der Gruppe (für „Wer“) – erst gelesen, wenn das Fenster aufgeht. */
-function BearbeitenFenster(p: {
-  gruppeId: number;
-  reihe: Themenreihe;
-  neu: boolean;
-  ort: { modul: number; kategorie: number };
-  ich: { person: number };
-  onGespeichert: (r: Themenreihe) => void;
-  onClose: () => void;
-}) {
-  const stand = useLaden(() => ladeGruppenMitglieder(p.gruppeId), [p.gruppeId]).stand;
-  const mitglieder: readonly Person[] | 'verborgen' | null =
-    stand.art === 'fertig' ? stand.daten : stand.art === 'fehler' ? 'verborgen' : null;
-  return (
-    <ReiheFenster
-      reihe={p.reihe}
-      neu={p.neu}
-      mitglieder={mitglieder}
-      ort={p.ort}
-      ich={p.ich}
-      onGespeichert={p.onGespeichert}
-      onClose={p.onClose}
-    />
   );
 }

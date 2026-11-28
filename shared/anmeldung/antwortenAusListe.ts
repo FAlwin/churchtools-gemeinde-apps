@@ -19,7 +19,14 @@ import {
   ungueltigeAntworten,
 } from './bedingungen';
 import { freiMitText, freiSchluessel } from './freieAntwort';
-import { antwortRoh, mehrfachAntworten, type ListenAnmeldung, type Werte } from './liste';
+import {
+  antwortRoh,
+  listeDatenText,
+  mehrfachAntworten,
+  type ListenAnmeldung,
+  type Werte,
+} from './liste';
+import { listeAusDaten } from './zeilenListe';
 
 /**
  * Eine gespeicherte Antwort so, wie die Regeln sie erwarten: Ankreuzen als `true`, Mehrfachauswahl als Liste, die freie
@@ -30,6 +37,14 @@ function antwortAus(
   werte: Werte,
   ctFelder: OeffentlicheEinstellungen['ctFelder'],
 ): Antwort {
+  // F6c: Eine Liste mit Zeilen ist für die Regeln `{ zeilen }` (aus „(Daten)“), nie der lesbare Text. Fehlen die Daten,
+  // steht aber Text da (von Hand), gilt sie als beantwortet – ohne Zeilen.
+  if (f.typ === 'liste') {
+    const daten = listeDatenText(f, werte, ctFelder);
+    const zeilen = f.liste && daten ? listeAusDaten(f.liste, daten) : null;
+    if (zeilen?.zeilen.length) return zeilen;
+    return daten || antwortRoh(f, werte, ctFelder) !== null ? { zeilen: [] } : undefined;
+  }
   const text = antwortRoh(f, werte, ctFelder);
   if (text === null) return undefined;
   if (f.typ === 'check') return true;

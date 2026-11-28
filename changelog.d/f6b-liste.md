@@ -1,6 +1,6 @@
 ### Neu (Anmeldungen)
 
-- **Liste mit Zeilen – jetzt für alle (F6b).** Die Liste lässt sich abschicken: Im Formular und bei „Von Hand“ landet sie in ChurchTools lesbar (Kopfzeile, eine Zeile je Eintrag), dazu in der Spalte „(Daten)“ zum Wiederöffnen und – mit „Summe zeigen“ – die Summe als Zahl. Leere Zeilen fallen weg, angefangene halten das Absenden auf. Kachel und Fragetyp sind in der gebauten Erweiterung da. Bis zur nächsten Scheibe zeigen Tabelle, Fenster und Druckliste die Liste als lesbaren Text; die Team-Mail nennt sie ebenso.
+- **Liste mit Zeilen – jetzt für alle (F6b).** Die Liste lässt sich abschicken: Im Formular und bei „Von Hand“ landet sie in ChurchTools lesbar (Kopfzeile, eine Zeile je Eintrag), dazu in der Spalte „(Daten)“ zum Wiederöffnen und – mit „Summe zeigen“ – die Summe als Zahl. Leere Zeilen fallen weg, angefangene halten das Absenden auf. Kachel und Fragetyp sind in der gebauten Erweiterung da. Die Team-Mail nennt sie lesbar.
 - Im Baukasten steht ein Hinweis, wenn eine volle Liste mit längeren Einträgen nicht in ChurchTools passen könnte (z. B. 5 Text-Spalten × 50 Zeilen).
 
 ### Behoben (Anmeldungen)

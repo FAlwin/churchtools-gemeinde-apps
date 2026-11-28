@@ -50,7 +50,9 @@ const ZEILEN = [
   }),
 ];
 
-function zeige(o: { infoGruppen?: { id: number; name: string }[]; tag?: string } = {}) {
+function zeige(
+  o: { infoGruppen?: { id: number; name: string }[]; tag?: string; serie?: string | null } = {},
+) {
   const onSchliessen = vi.fn();
   render(
     <AblaufAnzeige
@@ -58,6 +60,7 @@ function zeige(o: { infoGruppen?: { id: number; name: string }[]; tag?: string }
       tag={o.tag ?? '2026-11-01'}
       beginn="10:00"
       zeilen={ZEILEN}
+      serie={o.serie}
       infoGruppen={o.infoGruppen ?? [{ id: 3, name: 'Technik' }]}
       zeitzone="Europe/Berlin"
       onSchliessen={onSchliessen}
@@ -84,6 +87,15 @@ describe('Ablauf-Anzeige (E6b-1)', () => {
     expect(within(anzeige).getByText('Sonntag, 1. November')).toBeTruthy();
     expect(within(anzeige).getByText('Gottesdienst')).toBeTruthy();
     expect(within(anzeige).getByText('Beginn 10:00 · Ende 10:34 · Dauer 34 Min')).toBeTruthy();
+  });
+
+  it('mit Predigtserie: sie steht hinten in der Zeile unter dem Titel (27.11.2026)', () => {
+    const { anzeige } = zeige({ serie: 'Die Psalmen' });
+    expect(
+      within(anzeige).getByText(
+        'Beginn 10:00 · Ende 10:34 · Dauer 34 Min · Predigtserie: Die Psalmen',
+      ),
+    ).toBeTruthy();
   });
 
   it('ein anderer Tag als heute: sein Datum steht vorne dabei', () => {

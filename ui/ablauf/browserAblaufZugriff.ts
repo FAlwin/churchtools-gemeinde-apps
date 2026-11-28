@@ -19,6 +19,7 @@ import {
 import { vorlagenStandAusRohdaten } from '@shared/ct/ablaufVorlagenListe';
 import {
   ablaufUmsortieren,
+  serieSetzen,
   punktAendern,
   punktAnlegen,
   punktLoeschen,
@@ -64,6 +65,11 @@ export function terminAktionen(eventId: number, geschrieben: () => void): Ablauf
       geschrieben();
     },
   };
+}
+
+/** Die Predigtserie eines Termins setzen oder entfernen – über den Kern (`serieSetzen`, nur `{ series }`). */
+export function browserSerieSetzen(eventId: number, serie: string | null): Promise<string | null> {
+  return serieSetzen(browserSchreiber, eventId, serie);
 }
 
 /** Die Liste samt Kalendern – frisch aus ChurchTools. */

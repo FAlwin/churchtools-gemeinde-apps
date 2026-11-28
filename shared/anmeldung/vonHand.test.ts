@@ -510,7 +510,7 @@ describe('F6b: Liste mit Zeilen von Hand', () => {
       s: ['a', 'b'],
       z: [['Schlafsack', 2.5]],
     });
-    // Bis F6c zeigen Tabelle, Fenster und Druckliste den lesbaren Text (`antwortText`) – nie „[object Object]“.
+    // Tabelle, Fenster und Druckliste lesen sie über „(Daten)“ (F6c, `antwortText`) – nie „[object Object]“.
     const [anm] = anmeldungenAus(x, stand([mitglied(hand, 'active')]), STICHTAG);
     const gep = x.formular.person.find((f) => f.id === 'gep')!;
     expect(antwortText(gep, anm.personen[0].werte, x.ctFelder)).toBe(

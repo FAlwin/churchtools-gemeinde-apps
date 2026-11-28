@@ -57,6 +57,8 @@ export interface BlattQuelle {
   stand: string;
   /** Die Ablauf-Zeilen – `null`, wenn der Termin keinen Ablauf hat. */
   zeilen: readonly AblaufZeile[] | null;
+  /** Die Predigtserie des Ablaufs (Dienstplaner, 27.11.2026) – steht im Untertitel. Ohne: nichts davon. */
+  serie?: string | null;
   /** Die Dienste des Termins je Gruppe – nur Gesendetes (keine Entwürfe). */
   dienste: readonly BlattGruppe[];
   /** Die Dienstgruppen, deren Infos man sieht (`infoGruppen`) – in der Reihenfolge der Gemeinde. */
@@ -286,7 +288,9 @@ export function terminBlatt(q: BlattQuelle, e: BlattEinstellungen): TerminBlatt 
   const alle = (q.zeilen ?? []).filter((z) => !z.removed);
   const ende = q.zeilen ? ablaufEnde(alle) : null;
   const datum = `${tagLang(q.tag)} ${q.tag.slice(0, 4)}`;
-  const untertitel = `${datum} · ${q.beginn}${ende ? ` – ${ende}` : ''} Uhr`;
+  const untertitel = `${datum} · ${q.beginn}${ende ? ` – ${ende}` : ''} Uhr${
+    q.serie ? ` · Predigtserie: ${q.serie}` : ''
+  }`;
 
   let ablauf: TerminBlatt['ablauf'] = null;
   if (q.zeilen && e.ablauf.an && alle.length > 0) {

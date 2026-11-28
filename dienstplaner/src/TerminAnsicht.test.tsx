@@ -361,9 +361,16 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
       lesenScheitertAb?: number;
       /** Ab dem n-ten Abruf hält das Lesen an, bis `weiter()` – für „blättern, während neu gelesen wird“. */
       lesenHaeltAb?: number;
+      /** Die Predigtserie (`series`) des Ablaufs; ein `PUT …/agenda` setzt sie wie ChurchTools (gekürzt, leer = null). */
+      serie?: string | null;
+      /** Weitere Termine, die sich den Ablauf teilen – wie ChurchTools als Schlüssel in `startTimes` (`verbundeneTermine`). */
+      verbunden?: number[];
     } = {},
   ) {
     let items = ABLAUF.items.map((i, n) => ({ ...i, position: n }));
+    let serie = o.serie ?? null;
+    /** Die Rümpfe aller `PUT …/agenda` (Ablauf selbst, nicht seine Punkte). */
+    const ablaufRuempfe: unknown[] = [];
     let weiter = () => {};
     let versteckt: number | null = null;
     let lesen = 0;
@@ -375,6 +382,12 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
       if (methode !== 'GET') {
         schreiben.push(`${methode} ${url.pathname}`);
         if (o.gesperrt) return Promise.resolve(json(403, { message: 'Forbidden' }));
+        if (methode === 'PUT' && url.pathname.endsWith('/agenda')) {
+          const rumpf = JSON.parse(String(init?.body)) as { series?: string | null };
+          ablaufRuempfe.push(rumpf);
+          if ('series' in rumpf) serie = rumpf.series?.trim() || null;
+          return Promise.resolve(json(200, { data: {} }));
+        }
         const auge = /\/items\/(\d+)\/(hide|unhide)$/.exec(url.pathname);
         if (auge) {
           versteckt = auge[2] === 'hide' ? Number(auge[1]) : null;
@@ -396,11 +409,25 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
         if (o.lesenScheitertAb !== undefined && lesen >= o.lesenScheitertAb) {
           return Promise.resolve(json(502, {}));
         }
-        const mitAuge = items.map((i) =>
-          i.id === versteckt ? { ...i, startTimes: { '7': null } } : i,
+        const mitAuge = items.map((i, n) =>
+          i.id === versteckt
+            ? { ...i, startTimes: { '7': null } }
+            : n === 0 && o.verbunden
+              ? {
+                  ...i,
+                  startTimes: Object.fromEntries(
+                    [7, ...o.verbunden].map((t) => [String(t), i.start]),
+                  ),
+                }
+              : i,
         );
         const antwort = json(200, {
-          data: { calendarId: 2, isLocked: o.gesperrt ?? false, items: mitAuge },
+          data: {
+            calendarId: 2,
+            isLocked: o.gesperrt ?? false,
+            series: serie,
+            items: mitAuge,
+          },
         });
         if (o.lesenHaeltAb !== undefined && lesen >= o.lesenHaeltAb) {
           return new Promise<Response>((r) => (weiter = () => r(antwort)));
@@ -416,6 +443,7 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
     return {
       spy,
       schreiben,
+      ablaufRuempfe,
       lesen: () => lesen,
       weiter: () => weiter(),
       /** Ein anderer löscht in ChurchTools einen Punkt. */
@@ -525,6 +553,75 @@ describe('TerminAnsicht – Bearbeiten (E6-3a)', () => {
     zeige({ start: darfKalender([2]) });
     expect(await screen.findByText('Noch kein Ablauf.')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Ablauf bearbeiten' })).toBeNull();
+  });
+
+  /**
+   * **Predigtserie** (27.11.2026, wie die ChurchTools-App): in der Ansicht nur, wenn gesetzt; im Bearbeiten öffnet die Zeile
+   * das Fenster, gespeichert wird NUR `{ series }` (gemessen: mitgeschickte Punkte ersetzten die ganze Liste).
+   */
+  it('Predigtserie: Ansicht zeigt sie nur, wenn gesetzt; ohne Serie keine Zeile', async () => {
+    ctMitAblauf({ serie: 'Die Psalmen' });
+    zeige({ start: darfKalender([2]) });
+    const ablauf = await screen.findByRole('region', { name: 'Ablauf' });
+    expect(await within(ablauf).findByText('Die Psalmen')).toBeTruthy();
+    expect(within(ablauf).getByText('Predigtserie')).toBeTruthy();
+    cleanup();
+    vi.restoreAllMocks();
+
+    ctMitAblauf();
+    zeige({ start: darfKalender([2]) });
+    await screen.findByText('Soundcheck');
+    expect(screen.queryByText('Predigtserie')).toBeNull();
+  });
+
+  it('Predigtserie setzen: im Bearbeiten die Zeile antippen, eintippen, speichern → nur { series }, danach neu gelesen', async () => {
+    const ct = ctMitAblauf();
+    zeige({ start: darfKalender([2]) });
+    fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Predigtserie\s*keine/ }));
+    const fenster = await screen.findByRole('dialog', { name: 'Predigtserie' });
+    // Nicht geteilt: kein Hinweis auf andere Termine.
+    expect(within(fenster).queryByText(/Gilt für alle Termine/)).toBeNull();
+    fireEvent.change(within(fenster).getByRole('textbox'), {
+      target: { value: '  Römerbrief  ' },
+    });
+    fireEvent.click(within(fenster).getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(ct.ablaufRuempfe).toEqual([{ series: 'Römerbrief' }]));
+    expect(ct.schreiben).toEqual(['PUT /api/events/7/agenda']);
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Predigtserie' })).toBeNull());
+    expect(await screen.findByRole('button', { name: /Predigtserie\s*Römerbrief/ })).toBeTruthy();
+  });
+
+  it('Predigtserie entfernen: Feld leeren und speichern schreibt { series: null }', async () => {
+    const ct = ctMitAblauf({ serie: 'Die Psalmen', verbunden: [8] });
+    zeige({ start: darfKalender([2]) });
+    fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Predigtserie\s*Die Psalmen/ }));
+    const fenster = await screen.findByRole('dialog', { name: 'Predigtserie' });
+    // Geteilter Ablauf: der Hinweis sagt, dass die Serie für alle Termine gilt.
+    expect(within(fenster).getByText(/Gilt für alle Termine mit diesem Ablauf/)).toBeTruthy();
+    fireEvent.change(within(fenster).getByRole('textbox'), { target: { value: '' } });
+    fireEvent.click(within(fenster).getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(ct.ablaufRuempfe).toEqual([{ series: null }]));
+    expect(await screen.findByRole('button', { name: /Predigtserie\s*keine/ })).toBeTruthy();
+  });
+
+  it('abgeschlossen: Schloss im Ablauf-Kopf; die Serie steht da, lässt sich aber nicht öffnen', async () => {
+    const ct = ctMitAblauf({ gesperrt: true, serie: 'Die Psalmen' });
+    zeige({ start: darfKalender([2]) });
+    expect(await screen.findByRole('img', { name: 'In ChurchTools abgeschlossen' })).toBeTruthy();
+    fireEvent.click(await screen.findByRole('button', { name: 'Ablauf bearbeiten' }));
+    expect(await screen.findByText('Die Psalmen')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Predigtserie/ })).toBeNull();
+    expect(ct.schreiben).toEqual([]);
+    cleanup();
+    vi.restoreAllMocks();
+
+    // Offen: kein Schloss.
+    ctMitAblauf();
+    zeige({ start: darfKalender([2]) });
+    await screen.findByText('Soundcheck');
+    expect(screen.queryByRole('img', { name: 'In ChurchTools abgeschlossen' })).toBeNull();
   });
 
   it('blättern beendet das Bearbeiten', async () => {

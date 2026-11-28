@@ -1352,3 +1352,38 @@ hängt nichts doppelt an, und wo etwas nicht geht, sagt das Fenster es – die a
 - **Historie:** 27.11.2026 (Entwurf `reihe-events-v1` von Alwin abgenommen; Anlass: Die Jugend plant ihre Reihen im Treffen und will sie in die Events schreiben; Scheibe 1)
 
 </details>
+
+### TF-PROT-36 · Reiter „Reihen“: alle Reihen der Gruppen, Karte, „Neue Reihe“ mit Gruppe
+
+**Das brauchst du:** In der Test-Instanz **zwei Gruppen mit Protokollen**, in denen du **schreiben darfst** (Leitung), dazu in einer **dritten** Gruppe nur Lese-Rechte (oder ein
+zweites Konto, das nur in einer der beiden schreiben darf). Mindestens **zwei Reihen**: eine kommende mit einem Abend ohne Event, eine vergangene mit Event bei jedem Abend – am besten
+je eine in jeder Gruppe (vorher im Protokoll über **Einfügen ▾ → Reihe** angelegt, siehe TF-PROT-35). Ein Handy (oder das Browserfenster auf 375 px).
+
+**Das muss passieren:** Der Reiter **Reihen** zeigt alle Reihen deiner Gruppen auf einen Blick, ohne dass ChurchTools-Events gelesen werden; eine neue Reihe landet genau in der gewählten Gruppe,
+und nach einem Speicherversuch lässt sich die Gruppe nicht mehr wechseln.
+
+1. Der Reiter **Reihen** steht zwischen **To-Dos** und **Termine**; **Einstellungen** (nur Admins) bleibt der letzte. Beim Öffnen steht oben „Reihen werden geladen …“, dann die Liste.
+2. Die Liste ist nach **Gruppe** geordnet (Zwischenüberschrift mit dem Gruppennamen). In jeder Gruppe steht die **kommende** Reihe vor der **vergangenen**. Jede Zeile zeigt den Namen, darunter
+   „13. Jan – 10. Feb 2027 · 5 Abende“, rechts ein Etikett wie **4 von 5 mit Event** – **grün** nur dort, wo jeder Abend ein Event hat – und einen schmalen Balken. Die Zahlen stimmen mit der Karte überein.
+3. In den Entwicklerwerkzeugen des Browsers (Netzwerk): Beim Öffnen des Reiters gehen **keine** Abfragen an `/events` – nur das Lesen der „Mitarbeit“-Werte, höchstens zwei Gruppen gleichzeitig.
+4. Der Trichter **Filter → Gruppe** (nur bei mehreren Gruppen): Eine Gruppe wählen, es bleibt nur sie; **Alle Gruppen** bringt die anderen zurück.
+5. Eine Reihe antippen: Ein Fenster mit **derselben Karte wie im Protokoll** (Tabelle, am Handy Karten) geht auf, darunter **Bearbeiten** und **In Events übertragen**. In einer Gruppe, in der du **nicht** schreiben
+   darfst: die Karte ohne beide Knöpfe.
+6. **Bearbeiten**: Das Fenster zeigt den **aktuellen** Stand – hat jemand anderes die Reihe gerade geändert (zweiter Browser), steht dessen Änderung drin, nicht „Bitte öffne sie neu“. Name ändern, **Speichern**:
+   Fenster zu, Karte und Liste zeigen den neuen Namen sofort. **In Events übertragen** öffnet dasselbe Fenster wie im Protokoll.
+7. **Neue Reihe** (am PC der grüne Knopf in der Werkzeugzeile, am Handy das schwebende Plus): Es gibt ihn nur, wenn du in einer Gruppe mit „Mitarbeit“ schreiben darfst. Bei **zwei** Gruppen hat das Fenster oben das
+   Feld **Gruppe**: vorbelegt mit der Gruppe aus dem Filter, sonst der ersten. Name eintippen, Gruppe wechseln – **der Name bleibt stehen**, bei „Wer“ erscheinen die Mitglieder der gewählten Gruppe. **Speichern**:
+   Die Reihe steht unter der **gewählten** Gruppe (in ChurchTools in der Kategorie „Mitarbeit“ dieser Gruppe). Bei **nur einer** wählbaren Gruppe fehlt das Feld.
+8. **Neue Reihe**, Namen eintippen, **Speichern** mit abgeschaltetem Netz (Flugmodus): Es erscheint eine Fehlermeldung, das Feld **Gruppe** ist jetzt **grau** und lässt sich nicht mehr ändern. Netz wieder an,
+   **Speichern**: Die Reihe entsteht **einmal**, in der Gruppe, die beim ersten Versuch gewählt war.
+9. Ohne Reihen in allen Gruppen: Der Satz „Noch keine Reihen. Du legst sie hier mit „Neue Reihe“ an oder im Protokoll als Baustein „Reihe“.“ Ohne Gruppe: „Du bist in keiner Gruppe, die hier Protokolle führt.“
+10. Scheitert das Lesen einer Gruppe (Netz kurz weg): der rote Fehlerkasten mit **Erneut versuchen** statt einer halben Liste. Hell und dunkel, PC und 375 px: nichts läuft über den Rand.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `protokolle/src/Reihen.tsx`, `protokolle/src/Reihen.module.scss`, `protokolle/src/useReiheFenster.tsx`, `protokolle/src/ReiheBearbeitenFenster.tsx`, `protokolle/src/ReiheAnbieter.tsx`, `protokolle/src/ReiheFenster.tsx`, `protokolle/src/reiter.ts`, `protokolle/src/App.tsx`, `shared/protokolle/themenreihe.ts`
+- **Automatisiert:** größtenteils – `protokolle/src/Reihen.test.tsx` (Gruppierung/Reihenfolge/Etikett, kein Event-Lesen, höchstens zwei Gruppen gleichzeitig, Filter, leere Zustände, Fehlerkasten, Karte mit Recht je Gruppe, frisches Lesen vor dem Öffnen, „Neue Reihe“: Knopf nur mit Recht, Feld „Gruppe“ vorbelegt/fehlt/gesperrt nach Speicherversuch, Speichern in die gewählte Gruppe), `shared/protokolle/themenreihe.test.ts` (`reiheUeberblick`, `reihenOrdnen`, `reiheZeitraumText`), `protokolle/src/reiter.test.ts` (Platz des Reiters), `protokolle/src/Reihe.test.tsx` (Anbieter mit dem gemeinsamen Fenster-Baustein); **nur von Hand:** echtes ChurchTools (Kategorie „Mitarbeit“ der gewählten Gruppe), Flugmodus-Fall, Aussehen am Handy
+- **Historie:** 28.11.2026 (Entwurf `reihen-reiter-s2-v1`, Variante A, von Alwin abgenommen; Scheibe 2)
+
+</details>

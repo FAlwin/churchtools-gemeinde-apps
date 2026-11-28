@@ -128,6 +128,18 @@
   }
 }
 
+// „Ablauf“ mit Schloss, wenn er in ChurchTools abgeschlossen ist (27.11.2026).
+.ablaufTitel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.schloss {
+  display: inline-flex;
+  color: var(--text2);
+}
+
 .hinweis {
   @include t.hinweis;
 }

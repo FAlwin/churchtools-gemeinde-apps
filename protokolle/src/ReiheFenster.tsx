@@ -41,6 +41,7 @@ export function ReiheFenster({
   mitglieder,
   ort,
   ich,
+  gruppenwahl,
   onGespeichert,
   onClose,
 }: {
@@ -50,6 +51,15 @@ export function ReiheFenster({
   mitglieder: readonly Person[] | 'verborgen' | null;
   ort: MitarbeitOrt;
   ich: { person: number };
+  /**
+   * Nur bei „Neue Reihe“ aus dem Reiter „Reihen“ mit mehr als einer Gruppe: das Feld „Gruppe“. Die Wahl liegt beim Aufrufer
+   * (`ort` und die Mitglieder folgen ihr, das Fenster bleibt stehen); gespeichert wird in die gewählte Gruppe.
+   */
+  gruppenwahl?: {
+    gruppen: readonly { id: number; name: string }[];
+    gewaehlt: number;
+    onWahl: (gruppe: number) => void;
+  };
   onGespeichert: (r: Themenreihe) => void;
   onClose: () => void;
 }) {
@@ -60,6 +70,9 @@ export function ReiheFenster({
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const [wahlFuer, setWahlFuer] = useState<string | null>(null);
+  // Ein Speichern wurde versucht: Die Gruppe ist ab jetzt gesperrt. Ein vorübergehender Fehler kann schon in Gruppe A
+  // geschrieben haben – ein Wechsel auf B legte beim zweiten Versuch mit derselben ID ein Doppel an.
+  const [versucht, setVersucht] = useState(false);
 
   const fehlt = reiheFehlt({ name, zeilen });
   const geaendert =
@@ -74,12 +87,13 @@ export function ReiheFenster({
 
   async function speichern(): Promise<void> {
     if (fehlt) return;
+    setVersucht(true);
     setLaeuft(true);
     setFehler(null);
     try {
       const r = await themenreiheSpeichern(
         ort,
-        { ...reihe, name, zeilen },
+        { ...reihe, gruppe: gruppenwahl ? gruppenwahl.gewaehlt : reihe.gruppe, name, zeilen },
         neu ? null : gesehen,
         ich.person,
         new Date().toISOString(),
@@ -111,6 +125,23 @@ export function ReiheFenster({
           </FensterKnopf>
         }
       >
+        {gruppenwahl && (
+          <label className={felder.feld}>
+            <span>Gruppe</span>
+            <select
+              className={felder.eingabe}
+              value={gruppenwahl.gewaehlt}
+              disabled={laeuft || versucht}
+              onChange={(e) => gruppenwahl.onWahl(Number(e.target.value))}
+            >
+              {gruppenwahl.gruppen.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className={felder.feld}>
           <span>Name der Reihe</span>
           <input
@@ -226,6 +257,11 @@ export function ReiheFenster({
           <p className={felder.leise}>
             Die Mitglieder der Gruppe lassen sich nicht anzeigen – bei „Wer“ geht nur ein freier
             Name.
+          </p>
+        )}
+        {gruppenwahl && versucht && (
+          <p className={felder.leise}>
+            Die Gruppe lässt sich nicht mehr ändern, sobald du gespeichert hast.
           </p>
         )}
         {fehlt && geaendert && <p className={felder.leise}>{fehlt}</p>}

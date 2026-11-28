@@ -11,10 +11,17 @@
  * Angaben der Anmeldung (Betrag, Mitfahrt …) prüfen in beiden Ansichten die Anmeldung.
  */
 import type { Feld, OeffentlicheEinstellungen, SpaltenFilter } from './formular';
-import { frageAntwort, frageAntwortRoh, frageSchluessel, fragen } from './druckliste';
+import { frageAntwort, frageAntwortRoh, frageSchluessel, frageWert, fragen } from './druckliste';
 import { kurzname, wahlAntworten } from './bedingungen';
-import { mehrfachAnzeigeTeile, type ListenAnmeldung, type ListenPerson } from './liste';
-import { spaltenKatalog, zahlAus } from './tabelle';
+import {
+  listeVon,
+  listenSummeVon,
+  mehrfachAnzeigeTeile,
+  type ListenAnmeldung,
+  type ListenPerson,
+} from './liste';
+import { spaltenKatalog, summenFrage, zahlAus } from './tabelle';
+import { listeGelesenText } from './zeilenListe';
 import { zahlText } from './feldwert';
 import { AMPEL_TEXT, ampelDerPerson, nachweisArtVon, type AmpelWert } from './nachweisAmpel';
 
@@ -44,6 +51,8 @@ export function filterArt(e: OeffentlicheEinstellungen, spalte: string): FilterA
     case 'kontakt':
       return 'text';
   }
+  // F6c (E59): die Summe einer Liste wie eine Zahl-Frage; die Liste selbst wie ein Text (ausgefüllt/leer/enthält).
+  if (summenFrage(e, spalte)) return 'zahl';
   const f = frageZu(e, spalte);
   if (!f) return null;
   if (MIT_ANTWORTEN.has(f.typ)) return 'antworten';
@@ -91,7 +100,7 @@ export function filterAntworten(e: OeffentlicheEinstellungen, spalte: string): s
 /** Steht die Spalte an der Person (Status, Alter, Fragen je Person)? Dann prüft der Filter je Person (E4). */
 export function personenSpalte(e: OeffentlicheEinstellungen, spalte: string): boolean {
   if (spalte === 'status' || spalte === 'alter' || nachweisArtVon(spalte) !== null) return true;
-  const f = frageZu(e, spalte);
+  const f = frageZu(e, spalte) ?? summenFrage(e, spalte);
   return !!f && e.formular.person.includes(f);
 }
 
@@ -179,6 +188,8 @@ function zahlVon(
   if (spalte === 'personen') return x.personen.length;
   if (spalte === 'betrag') return x.betragCent === null ? null : x.betragCent / 100;
   if (spalte === 'alter') return p?.alter ?? null;
+  const sf = summenFrage(e, spalte);
+  if (sf) return frageWert(e, sf, x, p, listenSummeVon);
   const f = frageZu(e, spalte);
   return f ? zahlAus(frageAntwort(e, f, x, p)) : null;
 }
@@ -192,6 +203,9 @@ function textVon(
 ): string {
   if (spalte === 'kontakt') return x.wer;
   const f = frageZu(e, spalte);
+  // F6c: Bei einer Liste nur die Einträge – sonst fände „enthält“ die Spaltennamen in jeder Anmeldung.
+  const liste = f?.typ === 'liste' ? frageWert(e, f, x, p, listeVon) : null;
+  if (liste) return listeGelesenText(liste, { kopf: false });
   return f ? (frageAntwort(e, f, x, p) ?? '') : '';
 }
 

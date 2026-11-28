@@ -19,21 +19,27 @@ export function NameFeld({
   fehler,
   hinweis,
   beschaeftigt,
+  label = 'Name',
+  max = VORLAGE_NAME_MAX,
 }: {
   wert: string;
   onChange: (w: string) => void;
   fehler: string | null;
   hinweis?: string;
   beschaeftigt: boolean;
+  /** Die Beschriftung über dem Feld – auch „Predigtserie“ (`PredigtserieFenster`) nimmt dieses Feld. */
+  label?: string;
+  /** Höchstlänge – die Regel des Kerns, das Feld bremst nur früher. */
+  max?: number;
 }) {
   return (
     <label className={styles.feld}>
-      <span className={styles.lab}>Name</span>
+      <span className={styles.lab}>{label}</span>
       <input
         className={styles.eingabe}
         value={wert}
         // Eine Zeichen über die Grenze hinaus lässt sich nicht tippen – die Meldung des Kerns bleibt für Eingefügtes.
-        maxLength={VORLAGE_NAME_MAX}
+        maxLength={max}
         autoFocus
         disabled={beschaeftigt}
         aria-invalid={fehler !== null}

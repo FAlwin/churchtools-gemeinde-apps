@@ -40,6 +40,7 @@ describe('Zähler am Reiter „To-Dos“', () => {
       ['start', undefined, undefined],
       ['sitzungen', undefined, undefined],
       ['todos', 3, 'To-Dos, 3 fällig'],
+      ['reihen', undefined, undefined],
       ['termine', undefined, undefined],
       ['verwaltung', undefined, undefined],
     ]);
@@ -52,19 +53,24 @@ describe('Zähler am Reiter „To-Dos“', () => {
   });
 });
 
-describe('Reiter „Termine“ (W14)', () => {
-  it('steht zwischen „To-Dos“ und „Einstellungen“ – auch ohne Recht für die Einstellungen', () => {
+describe('Reiter „Reihen“ und „Termine“', () => {
+  it('„Reihen“ steht zwischen „To-Dos“ und „Termine“, „Einstellungen“ bleibt der letzte (R13)', () => {
     expect(sichtbareReiter(true).map((r) => r.id)).toEqual([
       'start',
       'sitzungen',
       'todos',
+      'reihen',
       'termine',
       'verwaltung',
     ]);
+  });
+
+  it('beide gibt es auch ohne Recht für die Einstellungen', () => {
     expect(sichtbareReiter(false).map((r) => r.id)).toEqual([
       'start',
       'sitzungen',
       'todos',
+      'reihen',
       'termine',
     ]);
   });

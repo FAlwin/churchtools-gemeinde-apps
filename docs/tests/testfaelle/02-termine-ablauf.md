@@ -1629,7 +1629,7 @@ steht der Inhalt in Lesebreite in der Mitte. Bearbeiten ändert sich nicht.
 4. **Lied-Karte in der Liste** antippen → direkt das Liedblatt bzw. die Lied-Ansicht, **nicht** die Einzelansicht. Die **Kreise** öffnen weiter die
    Zuständigen am Knopf.
 5. **Handy (375 px):** dieselbe Seite, nur schmal: die **Beschriftung steht über dem Wert** (nicht mehr daneben), **DAVOR** und **DANACH** zeigen
-   Uhrzeit · Dauer und Titel des Nachbarn. Antippen blättert; am Rand ist der Knopf grau und leer. **‹ Ablauf** (oder Escape) führt zur Liste zurück.
+   Uhrzeit · Dauer, Titel und (seit 27.11.2026, wie die ChurchTools-App) die Zuständigen des Nachbarn in einer kleinen grauen Zeile. Antippen blättert; am Rand ist der Knopf grau und leer. **‹ Ablauf** (oder Escape) führt zur Liste zurück.
 6. **Bearbeiten** (Musik-App): Zeile antippen öffnet wie bisher das Fenster „Punkt bearbeiten“ (Position, Titel, Dauer, Lied, Zuständig,
    Bemerkung, Infos je Gruppe) – unverändert. Der **blaue Streifen** an der Lied-Zeile und der rote Hinweis **„Moderation ?“** bei einem
    unbesetzten Dienst stehen in der Liste wie bisher.
@@ -1646,5 +1646,44 @@ steht der Inhalt in Lesebreite in der Mitte. Bearbeiten ändert sich nicht.
 - **Betrifft:** `ui/ablauf/PunktAnsicht.tsx`, `ui/ablauf/usePunktAnsicht.tsx`, `ui/ablauf/AblaufListe.tsx`, `ui/ablauf/liedMeta.ts`, `client/src/components/AgendaFullView.tsx`, `dienstplaner/src/TerminAblauf.tsx`, `dienstplaner/src/TerminAnsicht.tsx`
 - **Automatisiert:** ja – `ui/ablauf/PunktAnsicht.test.tsx` (alle Infos, Überschriften übersprungen, Ränder, ← → mit Schutz im Eingabefeld, Escape/„‹ Ablauf“, Seite in allen Breiten mit Lesebreiten-Rahmen und Davor/Danach, Tipp-Ziele Karte gegen Punkt), `ui/design/punktSeite.test.ts` (Lesebreite 720 px, Beschriftung nur am Handy darüber), `client/src/components/AgendaFullView.test.tsx`, `dienstplaner/src/TerminAnsicht.test.tsx` (Abschnitt „wie in der Musik-App (B8)“: Einzelansicht als Seite mit Davor/Danach, Kopf in Stufen, kein Stift, Menüpunkt „Ablauf zeigen“, leises „Ablauf anlegen“); Gegenproben (Überschriften mitgezählt, Fenster statt Seite, Lesebreite, Pfeiltasten, Eingabefeld-Schutz, Handy-Beschriftung) einzeln rot; von Hand bleibt der Blick am Gerät
 - **Historie:** „Ruhige Bedienung“ B8 (21.11.2026, Entwurf `musik-app-ruhiger-v5.html`, Entscheidungen E16–E21)
+
+</details>
+
+### TF-ABLAUF-55 · Dienstplaner: Predigtserie setzen, Schloss bei abgeschlossenem Ablauf
+
+**Das brauchst du:** Die Test-Instanz, einen Termin mit Ablauf und das Recht „Ablauf bearbeiten“ in seinem Kalender; dazu einen zweiten
+Termin, dessen Ablauf in ChurchTools abgeschlossen ist („Ablaufplan festlegen“). Einmal am Rechner/iPad, einmal am Handy (390 px).
+
+**Das muss passieren:** Die Predigtserie, die man seit dem 26.11.2026 in der ChurchTools-App am Ablauf setzen kann, steht im Dienstplaner
+über dem Ablauf und lässt sich dort setzen, ändern und entfernen – ohne dass sich am Ablauf sonst etwas ändert.
+
+1. Termin **ohne** Serie öffnen: über dem Ablauf steht **keine** Zeile „Predigtserie“.
+2. **Bearbeiten** → über dem Ablauf die Zeile **Predigtserie · keine ›**. Antippen → Fenster „Predigtserie“ mit einem Feld, Hinweis „Leer
+   lassen = keine Predigtserie. Höchstens 100 Zeichen.“ Etwas eintippen (mit Leerzeichen am Rand) → **Speichern** → das Fenster schließt, die
+   Zeile zeigt die Serie (ohne die Rand-Leerzeichen). Die Punkte und ihre Reihenfolge, der „Beginn“ und weggelassene Punkte sind unverändert.
+3. **Fertig** → die Serie steht als leise Zeile über dem Ablauf. In der **ChurchTools-App** (oder im Web unter Ablaufpläne) steht dieselbe Serie.
+4. **⋯ → Ablauf zeigen**: oben unter dem Titel „… · Predigtserie: …“. **Teilen** (Termin-PDF): im Untertitel „… Uhr · Predigtserie: …“.
+5. Wieder **Bearbeiten** → Zeile antippen → Feld leeren → **Speichern** → die Zeile zeigt „keine“, nach **Fertig** ist sie weg; in ChurchTools ist
+   die Serie entfernt.
+6. Den **abgeschlossenen** Termin öffnen: neben „Ablauf“ steht ein kleines **Schloss** (Maus darüber: „In ChurchTools abgeschlossen“). Hat er eine
+   Serie, steht sie da – im Bearbeiten lässt sie sich aber nicht antippen. Ein offener Termin hat kein Schloss.
+7. Ein Termin, der sich den Ablauf mit einem anderen teilt (verknüpfte Termine): im Fenster steht zusätzlich „Gilt für alle Termine mit diesem
+   Ablauf.“
+8. **Matrix** (Planen, Rechner/iPad): Im **Spaltenkopf** steht die Serie kursiv mit kleinem Buch unter dem Termin-Namen, über dem
+   Füllbalken – gut vom Status („3 frei“) zu unterscheiden. Ein langer Titel endet mit „…“, beim Darüberfahren steht er ganz da.
+   Termine ohne Serie zeigen nichts. **⋯ → Ablauf bearbeiten**: die Serie wird blau und antippbar (öffnet „Predigtserie“), wo sie
+   fehlt, steht leise „Predigtserie …“ – nur an Terminen mit Ablauf, mit Recht und nicht abgeschlossen. Der Kopf wird dabei nicht
+   höher. Am Handy steht die Serie im Ablauf des gewählten Termins wie in der Termin-Ansicht.
+
+<details><summary>Technisches</summary>
+
+- **Priorität:** normal
+- **Betrifft:** `shared/ct/schreibKern.ts`, `ui/ablauf/PredigtserieFenster.tsx`, `dienstplaner/src/MatrixSerie.tsx`, `ui/ablauf/browserAblaufZugriff.ts`, `dienstplaner/src/TerminAblauf.tsx`, `dienstplaner/src/TerminAnsicht.tsx`, `dienstplaner/src/AblaufAnzeige.tsx`, `shared/ct/terminBlatt.ts`
+- **Automatisiert:** ja – `shared/ct/predigtserie.test.ts` (Rumpf NUR `{ series }`, Kürzen, leer = `null`, 100/101 Zeichen, abgeschlossen → 423),
+  `dienstplaner/src/TerminAnsicht.test.tsx` (Zeile nur wenn gesetzt, setzen/entfernen mit echtem Schreibweg, Hinweis bei geteiltem Ablauf, Schloss),
+  `dienstplaner/src/AblaufAnzeige.test.tsx`, `shared/ct/terminBlatt.test.ts`, `dienstplaner/src/MatrixAblauf.test.tsx` (Spaltenkopf:
+  Anzeige, Ändern im Bearbeiten, nur ansehen, abgeschlossen); Gegenproben (`items` im Rumpf, Schloss weg) einzeln rot; von Hand
+  bleibt der Abgleich mit der ChurchTools-App
+- **Historie:** 27.11.2026, gemessen an Test-Termin 160 (`server/scripts/probe-agenda-series.ts --serie-rumpf`)
 
 </details>

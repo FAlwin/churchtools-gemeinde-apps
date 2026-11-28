@@ -59,6 +59,7 @@ import {
   summe,
   wahlGeaendert,
   zellText,
+  zellTitel,
   type Sortierung,
   type TabellenModus,
   type TabellenSpalte,
@@ -687,7 +688,7 @@ export function AnmeldungenReiter({
       );
     const text = zellText(e, k, x);
     return text ? (
-      <span className={a.kurzText} title={text}>
+      <span className={a.kurzText} title={zellTitel(e, k, x, null) ?? text}>
         {text}
       </span>
     ) : (
@@ -713,7 +714,7 @@ export function AnmeldungenReiter({
       return <AmpelZelle fall={ampelDerPerson(e.nachweisLage, k, y.p.personId)} leise={a.leise} />;
     const text = personZellText(e, k, y);
     return text ? (
-      <span className={a.kurzText} title={text}>
+      <span className={a.kurzText} title={zellTitel(e, k, y.x, y.p) ?? text}>
         {text}
       </span>
     ) : (

@@ -168,6 +168,15 @@ export function itemTitleParts(item: TitelQuelle): TitelTeile {
   return { title: own, songName: song };
 }
 
+/**
+ * Die Zuständigen einer Zeile als eine Zeile Text („Anna Schmidt, Ton“) – Namen bzw. offene Dienste, wie die Kreise sie
+ * zeigen. Nicht `responsibleText`: das ist der rohe Text aus ChurchTools („[Ton], [Bild]“). Eine Stelle für „Ablauf
+ * zeigen“, Live und „Davor / Danach“ der Punkt-Seite.
+ */
+export function zustaendigeText(z: Pick<AblaufZeile, 'responsible'>): string {
+  return z.responsible.map((r) => r.label).join(', ');
+}
+
 /** Einzeilige Klartext-Bezeichnung für Dialoge/Meldungen (z. B. „Lied – Du großer Gott“). */
 export function itemLabel(item: TitelQuelle): string {
   const { title, songName } = itemTitleParts(item);

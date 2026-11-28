@@ -7,17 +7,25 @@
  * Beträge aus `listenZahlen` – dieselbe Zählung wie Kacheln, Startseite und Rundmail.
  */
 import { tagPunkt } from '../ct/datum';
-import type { Feld, OeffentlicheEinstellungen, TabellenWahl } from './formular';
+import {
+  listeSummenName,
+  type Feld,
+  type OeffentlicheEinstellungen,
+  type TabellenWahl,
+} from './formular';
 import {
   frageAntwort,
   frageSchluessel,
+  frageWert,
   fragen,
   nurVorhandene,
   teilnehmerSpalten,
   teilnehmerZelle,
 } from './druckliste';
-import { wahlAntworten } from './bedingungen';
+import { kurzname, wahlAntworten } from './bedingungen';
 import {
+  listeVon,
+  listenSummeVon,
   listenZahlen,
   mehrfachAnzeigeTeile,
   type ListenAnmeldung,
@@ -25,6 +33,7 @@ import {
 } from './liste';
 import { altersregel, euroText, kannEtwasKosten } from './preis';
 import { zahlText } from './feldwert';
+import { hundertstel, listeKurz, summeText } from './zeilenListe';
 import {
   ampelDerAnmeldung,
   ampelDerPerson,
@@ -66,8 +75,74 @@ const spalte = (schluessel: string, titel: string, zahl = false): TabellenSpalte
   titel,
   zahl,
 });
-/** Eine Frage als Spalte – Zahlenfragen rechtsbündig. */
-const frageSpalte = (f: Feld) => spalte(frageSchluessel(f), f.frage, ZAHL_TYPEN.has(f.typ));
+/** Eine Frage als Spalte – Zahlenfragen rechtsbündig; eine Liste mit Zeilen unter ihrem Kurznamen (Entwurf F6). */
+const frageSpalte = (f: Feld) =>
+  spalte(frageSchluessel(f), f.typ === 'liste' ? kurzname(f) : f.frage, ZAHL_TYPEN.has(f.typ));
+
+/** Der Schlüssel der Summen-Spalte einer Liste mit Zeilen (F6c) – `summe:<Feld-ID>`. */
+export const summenSchluessel = (f: Pick<Feld, 'id'>) => `summe:${f.id}`;
+
+/**
+ * **Eine Frage und – bei einer Liste mit „Summe zeigen“ – gleich dahinter ihre Summen-Spalte** (F6c, Entwurf: „Inventar –
+ * Summe Wert gesamt“, Name wie die Spalte in ChurchTools, `listeSummenName`).
+ */
+function frageSpalten(f: Feld): TabellenSpalte[] {
+  const name = listeSummenName(f);
+  return [frageSpalte(f), ...(name ? [spalte(summenSchluessel(f), name, true)] : [])];
+}
+
+/** Die Liste hinter einer Summen-Spalte – `undefined`, wenn der Schlüssel keine ist (oder „Summe zeigen“ aus ist). */
+export function summenFrage(e: OeffentlicheEinstellungen, schluessel: string): Feld | undefined {
+  if (!schluessel.startsWith('summe:')) return undefined;
+  return fragen(e).find((f) => summenSchluessel(f) === schluessel && listeSummenName(f) !== null);
+}
+
+/** Die Summe einer Liste für eine Anmeldung bzw. Person – `listenSummeVon` mit „wessen Werte“ (`frageWert`). */
+const summeVon = (
+  e: OeffentlicheEinstellungen,
+  f: Feld,
+  x: ListenAnmeldung,
+  p: ListenPerson | null,
+) => frageWert(e, f, x, p, listenSummeVon);
+
+/** Die Zelle einer Summen-Spalte: „1.384,5 €“, ohne Wert leer. */
+const summenZelle = (
+  e: OeffentlicheEinstellungen,
+  f: Feld,
+  x: ListenAnmeldung,
+  p: ListenPerson | null,
+) => {
+  const n = summeVon(e, f, x, p);
+  return n === null || !f.liste ? '' : summeText(f.liste, n);
+};
+
+/**
+ * **Was in der Zelle einer Frage steht** – eine Liste mit Zeilen kurz („2 Einträge · Zelt, Kocher“, F6c), sonst die
+ * Antwort wie in Fenster und Druckliste (`frageAntwort`).
+ */
+function frageZelle(
+  e: OeffentlicheEinstellungen,
+  f: Feld,
+  x: ListenAnmeldung,
+  p: ListenPerson | null,
+): string {
+  const liste = f.typ === 'liste' ? frageWert(e, f, x, p, listeVon) : null;
+  return liste ? listeKurz(liste) : (frageAntwort(e, f, x, p) ?? '');
+}
+
+/**
+ * **Der ganze Text beim Darüberfahren** – nur, wo die Zelle gekürzt ist (Liste mit Zeilen: alle Einträge); sonst
+ * `null`, dann gilt der Text der Zelle.
+ */
+export function zellTitel(
+  e: OeffentlicheEinstellungen,
+  schluessel: string,
+  x: ListenAnmeldung,
+  p: ListenPerson | null,
+): string | null {
+  const f = fragen(e).find((y) => frageSchluessel(y) === schluessel);
+  return f?.typ === 'liste' ? frageAntwort(e, f, x, p) : null;
+}
 
 const mitPlatz = (x: ListenAnmeldung) => x.personen.filter((p) => p.status === 'aktiv');
 const ersterWarteplatz = (x: ListenAnmeldung) =>
@@ -111,8 +186,10 @@ export function zellText(
     );
     return f ? ampelZelle(f) : '';
   }
+  const sf = summenFrage(e, schluessel);
+  if (sf) return summenZelle(e, sf, x, null);
   const f = frageVon(e, schluessel);
-  return f ? (frageAntwort(e, f, x, null) ?? '') : '';
+  return f ? frageZelle(e, f, x, null) : '';
 }
 
 /** Wonach eine Spalte sortiert – Zahlen als Zahl, sonst Text; `null` steht immer hinten. */
@@ -143,6 +220,8 @@ function sortWert(
     );
     return a ? ampelRang(a.wert) : null;
   }
+  const sf = summenFrage(e, schluessel);
+  if (sf) return summeVon(e, sf, x, null);
   const f = frageVon(e, schluessel);
   if (f && ZAHL_TYPEN.has(f.typ)) return zahlAus(frageAntwort(e, f, x, null));
   const t = zellText(e, schluessel, x);
@@ -261,12 +340,25 @@ export function summe(
         text: `${liste.filter((x) => x.bezahlt && (x.betragCent ?? 0) > 0).length}× bezahlt`,
       };
   }
+  const sf = summenFrage(e, schluessel);
+  if (sf)
+    return listenSummenZeile(
+      sf,
+      zaehlbar(liste).map((x) => summeVon(e, sf, x, null)),
+    );
   const f = frageVon(e, schluessel);
   if (!f) return null;
   return frageSumme(
     f,
     zaehlbar(liste).map((x) => frageAntwort(e, f, x, null)),
   );
+}
+
+/** **Die Summenzeile einer Summen-Spalte** (F6c): alles zusammen, mit Einheit (Entwurf: „1.934,5 €“). */
+function listenSummenZeile(f: Feld, werte: (number | null)[]): Summe | null {
+  if (!f.liste) return null;
+  const n = werte.reduce<number>((s, w) => s + (w ?? 0), 0);
+  return { text: summeText(f.liste, hundertstel(n)) };
 }
 
 /** **Suchen** – Name der Anmeldung, Anmelde-Nr. und jede Person; ohne Suchtext alle. Auch für Absagen (nur Name). */
@@ -325,6 +417,10 @@ export function personZellText(
     const f = ampelDerPerson(e.nachweisLage, schluessel, p.personId);
     return f ? ampelZelle(f) : '';
   }
+  const sf = summenFrage(e, schluessel);
+  if (sf) return summenZelle(e, sf, x, p);
+  const f = jedeFrage(e, schluessel);
+  if (f?.typ === 'liste') return frageZelle(e, f, x, p);
   return teilnehmerZelle(e, schluessel, x, p);
 }
 
@@ -350,6 +446,8 @@ function personSortWert(
     const a = ampelDerPerson(e.nachweisLage, schluessel, z.p.personId);
     return a ? ampelRang(a.wert) : null;
   }
+  const sf = summenFrage(e, schluessel);
+  if (sf) return summeVon(e, sf, z.x, z.p);
   const f = jedeFrage(e, schluessel);
   if (f && ZAHL_TYPEN.has(f.typ)) return zahlAus(frageAntwort(e, f, z.x, z.p));
   const t = personZellText(e, schluessel, z);
@@ -419,10 +517,16 @@ export function personSumme(
     case 'bezahlt':
       return summe(e, schluessel, anmeldungenVon(zeilen));
   }
+  const sf = summenFrage(e, schluessel);
+  if (sf && e.formular.person.includes(sf))
+    return listenSummenZeile(
+      sf,
+      zaehlen.map((z) => summeVon(e, sf, z.x, z.p)),
+    );
   const f = personenFrage(e, schluessel);
   if (!f) {
     // Eine Frage der Anmeldung: dieselbe Summe wie je Anmeldung – sonst zählte „Mitfahrt: Ja“ jedes Kind mit.
-    const je = jedeFrage(e, schluessel) ? summe(e, schluessel, anmeldungenVon(zeilen)) : null;
+    const je = jedeFrage(e, schluessel) || sf ? summe(e, schluessel, anmeldungenVon(zeilen)) : null;
     return je && !je.klein ? { ...je, klein: 'einmal je Anmeldung' } : je;
   }
   return frageSumme(
@@ -478,7 +582,7 @@ export function spaltenKatalog(
       spalte('name', 'Name'),
       spalte('nr', 'Nr.'),
       spalte('personen', 'Personen'),
-      ...anmeldungsFragen(e).map(frageSpalte),
+      ...anmeldungsFragen(e).flatMap(frageSpalten),
       ...geld,
       spalte('am', 'Angemeldet am'),
       ...nachweisSpalten(e),
@@ -492,10 +596,10 @@ export function spaltenKatalog(
     spalte('status', 'Status'),
     ...ausDruck('alter'),
     ...ausDruck('geburtstag'),
-    ...personenFragen(e).map(frageSpalte),
+    ...personenFragen(e).flatMap(frageSpalten),
     ...ausDruck('kontakt'),
     ...ausDruck('nr'),
-    ...anmeldungsFragen(e).map(frageSpalte),
+    ...anmeldungsFragen(e).flatMap(frageSpalten),
     ...geld,
     ...nachweisSpalten(e),
   ];
@@ -515,7 +619,10 @@ export function vorgabeWahl(e: OeffentlicheEinstellungen, modus: TabellenModus):
   const reihe = spaltenKatalog(e, modus).map((s) => s.schluessel);
   const aus =
     modus === 'person'
-      ? new Set(['geburtstag', ...anmeldungsFragen(e).map(frageSchluessel)])
+      ? new Set([
+          'geburtstag',
+          ...anmeldungsFragen(e).flatMap((f) => frageSpalten(f).map((s) => s.schluessel)),
+        ])
       : new Set<string>();
   return {
     reihe,

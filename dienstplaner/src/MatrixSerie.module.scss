@@ -1,0 +1,35 @@
+// Die Predigtserie im Spaltenkopf der Matrix (`MatrixSerie.tsx`, Entwurf `predigtserie-matrix-3.html` C): kursiv mit Buch,
+// eine Zeile, am Ende „…“ – anders als der Status darunter (gerade, ohne Symbol).
+.serie {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  margin-top: 2px;
+  font-size: 12px;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--text2);
+  white-space: nowrap;
+}
+
+.buch {
+  flex: none;
+}
+
+.text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Im Bearbeiten: im stillen Knopf (`TextKnopf`) – blau wie dieser, aber kursiv und normal stark wie die Serie.
+.knopf {
+  font-weight: 400;
+  color: var(--blue);
+}
+
+.ohne {
+  font-style: normal;
+  color: var(--text3);
+}
